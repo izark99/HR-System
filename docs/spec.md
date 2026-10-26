@@ -653,6 +653,7 @@ Flow (DAG):
   - `only_left`, `only_right`: các dòng không tìm thấy khóa ở bảng còn lại.
 - Quy tắc so sánh: `|right − left| > tolerance` ⇒ lệch. Giá trị null được coi là 0 nếu Admin bật `nullAsZero` (mặc định bật), ngược lại null ≠ số bất kỳ ⇒ lệch.
 - So khớp khóa không phân biệt hoa thường, bỏ khoảng trắng thừa (chốt 20261026).
+- Rule `unique` của input slot dùng cùng cách chuẩn hóa khóa này, để trùng mã bị phát hiện ngay ở bước kiểm tra file (chốt 20261026).
 - Sheet "Lệch": giá trị null hiển thị ô trống, nhưng vẫn tính là 0 khi so sánh nếu `nullAsZero` bật (chốt 20261026).
 - Tính toán bằng decimal, không dùng float.
 

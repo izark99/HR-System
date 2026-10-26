@@ -31,6 +31,7 @@
 20261026 - File có header nhưng không có dòng dữ liệu → cảnh báo (warning).
 20261026 - Sheet "Lệch": ô trống hiển thị để trống, nhưng vẫn tính là 0 khi so sánh.
 20261026 - So khớp khóa (Mã NV) không phân biệt hoa thường, bỏ khoảng trắng thừa.
+20261026 - Rule `unique` trên cột khóa cũng không phân biệt hoa thường/khoảng trắng → báo trùng ngay ở bước kiểm tra file.
 20261026 - File có 2 cột trùng tên với cột bắt buộc → lỗi.
 20261026 - Dữ liệu test do Claude tự sinh (dữ liệu giả, `fixtures/payroll-timesheet/`), Harold review và chỉnh cấu trúc cho sát thực tế.
 
