@@ -9,6 +9,8 @@
 
 ## Phạm vi & sản phẩm
 
+2026-10-26 13:37 - Bước 2 (Supabase) gồm: đăng nhập/đổi mật khẩu, RLS, lưu flow/version (flow nạp bằng lệnh import JSON), run log metadata, màn Admin Users & Groups (tạo tài khoản, reset mật khẩu, khóa, gán flow). Màn Version & Flow Designer để bước 3.
+
 2026-10-26 09:27 - Thứ tự làm Phase 1: (1) chạy được flow nghiệm thu trên trình duyệt (DAG executor + Web Worker + 3 màn User), (2) Supabase (auth, RLS, lưu flow/version), (3) Flow Designer Admin.
 
 2026-10-26 08:20 - Python (Pyodide) và template Excel để sang Phase 2; MVP chỉ có Excel + SQL, output là preview + xuất Excel nhiều sheet cơ bản.
@@ -70,6 +72,8 @@
 2026-10-26 08:20 - Không nhắc tên công ty của Harold trong dự án (code, tài liệu, dữ liệu mẫu, commit); dùng cách gọi chung.
 
 ## Hạ tầng
+
+2026-10-26 13:37 - Deploy lên Cloudflare Pages ngay khi xong bước 2 để có link dùng thử; Harold tạo tài khoản Cloudflare và kết nối repo GitHub theo hướng dẫn.
 
 2026-10-26 13:37 - Tài khoản Admin đầu tiên tạo bằng script seed (username `admin`, mật khẩu tạm gửi riêng cho Harold, bắt đổi ở lần đăng nhập đầu).
 
