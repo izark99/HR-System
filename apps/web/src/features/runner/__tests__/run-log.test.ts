@@ -5,7 +5,7 @@ import { join, resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import type { RunSummary } from '../../../engine/protocol';
 import { asOfFromParams, todayIso } from '../as-of';
-import { buildRunLog, sha256Hex } from '../run-log';
+import { buildRunLog, isParamLogged, sha256Hex } from '../run-log';
 
 const FIXTURES = resolve(import.meta.dirname, '../../../../../../fixtures/payroll-timesheet');
 const flow = FlowDefinitionSchema.parse(
@@ -85,6 +85,47 @@ describe('buildRunLog (metadata only, spec §7.1)', () => {
     expect(entry.params).toEqual({ ky: '2026-09', ghi_chu: 'x'.repeat(100) });
     expect(JSON.stringify(entry)).not.toContain('Nguyễn');
     expect(entry.rows_out).toBeNull();
+  });
+
+  it('without an explicit `log`: month/date/select/boolean/number are logged, string is not (reviewer MAJOR)', async () => {
+    expect(isParamLogged({ type: 'string' })).toBe(false);
+    expect(isParamLogged({ type: 'string', log: true })).toBe(true);
+    for (const type of ['month', 'date', 'select', 'boolean', 'number'] as const) {
+      expect(isParamLogged({ type })).toBe(true);
+      expect(isParamLogged({ type, log: false })).toBe(false);
+    }
+    const entry = await buildRunLog({
+      flowVersionId: 'v1',
+      flowParams: [
+        { key: 'ky', label: 'Kỳ', type: 'month', required: true },
+        { key: 'ngay', label: 'Ngày', type: 'date', required: false },
+        { key: 'chi_nhanh', label: 'Chi nhánh', type: 'select', required: false },
+        { key: 'co', label: 'Cờ', type: 'boolean', required: false },
+        { key: 'he_so', label: 'Hệ số', type: 'number', required: false },
+        { key: 'ghi_chu', label: 'Ghi chú', type: 'string', required: false },
+      ],
+      params: {
+        ky: '2026-09',
+        ngay: '2026-09-15',
+        chi_nhanh: 'HN',
+        co: true,
+        he_so: 1.5,
+        ghi_chu: 'NV00001 Nguyễn Văn A',
+      },
+      slots: [],
+      status: 'succeeded',
+      durationMs: 1,
+      summary: null,
+      error: null,
+    });
+    expect(entry.params).toEqual({
+      ky: '2026-09',
+      ngay: '2026-09-15',
+      chi_nhanh: 'HN',
+      co: true,
+      he_so: 1.5,
+    });
+    expect(JSON.stringify(entry)).not.toMatch(/Nguyễn|NV00001/);
   });
 
   it('failed run: only the i18n key and node id, never error params (they can hold cell values)', async () => {

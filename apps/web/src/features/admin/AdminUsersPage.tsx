@@ -2,12 +2,13 @@ import { useId, useRef, useState, type FormEvent, type KeyboardEvent, type React
 import { useTranslation } from 'react-i18next';
 import { Button, Callout, Card, Chip, cx, PageHeader } from '../../components/ui';
 import type { Role } from '../../lib/database.types';
-import { useAuth } from '../auth/auth-context';
+import { signOutAndReload, useAuth, useAuthService } from '../auth/auth-context';
 import { normalizeUsername, USERNAME_PATTERN } from '../auth/credentials';
 import {
   errorKeyOf,
   type AdminApi,
   type AdminErrorKey,
+  type AdminWarning,
   type AdminFlow,
   type AdminGroup,
   type AdminUser,
@@ -113,6 +114,8 @@ function tabPanelProps(base: string, key: string) {
 interface Secret {
   username: string;
   password: string;
+  /** The account was changed but its audit entry could not be written. */
+  warning?: AdminWarning;
 }
 
 function TempPasswordDialog({ secret, onClose }: { secret: Secret | null; onClose: () => void }) {
@@ -152,6 +155,11 @@ function TempPasswordDialog({ secret, onClose }: { secret: Secret | null; onClos
       <Callout tone="amber" label={t('admin.temp.warningLabel')}>
         {t('admin.temp.warning')}
       </Callout>
+      {secret?.warning && (
+        <Callout tone="amber" label={t('admin.warnings.label')} role="status">
+          {t(`admin.warnings.${secret.warning}`)}
+        </Callout>
+      )}
       <Button
         variant="primary"
         className="self-end"
@@ -254,16 +262,14 @@ function RoleRadios({
   name,
   value,
   onChange,
-  disabled,
 }: {
   name: string;
   value: Role;
   onChange: (r: Role) => void;
-  disabled?: boolean;
 }) {
   const { t } = useTranslation();
   return (
-    <fieldset className="m-0 flex flex-wrap gap-4 border-0 p-0" disabled={disabled}>
+    <fieldset className="m-0 flex flex-wrap gap-4 border-0 p-0">
       <legend className={cx(labelClass, 'mb-1.5')}>{t('admin.users.role')}</legend>
       {(['user', 'admin'] as const).map((r) => (
         <label key={r} className="flex min-h-target items-center gap-2 text-label text-body">
@@ -312,7 +318,11 @@ function CreateUserForm({
       setFullName('');
       setRole('user');
       setGroupIds([]);
-      onCreated({ username: created.username, password: created.temp_password });
+      onCreated({
+        username: created.username,
+        password: created.temp_password,
+        ...(created.warning ? { warning: created.warning } : {}),
+      });
     } catch (err) {
       setError(errorKeyOf(err));
     } finally {
@@ -426,17 +436,26 @@ function EditUserForm({
   const [groupIds, setGroupIds] = useState<string[]>(user.groupIds);
   const [error, setError] = useState<AdminErrorKey | null>(null);
   const [busy, setBusy] = useState(false);
+  // Demoting oneself (allowed, MEMORY 2026-10-26 18:09) needs a second, explicit confirmation.
+  const selfDemote = self && user.role === 'admin' && role !== 'admin';
+  const [demoteConfirmed, setDemoteConfirmed] = useState(false);
+  const askDemote = selfDemote && !demoteConfirmed;
 
   async function submit(e: FormEvent) {
     e.preventDefault();
+    if (askDemote) {
+      setDemoteConfirmed(true);
+      return;
+    }
     setBusy(true);
     setError(null);
     try {
-      await api.updateUser(user.id, {
-        fullName,
-        ...(self ? {} : { role }),
-        groupIds,
-      });
+      await api.updateUser(user.id, { fullName, role, groupIds });
+      if (selfDemote) {
+        // Full reload: the app re-reads the profile and drops the Admin screens.
+        window.location.assign('/');
+        return;
+      }
       onSaved();
     } catch (err) {
       setError(errorKeyOf(err));
@@ -458,8 +477,19 @@ function EditUserForm({
           className={inputClass}
         />
       </div>
-      <RoleRadios name="edit-role" value={role} onChange={setRole} disabled={self} />
-      {self && <p className="m-0 text-small text-muted">{t('admin.edit.selfRole')}</p>}
+      <RoleRadios
+        name="edit-role"
+        value={role}
+        onChange={(r) => {
+          setRole(r);
+          setDemoteConfirmed(false);
+        }}
+      />
+      {selfDemote && demoteConfirmed && (
+        <Callout tone="coral" label={t('admin.self.label')} role="alert">
+          {t('admin.self.demote')}
+        </Callout>
+      )}
       <GroupCheckboxes
         groups={groups}
         value={groupIds}
@@ -468,7 +498,7 @@ function EditUserForm({
       />
       <ErrorText code={error} />
       <Button type="submit" variant="primary" disabled={busy} className="self-end">
-        {t('admin.edit.save')}
+        {selfDemote && demoteConfirmed ? t('admin.self.demoteAction') : t('admin.edit.save')}
       </Button>
     </form>
   );
@@ -483,13 +513,11 @@ function StatusChip({ user }: { user: AdminUser }) {
 
 function UsersTable({
   data,
-  selfId,
   onEdit,
   onReset,
   onToggleActive,
 }: {
   data: PageData;
-  selfId: string | null;
   onEdit: (u: AdminUser) => void;
   onReset: (u: AdminUser) => void;
   onToggleActive: (u: AdminUser) => void;
@@ -524,7 +552,6 @@ function UsersTable({
         </thead>
         <tbody>
           {data.users.map((u) => {
-            const self = u.id === selfId;
             return (
               <tr
                 key={u.id}
@@ -561,31 +588,25 @@ function UsersTable({
                     >
                       {t('admin.users.edit')}
                     </button>
-                    {!self && (
-                      <>
-                        <button
-                          type="button"
-                          className={linkButtonClass}
-                          aria-label={t('admin.users.resetNamed', { username: u.username })}
-                          onClick={() => onReset(u)}
-                        >
-                          {t('admin.users.reset')}
-                        </button>
-                        <button
-                          type="button"
-                          className={linkButtonClass}
-                          aria-label={t(
-                            u.isActive ? 'admin.users.lockNamed' : 'admin.users.unlockNamed',
-                            {
-                              username: u.username,
-                            },
-                          )}
-                          onClick={() => onToggleActive(u)}
-                        >
-                          {u.isActive ? t('admin.users.lock') : t('admin.users.unlock')}
-                        </button>
-                      </>
-                    )}
+                    <button
+                      type="button"
+                      className={linkButtonClass}
+                      aria-label={t('admin.users.resetNamed', { username: u.username })}
+                      onClick={() => onReset(u)}
+                    >
+                      {t('admin.users.reset')}
+                    </button>
+                    <button
+                      type="button"
+                      className={linkButtonClass}
+                      aria-label={t(
+                        u.isActive ? 'admin.users.lockNamed' : 'admin.users.unlockNamed',
+                        { username: u.username },
+                      )}
+                      onClick={() => onToggleActive(u)}
+                    >
+                      {u.isActive ? t('admin.users.lock') : t('admin.users.unlock')}
+                    </button>
                   </div>
                 </td>
               </tr>
@@ -611,7 +632,7 @@ function GroupForm({ group, onDone }: { group: AdminGroup | null; onDone: () => 
   async function submit(e: FormEvent) {
     e.preventDefault();
     if (!name.trim()) {
-      setError('invalid_input');
+      setError('group_name_required');
       return;
     }
     setBusy(true);
@@ -857,36 +878,64 @@ export function AdminUsersPage() {
   const { t } = useTranslation();
   const api = useAdminApi();
   const auth = useAuth();
+  const authService = useAuthService();
   const selfId = auth.status === 'signedIn' ? auth.user.id : null;
   const { data, error, reload } = useAdminQuery(loadAll);
   const [tab, setTab] = useState<'users' | 'groups'>('users');
   const [secret, setSecret] = useState<Secret | null>(null);
+  /** The Admin reset their own password: sign out once the temp password has been noted. */
+  const [selfReset, setSelfReset] = useState(false);
   const [confirm, setConfirm] = useState<Confirm | null>(null);
   const [editing, setEditing] = useState<AdminUser | null>(null);
   const [editingGroup, setEditingGroup] = useState<AdminGroup | null>(null);
   const tabsBase = useId();
 
+  /** Body of a confirm dialog, with an explicit warning when the Admin targets themself. */
+  function confirmBody(text: string, selfWarning: string | null): ReactNode {
+    if (!selfWarning) return text;
+    return (
+      <div className="flex flex-col gap-3">
+        <Callout tone="coral" label={t('admin.self.label')} role="alert">
+          {selfWarning}
+        </Callout>
+        <p className="m-0">{text}</p>
+      </div>
+    );
+  }
+
   function askReset(u: AdminUser) {
+    const self = u.id === selfId;
     setConfirm({
       title: t('admin.reset.title', { username: u.username }),
-      body: t('admin.reset.body'),
+      body: confirmBody(t('admin.reset.body'), self ? t('admin.self.reset') : null),
       action: t('admin.reset.action'),
       run: async () => {
         const r = await api.resetPassword(u.id);
-        reload();
-        setSecret({ username: u.username, password: r.temp_password });
+        if (self) setSelfReset(true);
+        else reload();
+        setSecret({
+          username: u.username,
+          password: r.temp_password,
+          ...(r.warning ? { warning: r.warning } : {}),
+        });
       },
     });
   }
 
   function askToggle(u: AdminUser) {
+    const selfLock = u.id === selfId && u.isActive;
     setConfirm({
       title: t(u.isActive ? 'admin.lock.title' : 'admin.unlock.title', { username: u.username }),
-      body: t(u.isActive ? 'admin.lock.body' : 'admin.unlock.body'),
+      body: confirmBody(
+        t(u.isActive ? 'admin.lock.body' : 'admin.unlock.body'),
+        selfLock ? t('admin.self.lock') : null,
+      ),
       action: t(u.isActive ? 'admin.users.lock' : 'admin.users.unlock'),
       run: async () => {
         await api.setActive(u.id, !u.isActive);
-        reload();
+        // Own sessions are revoked: leave the app now instead of failing on the next request.
+        if (selfLock) await signOutAndReload(authService);
+        else reload();
       },
     });
   }
@@ -949,7 +998,6 @@ export function AdminUsersPage() {
                 {tab === 'users' ? (
                   <UsersTable
                     data={data}
-                    selfId={selfId}
                     onEdit={setEditing}
                     onReset={askReset}
                     onToggleActive={askToggle}
@@ -984,7 +1032,13 @@ export function AdminUsersPage() {
         </>
       )}
 
-      <TempPasswordDialog secret={secret} onClose={() => setSecret(null)} />
+      <TempPasswordDialog
+        secret={secret}
+        onClose={() => {
+          setSecret(null);
+          if (selfReset) void signOutAndReload(authService);
+        }}
+      />
       <ConfirmDialog confirm={confirm} onClose={() => setConfirm(null)} />
       <EditUserDialog
         user={editing}

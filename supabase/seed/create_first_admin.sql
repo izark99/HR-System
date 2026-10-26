@@ -14,15 +14,22 @@
 -- quoted literals, e.g. :'admin_username' -> 'admin'. Never commit the substituted file, and do
 -- not keep the password in shell history (prefer `read -s` + an env var).
 --
+-- The password never lands in a table and the script runs no DDL with it (statements are not
+-- written to the server log under log_statement = 'ddl'): psql cannot substitute variables inside
+-- a dollar-quoted DO body, so the values travel as transaction-local settings set by one plain
+-- SELECT, are read once by the DO block and cleared before commit. Change the temporary
+-- password right after the first login (the app forces it anyway).
+--
 -- The login e-mail is synthetic: <username>@users.hrflow.local (spec §6), confirmed, no mail sent.
 
 begin;
 
-create temporary table first_admin_input on commit drop as
+-- Prints only "t": set_config returns the value, which must not be echoed.
 select
-  lower(btrim(:'admin_username'))::text as username,
-  (:'admin_password')::text as password,
-  btrim(:'admin_full_name')::text as full_name;
+  set_config('hrflow.first_admin_username', lower(btrim(:'admin_username')), true) is not null
+  and set_config('hrflow.first_admin_password', :'admin_password', true) is not null
+  and set_config('hrflow.first_admin_full_name', btrim(:'admin_full_name'), true) is not null
+  as inputs_set;
 
 do $$
 declare
@@ -30,15 +37,21 @@ declare
   v_id uuid := gen_random_uuid();
   v_email text;
 begin
-  select * into v_in from pg_temp.first_admin_input;
+  select
+    current_setting('hrflow.first_admin_username', true) as username,
+    current_setting('hrflow.first_admin_password', true) as password,
+    current_setting('hrflow.first_admin_full_name', true) as full_name
+  into v_in;
+  -- Do not leave the password readable in the session for the rest of the transaction.
+  perform set_config('hrflow.first_admin_password', '', true);
 
   if exists (select 1 from public.profiles where role = 'admin') then
     raise exception 'first admin already exists: refusing to create another one';
   end if;
-  if v_in.username !~ '^[a-z0-9][a-z0-9._-]{1,30}[a-z0-9]$' then
+  if coalesce(v_in.username, '') !~ '^[a-z0-9][a-z0-9._-]{1,30}[a-z0-9]$' then
     raise exception 'invalid username (3-32 chars: a-z 0-9 . _ -)';
   end if;
-  if char_length(v_in.password) < 10 then
+  if char_length(coalesce(v_in.password, '')) < 10 then
     raise exception 'password must have at least 10 characters';
   end if;
 

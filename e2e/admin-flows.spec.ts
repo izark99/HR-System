@@ -300,29 +300,51 @@ test.describe('import flow JSON → migration notices (.csv in accept)', () => {
     return def;
   }
 
-  test('.csv among other formats: stripped with an amber notice, publish still possible', async ({
+  type Published = { p_definition: { inputSlots: { key: string; accept?: string[] }[] } };
+
+  test('.csv among other formats: stripped, notice by slot label, the CLEANED JSON is stored', async ({
     page,
     supabase,
   }) => {
     await openImport(page, 'csv-lan.json', withAccept([['.xlsx', '.csv'], ['.xlsx']]));
     const dialog = importDialog(page);
     await expect(dialog.getByText('Đã tự điều chỉnh:')).toBeVisible();
-    await expect(dialog).toContainText('Mục upload "bang_luong"');
-    await expect(dialog).toContainText('đã bỏ định dạng .csv');
-    await expect(dialog).not.toContainText('cham_cong'); // untouched slot
+    // The slot's display label, not its technical key.
+    await expect(dialog).toContainText(
+      'Đã bỏ định dạng .csv khỏi Bảng lương (nhiều chi nhánh) (không còn được hỗ trợ).',
+    );
+    await expect(dialog).not.toContainText('bang_luong');
+    await expect(dialog).not.toContainText('Chấm công (nhiều chi nhánh)'); // untouched slot
     await dialog.getByLabel(/^Tên flow/).fill('Flow csv');
     await publishButton(page).click();
     await expect(dialog).toHaveCount(0);
-    expect(supabase.bodiesOf('/rest/v1/rpc/admin_publish_flow_version')).toHaveLength(1);
+    const bodies = supabase.bodiesOf(
+      '/rest/v1/rpc/admin_publish_flow_version',
+    ) as unknown as Published[];
+    expect(bodies).toHaveLength(1);
+    const slots = bodies[0]!.p_definition.inputSlots;
+    expect(slots[0]!.accept).toEqual(['.xlsx']);
+    expect(slots[1]!.accept).toEqual(['.xlsx']);
+    expect(JSON.stringify(bodies[0]!.p_definition)).not.toContain('.csv');
   });
 
-  test('slot that accepted only .csv falls back to .xlsx/.xls, notice says so', async ({
+  test('slot that accepted only .csv: accept removed (default .xlsx/.xls) before storing', async ({
     page,
+    supabase,
   }) => {
     await openImport(page, 'csv-chi.json', withAccept([['.csv'], ['.xlsx']]));
     const dialog = importDialog(page);
-    await expect(dialog.getByText('Đã tự điều chỉnh:')).toBeVisible();
-    await expect(dialog).toContainText('chỉ nhận .csv nên đã chuyển sang nhận .xlsx, .xls');
+    await expect(dialog).toContainText(
+      'Đã bỏ định dạng .csv khỏi Bảng lương (nhiều chi nhánh) (không còn được hỗ trợ).',
+    );
+    await dialog.getByLabel(/^Tên flow/).fill('Flow csv chi');
+    await publishButton(page).click();
+    await expect(dialog).toHaveCount(0);
+    const bodies = supabase.bodiesOf(
+      '/rest/v1/rpc/admin_publish_flow_version',
+    ) as unknown as Published[];
+    expect(bodies[0]!.p_definition.inputSlots[0]).not.toHaveProperty('accept');
+    expect(JSON.stringify(bodies[0]!.p_definition)).not.toContain('.csv');
   });
 
   test('a clean definition shows no notice', async ({ page }) => {

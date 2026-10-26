@@ -92,7 +92,7 @@ Thiếu biến khi build → app hiện màn "Ứng dụng chưa được cấu 
 2. **Kiểm thử RLS**: chạy `supabase/tests/rls.sql` (tự rollback); kết quả cuối phải là `RLS OK`.
    Không có Supabase? Chạy trên PostgreSQL ≥ 15 thường: nạp `supabase/tests/support/supabase_stub.sql` trước (chỉ dùng local).
 3. **Edge Function `admin-users`**: deploy 4 file trong `supabase/functions/admin-users/` (`index.ts`, `handler.ts`, `backend.ts`, `deno.json`). Secret cần đặt: `ALLOWED_ORIGINS` = các origin của app, cách nhau dấu phẩy (VD `https://<tên>.pages.dev,http://localhost:5173`). `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY` do Supabase cung cấp sẵn. Hàm tự kiểm tra JWT + role Admin.
-4. **Admin đầu tiên**: chạy `supabase/seed/create_first_admin.sql` một lần (hướng dẫn tham số ở đầu file); script từ chối nếu đã có Admin.
+4. **Admin đầu tiên**: chạy `supabase/seed/create_first_admin.sql` một lần (hướng dẫn tham số ở đầu file); script từ chối nếu đã có Admin. Mật khẩu không được ghi vào bảng hay câu lệnh DDL nào, nhưng vẫn nên **đăng nhập và đổi mật khẩu tạm ngay** (app cũng bắt buộc đổi ở lần đăng nhập đầu).
 5. **Dashboard → Authentication**:
    - Sign In / Providers: **tắt "Allow new users to sign up"** (không public sign-up).
    - Email provider: đặt **Minimum password length = 10** (tài khoản do Admin tạo đã được xác nhận email sẵn, không gửi thư).

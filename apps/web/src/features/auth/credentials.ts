@@ -32,6 +32,8 @@ export function checkNewPassword(password: string, confirm: string): PasswordPro
 export type AuthErrorKey =
   | 'invalidCredentials'
   | 'locked'
+  /** Signed in, but the profile is locked or not readable (RLS): one message for both. */
+  | 'noAccess'
   | 'rateLimited'
   | 'network'
   | 'weakPassword'

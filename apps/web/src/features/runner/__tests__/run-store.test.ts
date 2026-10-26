@@ -837,6 +837,118 @@ describe('RunStore: version by as-of date and run logging (Supabase source)', ()
     expect(store.getSnapshot().run.status).toBe('done');
   });
 
+  /** v1 until 2026-07-01 (exclusive), gap in July/August, v2 from 2026-09-01; like the server, a
+   * period without a version is answered with the latest version and applies = false. */
+  function gapSource(): FlowSource {
+    const g1: Version = { id: 'v1', no: 1, from: '2026-01-01', to: '2026-07-01' };
+    const pick = (asOf: string) =>
+      asOf >= V2.from ? V2 : asOf >= g1.from && asOf < g1.to! ? g1 : null;
+    return {
+      list: () => Promise.resolve([]),
+      get: (code, asOf) => {
+        const v = pick(asOf) ?? V2;
+        const def = structuredClone(flowJson) as { inputSlots: { label: string }[] };
+        def.inputSlots[0]!.label = `Bảng lương (${v.id})`;
+        return Promise.resolve({
+          summary: {
+            code,
+            name: 'Đối chiếu',
+            description: '',
+            category: 'Lương',
+            inputCount: 2,
+            versionLabel: `v${v.no}`,
+          },
+          definition: def,
+          version: {
+            id: v.id,
+            versionNo: v.no,
+            effectiveFrom: v.from,
+            effectiveTo: v.to,
+            applies: pick(asOf) !== null,
+          },
+        });
+      },
+    };
+  }
+
+  it('v1 → period without a version → v2: the v2 definition is loaded and logged (reviewer BLOCKING)', async () => {
+    const logged: RunLogInsert[] = [];
+    const logger: RunLogger = {
+      logRun: (e) => {
+        logged.push(e);
+        return Promise.resolve();
+      },
+    };
+    const store = new RunStore(gapSource(), { logger, today: () => '2026-03-15' });
+    await store.open('payroll-timesheet');
+    expect(store.getSnapshot().version?.id).toBe('v1');
+    store.addFiles('bang_luong', [new File(['a'], 'a.xlsx')]);
+    store.addFiles('cham_cong', [new File(['b'], 'b.xlsx')]);
+    for (const v of scripts[0]!.validations) v.d.resolve(okReport(v.slot, 1));
+
+    store.setParam('ky_luong', '2026-08');
+    await until(() => store.getSnapshot().versionCheck === 'none');
+    // The non-applying answer does not replace the loaded version.
+    expect(store.getSnapshot().version?.id).toBe('v1');
+    expect(scripts[0]!.loads).toBe(1);
+
+    store.setParam('ky_luong', '2026-10');
+    await until(() => scripts[0]!.loads === 2);
+    await until(() => scripts[0]!.validations.length === 4);
+    for (const v of scripts[0]!.validations.slice(2)) v.d.resolve(okReport(v.slot, 1));
+    await until(() => readiness(store.getSnapshot()).canRun);
+    const s = store.getSnapshot();
+    expect(s.version?.id).toBe('v2');
+    expect(s.flow?.inputSlots[0]?.label).toBe('Bảng lương (v2)');
+
+    const r = store.run();
+    scripts[0]!.runs[0]!.resolve({
+      ok: true,
+      summary: { durationMs: 1, sheets: [], compare: null } as never,
+    });
+    await r;
+    await until(() => logged.length === 1);
+    expect(logged[0]).toMatchObject({ flow_version_id: 'v2', params: { ky_luong: '2026-10' } });
+  });
+
+  it('opened in a gap (v2 loaded, not applying) → a v2 period needs no reload', async () => {
+    const store = new RunStore(gapSource(), { today: () => '2026-08-10' });
+    await store.open('payroll-timesheet');
+    expect(store.getSnapshot()).toMatchObject({ versionCheck: 'none', version: { id: 'v2' } });
+    store.setParam('ky_luong', '2026-10');
+    await until(() => store.getSnapshot().versionCheck === 'ok');
+    expect(scripts[0]!.loads).toBe(1);
+    store.setParam('ky_luong', '2026-03');
+    await until(() => scripts[0]!.loads === 2 && store.getSnapshot().versionCheck === 'ok');
+    expect(store.getSnapshot().flow?.inputSlots[0]?.label).toBe('Bảng lương (v1)');
+  });
+
+  it('a period change during a run is applied after the run settles, not under it', async () => {
+    const store = new RunStore(gapSource(), { today: () => '2026-03-15' });
+    await store.open('payroll-timesheet');
+    store.setParam('ky_luong', '2026-03');
+    store.addFiles('bang_luong', [new File(['a'], 'a.xlsx')]);
+    store.addFiles('cham_cong', [new File(['b'], 'b.xlsx')]);
+    for (const v of scripts[0]!.validations) v.d.resolve(okReport(v.slot, 1));
+    await until(() => readiness(store.getSnapshot()).canRun);
+
+    const r = store.run();
+    store.setParam('ky_luong', '2026-10');
+    await new Promise((res) => setTimeout(res, 20));
+    expect(scripts[0]!.loads).toBe(1);
+    expect(store.getSnapshot().version?.id).toBe('v1');
+    expect(readiness(store.getSnapshot()).canRun).toBe(false);
+
+    scripts[0]!.runs[0]!.resolve({
+      ok: true,
+      summary: { durationMs: 1, sheets: [], compare: null } as never,
+    });
+    await r;
+    await until(() => scripts[0]!.loads === 2);
+    await until(() => store.getSnapshot().version?.id === 'v2');
+    expect(store.getSnapshot().flow?.inputSlots[0]?.label).toBe('Bảng lương (v2)');
+  });
+
   it('bundled flows (no version) are not logged', async () => {
     const logRun = vi.fn(() => Promise.resolve());
     const store = new RunStore(source, { logger: { logRun } });

@@ -67,9 +67,13 @@ insert into public.flow_assignments (flow_id, group_id) values
 insert into public.flow_assignments (flow_id, user_id) values
   ('00000000-0000-4000-8000-0000000000f2', '00000000-0000-4000-8000-000000000002');
 
--- A run log of nv02 (nv01 must not see it).
+-- A run log of nv02 (nv01 must not see it) and one of nv03 from before the lock.
 insert into public.run_logs (user_id, flow_version_id, status, duration_ms) values
-  ('00000000-0000-4000-8000-000000000002', '00000000-0000-4000-8000-0000000001f2', 'succeeded', 10);
+  ('00000000-0000-4000-8000-000000000002', '00000000-0000-4000-8000-0000000001f2', 'succeeded', 10),
+  ('00000000-0000-4000-8000-000000000003', '00000000-0000-4000-8000-0000000002f1', 'succeeded', 10);
+-- A direct assignment of nv03 (still hidden once locked).
+insert into public.flow_assignments (flow_id, user_id) values
+  ('00000000-0000-4000-8000-0000000000f1', '00000000-0000-4000-8000-000000000003');
 
 -- Generic "this statement must fail with SQLSTATE x" helper (dropped by the rollback).
 create function pg_temp.expect_error(p_sql text, p_state text, p_label text)
@@ -308,6 +312,20 @@ select pg_temp.expect_error(
   '42501', 'locked user cannot log runs');
 select pg_temp.expect(
   (select count(*) from public.app_settings) = 0, 'locked user cannot read app settings');
+select pg_temp.expect(
+  (select count(*) from public.groups where name like 'RLS %') = 0, 'locked user sees no groups');
+select pg_temp.expect(
+  (select count(*) from public.group_members) = 0, 'locked user sees no group memberships');
+select pg_temp.expect(
+  (select count(*) from public.flow_assignments) = 0, 'locked user sees no flow assignments');
+select pg_temp.expect(
+  (select count(*) from public.run_logs) = 0, 'locked user sees no run logs (not even own)');
+select pg_temp.expect(
+  (select count(*) from public.my_recent_runs(50)) = 0, 'locked user: my_recent_runs is empty');
+select pg_temp.expect(
+  (select count(*) from public.profiles
+    where id = '00000000-0000-4000-8000-000000000003' and not is_active) = 1,
+  'locked user still reads own profile (client shows "locked")');
 do $$
 declare
   n integer;
@@ -354,7 +372,7 @@ select pg_temp.expect(
   (select count(*) from public.profiles where username like 'rls.%') = 4, 'admin sees all profiles');
 select pg_temp.expect(
   (select count(*) from public.run_logs r join public.profiles p on p.id = r.user_id
-    where p.username like 'rls.%') = 2, 'admin sees all run logs');
+    where p.username like 'rls.%') = 3, 'admin sees all run logs');
 select pg_temp.expect(
   (select count(*) from public.my_flows('2026-09-15') where code like 'rls-%') = 3,
   'admin: my_flows lists every flow with a published version');
@@ -383,6 +401,15 @@ select pg_temp.expect_error(
 select pg_temp.expect_error(
   $$update public.flow_versions set effective_from = '2025-01-01' where id = '00000000-0000-4000-8000-0000000001f1'$$,
   'HF001', 'published effective_from is immutable');
+select pg_temp.expect_error(
+  $$update public.flow_versions set id = '00000000-0000-4000-8000-0000000009f1' where id = '00000000-0000-4000-8000-0000000002f1'$$,
+  'HF001', 'published id is immutable');
+select pg_temp.expect_error(
+  $$update public.flow_versions set version_no = 99 where id = '00000000-0000-4000-8000-0000000002f1'$$,
+  'HF001', 'published version_no is immutable');
+select pg_temp.expect_error(
+  $$update public.flow_versions set flow_id = '00000000-0000-4000-8000-0000000000f3' where id = '00000000-0000-4000-8000-0000000002f1'$$,
+  'HF001', 'published flow_id is immutable');
 select pg_temp.expect_error(
   $$delete from public.flow_versions where id = '00000000-0000-4000-8000-0000000001f1'$$,
   'HF001', 'published versions cannot be deleted');
@@ -450,6 +477,31 @@ select pg_temp.expect(
   (select not must_change_password and password_changed_at is not null
      from public.profiles where id = '00000000-0000-4000-8000-000000000001'),
   'a password change clears must_change_password');
+
+-- ---------------------------------------------------------------------------------------------
+-- Default privileges: objects created later get no API access until granted explicitly
+-- ---------------------------------------------------------------------------------------------
+
+create table public.rls_future_table (id bigint generated always as identity primary key);
+create sequence public.rls_future_seq;
+create function public.rls_future_fn() returns integer language sql as $$ select 1 $$;
+select pg_temp.expect(
+  not has_table_privilege('authenticated', 'public.rls_future_table', 'SELECT')
+  and not has_table_privilege('anon', 'public.rls_future_table', 'SELECT')
+  and not has_table_privilege('authenticated', 'public.rls_future_table', 'INSERT'),
+  'a new table gets no anon/authenticated privileges by default');
+select pg_temp.expect(
+  not has_sequence_privilege('authenticated', 'public.rls_future_seq', 'USAGE')
+  and not has_sequence_privilege('anon', 'public.rls_future_seq', 'USAGE'),
+  'a new sequence gets no anon/authenticated privileges by default');
+select pg_temp.expect(
+  not exists (
+    select 1
+    from pg_proc p, aclexplode(p.proacl) a
+    where p.oid = 'public.rls_future_fn()'::regprocedure
+      and a.grantee in ('anon'::regrole, 'authenticated'::regrole)
+  ),
+  'a new function gets no direct anon/authenticated grant by default');
 
 select 'RLS OK' as rls_result;
 

@@ -309,34 +309,32 @@ test.describe('small viewports: the popover is fully visible', () => {
   });
 });
 
-test.describe('KNOWN BUG', () => {
+test.describe('fixed bugs (were KNOWN BUGS)', () => {
   test.use({ signedInAs: ADMIN });
 
   const importDialog = (page: Page) => page.getByRole('dialog', { name: 'Nhập flow từ JSON' });
   const from = (page: Page) => importDialog(page).locator('#import-from');
 
-  // picker-shared.tsx:134-139 stops React propagation on Escape but does not preventDefault(),
-  // so the browser still fires `cancel` on the surrounding modal <dialog> and the whole import
-  // form (with everything the Admin typed) is closed.
-  test.fail(
-    'Escape closes only the picker: the modal dialog stays open and focus returns to the trigger',
-    async ({ page }) => {
-      await page.goto('/admin/flows');
-      await page
-        .getByLabel('Chọn file flow JSON')
-        .setInputFiles(textFile('flow-ngay.json', JSON.stringify(baseFlowDefinition())));
-      await pickDate(page, from(page), '2026-03-10');
-      await from(page).focus();
-      await page.keyboard.press('Enter');
-      await expect(pickerPopover(page)).toBeVisible();
-      await page.keyboard.press('Escape');
-      await expect(pickerPopover(page)).toHaveCount(0);
-      await expect(importDialog(page)).toBeVisible({ timeout: 2_000 });
-      await expect(from(page)).toBeFocused();
-      await expect(from(page)).toContainText('10/03/2026'); // value unchanged
-      // A second Escape (picker closed) closes the dialog itself.
-      await page.keyboard.press('Escape');
-      await expect(importDialog(page)).toHaveCount(0);
-    },
-  );
+  // Was picker-shared.tsx:134-139: Escape was not preventDefault()-ed, so the browser also fired
+  // `cancel` on the surrounding modal <dialog> and closed the whole import form.
+  test('Escape closes only the picker: the modal dialog stays open and focus returns to the trigger', async ({
+    page,
+  }) => {
+    await page.goto('/admin/flows');
+    await page
+      .getByLabel('Chọn file flow JSON')
+      .setInputFiles(textFile('flow-ngay.json', JSON.stringify(baseFlowDefinition())));
+    await pickDate(page, from(page), '2026-03-10');
+    await from(page).focus();
+    await page.keyboard.press('Enter');
+    await expect(pickerPopover(page)).toBeVisible();
+    await page.keyboard.press('Escape');
+    await expect(pickerPopover(page)).toHaveCount(0);
+    await expect(importDialog(page)).toBeVisible({ timeout: 2_000 });
+    await expect(from(page)).toBeFocused();
+    await expect(from(page)).toContainText('10/03/2026'); // value unchanged
+    // A second Escape (picker closed) closes the dialog itself.
+    await page.keyboard.press('Escape');
+    await expect(importDialog(page)).toHaveCount(0);
+  });
 });

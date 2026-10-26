@@ -133,6 +133,14 @@ export class RunStore {
   private readonly listeners = new Set<() => void>();
   private client: EngineClient | null = null;
   private definition: unknown = null;
+  /**
+   * Id of the version whose definition is actually loaded in the worker. `state.version` is what
+   * the UI shows; the two can differ (e.g. after a period without any version), so reload
+   * decisions and the run log use this one.
+   */
+  private loadedVersionId: string | null = null;
+  /** As-of date whose version could not be applied while a run was in progress. */
+  private deferredAsOf: string | null = null;
   private nextFileId = 1;
   /** Bumped by every open/run/restart; late worker answers with an old token are dropped. */
   private token = 0;
@@ -208,6 +216,8 @@ export class RunStore {
     keep: { params?: ParamValues; slots?: Record<string, SlotState> },
   ): Promise<void> {
     this.definition = loaded.definition;
+    // Unknown until the worker accepts it.
+    this.loadedVersionId = null;
     let result: LoadFlowResult;
     try {
       result = await this.engine().api.loadFlow(loaded.definition);
@@ -235,6 +245,7 @@ export class RunStore {
       };
     }
     const version = loaded.version ?? null;
+    this.loadedVersionId = version?.id ?? null;
     this.set((s) => ({
       ...s,
       load: 'ready',
@@ -289,13 +300,23 @@ export class RunStore {
       return;
     }
     if (!next.applies) {
-      this.set((s) => ({ ...s, versionCheck: 'none', version: next }));
+      // `version` keeps describing the loaded definition: the server answers with a version that
+      // does not apply, and treating it as loaded would skip the reload later (stale definition).
+      this.deferredAsOf = null;
+      this.set((s) => ({ ...s, versionCheck: 'none' }));
       return;
     }
-    if (next.id === this.state.version?.id || this.isBusy()) {
+    if (next.id === this.loadedVersionId) {
+      this.deferredAsOf = null;
       this.set((s) => ({ ...s, versionCheck: 'ok', version: next }));
       return;
     }
+    if (this.isBusy()) {
+      // Cannot swap the definition under a running flow: resolve again once the run settles.
+      this.deferredAsOf = asOf;
+      return;
+    }
+    this.deferredAsOf = null;
     // Another version applies: reload it (drops in-flight answers of the old definition).
     const reload = ++this.token;
     this.set((s) => ({ ...s, versionCheck: 'resolving' }));
@@ -371,12 +392,14 @@ export class RunStore {
       return;
     }
     if (this.state.versionCheck !== 'ok') return;
+    if ((this.state.version?.id ?? null) !== this.loadedVersionId) return;
     const token = ++this.token;
     const params = { ...this.state.params };
     this.currentRun = {
       token,
       startedAt: Date.now(),
-      versionId: this.state.version?.id ?? null,
+      // What the worker computes with, not what the callout says.
+      versionId: this.loadedVersionId,
       flow,
       params,
       slots: flow.inputSlots.map((slot) => {
@@ -442,6 +465,15 @@ export class RunStore {
       }));
       this.logRun(token, 'failed', null, ENGINE_CRASHED);
     }
+    this.resolveDeferred();
+  }
+
+  /** A period change made during a run is applied once the run has settled. */
+  private resolveDeferred(): void {
+    const asOf = this.deferredAsOf;
+    if (asOf === null || this.isBusy()) return;
+    this.deferredAsOf = null;
+    void this.resolveVersion(asOf);
   }
 
   /**
@@ -489,6 +521,7 @@ export class RunStore {
     this.set((s) => ({ ...s, run: { ...s.run, status: 'cancelled' } }));
     this.logRun(token, 'cancelled', null, null);
     await this.restartEngine();
+    this.resolveDeferred();
   }
 
   /** After a failed restore: try again on a fresh worker. */

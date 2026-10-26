@@ -12,7 +12,7 @@ import { cx } from './ui';
 /**
  * Building blocks shared by MonthPicker and DatePicker: the input-like trigger button, the
  * non-modal popover dialog (closes on Escape / outside click / focus leaving it, returns focus to
- * the trigger on Escape) and the icons. No dependency.
+ * the trigger on Escape; inside a modal <dialog> Escape closes only the picker) and the icons. No dependency.
  */
 
 const iconProps = {
@@ -101,8 +101,21 @@ export function usePickerPopover(triggerRef: RefObject<HTMLButtonElement | null>
     const onDown = (e: PointerEvent) => {
       if (!rootRef.current?.contains(e.target as Node)) close(false);
     };
+    // Fallback for a picker inside a modal <dialog>: if the browser still raises the dialog's
+    // `cancel` (close request) while the picker is open, it closes the picker only.
+    const onCancel = (e: Event) => {
+      const root = rootRef.current;
+      if (root && e.target instanceof Node && e.target.contains(root)) {
+        e.preventDefault();
+        close(true);
+      }
+    };
     document.addEventListener('pointerdown', onDown);
-    return () => document.removeEventListener('pointerdown', onDown);
+    document.addEventListener('cancel', onCancel, true);
+    return () => {
+      document.removeEventListener('pointerdown', onDown);
+      document.removeEventListener('cancel', onCancel, true);
+    };
   }, [open, close]);
 
   return { open, setOpen, close, shift, rootRef };
@@ -133,6 +146,9 @@ export function PickerPanel({
       className="absolute top-full z-40 mt-2 flex flex-col gap-2 rounded-card bg-card p-3 shadow-card"
       onKeyDown={(e) => {
         if (e.key === 'Escape') {
+          // preventDefault: inside a modal <dialog> the browser would otherwise turn this Escape
+          // into a close request for the dialog too (only the picker must close).
+          e.preventDefault();
           e.stopPropagation();
           onClose(true);
         }

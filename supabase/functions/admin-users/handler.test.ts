@@ -215,21 +215,40 @@ describe('admin-users: actions', () => {
     expect(order).toEqual(['password', 'profile:{"must_change_password":true}', 'revoke']);
   });
 
-  it('self actions are refused: reset own password, lock self, demote self', async () => {
+  it('self actions are allowed (MEMORY 2026-10-26 18:09): reset own password, lock self, demote self', async () => {
     const b = fakeBackend();
-    expect((await call(b, { action: 'reset_password', user_id: ADMIN.id })).json.error?.code).toBe(
-      'self_action_forbidden',
-    );
-    expect(
-      (await call(b, { action: 'set_active', user_id: ADMIN.id, active: false })).res.status,
-    ).toBe(409);
-    expect((await call(b, { action: 'update', user_id: ADMIN.id, role: 'user' })).res.status).toBe(
-      409,
-    );
-    // Renaming self is fine.
-    expect(
-      (await call(b, { action: 'update', user_id: ADMIN.id, full_name: 'Tên mới' })).json.ok,
-    ).toBe(true);
+    const reset = await call(b, { action: 'reset_password', user_id: ADMIN.id });
+    expect(reset.json.ok).toBe(true);
+    expect(reset.json.data?.temp_password).toMatch(/^[A-Za-z2-9]{16}$/);
+    expect(b.setPassword).toHaveBeenCalledWith(ADMIN.id, expect.any(String));
+
+    const lock = await call(b, { action: 'set_active', user_id: ADMIN.id, active: false });
+    expect(lock.json.ok).toBe(true);
+    expect(b.setBanned).toHaveBeenCalledWith(ADMIN.id, true);
+    expect(b.revokeSessions).toHaveBeenCalledWith(ADMIN.id);
+
+    const demote = await call(b, { action: 'update', user_id: ADMIN.id, role: 'user' });
+    expect(demote.json.ok).toBe(true);
+    expect(b.updateProfile).toHaveBeenCalledWith(ADMIN.id, { role: 'user' });
+  });
+
+  it('audit insert fails after create / reset → still ok with the password + warning (reviewer MINOR)', async () => {
+    const b = fakeBackend({ audit: () => Promise.reject(new Error('db down')) });
+    const created = await call(b, { action: 'create', username: 'hr.audit' });
+    expect(created.res.status).toBe(200);
+    expect(created.json.ok).toBe(true);
+    expect(created.json.data).toMatchObject({ user_id: NEW_ID, warning: 'audit_failed' });
+    expect(created.json.data?.temp_password).toMatch(/^[A-Za-z2-9]{16}$/);
+    expect(b.deleteAuthUser).not.toHaveBeenCalled();
+
+    const reset = await call(b, { action: 'reset_password', user_id: USER.id });
+    expect(reset.json.ok).toBe(true);
+    expect(reset.json.data).toMatchObject({ warning: 'audit_failed' });
+    expect(reset.json.data?.temp_password).toMatch(/^[A-Za-z2-9]{16}$/);
+
+    // Without a failure there is no warning.
+    const ok = await call(fakeBackend(), { action: 'create', username: 'hr.audit2' });
+    expect(ok.json.data).not.toHaveProperty('warning');
   });
 
   it('set_active false: ban + is_active false + revoke; true: unban', async () => {

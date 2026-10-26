@@ -215,6 +215,8 @@ export class SupabaseMock {
   ];
   /** Next admin-users call / publish RPC fails with this (see InjectedFailure). */
   functionFailure: InjectedFailure | null = null;
+  /** Successful create / reset_password replies carry this warning (audit insert failed). */
+  functionWarning: 'audit_failed' | null = null;
   publishFailure: InjectedFailure | null = null;
   /** resolve_flow_version fails (500) while set; `resolveDelayMs(asOf)` delays its answer. */
   resolveFailure: InjectedFailure | null = null;
@@ -634,7 +636,8 @@ export class SupabaseMock {
         return json(f.status, { ok: false, error: { code: f.code } });
       }
       const target = this.users.find((u) => u.id === req.user_id);
-      const selfAction = target?.id === caller.id;
+      // Admins may reset / lock / demote themselves (MEMORY 2026-10-26 18:09): no self guard.
+      const warning = this.functionWarning ? { warning: this.functionWarning } : {};
       if (req.action === 'create') {
         const username = String(req.username);
         if (this.users.some((u) => u.username === username)) {
@@ -655,25 +658,20 @@ export class SupabaseMock {
         }
         return json(200, {
           ok: true,
-          data: { user_id: user.id, username, temp_password: user.password },
+          data: { user_id: user.id, username, temp_password: user.password, ...warning },
         });
       }
       if (!target) return json(404, { ok: false, error: { code: 'not_found' } });
       if (req.action === 'reset_password') {
-        if (selfAction) return json(409, { ok: false, error: { code: 'self_action_forbidden' } });
         target.password = RESET_TEMP_PASSWORD;
         target.must_change_password = true;
-        return json(200, { ok: true, data: { temp_password: RESET_TEMP_PASSWORD } });
+        return json(200, { ok: true, data: { temp_password: RESET_TEMP_PASSWORD, ...warning } });
       }
       if (req.action === 'set_active') {
-        if (selfAction) return json(409, { ok: false, error: { code: 'self_action_forbidden' } });
         target.is_active = Boolean(req.active);
         return json(200, { ok: true, data: {} });
       }
       if (req.action === 'update') {
-        if (selfAction && req.role !== undefined && req.role !== target.role) {
-          return json(409, { ok: false, error: { code: 'self_action_forbidden' } });
-        }
         if (typeof req.full_name === 'string') target.full_name = req.full_name;
         if (req.role === 'admin' || req.role === 'user') target.role = req.role;
         if (Array.isArray(req.group_ids)) {

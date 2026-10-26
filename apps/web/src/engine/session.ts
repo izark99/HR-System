@@ -89,7 +89,9 @@ export class EngineSession {
     this.reset();
     // Published versions must stay loadable: old shapes are upgraded in memory first (spec §8).
     const migrated = migrateFlowDefinition(raw);
-    const notices = migrated.notes.map((n) => this.t(`flow.migration.${n.code}`, { slot: n.slot }));
+    const notices = migrated.notes.map((n) =>
+      this.t(`flow.migration.${n.code}`, { slot: n.label }),
+    );
     const parsed = FlowDefinitionSchema.safeParse(migrated.definition);
     if (!parsed.success) {
       return {

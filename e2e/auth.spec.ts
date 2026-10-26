@@ -184,9 +184,9 @@ test.describe('signed in as Admin', () => {
     await page.getByRole('button', { name: 'Tạo và hiện mật khẩu tạm' }).click();
     await expect(page.getByRole('alert')).toContainText('username đã tồn tại');
 
-    // Own row has no reset/lock actions.
+    // Own row has reset/lock too (no self-action guard, MEMORY 2026-10-26 18:09).
     const own = table.getByRole('row', { name: /^admin/ });
-    await expect(own.getByRole('button', { name: /Khóa|Reset/ })).toHaveCount(0);
+    await expect(own.getByRole('button', { name: /Khóa|Reset/ })).toHaveCount(2);
 
     // Tabs follow the APG pattern (arrow keys).
     await page.getByRole('tab', { name: /Tài khoản/ }).focus();

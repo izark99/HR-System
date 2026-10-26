@@ -182,28 +182,24 @@ test.describe('period decides the version', () => {
   });
 });
 
-test.describe('KNOWN BUG', () => {
+test.describe('fixed bugs (were KNOWN BUGS)', () => {
   test.beforeEach(({ supabase }) => twoVersions(supabase));
 
-  // run-store.ts:291-297. In the "no version" branch `version` is replaced by the latest version
-  // (v2, applies=false) while the worker still holds the definition of the earlier period (v1).
-  // Choosing a period where v2 applies then hits `next.id === state.version.id`, so v2 is never
-  // loaded: the callout and the run log say v2, the engine computes with v1.
-  test.fail(
-    'v1 → gap → v2: the run uses the v2 definition it reports',
-    async ({ page, supabase }) => {
-      await openFlow(page, '2026-03'); // worker holds v1
-      await upload(page);
-      await expect(runButton(page)).toHaveText('Chạy');
-      await pickMonth(page, '2026-08'); // gap: server answers with v2, applies = false
-      await expect(noVersion(page)).toBeVisible();
-      await pickMonth(page, '2026-10'); // v2 applies
-      await expect(callout(page)).toContainText('v2, hiệu lực từ 01/09/2026');
-      await expect(runButton(page)).toHaveText('Chạy');
-      await runToResult(page);
-      await expect.poll(() => supabase.runLogs.length).toBe(1);
-      expect(supabase.runLogs[0]).toMatchObject({ flow_version_id: V2 });
-      expect(await mismatchedTab(page)).toBe('Lệch (6)'); // actual: Lệch (9), i.e. v1 was used
-    },
-  );
+  // Was run-store.ts:291-297: the "no version" answer (v2, applies=false) replaced the displayed
+  // version while the worker still held v1, so a v2 period skipped the reload. The store now
+  // tracks the version loaded in the worker separately.
+  test('v1 → gap → v2: the run uses the v2 definition it reports', async ({ page, supabase }) => {
+    await openFlow(page, '2026-03'); // worker holds v1
+    await upload(page);
+    await expect(runButton(page)).toHaveText('Chạy');
+    await pickMonth(page, '2026-08'); // gap: server answers with v2, applies = false
+    await expect(noVersion(page)).toBeVisible();
+    await pickMonth(page, '2026-10'); // v2 applies
+    await expect(callout(page)).toContainText('v2, hiệu lực từ 01/09/2026');
+    await expect(runButton(page)).toHaveText('Chạy');
+    await runToResult(page);
+    await expect.poll(() => supabase.runLogs.length).toBe(1);
+    expect(supabase.runLogs[0]).toMatchObject({ flow_version_id: V2 });
+    expect(await mismatchedTab(page)).toBe('Lệch (6)');
+  });
 });

@@ -16,11 +16,12 @@ describe('admin API error mapping', () => {
     expect(
       await functionErrorKey(httpError(409, { ok: false, error: { code: 'username_taken' } })),
     ).toBe('username_taken');
+    // Removed with the self-action guard (MEMORY 2026-10-26 18:09): no longer a known code.
     expect(
       await functionErrorKey(
         httpError(409, { ok: false, error: { code: 'self_action_forbidden' } }),
       ),
-    ).toBe('self_action_forbidden');
+    ).toBe('unknown');
     expect(await functionErrorKey(httpError(403, { error: { code: 'origin_not_allowed' } }))).toBe(
       'origin_not_allowed',
     );
@@ -78,6 +79,36 @@ describe('AdminApi', () => {
         group_ids: ['g1'],
       },
     });
+  });
+
+  it('audit_failed warning is passed through with the password; other warnings are dropped', async () => {
+    const reply = (data: Record<string, unknown>) =>
+      vi.fn(() => Promise.resolve({ data: { ok: true, data }, error: null }));
+    const created = await new AdminApi(
+      client(
+        reply({
+          user_id: 'u1',
+          username: 'hr.cn03',
+          temp_password: 'Abc23456789xyzQW',
+          warning: 'audit_failed',
+        }) as unknown as AdminClient['functions']['invoke'],
+      ),
+    ).createUser({ username: 'hr.cn03', fullName: '', role: 'user', groupIds: [] });
+    expect(created).toEqual({
+      user_id: 'u1',
+      username: 'hr.cn03',
+      temp_password: 'Abc23456789xyzQW',
+      warning: 'audit_failed',
+    });
+    const reset = await new AdminApi(
+      client(
+        reply({
+          temp_password: 'Abc23456789xyzQW',
+          warning: '<script>',
+        }) as unknown as AdminClient['functions']['invoke'],
+      ),
+    ).resetPassword('u1');
+    expect(reset).toEqual({ temp_password: 'Abc23456789xyzQW' });
   });
 
   it('function errors surface as AdminApiError with the mapped key', async () => {

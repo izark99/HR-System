@@ -9,8 +9,12 @@ export const FlowParamSchema = z.strictObject({
   label: z.string().min(1),
   type: z.enum(['string', 'number', 'date', 'month', 'boolean', 'select']),
   required: z.boolean().default(false),
-  /** false = sensitive, never written to run_logs. */
-  log: z.boolean().default(true),
+  /**
+   * Whether the value is written to run_logs. Unset = by type: month/date/select/boolean/number
+   * are logged, free-text `string` params are not (they may hold personal data) unless the Admin
+   * sets `log: true`. `false` = sensitive, never logged.
+   */
+  log: z.boolean().optional(),
   isAsOfDate: z.boolean().optional(),
   options: z
     .union([

@@ -88,6 +88,15 @@ describe('route guard (spec §3, §6)', () => {
     }
     expect(safeRedirect('/run/a?x=1')).toBe('/run/a?x=1');
   });
+
+  it('safeRedirect rejects control characters (tester: "/\\t/evil.example")', () => {
+    for (const ctrl of ['\t', '\n', '\r', '\u0000', '\u001b', '\u007f', '\u0085']) {
+      expect(safeRedirect(`/${ctrl}/evil.example`)).toBe('/');
+      expect(safeRedirect(`/run/a?x=${ctrl}`)).toBe('/');
+    }
+    // Ordinary non-ASCII paths are fine.
+    expect(safeRedirect('/run/đối-chiếu')).toBe('/run/đối-chiếu');
+  });
 });
 
 describe('credentials', () => {

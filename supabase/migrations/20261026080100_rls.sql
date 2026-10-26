@@ -136,9 +136,14 @@ to authenticated;
 grant select, insert on public.run_logs to authenticated;
 grant select on public.audit_logs to authenticated;
 
--- Future tables must opt in to API access explicitly.
-alter default privileges in schema public revoke all on tables from anon;
-alter default privileges in schema public revoke execute on functions from anon;
+-- Undo Supabase's per-schema default grants for objects the migration role creates later: a
+-- future table/sequence/function in public gets no anon/authenticated privileges until its
+-- migration grants them explicitly (as above). PostgreSQL's built-in EXECUTE-to-PUBLIC default
+-- for functions is global and cannot be revoked per schema, so every new function must also
+-- `revoke all on function … from public, anon` itself (see 20261026080200_rpc.sql).
+alter default privileges in schema public revoke all on tables from anon, authenticated;
+alter default privileges in schema public revoke all on sequences from anon, authenticated;
+alter default privileges in schema public revoke all on functions from anon, authenticated;
 
 -- ---------------------------------------------------------------------------------------------
 -- RLS
@@ -155,6 +160,9 @@ alter table public.audit_logs enable row level security;
 alter table public.app_settings enable row level security;
 
 -- profiles ------------------------------------------------------------------------------------
+-- Deliberately without is_active_user(): a locked user can still read their own row, so the
+-- client can tell "locked" apart from other failures. Every other SELECT policy requires an
+-- active caller.
 drop policy if exists profiles_select on public.profiles;
 create policy profiles_select on public.profiles for select to authenticated
   using (id = (select auth.uid()) or (select private.is_admin()));
@@ -168,7 +176,10 @@ create policy profiles_update_own on public.profiles for update to authenticated
 -- groups --------------------------------------------------------------------------------------
 drop policy if exists groups_select on public.groups;
 create policy groups_select on public.groups for select to authenticated
-  using ((select private.is_admin()) or private.is_group_member(id));
+  using (
+    (select private.is_admin())
+    or ((select private.is_active_user()) and private.is_group_member(id))
+  );
 
 drop policy if exists groups_insert on public.groups;
 create policy groups_insert on public.groups for insert to authenticated
@@ -183,7 +194,10 @@ create policy groups_delete on public.groups for delete to authenticated
 -- group_members -------------------------------------------------------------------------------
 drop policy if exists group_members_select on public.group_members;
 create policy group_members_select on public.group_members for select to authenticated
-  using ((select private.is_admin()) or user_id = (select auth.uid()));
+  using (
+    (select private.is_admin())
+    or ((select private.is_active_user()) and user_id = (select auth.uid()))
+  );
 
 drop policy if exists group_members_insert on public.group_members;
 create policy group_members_insert on public.group_members for insert to authenticated
@@ -243,8 +257,13 @@ drop policy if exists flow_assignments_select on public.flow_assignments;
 create policy flow_assignments_select on public.flow_assignments for select to authenticated
   using (
     (select private.is_admin())
-    or user_id = (select auth.uid())
-    or (group_id is not null and private.is_group_member(group_id))
+    or (
+      (select private.is_active_user())
+      and (
+        user_id = (select auth.uid())
+        or (group_id is not null and private.is_group_member(group_id))
+      )
+    )
   );
 
 drop policy if exists flow_assignments_insert on public.flow_assignments;
@@ -260,7 +279,10 @@ create policy flow_assignments_delete on public.flow_assignments for delete to a
 -- run_logs ------------------------------------------------------------------------------------
 drop policy if exists run_logs_select on public.run_logs;
 create policy run_logs_select on public.run_logs for select to authenticated
-  using (user_id = (select auth.uid()) or (select private.is_admin()));
+  using (
+    (select private.is_admin())
+    or ((select private.is_active_user()) and user_id = (select auth.uid()))
+  );
 
 drop policy if exists run_logs_insert_own on public.run_logs;
 create policy run_logs_insert_own on public.run_logs for insert to authenticated

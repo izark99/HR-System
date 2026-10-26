@@ -30,9 +30,22 @@ export type GuardDecision =
 export const LOGIN_PATH = '/login';
 export const CHANGE_PASSWORD_PATH = '/change-password';
 
-/** Only same-app absolute paths; anything else (//host, https:…, /login) falls back to "/". */
+/** C0/C1 control characters (tab, CR, LF, …) and DEL: URL parsers strip or reinterpret them. */
+// eslint-disable-next-line no-control-regex
+const CONTROL_CHARS = /[\u0000-\u001F\u007F-\u009F]/;
+
+/**
+ * Only same-app absolute paths; anything else (//host, https:…, /login, control characters such
+ * as "/\t/host") falls back to "/".
+ */
 export function safeRedirect(target: string | undefined | null): string {
-  if (!target || !target.startsWith('/') || target.startsWith('//') || target.includes('\\')) {
+  if (
+    !target ||
+    CONTROL_CHARS.test(target) ||
+    !target.startsWith('/') ||
+    target.startsWith('//') ||
+    target.includes('\\')
+  ) {
     return '/';
   }
   const path = target.split(/[?#]/)[0] ?? '/';

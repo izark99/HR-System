@@ -1,3 +1,6 @@
+// Subpath import: keeps zod (the schemas) out of the main-thread bundle.
+import { migrateFlowDefinition } from '@hrflow/flow-schema/migrate';
+import type { TFunction } from 'i18next';
 import { useRef, useState, type FormEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import { DatePicker } from '../../components/DatePicker';
@@ -59,20 +62,27 @@ type ReadResult =
   | { ok: true; candidate: Candidate }
   | { ok: false; key: 'tooLarge' | 'notJson' | 'invalid' | 'engine'; problems?: string[] };
 
-/** Parse + validate a flow JSON file with the engine worker (the same check the run page uses). */
-async function readFlowFile(file: File): Promise<ReadResult> {
+/**
+ * Parse + validate a flow JSON file with the engine worker (the same check the run page uses).
+ * Outdated parts (e.g. `.csv` in `accept`) are cleaned here and the CLEANED definition is what
+ * gets published (spec §8.1); the worker's own migration stays as a safety net for old data.
+ */
+async function readFlowFile(file: File, t: TFunction): Promise<ReadResult> {
   if (file.size > MAX_JSON_BYTES) return { ok: false, key: 'tooLarge' };
-  let definition: Json;
+  let raw: unknown;
   try {
-    definition = JSON.parse(await file.text()) as Json;
+    raw = JSON.parse(await file.text()) as unknown;
   } catch {
     return { ok: false, key: 'notJson' };
   }
+  const migrated = migrateFlowDefinition(raw);
+  const definition = migrated.definition as Json;
+  const notices = migrated.notes.map((n) => t('admin.import.csvStripped', { slot: n.label }));
   const engine = new EngineClient();
   try {
     const result = await engine.api.loadFlow(definition);
     if (!result.ok) return { ok: false, key: 'invalid', problems: result.problems };
-    return { ok: true, candidate: { fileName: file.name, definition, notices: result.notices } };
+    return { ok: true, candidate: { fileName: file.name, definition, notices } };
   } catch {
     return { ok: false, key: 'engine' };
   } finally {
@@ -285,7 +295,7 @@ export function AdminFlowsPage() {
     setChecking(true);
     setReadError(null);
     setMessage('');
-    const result = await readFlowFile(file);
+    const result = await readFlowFile(file, t);
     setChecking(false);
     if (fileRef.current) fileRef.current.value = '';
     if (result.ok) setCandidate(result.candidate);

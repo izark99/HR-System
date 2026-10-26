@@ -79,19 +79,19 @@ describe('SupabaseAuth', () => {
   it('a locked account is signed out right away with reason "locked"', async () => {
     const { client, auth } = fake({ ...PROFILE, is_active: false });
     const service = new SupabaseAuth(client);
-    expect(await service.signIn('hr.nv01', 'x'.repeat(10))).toBe('locked');
+    expect(await service.signIn('hr.nv01', 'x'.repeat(10))).toBe('noAccess');
     expect(auth.signOut).toHaveBeenCalledWith({ scope: 'local' });
     expect(service.getSnapshot()).toEqual({ status: 'signedOut', reason: 'locked' });
   });
 
-  it('wrong password → invalidCredentials; no profile → profileMissing', async () => {
+  it('wrong password → invalidCredentials; no profile (or hidden by RLS) → noAccess + profileMissing', async () => {
     const bad = fake(PROFILE, { name: 'AuthApiError', code: 'invalid_credentials', status: 400 });
     expect(await new SupabaseAuth(bad.client).signIn('hr.nv01', 'wrong-pass-1')).toBe(
       'invalidCredentials',
     );
     const none = fake(null);
     const service = new SupabaseAuth(none.client);
-    expect(await service.signIn('hr.nv01', 'x'.repeat(10))).toBe('unknown');
+    expect(await service.signIn('hr.nv01', 'x'.repeat(10))).toBe('noAccess');
     expect(service.getSnapshot()).toEqual({ status: 'signedOut', reason: 'profileMissing' });
   });
 

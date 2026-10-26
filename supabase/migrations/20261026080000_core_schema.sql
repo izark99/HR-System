@@ -204,7 +204,7 @@ begin
     if new.status = 'retired' then
       raise exception 'flow_version_invalid_status' using errcode = 'HF001';
     end if;
-    if new.flow_id <> old.flow_id then
+    if new.id <> old.id or new.flow_id <> old.flow_id then
       raise exception 'flow_version_immutable' using errcode = 'HF001';
     end if;
     if new.status = 'published' then
@@ -224,11 +224,13 @@ begin
 
   -- old.status = 'published'
   if new.status not in ('published', 'retired')
-     or (new.flow_id, new.version_no, new.definition, new.schema_version, new.effective_from,
-         new.change_note, new.published_by, new.published_at, new.created_at, new.created_by)
+     or (new.id, new.flow_id, new.version_no, new.definition, new.schema_version,
+         new.effective_from, new.change_note, new.published_by, new.published_at, new.created_at,
+         new.created_by)
         is distinct from
-        (old.flow_id, old.version_no, old.definition, old.schema_version, old.effective_from,
-         old.change_note, old.published_by, old.published_at, old.created_at, old.created_by)
+        (old.id, old.flow_id, old.version_no, old.definition, old.schema_version,
+         old.effective_from, old.change_note, old.published_by, old.published_at, old.created_at,
+         old.created_by)
   then
     raise exception 'flow_version_immutable' using errcode = 'HF001',
       detail = 'A published version only allows changing effective_to or retiring it.';

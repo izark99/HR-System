@@ -23,7 +23,6 @@ export type ErrorCode =
   | 'username_taken'
   | 'not_found'
   | 'group_not_found'
-  | 'self_action_forbidden'
   | 'internal';
 
 const STATUS: Record<ErrorCode, number> = {
@@ -35,7 +34,6 @@ const STATUS: Record<ErrorCode, number> = {
   username_taken: 409,
   not_found: 404,
   group_not_found: 400,
-  self_action_forbidden: 409,
   internal: 500,
 };
 
@@ -213,6 +211,23 @@ async function requireGroups(backend: AdminBackend, ids: readonly string[]): Pro
   if ((await backend.missingGroups(ids)).length > 0) throw new AdminError('group_not_found');
 }
 
+/**
+ * Audit for an action that already happened and produced a temporary password. Failing the
+ * request here would lose the password (the account exists / was reset, nobody knows it), so a
+ * failed audit insert is reported as a warning instead.
+ */
+async function auditAfterPassword(
+  backend: AdminBackend,
+  entry: AuditEntry,
+): Promise<{ warning?: 'audit_failed' }> {
+  try {
+    await backend.audit(entry);
+    return {};
+  } catch {
+    return { warning: 'audit_failed' };
+  }
+}
+
 async function run(
   request: AdminRequest,
   caller: ProfileRow,
@@ -248,34 +263,34 @@ async function run(
         await backend.deleteAuthUser(id).catch(() => undefined);
         throw err;
       }
-      await backend.audit({
+      const warning = await auditAfterPassword(backend, {
         actorId: caller.id,
         action: 'user.create',
         entityId: id,
         diff: { username: request.username, role: request.role, group_ids: groupIds },
       });
-      return { user_id: id, username: request.username, temp_password: password };
+      return { user_id: id, username: request.username, temp_password: password, ...warning };
     }
 
     case 'reset_password': {
-      if (request.user_id === caller.id) throw new AdminError('self_action_forbidden');
+      // Admins may reset their own password too (MEMORY 2026-10-26 18:09).
       await requireTarget(backend, request.user_id);
       const password = generateTempPassword(random);
       // Order matters: the password change trigger clears must_change_password, so set it after.
       await backend.setPassword(request.user_id, password);
       await backend.updateProfile(request.user_id, { must_change_password: true });
       await backend.revokeSessions(request.user_id);
-      await backend.audit({
+      const warning = await auditAfterPassword(backend, {
         actorId: caller.id,
         action: 'user.reset_password',
         entityId: request.user_id,
         diff: {},
       });
-      return { user_id: request.user_id, temp_password: password };
+      return { user_id: request.user_id, temp_password: password, ...warning };
     }
 
     case 'set_active': {
-      if (request.user_id === caller.id) throw new AdminError('self_action_forbidden');
+      // Self-lock allowed (MEMORY 2026-10-26 18:09); recovery is via SQL on the dashboard.
       await requireTarget(backend, request.user_id);
       await backend.setBanned(request.user_id, !request.active);
       await backend.updateProfile(request.user_id, { is_active: request.active });
@@ -290,15 +305,8 @@ async function run(
     }
 
     case 'update': {
-      const target = await requireTarget(backend, request.user_id);
-      if (
-        request.user_id === caller.id &&
-        request.role !== undefined &&
-        request.role !== target.role
-      ) {
-        // An Admin cannot demote themself (keeps at least one active Admin).
-        throw new AdminError('self_action_forbidden');
-      }
+      // Self-demotion allowed (MEMORY 2026-10-26 18:09).
+      await requireTarget(backend, request.user_id);
       const groupIds = request.group_ids ? [...new Set(request.group_ids)] : undefined;
       if (groupIds) await requireGroups(backend, groupIds);
       const patch: { full_name?: string; role?: Role } = {};

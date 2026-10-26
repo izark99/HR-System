@@ -18,7 +18,7 @@ describe('migrateFlowDefinition (published versions stay loadable, spec §8)', (
   it('strips .csv from accept with a note; the result parses', () => {
     const raw = flow([slot('a', ['.xlsx', '.CSV ', '.xls']), slot('b', ['.xlsx'])]);
     const { definition, notes } = migrateFlowDefinition(raw);
-    expect(notes).toEqual([{ code: 'acceptCsvRemoved', slot: 'a' }]);
+    expect(notes).toEqual([{ code: 'acceptCsvRemoved', slot: 'a', label: 'a' }]);
     const parsed = FlowDefinitionSchema.parse(definition);
     expect(parsed.inputSlots.map((s) => s.accept)).toEqual([['.xlsx', '.xls'], ['.xlsx']]);
     // Old definitions without the step would be rejected outright.
@@ -27,7 +27,7 @@ describe('migrateFlowDefinition (published versions stay loadable, spec §8)', (
 
   it('a slot that accepted only .csv falls back to the default accept list', () => {
     const { definition, notes } = migrateFlowDefinition(flow([slot('a', ['.csv'])]));
-    expect(notes).toEqual([{ code: 'acceptCsvOnlyReplaced', slot: 'a' }]);
+    expect(notes).toEqual([{ code: 'acceptCsvOnlyReplaced', slot: 'a', label: 'a' }]);
     expect(FlowDefinitionSchema.parse(definition).inputSlots[0]!.accept).toEqual(['.xlsx', '.xls']);
   });
 
@@ -45,7 +45,16 @@ describe('migrateFlowDefinition (published versions stay loadable, spec §8)', (
     expect(migrateFlowDefinition(null)).toEqual({ definition: null, notes: [] });
     expect(migrateFlowDefinition({ inputSlots: 'x' }).notes).toEqual([]);
     expect(migrateFlowDefinition(flow([42, { accept: ['.csv'] }])).notes).toEqual([
-      { code: 'acceptCsvOnlyReplaced', slot: '1' },
+      { code: 'acceptCsvOnlyReplaced', slot: '1', label: '1' },
+    ]);
+  });
+
+  it('notes carry the display label for the Admin (tester), the key for code', () => {
+    const named = { ...slot('bang_luong', ['.xlsx', '.csv']), label: '  Bảng lương  ' };
+    const blank = { ...slot('cham_cong', ['.csv']), label: ' ' };
+    expect(migrateFlowDefinition(flow([named, blank])).notes).toEqual([
+      { code: 'acceptCsvRemoved', slot: 'bang_luong', label: 'Bảng lương' },
+      { code: 'acceptCsvOnlyReplaced', slot: 'cham_cong', label: 'cham_cong' },
     ]);
   });
 });

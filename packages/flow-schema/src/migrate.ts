@@ -15,6 +15,8 @@ export interface FlowMigrationNote {
   code: FlowMigrationCode;
   /** Slot key (or index when the key is missing) the note is about. */
   slot: string;
+  /** What the Admin sees for the slot: its display label, else the key/index. */
+  label: string;
 }
 
 export interface FlowMigrationResult {
@@ -32,15 +34,16 @@ function migrateSlot(slot: unknown, index: number, notes: FlowMigrationNote[]): 
   const accept = slot.accept as unknown[];
   const isCsv = (v: unknown) => typeof v === 'string' && v.trim().toLowerCase() === '.csv';
   if (!accept.some(isCsv)) return slot;
-  const label = typeof slot.key === 'string' ? slot.key : String(index);
+  const key = typeof slot.key === 'string' ? slot.key : String(index);
+  const label = typeof slot.label === 'string' && slot.label.trim() ? slot.label.trim() : key;
   const kept = accept.filter((v) => !isCsv(v));
   if (kept.length === 0) {
     const rest: Record<string, unknown> = { ...slot };
     delete rest.accept;
-    notes.push({ code: 'acceptCsvOnlyReplaced', slot: label });
+    notes.push({ code: 'acceptCsvOnlyReplaced', slot: key, label });
     return rest;
   }
-  notes.push({ code: 'acceptCsvRemoved', slot: label });
+  notes.push({ code: 'acceptCsvRemoved', slot: key, label });
   return { ...slot, accept: kept };
 }
 

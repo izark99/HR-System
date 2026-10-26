@@ -212,7 +212,7 @@ describe('EngineSession.loadFlow: schema compatibility (spec §8)', () => {
     if (!result.ok) return;
     expect(result.flow.inputSlots[0]!.accept).toEqual(['.xlsx', '.xls']);
     expect(result.notices).toEqual([
-      'Mục upload "bang_luong": đã bỏ định dạng .csv (hệ thống không còn nhận CSV).',
+      'Mục upload "Bảng lương (nhiều chi nhánh)": đã bỏ định dạng .csv (hệ thống không còn nhận CSV).',
     ]);
     expect(new EngineSession('vi').loadFlow(flowJson)).toMatchObject({ ok: true, notices: [] });
   });

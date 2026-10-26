@@ -227,7 +227,8 @@ Flow là một **DAG** (đồ thị có hướng, không vòng) gồm các node 
 
 - Version đã Published là bất biến (§7.2) nên **mọi bản phát hành app sau này phải nạp được mọi version đã publish**.
 - Thay đổi schema flow chỉ được phép theo 2 cách: (a) **bổ sung** (thêm trường tùy chọn có giá trị mặc định), hoặc (b) kèm một **bước tiền xử lý (preprocess migration)** trong `packages/flow-schema/src/migrate.ts` (`migrateFlowDefinition`) chuyển định nghĩa cũ sang dạng mới **trong bộ nhớ** trước khi parse (không sửa bản lưu trong database), và trả về ghi chú (notice) để hiển thị cho Admin.
-- Engine (worker) luôn chạy `migrateFlowDefinition` trước `FlowDefinitionSchema`; màn Import flow của Admin hiển thị các notice.
+- Engine (worker) luôn chạy `migrateFlowDefinition` trước `FlowDefinitionSchema` (lưới an toàn cho dữ liệu cũ đã lưu).
+- Màn Import flow của Admin chạy `migrateFlowDefinition` trên file JSON trước khi publish và **lưu bản đã làm sạch** lên server (không lưu bản gốc); dialog hiển thị notice theo nhãn hiển thị của slot, VD "Đã bỏ định dạng .csv khỏi Bảng lương (không còn được hỗ trợ)." (chốt 2026-10-26).
 - Bước tiền xử lý hiện có: bỏ `.csv` khỏi `inputSlots[].accept` (CSV không còn được nhận, chốt 2026-10-26 13:08); slot chỉ nhận `.csv` chuyển về mặc định `.xlsx, .xls`. Cả hai trường hợp đều có notice.
 
 ---

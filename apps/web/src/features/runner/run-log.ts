@@ -36,14 +36,22 @@ export async function sha256Hex(text: string): Promise<string> {
   return Array.from(new Uint8Array(digest), (b) => b.toString(16).padStart(2, '0')).join('');
 }
 
-/** Only params the Admin did not mark `log: false`, as small scalars. */
+/**
+ * Default-deny for free text: `string` params are logged only when the Admin sets `log: true`
+ * explicitly; other types unless `log: false`.
+ */
+export function isParamLogged(p: Pick<FlowParam, 'type' | 'log'>): boolean {
+  return p.log ?? p.type !== 'string';
+}
+
+/** Only params that may be logged (see isParamLogged), as small scalars. */
 function loggedParams(
   flowParams: readonly FlowParam[],
   values: ParamValues,
 ): RunLogInsert['params'] {
   const out: RunLogInsert['params'] = {};
   for (const p of flowParams) {
-    if (p.log === false || !PARAM_KEY.test(p.key)) continue;
+    if (!isParamLogged(p) || !PARAM_KEY.test(p.key)) continue;
     const v = values[p.key];
     if (v === undefined || v === null || v === '') continue;
     out[p.key] = typeof v === 'string' ? v.trim().slice(0, MAX_PARAM_LENGTH) : v;

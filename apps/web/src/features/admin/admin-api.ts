@@ -21,13 +21,14 @@ export type AdminErrorKey =
   | 'username_taken'
   | 'not_found'
   | 'group_not_found'
-  | 'self_action_forbidden'
   // Database
   | 'duplicate'
   | 'overlap'
   | 'immutable'
   | 'invalid_definition'
   | 'check_failed'
+  // Client-side validation (never sent by the server)
+  | 'group_name_required'
   // Transport / other
   | 'network'
   | 'unknown';
@@ -40,8 +41,14 @@ const FUNCTION_CODES = new Set<AdminErrorKey>([
   'username_taken',
   'not_found',
   'group_not_found',
-  'self_action_forbidden',
 ]);
+
+/** Non-fatal notice of a successful account action (the action itself happened). */
+export type AdminWarning = 'audit_failed';
+
+function warningOf(data: { warning?: unknown }): { warning?: AdminWarning } {
+  return data.warning === 'audit_failed' ? { warning: 'audit_failed' } : {};
+}
 
 export class AdminApiError extends Error {
   constructor(readonly key: AdminErrorKey) {
@@ -312,23 +319,43 @@ export class AdminApi {
     return { versionNo: row.version_no };
   }
 
-  createUser(input: {
+  async createUser(input: {
     username: string;
     fullName: string;
     role: Role;
     groupIds: string[];
-  }): Promise<{ user_id: string; username: string; temp_password: string }> {
-    return this.call({
+  }): Promise<{
+    user_id: string;
+    username: string;
+    temp_password: string;
+    warning?: AdminWarning;
+  }> {
+    const data = await this.call<{
+      user_id: string;
+      username: string;
+      temp_password: string;
+      warning?: unknown;
+    }>({
       action: 'create',
       username: input.username,
       full_name: input.fullName,
       role: input.role,
       group_ids: input.groupIds,
     });
+    return {
+      user_id: data.user_id,
+      username: data.username,
+      temp_password: data.temp_password,
+      ...warningOf(data),
+    };
   }
 
-  resetPassword(userId: string): Promise<{ temp_password: string }> {
-    return this.call({ action: 'reset_password', user_id: userId });
+  async resetPassword(userId: string): Promise<{ temp_password: string; warning?: AdminWarning }> {
+    const data = await this.call<{ temp_password: string; warning?: unknown }>({
+      action: 'reset_password',
+      user_id: userId,
+    });
+    return { temp_password: data.temp_password, ...warningOf(data) };
   }
 
   async setActive(userId: string, active: boolean): Promise<void> {

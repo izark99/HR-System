@@ -286,6 +286,7 @@
       "missingFields": "nhập tên đăng nhập và mật khẩu.",
       "invalidCredentials": "tên đăng nhập hoặc mật khẩu không đúng.",
       "locked": "tài khoản đã bị khóa. Liên hệ Admin.",
+      "noAccess": "tài khoản bị khóa hoặc chưa được cấp quyền. Vui lòng liên hệ Admin.",
       "rateLimited": "thử quá nhiều lần. Đợi vài phút rồi thử lại.",
       "network": "không kết nối được máy chủ. Kiểm tra mạng rồi thử lại.",
       "weakPassword": "mật khẩu chưa đủ mạnh. Dùng mật khẩu dài hơn, khó đoán hơn.",
@@ -296,12 +297,12 @@
     },
     "reason": {
       "locked": {
-        "label": "Tài khoản đã bị khóa:",
-        "text": "liên hệ Admin để được mở khóa."
+        "label": "Không vào được tài khoản:",
+        "text": "Tài khoản bị khóa hoặc chưa được cấp quyền. Vui lòng liên hệ Admin."
       },
       "profileMissing": {
-        "label": "Tài khoản chưa sẵn sàng:",
-        "text": "liên hệ Admin để được cấp quyền."
+        "label": "Không vào được tài khoản:",
+        "text": "Tài khoản bị khóa hoặc chưa được cấp quyền. Vui lòng liên hệ Admin."
       },
       "profileError": {
         "label": "Chưa tải được tài khoản:",
@@ -343,7 +344,7 @@
       "username_taken": "username đã tồn tại.",
       "not_found": "không tìm thấy tài khoản.",
       "group_not_found": "có nhóm không còn tồn tại. Tải lại trang.",
-      "self_action_forbidden": "không thể tự khóa, tự reset mật khẩu hoặc tự đổi role của chính mình.",
+      "group_name_required": "nhập tên nhóm (không được để trống).",
       "duplicate": "tên/mã này đã tồn tại.",
       "overlap": "khoảng hiệu lực chồng lấn với một phiên bản đã publish.",
       "immutable": "phiên bản đã publish không được sửa nội dung.",
@@ -414,8 +415,7 @@
     },
     "edit": {
       "title": "Sửa tài khoản {{username}}",
-      "save": "Lưu thay đổi",
-      "selfRole": "Bạn không thể tự đổi role của chính mình."
+      "save": "Lưu thay đổi"
     },
     "groups": {
       "none": "Chưa có nhóm nào.",
@@ -473,6 +473,7 @@
       "title": "Nhập flow từ JSON",
       "file": "File: {{name}} (hợp lệ)",
       "noticesLabel": "Đã tự điều chỉnh:",
+      "csvStripped": "Đã bỏ định dạng .csv khỏi {{slot}} (không còn được hỗ trợ).",
       "code": "Mã flow (dùng trong đường dẫn)",
       "codeHint": "Chữ thường không dấu, số và gạch ngang. Trùng mã có sẵn = thêm phiên bản mới.",
       "existingLabel": "Flow đã có:",
@@ -502,6 +503,17 @@
         "nameRequired": "nhập tên flow.",
         "range": "ngày kết thúc phải sau ngày bắt đầu."
       }
+    },
+    "self": {
+      "label": "Đây là tài khoản của bạn:",
+      "reset": "Bạn đang reset mật khẩu của chính mình. Sau khi đóng hộp thoại mật khẩu tạm, bạn sẽ bị đăng xuất và phải đăng nhập lại bằng mật khẩu tạm rồi đổi mật khẩu.",
+      "lock": "Bạn đang khóa chính mình. Bạn sẽ bị đăng xuất ngay và không đăng nhập lại được; nếu không còn Admin nào khác, chỉ khôi phục được bằng SQL trên Supabase dashboard.",
+      "demote": "Bạn đang hạ quyền chính mình xuống User. Bạn sẽ mất quyền vào các màn quản trị ngay; nếu không còn Admin nào khác, chỉ khôi phục được bằng SQL trên Supabase dashboard.",
+      "demoteAction": "Vẫn hạ quyền chính mình"
+    },
+    "warnings": {
+      "label": "Cảnh báo:",
+      "audit_failed": "thao tác đã thực hiện nhưng chưa ghi được nhật ký quản trị (audit log)."
     }
   }
 }

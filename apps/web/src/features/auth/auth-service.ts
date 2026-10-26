@@ -156,7 +156,10 @@ export class SupabaseAuth extends BaseAuth implements AuthService {
       if (error || !data.user) return authErrorKey(error);
       const result = await this.applyProfile(data.user.id, true);
       if (result.ok) return null;
-      return result.reason === 'locked' ? 'locked' : 'unknown';
+      // A locked profile and one hidden by RLS look the same to the User (tester observation).
+      return result.reason === 'locked' || result.reason === 'profileMissing'
+        ? 'noAccess'
+        : 'unknown';
     } catch (err) {
       return authErrorKey(err);
     }

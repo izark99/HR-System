@@ -1,6 +1,6 @@
 /**
- * Admin "Users & Groups" screen (spec §6): create / reset / lock / edit accounts, the self-action
- * guard, groups CRUD and flow assignment. Supabase and the admin-users Edge Function are mocked
+ * Admin "Users & Groups" screen (spec §6): create / reset / lock / edit accounts, actions on the
+ * own account (allowed, with a warning), groups CRUD and flow assignment. Supabase and the admin-users Edge Function are mocked
  * (e2e/supabase-mock.ts); fake accounts only.
  */
 import { ADMIN, expect, SUPABASE_ORIGIN, test, USER, type Page } from './fixtures';
@@ -324,53 +324,148 @@ test.describe('edit account', () => {
   });
 });
 
-test.describe('self-action guard (an Admin cannot lock / reset / demote themselves)', () => {
-  test('own row: only "Sửa"; editing self disables the role and never sends it', async ({
+test.describe('own account (MEMORY 2026-10-26 18:09: no self-action guard, explicit warning)', () => {
+  test('own row has edit, reset and lock like any other row', async ({ page }) => {
+    await openUsers(page);
+    await expect(userRow(page, ADMIN.username).getByRole('button')).toHaveCount(3);
+    await expect(userRow(page, USER.username).getByRole('button')).toHaveCount(3);
+    await expect(
+      page.getByRole('button', { name: `Khóa tài khoản ${ADMIN.username}` }),
+    ).toBeVisible();
+    await expect(
+      page.getByRole('button', { name: `Reset mật khẩu ${ADMIN.username}` }),
+    ).toBeVisible();
+  });
+
+  test('other accounts get no self warning', async ({ page }) => {
+    await openUsers(page);
+    await userRow(page, USER.username)
+      .getByRole('button', { name: `Khóa tài khoản ${USER.username}` })
+      .click();
+    const dialog = page.getByRole('dialog', { name: `Khóa tài khoản ${USER.username}?` });
+    await expect(dialog).toBeVisible();
+    await expect(dialog).not.toContainText('Bạn đang khóa chính mình');
+  });
+
+  test('lock self: explicit warning; cancel sends nothing; confirm locks and signs out', async ({
     page,
     supabase,
   }) => {
     await openUsers(page);
-    const own = userRow(page, ADMIN.username);
-    await expect(own.getByRole('button')).toHaveCount(1);
-    await expect(
-      own.getByRole('button', { name: `Sửa tài khoản ${ADMIN.username}` }),
-    ).toBeVisible();
-    // Other rows do have the three actions.
-    await expect(userRow(page, USER.username).getByRole('button')).toHaveCount(3);
+    const lockSelf = () =>
+      userRow(page, ADMIN.username)
+        .getByRole('button', { name: `Khóa tài khoản ${ADMIN.username}` })
+        .click();
+    await lockSelf();
+    const dialog = page.getByRole('dialog', { name: `Khóa tài khoản ${ADMIN.username}?` });
+    await expect(dialog.getByRole('alert')).toContainText('Bạn đang khóa chính mình');
+    await dialog.getByRole('button', { name: 'Hủy' }).click();
+    expect(supabase.functionCalls).toEqual([]);
 
-    await own.getByRole('button', { name: `Sửa tài khoản ${ADMIN.username}` }).click();
+    await lockSelf();
+    await dialog.getByRole('button', { name: 'Khóa', exact: true }).click();
+    await expect(page).toHaveURL(/\/login\?reason=signedOut$/);
+    // Wait for the reloaded login page (ending the test mid-navigation can hang the teardown).
+    await expect(page.getByRole('heading', { level: 1 })).toHaveText('Đăng nhập');
+    await page.waitForLoadState('networkidle');
+    expect(supabase.functionCalls).toEqual([
+      { action: 'set_active', user_id: ADMIN.id, active: false },
+    ]);
+    expect(supabase.users.find((u) => u.id === ADMIN.id)?.is_active).toBe(false);
+  });
+
+  test('reset own password: warning, temp password shown once, then signed out', async ({
+    page,
+    supabase,
+  }) => {
+    await openUsers(page);
+    await userRow(page, ADMIN.username)
+      .getByRole('button', { name: `Reset mật khẩu ${ADMIN.username}` })
+      .click();
+    const confirm = page.getByRole('dialog', { name: `Reset mật khẩu ${ADMIN.username}?` });
+    await expect(confirm.getByRole('alert')).toContainText(
+      'Bạn đang reset mật khẩu của chính mình',
+    );
+    await confirm.getByRole('button', { name: 'Reset mật khẩu', exact: true }).click();
+    const secret = page.getByRole('dialog', { name: `Mật khẩu tạm của ${ADMIN.username}` });
+    await expect(secret.getByLabel('Mật khẩu tạm')).toHaveText(RESET_TEMP_PASSWORD);
+    expect(supabase.functionCalls).toEqual([{ action: 'reset_password', user_id: ADMIN.id }]);
+    await secret.getByRole('button', { name: 'Đã lưu, đóng' }).click();
+    await expect(page).toHaveURL(/\/login\?reason=signedOut$/);
+    await expect(page.getByRole('heading', { level: 1 })).toHaveText('Đăng nhập');
+    await page.waitForLoadState('networkidle');
+    await expect(page.locator('body')).not.toContainText(RESET_TEMP_PASSWORD);
+  });
+
+  test('demote self: needs a second confirmation with a warning, then leaves the Admin area', async ({
+    page,
+    supabase,
+  }) => {
+    await openUsers(page);
+    await userRow(page, ADMIN.username)
+      .getByRole('button', { name: `Sửa tài khoản ${ADMIN.username}` })
+      .click();
     const dialog = page.getByRole('dialog', { name: `Sửa tài khoản ${ADMIN.username}` });
-    await expect(dialog.getByRole('radio', { name: 'User' })).toBeDisabled();
-    await expect(dialog.getByRole('radio', { name: 'Admin' })).toBeDisabled();
-    await expect(dialog).toContainText('Bạn không thể tự đổi role của chính mình');
+    await expect(dialog.getByRole('radio', { name: 'User' })).toBeEnabled();
+    await dialog.getByRole('radio', { name: 'User' }).check();
+    await dialog.getByRole('button', { name: 'Lưu thay đổi' }).click();
+    await expect(dialog.getByRole('alert')).toContainText('Bạn đang hạ quyền chính mình');
+    expect(supabase.functionCalls).toEqual([]);
+
+    // Changing the choice back drops the pending confirmation.
+    await dialog.getByRole('radio', { name: 'Admin' }).check();
+    await expect(dialog.getByRole('alert')).toHaveCount(0);
+    await dialog.getByRole('radio', { name: 'User' }).check();
+    await dialog.getByRole('button', { name: 'Lưu thay đổi' }).click();
+    await dialog.getByRole('button', { name: 'Vẫn hạ quyền chính mình' }).click();
+    await expect(page).not.toHaveURL(/\/admin/);
+    await expect(page.getByRole('heading', { level: 1 })).toHaveText(
+      'Chọn quy trình cần chạy hôm nay',
+    );
+    await page.waitForLoadState('networkidle');
+    expect(supabase.functionCalls).toEqual([
+      {
+        action: 'update',
+        user_id: ADMIN.id,
+        full_name: ADMIN.full_name,
+        role: 'user',
+        group_ids: [],
+      },
+    ]);
+    expect(supabase.users.find((u) => u.id === ADMIN.id)?.role).toBe('user');
+  });
+
+  test('editing own name only: saved directly, role sent unchanged', async ({ page, supabase }) => {
+    await openUsers(page);
+    await userRow(page, ADMIN.username)
+      .getByRole('button', { name: `Sửa tài khoản ${ADMIN.username}` })
+      .click();
+    const dialog = page.getByRole('dialog', { name: `Sửa tài khoản ${ADMIN.username}` });
     await dialog.getByLabel('Họ tên').fill('Quản trị Giả 2');
     await dialog.getByRole('button', { name: 'Lưu thay đổi' }).click();
     await expect(dialog).toHaveCount(0);
     expect(supabase.functionCalls).toEqual([
-      { action: 'update', user_id: ADMIN.id, full_name: 'Quản trị Giả 2', group_ids: [] },
+      {
+        action: 'update',
+        user_id: ADMIN.id,
+        full_name: 'Quản trị Giả 2',
+        role: 'admin',
+        group_ids: [],
+      },
     ]);
   });
+});
 
-  test('no lock / reset button exists for the own Admin account anywhere on the page', async ({
-    page,
-  }) => {
-    await openUsers(page);
-    await expect(
-      page.getByRole('button', { name: `Khóa tài khoản ${ADMIN.username}` }),
-    ).toHaveCount(0);
-    await expect(
-      page.getByRole('button', { name: `Reset mật khẩu ${ADMIN.username}` }),
-    ).toHaveCount(0);
-  });
-
+test.describe('function errors and warnings', () => {
   const errors: [string, string][] = [
-    ['self_action_forbidden', 'không thể tự khóa, tự reset mật khẩu hoặc tự đổi role'],
     ['forbidden', 'bạn không có quyền'],
     ['unauthorized', 'phiên đăng nhập đã hết hạn'],
     ['origin_not_allowed', 'chưa được phép gọi chức năng quản trị'],
     ['invalid_input', 'thông tin chưa hợp lệ'],
     ['not_found', 'không tìm thấy tài khoản'],
     ['group_not_found', 'có nhóm không còn tồn tại'],
+    // No longer sent by the function; an old deployment's code falls back to the generic text.
+    ['self_action_forbidden', 'có lỗi không xác định'],
     ['made_up_code', 'có lỗi không xác định'],
   ];
   for (const [code, text] of errors) {
@@ -383,7 +478,7 @@ test.describe('self-action guard (an Admin cannot lock / reset / demote themselv
         .getByRole('button', { name: `Khóa tài khoản ${USER.username}` })
         .click();
       const dialog = page.getByRole('dialog', { name: `Khóa tài khoản ${USER.username}?` });
-      supabase.functionFailure = { status: code === 'self_action_forbidden' ? 409 : 400, code };
+      supabase.functionFailure = { status: 400, code };
       await dialog.getByRole('button', { name: 'Khóa', exact: true }).click();
       await expect(dialog.getByRole('alert')).toContainText(text);
       await expect(dialog.getByRole('alert')).not.toContainText(code);
@@ -391,17 +486,45 @@ test.describe('self-action guard (an Admin cannot lock / reset / demote themselv
     });
   }
 
-  test('function error is also mapped in the edit dialog and the create form', async ({
-    page,
-    supabase,
-  }) => {
+  test('function error is also mapped in the edit dialog', async ({ page, supabase }) => {
     await openUsers(page);
     await page.getByRole('button', { name: `Sửa tài khoản ${USER.username}` }).click();
     const dialog = page.getByRole('dialog', { name: `Sửa tài khoản ${USER.username}` });
-    supabase.functionFailure = { status: 409, code: 'self_action_forbidden' };
+    supabase.functionFailure = { status: 403, code: 'forbidden' };
     await dialog.getByRole('button', { name: 'Lưu thay đổi' }).click();
-    await expect(dialog.getByRole('alert')).toContainText('không thể tự khóa');
+    await expect(dialog.getByRole('alert')).toContainText('bạn không có quyền');
     await expect(dialog).toBeVisible();
+  });
+
+  test('audit_failed: the temp password is still shown, with a warning (create and reset)', async ({
+    page,
+    supabase,
+  }) => {
+    supabase.functionWarning = 'audit_failed';
+    await openUsers(page);
+    await create(page, 'hr.audit');
+    const created = page.getByRole('dialog', { name: 'Mật khẩu tạm của hr.audit' });
+    await expect(created.getByLabel('Mật khẩu tạm')).toHaveText(FIXED_TEMP_PASSWORD);
+    await expect(created).toContainText('chưa ghi được nhật ký quản trị');
+    await created.getByRole('button', { name: 'Đã lưu, đóng' }).click();
+
+    await userRow(page, USER.username)
+      .getByRole('button', { name: `Reset mật khẩu ${USER.username}` })
+      .click();
+    await page
+      .getByRole('dialog', { name: `Reset mật khẩu ${USER.username}?` })
+      .getByRole('button', { name: 'Reset mật khẩu', exact: true })
+      .click();
+    const reset = page.getByRole('dialog', { name: `Mật khẩu tạm của ${USER.username}` });
+    await expect(reset.getByLabel('Mật khẩu tạm')).toHaveText(RESET_TEMP_PASSWORD);
+    await expect(reset).toContainText('chưa ghi được nhật ký quản trị');
+
+    supabase.functionWarning = null;
+    await reset.getByRole('button', { name: 'Đã lưu, đóng' }).click();
+    await create(page, 'hr.audit2');
+    await expect(
+      page.getByRole('dialog', { name: 'Mật khẩu tạm của hr.audit2' }),
+    ).not.toContainText('chưa ghi được nhật ký quản trị');
   });
 });
 
@@ -472,15 +595,15 @@ test.describe('groups', () => {
   });
 });
 
-test.describe('KNOWN BUG', () => {
-  test.fail('blank group name shows a group message, not the username hint', async ({ page }) => {
-    // AdminUsersPage.tsx:613-616 reuses error 'invalid_input' whose text is about usernames.
+test.describe('fixed bugs (were KNOWN BUGS)', () => {
+  test('blank group name shows a group message, not the username hint', async ({ page }) => {
+    // Was AdminUsersPage.tsx:613-616 (reused 'invalid_input', whose text is about usernames).
     await openUsers(page);
     await page.getByRole('tab', { name: /^Nhóm/ }).click();
     await page.getByLabel(/^Tên nhóm/).fill('   ');
     await page.getByRole('button', { name: 'Tạo nhóm' }).click();
-    await expect(page.getByRole('alert')).toBeVisible();
-    await expect(page.getByRole('alert')).not.toContainText('Username', { timeout: 1_000 });
+    await expect(page.getByRole('alert')).toContainText('nhập tên nhóm');
+    await expect(page.getByRole('alert')).not.toContainText('Username');
   });
 });
 

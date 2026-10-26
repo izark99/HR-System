@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { CompareConfigSchema, FlowDefinitionSchema, InputSlotSchema } from './index';
+import {
+  CompareConfigSchema,
+  FlowDefinitionSchema,
+  FlowParamSchema,
+  InputSlotSchema,
+} from './index';
 
 describe('InputSlotSchema', () => {
   it('applies defaults', () => {
@@ -156,5 +161,16 @@ describe('CompareConfigSchema', () => {
       metrics: [{ left: 'x', right: 'x', label: 'X', tolerance: '0,5' }],
     });
     expect(r.success).toBe(false);
+  });
+});
+
+describe('FlowParamSchema.log', () => {
+  it('stays unset when omitted (run log decides by type: string is not logged by default)', () => {
+    expect(FlowParamSchema.parse({ key: 'ghi_chu', label: 'Ghi chú', type: 'string' }).log).toBe(
+      undefined,
+    );
+    expect(FlowParamSchema.parse({ key: 'ky', label: 'Kỳ', type: 'month', log: false }).log).toBe(
+      false,
+    );
   });
 });

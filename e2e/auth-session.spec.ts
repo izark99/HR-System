@@ -67,7 +67,13 @@ test.describe('session expires mid-use', () => {
       await expect(page.getByRole('status')).toHaveCount(0);
     }
     await page.goto('/login?reason=locked');
-    await expect(page.getByRole('status')).toContainText('Tài khoản đã bị khóa');
+    await expect(page.getByRole('status')).toContainText(
+      'Tài khoản bị khóa hoặc chưa được cấp quyền. Vui lòng liên hệ Admin.',
+    );
+    await page.goto('/login?reason=profileMissing');
+    await expect(page.getByRole('status')).toContainText(
+      'Tài khoản bị khóa hoặc chưa được cấp quyền. Vui lòng liên hệ Admin.',
+    );
   });
 });
 
@@ -153,7 +159,10 @@ test.describe('login problems', () => {
     supabase.users.find((u) => u.id === USER.id)!.is_active = false;
     await page.goto('/login');
     await login(page, USER.username, USER.password);
-    await expect(page.getByRole('alert')).toBeVisible();
+    await expect(page.getByRole('alert')).toContainText(
+      'tài khoản bị khóa hoặc chưa được cấp quyền. Vui lòng liên hệ Admin.',
+    );
+    await expect(page.getByRole('alert')).not.toContainText('không xác định');
     await expect(page).toHaveURL(/\/login$/);
     expect(await page.evaluate(() => sessionStorage.length + localStorage.length)).toBe(0);
     await page.goto(FLOW_URL);
@@ -268,18 +277,17 @@ test.describe('open redirect through ?redirect=', () => {
   });
 });
 
-test.describe('KNOWN BUG', () => {
+test.describe('fixed bugs (were KNOWN BUGS)', () => {
   test.use({ signedInAs: null });
 
-  // guard.ts:34-41 safeRedirect() accepts control characters: the router strips them, so
-  // "/\t/evil.example" becomes "/evil.example" and the User lands on a "Not Found" page. Not an
-  // external redirect (same origin), but the fallback to "/" is not applied.
+  // Was guard.ts:34-41: safeRedirect() accepted control characters; the router stripped them, so
+  // "/\t/evil.example" became "/evil.example" (Not Found) instead of falling back to "/".
   for (const [name, ctrl] of [
     ['tab', '\t'],
     ['newline', '\n'],
     ['carriage return', '\r'],
   ] as const) {
-    test.fail(`redirect containing a ${name} falls back to home`, async ({ page, baseURL }) => {
+    test(`redirect containing a ${name} falls back to home`, async ({ page, baseURL }) => {
       await page.route(
         (u) => u.hostname === 'evil.example',
         (r) => r.abort(),
