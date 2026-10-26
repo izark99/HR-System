@@ -2,7 +2,6 @@ packages:
   - apps/*
   - packages/*
   - supabase/functions
-  - workers/*
 
 # pnpm 10 blocks dependency lifecycle scripts by default; allow only what the toolchain needs.
 onlyBuiltDependencies:

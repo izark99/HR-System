@@ -26,7 +26,8 @@ Trình duyệt ─ React SPA (UI)
              └ Web Worker: SheetJS (đọc) → engine (validate, compare…) → ExcelJS (ghi)
                    ▲ file Excel không bao giờ upload
 Supabase ──── chỉ metadata: auth, flow/version, bảng tham chiếu không chứa dữ liệu cá nhân, log
-Cloudflare ── host SPA (Pages) + cron giữ Supabase không bị pause
+Cloudflare ── host SPA (Pages, deploy từ main)
+GitHub ───── CI + Actions theo lịch giữ Supabase không bị pause
 ```
 
 Chi tiết: [`docs/spec.md`](docs/spec.md).
@@ -41,7 +42,7 @@ supabase/
   tests/rls.sql        Kiểm thử RLS (chạy trong BEGIN … ROLLBACK, in "RLS OK")
   functions/admin-users/  Edge Function quản lý tài khoản (Deno; test bằng Vitest)
   seed/create_first_admin.sql  Tạo Admin đầu tiên (chạy 1 lần)
-workers/keep-alive/    Cloudflare Cron Worker ping Supabase hằng ngày
+
 fixtures/              Dữ liệu GIẢ cho kiểm thử (+ script sinh dữ liệu)
 vendor/                Thư viện vendored (SheetJS CE), có checksum
 docs/
@@ -102,7 +103,7 @@ Thiếu biến khi build → app hiện màn "Ứng dụng chưa được cấu 
 ## Deploy
 
 - **Cloudflare Pages** (frontend): build command `pnpm install --frozen-lockfile && pnpm --filter @hrflow/web build`, output `apps/web/dist`, env `NODE_VERSION=22`, `PNPM_VERSION=10.28.0`, `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`. Header bảo mật (CSP…) lấy từ `apps/web/public/_headers`.
-- **Keep-alive**: xem `workers/keep-alive/README.md` (`npx wrangler@4 deploy`, cron 08:00 giờ VN).
+- **Keep-alive**: `.github/workflows/keep-alive.yml` ping Supabase mỗi ngày lúc 08:07 giờ VN (chỉ chạy trên `main`; GitHub tự tắt lịch nếu repo không hoạt động 60 ngày, khi đó bật lại trong tab Actions).
 
 ## Nguyên tắc bắt buộc
 

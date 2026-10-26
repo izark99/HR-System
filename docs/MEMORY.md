@@ -73,13 +73,17 @@
 
 ## Hạ tầng
 
+2026-10-26 20:27 - Giữ Supabase không bị pause bằng GitHub Actions chạy theo lịch mỗi ngày (`.github/workflows/keep-alive.yml`, chỉ dùng publishable key); bỏ Cloudflare Cron Worker.
+
+2026-10-26 20:27 - `main` là nhánh production: Cloudflare Pages deploy từ `main`; code được đưa lên `main` sau khi qua test/review.
+
 2026-10-26 13:37 - Deploy lên Cloudflare Pages ngay khi xong bước 2 để có link dùng thử; Harold tạo tài khoản Cloudflare và kết nối repo GitHub theo hướng dẫn.
 
 2026-10-26 13:37 - Tài khoản Admin đầu tiên tạo bằng script seed (username `admin`, mật khẩu tạm gửi riêng cho Harold, bắt đổi ở lần đăng nhập đầu).
 
 2026-10-26 13:37 - Supabase project `hr-data-flow` (ref `rzakjtgvbyxqsmbpcomw`), organization `izark99`, gói Free, region Singapore (`ap-southeast-1`); do Claude tạo qua kết nối Supabase.
 
-2026-10-26 08:20 - Dùng Cloudflare Cron Worker ping Supabase hằng ngày để tránh project bị pause sau 7 ngày.
+~~2026-10-26 08:20 - Dùng Cloudflare Cron Worker ping Supabase hằng ngày để tránh project bị pause sau 7 ngày.~~ → thay bởi 2026-10-26 20:27
 
 2026-10-26 08:20 - Hosting phải miễn phí: Cloudflare Pages (frontend) + Supabase Free (Auth, Postgres, Storage, Edge Functions). Không dùng Vercel Hobby vì cấm dùng thương mại.
 

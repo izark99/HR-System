@@ -84,7 +84,7 @@ Hệ thống được thiết kế như một **framework**: logic nghiệp vụ
                  ▼
 ┌────────────── Supabase (Free tier) ──────────────┐   ┌──── Cloudflare ────┐
 │ Auth (username → email nội bộ, password)          │   │ Pages: host SPA    │
-│ Postgres + RLS: users, groups, flows, versions…   │   │ Cron: keep-alive   │
+│ Postgres + RLS: users, groups, flows, versions…   │   │                    │
 │ Storage: template .xlsx (private bucket)          │   │  ping Supabase     │
 │ Edge Functions: admin-users (service role)        │   └────────────────────┘
 └───────────────────────────────────────────────────┘
@@ -96,7 +96,7 @@ Hệ thống được thiết kế như một **framework**: logic nghiệp vụ
 |------------|----------|-------|-----------------|
 | Hosting SPA | **Cloudflare Pages** | Free, **cho phép dùng thương mại**, CDN nhanh | Vercel Hobby **cấm dùng thương mại** → không chọn |
 | Backend | **Supabase Free** | Auth + Postgres + RLS + Storage + Edge Functions trong 1 gói | Project tự **pause sau 7 ngày không hoạt động** → cần keep-alive (§16) ; DB 500MB, Storage 1GB |
-| Keep-alive | Cloudflare Workers Cron Trigger | Free, chạy định kỳ | Ping 1 lần/ngày |
+| Keep-alive | GitHub Actions (schedule) | Free, không cần đăng nhập thêm dịch vụ | Ping 1 lần/ngày; GitHub tắt lịch nếu repo không hoạt động 60 ngày |
 
 Kiến trúc giữ tính **portable**: frontend là static build; backend chỉ dùng chuẩn Postgres + Supabase Auth → có thể chuyển sang Supabase self-host (Docker) trong hạ tầng nội bộ của công ty khi cần.
 
@@ -482,7 +482,7 @@ Designer có chức năng **diff** giữa 2 version: node thêm/xóa/sửa, cấ
 
 | Rủi ro | Giải pháp |
 |--------|-----------|
-| Supabase pause sau 7 ngày không hoạt động | Cloudflare Worker Cron ping 1 truy vấn nhẹ mỗi ngày; Admin dashboard cảnh báo nếu ping thất bại |
+| Supabase pause sau 7 ngày không hoạt động | GitHub Actions theo lịch ping 1 truy vấn nhẹ mỗi ngày; Admin dashboard cảnh báo nếu ping thất bại |
 | Free tier không có backup tự động đầy đủ | GitHub Actions hằng tuần chạy `pg_dump` cấu hình (không chứa dữ liệu cá nhân) → lưu vào artifact private / Google Drive của HR; Export flow JSON định kỳ |
 | Giới hạn DB 500MB / Storage 1GB | Run log tự xóa sau 12 tháng (cấu hình được); ref table lớn lưu dạng Parquet trong Storage |
 | Pyodide/DuckDB tải chậm lần đầu | Service Worker cache asset WASM; preload ở màn hình đăng nhập |
@@ -540,7 +540,7 @@ HR-System/
 │  ├─ migrations/                 # SQL schema + RLS
 │  ├─ functions/admin-users/      # Edge Function
 │  └─ seed.sql
-├─ workers/keep-alive/            # Cloudflare Cron Worker
+├─ .github/workflows/keep-alive.yml # GitHub Actions ping Supabase hằng ngày
 ├─ e2e/                           # Playwright
 ├─ docs/
 │  ├─ spec.md                     # đặc tả (file này)

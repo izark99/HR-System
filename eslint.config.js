@@ -20,7 +20,6 @@ export default tseslint.config(
           './apps/web/tsconfig.node.json',
           './packages/flow-schema/tsconfig.json',
           './supabase/functions/tsconfig.json',
-          './workers/keep-alive/tsconfig.json',
           './e2e/tsconfig.json',
         ],
         tsconfigRootDir: import.meta.dirname,
