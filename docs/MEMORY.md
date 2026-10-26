@@ -121,6 +121,8 @@
 
 ## Kỹ thuật & tổ chức
 
+2026-10-26 13:18 - CLAUDE.md giữ ngắn gọn (tổng quan, nguồn sự thật, lệnh); quy tắc chi tiết tách vào `.claude/rules/*.md`, quy tắc theo vùng code chỉ nạp khi làm việc ở vùng đó.
+
 2026-10-26 12:37 - Font Be Vietnam Pro được self-host trong app (không tải từ Google Fonts); CSP không cho phép domain font bên ngoài.
 
 2026-10-26 09:24 - Nút chính dùng teal đậm #0F766E (đạt tương phản WCAG AA với chữ trắng); #14B8A6 chỉ dùng cho mảng màu/trang trí.
