@@ -267,3 +267,55 @@ export function parseRgb(css: string): number[] {
   if (hex) return [0, 2, 4].map((i) => parseInt(hex[1]!.slice(i, i + 2), 16));
   throw new Error(`unsupported color ${css}`);
 }
+
+/** In-memory file for `setInputFiles` (text content, fake data only). */
+export function textFile(name: string, content: string | Buffer, mimeType = 'application/json') {
+  return { name, mimeType, buffer: Buffer.isBuffer(content) ? content : Buffer.from(content) };
+}
+
+/** The open custom picker popover (non-modal), as opposed to the native modal `<dialog>`s. */
+export function pickerPopover(page: Page): Locator {
+  return page.locator('[role="dialog"][aria-modal="false"]');
+}
+
+/**
+ * Pick `YYYY-MM-DD` in the custom date picker with the mouse: open, step the month header with
+ * the prev/next buttons, click the day cell.
+ */
+export async function pickDate(page: Page, trigger: Locator, iso: string): Promise<void> {
+  const [year, month, day] = iso.split('-').map(Number) as [number, number, number];
+  await trigger.click();
+  const popover = pickerPopover(page);
+  await expect(popover).toBeVisible();
+  for (let i = 0; i < 60; i++) {
+    const title = (await popover.locator('[aria-live="polite"]').textContent()) ?? '';
+    const m = /Tháng (\d+) năm (\d+)/.exec(title)!;
+    const shown = Number(m[2]) * 12 + Number(m[1]);
+    if (shown === year * 12 + month) break;
+    await popover
+      .getByRole('button', { name: shown > year * 12 + month ? 'Tháng trước' : 'Tháng sau' })
+      .click();
+  }
+  await popover.getByRole('gridcell', { name: `Ngày ${day} tháng ${month} năm ${year}` }).click();
+  await expect(popover).toHaveCount(0);
+}
+
+/** Everything the page could persist: web storage, IndexedDB names, Cache API, cookies, URL. */
+export async function persistedState(page: Page): Promise<string> {
+  const dump = await page.evaluate(async () => {
+    const entries = (s: Storage) =>
+      Object.fromEntries(
+        Array.from({ length: s.length }, (_, i) => s.key(i)!).map((k) => [k, s.getItem(k)]),
+      );
+    return JSON.stringify({
+      local: entries(localStorage),
+      session: entries(sessionStorage),
+      idb: (await indexedDB.databases()).map((d) => d.name),
+      caches: 'caches' in self ? await caches.keys() : [],
+      cookie: document.cookie,
+      name: window.name,
+      title: document.title,
+    });
+  });
+  return `${page.url()}\n${dump}`;
+}

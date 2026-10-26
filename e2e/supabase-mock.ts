@@ -78,6 +78,55 @@ const VERSION = {
   effective_to: null as string | null,
 };
 
+export interface MockFlow {
+  id: string;
+  code: string;
+  name: string;
+  description: string;
+  category: string;
+  instructions: string;
+  is_archived: boolean;
+}
+
+export interface MockVersion {
+  id: string;
+  flow_id: string;
+  version_no: number;
+  status: 'draft' | 'published' | 'retired';
+  effective_from: string;
+  effective_to: string | null;
+  definition: unknown;
+  published_at: string;
+}
+
+/** Error the mock answers instead of doing the work (one-shot unless `sticky`). */
+export interface InjectedFailure {
+  status: number;
+  /** Edge Function: `{ error: { code } }`; PostgREST: `{ code }` (e.g. 23P01). */
+  code: string;
+  sticky?: boolean;
+}
+
+/** Flow definition of the acceptance flow, deep-cloned so a test can tweak it. */
+export function baseFlowDefinition(): Record<string, unknown> {
+  return structuredClone(FLOW_JSON) as Record<string, unknown>;
+}
+
+/** The acceptance flow with the "Công" tolerance changed (other metrics untouched). */
+export function flowWithCongTolerance(tolerance: string): Record<string, unknown> {
+  const def = baseFlowDefinition();
+  const nodes = def.nodes as {
+    id: string;
+    config: { metrics: { left: string; tolerance: string }[] };
+  }[];
+  const cmp = nodes.find((n) => n.id === 'cmp')!;
+  cmp.config.metrics.find((m) => m.left === 'cong')!.tolerance = tolerance;
+  return def;
+}
+
+export const FIXED_TEMP_PASSWORD = 'TamThoi2345abcXY';
+export const RESET_TEMP_PASSWORD = 'DatLai7788qwrtZK';
+
 function b64url(s: string): string {
   return Buffer.from(s, 'utf8').toString('base64url');
 }
@@ -151,6 +200,81 @@ export class SupabaseMock {
   unhandled: string[] = [];
   /** Flow assigned to USER; set false to test the "not assigned" case. */
   flowVisibleToUsers = true;
+  flows: MockFlow[] = [{ ...FLOW, is_archived: false }];
+  versions: MockVersion[] = [
+    {
+      id: VERSION.id,
+      flow_id: FLOW.id,
+      version_no: VERSION.version_no,
+      status: 'published',
+      effective_from: VERSION.effective_from,
+      effective_to: VERSION.effective_to,
+      definition: FLOW_JSON,
+      published_at: '2026-10-26T00:00:00Z',
+    },
+  ];
+  /** Next admin-users call / publish RPC fails with this (see InjectedFailure). */
+  functionFailure: InjectedFailure | null = null;
+  publishFailure: InjectedFailure | null = null;
+  /** resolve_flow_version fails (500) while set; `resolveDelayMs(asOf)` delays its answer. */
+  resolveFailure: InjectedFailure | null = null;
+  resolveDelayMs: ((asOf: string) => number) | null = null;
+  /** run_logs insert fails with this (the run itself must not notice). */
+  runLogFailure: InjectedFailure | null = null;
+  /** Next password sign-in fails with this status/code (e.g. 429 over_request_rate_limit). */
+  tokenFailure: InjectedFailure | null = null;
+  /** Auth server refuses refresh tokens (session revoked / expired). */
+  refreshRevoked = false;
+  /** false: the token endpoint accepts a locked account, only the profile row says "locked". */
+  authEnforcesBan = true;
+
+  /** Replace the versions of the acceptance flow. */
+  setVersions(
+    list: { no: number; from: string; to?: string | null; definition?: unknown }[],
+  ): MockVersion[] {
+    this.versions = list.map((v) => ({
+      id: `00000000-0000-4000-8000-0000000002${String(v.no).padStart(2, '0')}`,
+      flow_id: FLOW.id,
+      version_no: v.no,
+      status: 'published',
+      effective_from: v.from,
+      effective_to: v.to ?? null,
+      definition: v.definition ?? FLOW_JSON,
+      published_at: '2026-10-26T00:00:00Z',
+    }));
+    return this.versions;
+  }
+
+  /** Calls whose path matches (substring or regexp), parsed JSON bodies. */
+  bodiesOf(path: string | RegExp, method?: string): Record<string, unknown>[] {
+    return this.calls
+      .filter(
+        (c) =>
+          (!method || c.method === method) &&
+          (typeof path === 'string' ? c.path.startsWith(path) : path.test(c.path)),
+      )
+      .map((c) => {
+        try {
+          return JSON.parse(c.body) as Record<string, unknown>;
+        } catch {
+          return {};
+        }
+      });
+  }
+
+  /** Any request that only an Admin screen makes (admin API surface). */
+  adminCalls(): string[] {
+    return this.calls
+      .filter(
+        (c) =>
+          c.path.startsWith('/functions/v1/admin-users') ||
+          /^\/rest\/v1\/(groups|group_members|flow_assignments|flow_versions|flows)(\?|$)/.test(
+            c.path,
+          ) ||
+          c.path.startsWith('/rest/v1/rpc/admin_'),
+      )
+      .map((c) => `${c.method} ${c.path}`);
+  }
 
   async install(context: BrowserContext): Promise<void> {
     await context.route(`${SUPABASE_ORIGIN}/**`, (route, request) => this.handle(route, request));
@@ -185,16 +309,32 @@ export class SupabaseMock {
     }
   }
 
-  private canSeeFlow(user: MockUser | undefined): boolean {
+  private canSeeFlow(user: MockUser | undefined, flowId: string = FLOW.id): boolean {
     if (!user || !user.is_active) return false;
     if (user.role === 'admin') return true;
-    if (!this.flowVisibleToUsers) return false;
+    if (!this.flowVisibleToUsers && flowId === FLOW.id) return false;
     const groups = this.members.filter((m) => m.user_id === user.id).map((m) => m.group_id);
     return this.assignments.some(
       (a) =>
-        a.flow_id === FLOW.id &&
+        a.flow_id === flowId &&
         (a.user_id === user.id || (a.group_id && groups.includes(a.group_id))),
     );
+  }
+
+  /** SQL resolve_flow_version: effective version first, else the latest published (applies=false). */
+  private resolveVersion(flowId: string, asOf: string) {
+    const rows = this.versions
+      .filter((v) => v.flow_id === flowId && v.status === 'published')
+      .map((v) => ({
+        v,
+        applies: v.effective_from <= asOf && (v.effective_to === null || v.effective_to > asOf),
+      }))
+      .sort(
+        (a, b) =>
+          Number(b.applies) - Number(a.applies) ||
+          b.v.effective_from.localeCompare(a.v.effective_from),
+      );
+    return rows[0];
   }
 
   private async handle(route: Route, request: Request): Promise<void> {
@@ -230,17 +370,25 @@ export class SupabaseMock {
 
     // ---- auth ----
     if (path === '/auth/v1/token' && url.searchParams.get('grant_type') === 'password') {
+      if (this.tokenFailure) {
+        const f = this.tokenFailure;
+        if (!f.sticky) this.tokenFailure = null;
+        return json(f.status, { code: f.code, msg: 'injected' });
+      }
       const { email, password } = parsed() as { email?: string; password?: string };
       const user = this.users.find((u) => `${u.username}@${EMAIL_DOMAIN}` === email);
       if (!user || user.password !== password) {
         return json(400, { code: 'invalid_credentials', msg: 'Invalid login credentials' });
       }
-      if (!user.is_active) return json(400, { code: 'user_banned', msg: 'User is banned' });
+      if (!user.is_active && this.authEnforcesBan) {
+        return json(400, { code: 'user_banned', msg: 'User is banned' });
+      }
       return json(200, sessionFor(user));
     }
     if (path === '/auth/v1/token' && url.searchParams.get('grant_type') === 'refresh_token') {
       const { refresh_token } = parsed() as { refresh_token?: string };
       const user = this.users.find((u) => `refresh-${u.id}` === refresh_token);
+      if (this.refreshRevoked) return json(400, { code: 'refresh_token_not_found', msg: 'x' });
       return user
         ? json(200, sessionFor(user))
         : json(400, { code: 'refresh_token_not_found', msg: 'x' });
@@ -275,56 +423,173 @@ export class SupabaseMock {
       );
       return rows(visible.map(({ password: _p, ...p }) => p));
     }
+    const pgError = (f: InjectedFailure) => json(f.status, { code: f.code, message: 'injected' });
+    const adminOnly = caller?.role === 'admin' && caller.is_active;
+    const denied = () => json(403, { code: '42501', message: 'denied' });
+    const idEq = eqFilter('id');
+
     if (path === '/rest/v1/group_members' && method === 'GET') return rows(this.members);
     if (path === '/rest/v1/groups' && method === 'GET') return rows(this.groups);
+    if (path === '/rest/v1/groups' && method === 'POST') {
+      if (!adminOnly) return denied();
+      const g = parsed() as { name?: string; description?: string };
+      if (this.groups.some((x) => x.name === g.name)) {
+        return json(409, { code: '23505', message: 'duplicate' });
+      }
+      this.groups.push({
+        id: `00000000-0000-4000-8000-0000000000${String(this.groups.length + 10)}`,
+        name: String(g.name),
+        description: g.description ?? '',
+      });
+      return route.fulfill({ status: 201, headers: cors });
+    }
+    if (path === '/rest/v1/groups' && method === 'PATCH') {
+      if (!adminOnly) return denied();
+      const g = parsed() as { name?: string; description?: string };
+      const row = this.groups.find((x) => x.id === idEq);
+      if (!row) return route.fulfill({ status: 204, headers: cors });
+      if (this.groups.some((x) => x.id !== row.id && x.name === g.name)) {
+        return json(409, { code: '23505', message: 'duplicate' });
+      }
+      row.name = g.name ?? row.name;
+      row.description = g.description ?? row.description;
+      return route.fulfill({ status: 204, headers: cors });
+    }
+    if (path === '/rest/v1/groups' && method === 'DELETE') {
+      if (!adminOnly) return denied();
+      this.groups = this.groups.filter((x) => x.id !== idEq);
+      this.members = this.members.filter((m) => m.group_id !== idEq);
+      this.assignments = this.assignments.filter((a) => a.group_id !== idEq);
+      return route.fulfill({ status: 204, headers: cors });
+    }
     if (path === '/rest/v1/flow_assignments' && method === 'GET') return rows(this.assignments);
+    if (path === '/rest/v1/flow_assignments' && method === 'POST') {
+      if (!adminOnly) return denied();
+      const a = parsed() as { flow_id: string; user_id?: string; group_id?: string };
+      this.assignments.push({
+        id: `asg-${this.assignments.length + 1}-${Date.now()}`,
+        flow_id: a.flow_id,
+        user_id: a.user_id ?? null,
+        group_id: a.group_id ?? null,
+      });
+      return route.fulfill({ status: 201, headers: cors });
+    }
+    if (path === '/rest/v1/flow_assignments' && method === 'DELETE') {
+      if (!adminOnly) return denied();
+      this.assignments = this.assignments.filter((a) => a.id !== idEq);
+      return route.fulfill({ status: 204, headers: cors });
+    }
     if (path === '/rest/v1/flows' && method === 'GET') {
-      return rows([{ ...FLOW, is_archived: false }]);
+      return rows([...this.flows].sort((a, b) => a.name.localeCompare(b.name)));
     }
     if (path === '/rest/v1/flow_versions' && method === 'GET') {
-      return rows([
-        {
-          id: VERSION.id,
-          flow_id: FLOW.id,
-          version_no: VERSION.version_no,
-          status: 'published',
-          effective_from: VERSION.effective_from,
-          effective_to: VERSION.effective_to,
-          published_at: '2026-10-26T00:00:00Z',
-        },
-      ]);
+      return rows(
+        [...this.versions]
+          .sort((a, b) => b.version_no - a.version_no)
+          .map(({ definition: _d, ...v }) => v),
+      );
+    }
+    if (path === '/rest/v1/rpc/admin_publish_flow_version') {
+      if (!adminOnly) return denied();
+      if (this.publishFailure) {
+        const f = this.publishFailure;
+        if (!f.sticky) this.publishFailure = null;
+        return pgError(f);
+      }
+      const p = parsed() as Record<string, string | null>;
+      let flow = this.flows.find((f) => f.code === p.p_code);
+      if (!flow) {
+        flow = {
+          id: `00000000-0000-4000-8000-0000000000f${this.flows.length + 2}`,
+          code: String(p.p_code),
+          name: '',
+          description: '',
+          category: '',
+          instructions: '',
+          is_archived: false,
+        };
+        this.flows.push(flow);
+      }
+      flow.name = String(p.p_name);
+      flow.description = p.p_description ?? '';
+      flow.category = p.p_category ?? '';
+      flow.instructions = p.p_instructions ?? '';
+      const mine = this.versions.filter((v) => v.flow_id === flow.id);
+      if (p.p_close_previous) {
+        for (const v of mine) {
+          if (
+            v.status === 'published' &&
+            v.effective_to === null &&
+            v.effective_from < String(p.p_effective_from)
+          ) {
+            v.effective_to = String(p.p_effective_from);
+          }
+        }
+      }
+      const no = Math.max(0, ...mine.map((v) => v.version_no)) + 1;
+      const id = `00000000-0000-4000-8000-0000000003${String(this.versions.length).padStart(2, '0')}`;
+      this.versions.push({
+        id,
+        flow_id: flow.id,
+        version_no: no,
+        status: 'published',
+        effective_from: String(p.p_effective_from),
+        effective_to: (p.p_effective_to as string | null) ?? null,
+        definition: p.p_definition,
+        published_at: '2026-10-26T00:00:00Z',
+      });
+      return json(200, [{ flow_id: flow.id, version_id: id, version_no: no }]);
     }
     if (path === '/rest/v1/rpc/my_flows') {
-      return json(
-        200,
-        this.canSeeFlow(caller)
-          ? [
-              {
-                flow_id: FLOW.id,
-                ...FLOW,
-                version_id: VERSION.id,
-                version_no: VERSION.version_no,
-                effective_from: VERSION.effective_from,
-                effective_to: VERSION.effective_to,
-                input_count: 2,
-              },
-            ]
-          : [],
-      );
+      const { p_as_of } = parsed() as { p_as_of?: string };
+      const out = this.flows
+        .filter((f) => !f.is_archived && this.canSeeFlow(caller, f.id))
+        .map((f) => {
+          const r = this.resolveVersion(f.id, p_as_of ?? '9999-12-31');
+          const slots = (r?.v.definition as { inputSlots?: unknown[] } | undefined)?.inputSlots;
+          return {
+            flow_id: f.id,
+            code: f.code,
+            name: f.name,
+            description: f.description,
+            category: f.category,
+            instructions: f.instructions,
+            version_id: r?.v.id ?? null,
+            version_no: r?.v.version_no ?? null,
+            effective_from: r?.v.effective_from ?? null,
+            effective_to: r?.v.effective_to ?? null,
+            input_count: Array.isArray(slots) ? slots.length : 0,
+          };
+        });
+      return json(200, out);
     }
     if (path === '/rest/v1/rpc/resolve_flow_version') {
       const { p_code, p_as_of } = parsed() as { p_code?: string; p_as_of?: string };
-      if (p_code !== FLOW.code || !this.canSeeFlow(caller)) return json(200, []);
+      const delay = this.resolveDelayMs?.(p_as_of ?? '') ?? 0;
+      if (delay > 0) await new Promise((r) => setTimeout(r, delay));
+      if (this.resolveFailure) {
+        const f = this.resolveFailure;
+        if (!f.sticky) this.resolveFailure = null;
+        return pgError(f);
+      }
+      const flow = this.flows.find((f) => f.code === p_code && !f.is_archived);
+      if (!flow || !this.canSeeFlow(caller, flow.id)) return json(200, []);
+      const r = this.resolveVersion(flow.id, p_as_of ?? '');
+      if (!r) return json(200, []);
       return json(200, [
         {
-          version_id: VERSION.id,
-          flow_id: FLOW.id,
-          ...FLOW,
-          version_no: VERSION.version_no,
-          effective_from: VERSION.effective_from,
-          effective_to: VERSION.effective_to,
-          definition: FLOW_JSON,
-          applies: (p_as_of ?? '') >= VERSION.effective_from,
+          version_id: r.v.id,
+          flow_id: flow.id,
+          code: flow.code,
+          name: flow.name,
+          description: flow.description,
+          category: flow.category,
+          instructions: flow.instructions,
+          version_no: r.v.version_no,
+          effective_from: r.v.effective_from,
+          effective_to: r.v.effective_to,
+          definition: r.v.definition,
+          applies: r.applies,
         },
       ]);
     }
@@ -347,6 +612,11 @@ export class SupabaseMock {
       );
     }
     if (path === '/rest/v1/run_logs' && method === 'POST') {
+      if (this.runLogFailure) {
+        const f = this.runLogFailure;
+        if (!f.sticky) this.runLogFailure = null;
+        return json(f.status, { code: f.code, message: 'injected' });
+      }
       if (!this.canSeeFlow(caller)) return json(403, { code: '42501', message: 'denied' });
       this.runLogs.push(parsed());
       return route.fulfill({ status: 201, headers: cors });
@@ -358,6 +628,13 @@ export class SupabaseMock {
       if (caller.role !== 'admin') return json(403, { ok: false, error: { code: 'forbidden' } });
       const req = parsed();
       this.functionCalls.push(req);
+      if (this.functionFailure) {
+        const f = this.functionFailure;
+        if (!f.sticky) this.functionFailure = null;
+        return json(f.status, { ok: false, error: { code: f.code } });
+      }
+      const target = this.users.find((u) => u.id === req.user_id);
+      const selfAction = target?.id === caller.id;
       if (req.action === 'create') {
         const username = String(req.username);
         if (this.users.some((u) => u.username === username)) {
@@ -370,7 +647,7 @@ export class SupabaseMock {
           role: req.role === 'admin' ? 'admin' : 'user',
           is_active: true,
           must_change_password: true,
-          password: 'TamThoi2345abcXY',
+          password: FIXED_TEMP_PASSWORD,
         };
         this.users.push(user);
         for (const g of (req.group_ids as string[] | undefined) ?? []) {
@@ -380,6 +657,32 @@ export class SupabaseMock {
           ok: true,
           data: { user_id: user.id, username, temp_password: user.password },
         });
+      }
+      if (!target) return json(404, { ok: false, error: { code: 'not_found' } });
+      if (req.action === 'reset_password') {
+        if (selfAction) return json(409, { ok: false, error: { code: 'self_action_forbidden' } });
+        target.password = RESET_TEMP_PASSWORD;
+        target.must_change_password = true;
+        return json(200, { ok: true, data: { temp_password: RESET_TEMP_PASSWORD } });
+      }
+      if (req.action === 'set_active') {
+        if (selfAction) return json(409, { ok: false, error: { code: 'self_action_forbidden' } });
+        target.is_active = Boolean(req.active);
+        return json(200, { ok: true, data: {} });
+      }
+      if (req.action === 'update') {
+        if (selfAction && req.role !== undefined && req.role !== target.role) {
+          return json(409, { ok: false, error: { code: 'self_action_forbidden' } });
+        }
+        if (typeof req.full_name === 'string') target.full_name = req.full_name;
+        if (req.role === 'admin' || req.role === 'user') target.role = req.role;
+        if (Array.isArray(req.group_ids)) {
+          this.members = this.members.filter((m) => m.user_id !== target.id);
+          for (const g of req.group_ids as string[]) {
+            this.members.push({ group_id: g, user_id: target.id });
+          }
+        }
+        return json(200, { ok: true, data: {} });
       }
       return json(200, { ok: true, data: {} });
     }
