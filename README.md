@@ -40,7 +40,7 @@ fixtures/              Dữ liệu GIẢ cho kiểm thử (+ script sinh dữ li
 vendor/                Thư viện vendored (SheetJS CE), có checksum
 docs/
   spec.md              Đặc tả hệ thống
-  MEMORY.md            Nhật ký quyết định (YYYYMMDD - Quyết định)
+  MEMORY.md            Nhật ký quyết định (YYYY-MM-DD HH:MM - Quyết định)
 .claude/agents/        Team agent: requirements-analyst, developer, tester, reviewer
 CLAUDE.md              Hướng dẫn làm việc cho Claude trên dự án
 ```

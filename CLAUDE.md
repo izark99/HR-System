@@ -14,8 +14,8 @@ Nếu yêu cầu mới mâu thuẫn với MEMORY.md hoặc spec.md → dừng l�
 
 ## Quy tắc cập nhật MEMORY.md (bắt buộc)
 
-- Mỗi khi Harold chốt một quyết định (phạm vi, kiến trúc, UX, quy tắc nghiệp vụ, công nghệ) → thêm ngay 1 dòng vào đúng nhóm: `YYYYMMDD - Quyết định` (các dòng cách nhau 1 dòng trống) (ngày thực tế, viết ngắn, rõ, không mơ hồ).
-- Khi quyết định thay đổi → **không xóa**; gạch dòng cũ `~~...~~ → thay bởi YYYYMMDD` và thêm dòng mới.
+- Mỗi khi Harold chốt một quyết định (phạm vi, kiến trúc, UX, quy tắc nghiệp vụ, công nghệ) → thêm ngay 1 dòng vào đúng nhóm: `YYYY-MM-DD HH:MM - Quyết định` (giờ Việt Nam) (các dòng cách nhau 1 dòng trống) (ngày thực tế, viết ngắn, rõ, không mơ hồ).
+- Khi quyết định thay đổi → **không xóa**; gạch dòng cũ `~~...~~ → thay bởi YYYY-MM-DD HH:MM` và thêm dòng mới.
 - Cập nhật `docs/spec.md` cho khớp trong cùng commit.
 - Không ghi vào MEMORY.md những điều chưa được Harold xác nhận.
 

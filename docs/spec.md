@@ -319,7 +319,7 @@ Admin khai báo **input slot** cho mỗi flow — mô tả file mà User cần u
   - `presence`: `required` (thiếu cột trong file → lỗi) | `optional`.
   - `required` (giá trị): ô trống → lỗi. Nếu không bắt buộc, ô trống nhận `defaultValue` (VD `0`) hoặc `null`.
   - Cột chỉ tiêu số trong flow nghiệm thu: `presence: required`, ô trống → `0`.
-- Quy tắc đọc file bổ sung (chốt 20261026):
+- Quy tắc đọc file bổ sung (chốt 2026-10-26):
   - `skipRows.whenKeyContains`: bỏ qua dòng có cột khóa chứa một trong các text cấu hình (VD `"TỔNG CỘNG"`), so khớp sau chuẩn hóa.
   - Thiếu cột khóa → chỉ 1 lỗi "thiếu cột"; không phát sinh lỗi từng dòng.
   - Số dạng text mơ hồ (VD `"1,500"`) → warning.
@@ -582,7 +582,7 @@ Package manager: pnpm workspace.
 
 | # | Câu hỏi | Ảnh hưởng |
 |---|---------|-----------|
-| ~~Q1~~ | ~~Flow nghiệm thu MVP?~~ → Đã chốt 20261026: đối chiếu bảng lương – chấm công | — |
+| ~~Q1~~ | ~~Flow nghiệm thu MVP?~~ → Đã chốt 2026-10-26: đối chiếu bảng lương – chấm công | — |
 | Q2 | IT/Pháp chế công ty có yêu cầu gì khi dùng cloud nước ngoài cho metadata không? | Hosting |
 | Q3 | Số lượng user dự kiến? | Free tier (Supabase Free: 50k MAU — dư) |
 | Q4 | Có cần Admin "giả lập" (impersonate) quyền User để kiểm tra không? | Phân quyền |
@@ -652,9 +652,9 @@ Flow (DAG):
   - `mismatched`: 1 dòng / NV lệch; mỗi chỉ tiêu có 3 cột `<label> (lương)`, `<label> (chấm công)`, `<label> (chênh lệch)` với chênh lệch = right − left; thêm cột `Chỉ tiêu lệch` (liệt kê).
   - `only_left`, `only_right`: các dòng không tìm thấy khóa ở bảng còn lại.
 - Quy tắc so sánh: `|right − left| > tolerance` ⇒ lệch. Giá trị null được coi là 0 nếu Admin bật `nullAsZero` (mặc định bật), ngược lại null ≠ số bất kỳ ⇒ lệch.
-- So khớp khóa không phân biệt hoa thường, bỏ khoảng trắng thừa (chốt 20261026).
-- Rule `unique` của input slot dùng cùng cách chuẩn hóa khóa này, để trùng mã bị phát hiện ngay ở bước kiểm tra file (chốt 20261026).
-- Sheet "Lệch": giá trị null hiển thị ô trống, nhưng vẫn tính là 0 khi so sánh nếu `nullAsZero` bật (chốt 20261026).
+- So khớp khóa không phân biệt hoa thường, bỏ khoảng trắng thừa (chốt 2026-10-26).
+- Rule `unique` của input slot dùng cùng cách chuẩn hóa khóa này, để trùng mã bị phát hiện ngay ở bước kiểm tra file (chốt 2026-10-26).
+- Sheet "Lệch": giá trị null hiển thị ô trống, nhưng vẫn tính là 0 khi so sánh nếu `nullAsZero` bật (chốt 2026-10-26).
 - Tính toán bằng decimal, không dùng float.
 
 ### 24.3 User story & Acceptance criteria
