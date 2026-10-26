@@ -1,6 +1,6 @@
 import type { InputSlot, SlotColumn } from '@hrflow/flow-schema';
 import * as XLSX from 'xlsx';
-import { Big, isDecimal } from '../core/decimal';
+import { Big, decimalFrom, isDecimal } from '../core/decimal';
 import type { ColumnDef, Row, Table, Value } from '../core/types';
 import { coerceValue, isBlank, type RawValue } from './coerce';
 import { normalizeHeader, slugifyHeader } from './normalize';
@@ -95,17 +95,18 @@ export function readSlot(slot: InputSlot, files: readonly SourceFile[]): SlotRea
       continue;
     }
     const result = readSlotFile(slot, file);
-    issues.push(...result.issues);
-    skipped.push(...result.skipped);
+    // No `push(...arr)`: spreading a large array as call arguments overflows the stack (~125k).
+    appendAll(issues, result.issues);
+    appendAll(skipped, result.skipped);
     summaries.push(result.summary);
-    rows.push(...result.rows);
-    refs.push(...result.refs);
+    appendAll(rows, result.rows);
+    appendAll(refs, result.refs);
     for (const col of result.extraColumns) {
       if (!extraByKey.has(col.key)) extraByKey.set(col.key, col);
     }
   }
 
-  issues.push(...checkUnique(slot, rows, refs));
+  appendAll(issues, checkUnique(slot, rows, refs));
 
   const columns: ColumnDef[] = [
     ...slot.columns.map((c) => ({ key: c.key, type: c.type, title: columnTitle(c) })),
@@ -155,9 +156,11 @@ export function readSlotFile(slot: InputSlot, file: SourceFile): FileReadResult 
     if (found.length === 0) {
       issues.push({
         ...issue(
-          col.required ? 'error' : 'warning',
+          col.presence === 'required' ? 'error' : 'warning',
           'column',
-          col.required ? 'validation.columnMissing' : 'validation.columnMissingOptional',
+          col.presence === 'required'
+            ? 'validation.columnMissing'
+            : 'validation.columnMissingOptional',
           {
             ...at,
             column: columnTitle(col),
@@ -169,21 +172,37 @@ export function readSlotFile(slot: InputSlot, file: SourceFile): FileReadResult 
         column: col.key,
       });
     } else if (found.length > 1) {
+      // Several matching headers: an error when the column must exist (which one is right?).
+      const req = col.presence === 'required';
       issues.push({
-        ...issue('warning', 'column', 'validation.columnAmbiguous', {
-          ...at,
-          column: columnTitle(col),
-          headers: found.map((c) => `"${mapping.headers[c]}"`).join(', '),
-        }),
+        ...issue(
+          req ? 'error' : 'warning',
+          'column',
+          req ? 'validation.columnAmbiguousRequired' : 'validation.columnAmbiguous',
+          {
+            ...at,
+            column: columnTitle(col),
+            headers: found.map((c) => `"${mapping.headers[c]}"`).join(', '),
+          },
+        ),
         ...at,
         column: col.key,
       });
     }
   }
 
+  // A missing key column (`skipRows.whenBlank`, presence required) makes every row unidentifiable:
+  // report only the missing column, not one error per row.
+  const keyMissing = (slot.skipRows?.whenBlank ?? []).some(
+    (k) =>
+      slot.columns.find((c) => c.key === k)?.presence === 'required' &&
+      (mapping.matches.get(k) ?? []).length === 0,
+  );
+  if (keyMissing) return empty(issues, sheetName);
+
   const mapped = slot.columns
-    .map((col) => ({ col, c: mapping.matches.get(col.key)?.[0] }))
-    .filter((m): m is { col: SlotColumn; c: number } => m.c !== undefined);
+    .map((col) => ({ col, c: mapping.matches.get(col.key)?.[0], fallback: blankValue(col) }))
+    .filter((m): m is { col: SlotColumn; c: number; fallback: Value } => m.c !== undefined);
 
   // Extra columns kept as strings under a slug of their header.
   const extraColumns: ColumnDef[] = [];
@@ -201,11 +220,15 @@ export function readSlotFile(slot: InputSlot, file: SourceFile): FileReadResult 
     });
   }
 
-  // Row exclusion rule: skip when every `skipRows.whenBlank` column is blank. Only applied when
-  // all those columns were found; otherwise every row would vanish silently.
+  // Row exclusion rules: skip when every `skipRows.whenBlank` (key) column is blank, or when a key
+  // column contains a `whenKeyContains` text. Only applied when all key columns were found;
+  // otherwise every row would vanish silently.
   const skipCols = slot.skipRows?.whenBlank ?? [];
   const skipIdx = skipCols.map((k) => mapping.matches.get(k)?.[0]);
   const skipActive = skipIdx.length > 0 && skipIdx.every((c) => c !== undefined);
+  const skipTexts = (slot.skipRows?.whenKeyContains ?? [])
+    .map((text) => ({ text, norm: normalizeHeader(text) }))
+    .filter((x) => x.norm !== '');
 
   const rows: Row[] = [];
   const refs: RowRef[] = [];
@@ -240,13 +263,33 @@ export function readSlotFile(slot: InputSlot, file: SourceFile): FileReadResult 
       });
       continue;
     }
+    if (skipActive && skipTexts.length > 0) {
+      const hit = findKeyText(skipCols, skipIdx, skipTexts, cellAt);
+      if (hit) {
+        skipped.push({
+          file: file.name,
+          sheet: sheetName,
+          row: excelRow,
+          messageKey: 'skipped.keyContains',
+          params: {
+            file: file.name,
+            row: excelRow,
+            column: columnTitle(slot.columns.find((c) => c.key === hit.key)!),
+            text: hit.text,
+          },
+        });
+        continue;
+      }
+    }
 
     const row: Row = {};
     for (const col of slot.columns) row[col.key] = null;
     const rowAt = { ...at, row: excelRow };
 
-    for (const { col, c } of mapped) {
-      const { value: raw, error } = cellAt(c);
+    for (const { col, c, fallback } of mapped) {
+      const cell = cellAt(c);
+      const { error } = cell;
+      const raw = displayRaw(cell, col.type, date1904);
       const colParams = { ...rowAt, column: columnTitle(col) };
       if (error) {
         issues.push(
@@ -261,13 +304,18 @@ export function readSlotFile(slot: InputSlot, file: SourceFile): FileReadResult 
       if (isBlank(raw)) {
         if (col.required) {
           issues.push(cellIssue('error', 'required', 'validation.required', col, rowAt, colParams));
+        } else {
+          row[col.key] = fallback;
         }
         continue;
       }
+      // A real Excel date cell is always accepted by a date column, whatever dateFormats says.
+      const dateCell = isDateCell(cell) && (col.type === 'date' || col.type === 'datetime');
+      const dateFormats = dateCell ? ['excelSerial'] : col.dateFormats;
       const coerced = coerceValue(raw, col.type, {
         decimalSeparator: col.decimalSeparator,
         date1904,
-        ...(col.dateFormats ? { dateFormats: col.dateFormats } : {}),
+        ...(dateFormats ? { dateFormats } : {}),
       });
       if (!coerced.ok) {
         issues.push(
@@ -280,11 +328,20 @@ export function readSlotFile(slot: InputSlot, file: SourceFile): FileReadResult 
         continue;
       }
       row[col.key] = coerced.value;
-      issues.push(...checkValueRules(col, coerced.value, rowAt, colParams));
+      if (coerced.ambiguous) {
+        issues.push(
+          cellIssue('warning', 'type', 'validation.numberAmbiguous', col, rowAt, {
+            ...colParams,
+            value: String(raw),
+            parsed: displayValue(coerced.value),
+          }),
+        );
+      }
+      appendAll(issues, checkValueRules(col, coerced.value, rowAt, colParams));
     }
 
     for (const { key, c } of extraIdx) {
-      const coerced = coerceValue(cellAt(c).value, 'string');
+      const coerced = coerceValue(displayRaw(cellAt(c), 'string', date1904), 'string');
       row[key] = coerced.ok ? coerced.value : null;
     }
     if (slot.multiple.enabled) row[SOURCE_FILE_COLUMN] = file.name;
@@ -292,6 +349,9 @@ export function readSlotFile(slot: InputSlot, file: SourceFile): FileReadResult 
     refs.push({ file: file.name, row: excelRow });
   }
 
+  if (rows.length === 0 && mapped.length > 0) {
+    issues.push({ ...issue('warning', 'rows', 'validation.noDataRows', { ...at }), ...at });
+  }
   if (slot.maxRows !== undefined && rows.length > slot.maxRows) {
     issues.push({
       ...issue('warning', 'rows', 'validation.rowsTooMany', {
@@ -323,6 +383,9 @@ function parseWorkbook(file: SourceFile): XLSX.WorkBook {
     cellFormula: false,
     cellHTML: false,
     cellText: false,
+    // Keep each cell's number format (cheap string) so string columns can render the displayed
+    // text and date columns can recognise real date cells, without formatting every cell.
+    cellNF: true,
   };
   if (extensionOf(file.name) === '.csv') {
     // Decode explicitly as UTF-8 (BOM optional) so Vietnamese text survives; `raw` keeps every
@@ -333,10 +396,17 @@ function parseWorkbook(file: SourceFile): XLSX.WorkBook {
   return XLSX.read(bytes, { ...common, type: 'array' });
 }
 
+interface CellRead {
+  value: RawValue;
+  error?: string;
+  /** Excel number format of a numeric cell (absent / "General" when unformatted). */
+  numFmt?: string;
+}
+
 interface Grid {
   lastRow: number;
   lastCol: number;
-  cell(r: number, c: number, followMerges: boolean): { value: RawValue; error?: string };
+  cell(r: number, c: number, followMerges: boolean): CellRead;
   isRowBlank(r: number): boolean;
 }
 
@@ -353,7 +423,7 @@ function makeGrid(ws: XLSX.WorkSheet): Grid {
       }
     }
   }
-  const raw = (r: number, c: number): { value: RawValue; error?: string } => {
+  const raw = (r: number, c: number): CellRead => {
     const cell = data[r]?.[c];
     if (!cell || cell.v === undefined || cell.t === 'z') return { value: null };
     if (cell.t === 'e') {
@@ -361,6 +431,8 @@ function makeGrid(ws: XLSX.WorkSheet): Grid {
       return { value: null, error: EXCEL_ERRORS[code] ?? '#ERROR' };
     }
     const v = cell.v;
+    if (typeof v === 'number' && cell.z !== undefined && cell.z !== 'General')
+      return { value: v, numFmt: String(cell.z) };
     if (typeof v === 'string' || typeof v === 'number' || typeof v === 'boolean')
       return { value: v };
     return { value: null };
@@ -440,7 +512,7 @@ function pickSheet(
     const name = wb.SheetNames[sel.value];
     return name ? load(name) : fileIssue('validation.sheetIndexNotFound', { index: sel.value + 1 });
   }
-  const required = slot.columns.filter((c) => c.required);
+  const required = slot.columns.filter((c) => c.presence === 'required');
   for (const name of wb.SheetNames) {
     const loaded = load(name);
     if (required.every((c) => (loaded.mapping.matches.get(c.key) ?? []).length > 0)) return loaded;
@@ -554,6 +626,67 @@ function cellIssue(
   params: IssueParams,
 ): ValidationIssue {
   return { ...issue(severity, rule, messageKey, params), ...at, column: col.key };
+}
+
+/** SheetJS number-format engine; typed here because the bundled typings declare it as `any`. */
+const SSF = XLSX.SSF as {
+  format(fmt: string, value: number, opts?: { date1904?: boolean }): string;
+  is_date(fmt: string): boolean;
+};
+
+/**
+ * Raw value as the column should see it: a formatted numeric cell in a `string` column becomes the
+ * text Excel displays ("00123", "01/09/2026"). Excel's locale short date (built-in format 14,
+ * which SheetJS names "m/d/yy") is rendered as dd/mm/yyyy, the convention of the organisation.
+ */
+function displayRaw(cell: CellRead, type: SlotColumn['type'], date1904: boolean): RawValue {
+  if (type !== 'string' || typeof cell.value !== 'number' || !cell.numFmt) return cell.value;
+  const fmt = cell.numFmt === 'm/d/yy' ? 'dd/mm/yyyy' : cell.numFmt;
+  try {
+    return SSF.format(fmt, cell.value, { date1904 });
+  } catch {
+    return cell.value;
+  }
+}
+
+function isDateCell(cell: CellRead): boolean {
+  return typeof cell.value === 'number' && !!cell.numFmt && SSF.is_date(cell.numFmt);
+}
+
+function findKeyText(
+  keys: readonly string[],
+  idx: readonly number[],
+  texts: readonly { text: string; norm: string }[],
+  cellAt: (c: number) => CellRead,
+): { key: string; text: string } | null {
+  for (let i = 0; i < idx.length; i++) {
+    const v = cellAt(idx[i]!).value;
+    if (isBlank(v)) continue;
+    const norm = normalizeHeader(String(v));
+    const hit = texts.find((t) => norm.includes(t.norm));
+    if (hit) return { key: keys[i]!, text: hit.text };
+  }
+  return null;
+}
+
+/** Value of a blank cell in a non-required column: `defaultValue` in the column type, or null. */
+function blankValue(col: SlotColumn): Value {
+  const d = col.defaultValue;
+  if (d === undefined) return null;
+  switch (col.type) {
+    case 'decimal':
+      return typeof d === 'boolean' ? null : decimalFrom(d);
+    case 'integer':
+      return typeof d === 'boolean' ? null : Number(d);
+    default:
+      // string / boolean / ISO date text: the schema guarantees the JSON type fits.
+      return d;
+  }
+}
+
+/** Append without spreading into call arguments (safe for arrays of any length). */
+function appendAll<T>(target: T[], items: readonly T[]): void {
+  for (const item of items) target.push(item);
 }
 
 function columnTitle(col: SlotColumn): string {

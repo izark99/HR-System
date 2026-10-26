@@ -6,7 +6,12 @@ import { normalizeHeader } from './normalize';
 /** Raw cell value as produced by the sheet parser (dates arrive as Excel serial numbers). */
 export type RawValue = string | number | boolean | null;
 
-export type CoerceResult = { ok: true; value: Value } | { ok: false };
+/**
+ * `ambiguous`: a number typed as text that reads differently depending on the decimal separator
+ * (e.g. "1,500" = 1500 with ".", but 1.5 in VN notation). The value follows the configured
+ * separator; the caller reports a warning.
+ */
+export type CoerceResult = { ok: true; value: Value; ambiguous?: boolean } | { ok: false };
 
 export interface CoerceOptions {
   dateFormats?: readonly string[];
@@ -39,7 +44,8 @@ export function coerceValue(raw: RawValue, type: DataType, opts: CoerceOptions =
         return Number.isFinite(raw) ? ok(decimalFromNumber(raw)) : fail();
       if (typeof raw !== 'string') return fail();
       const text = normalizeNumberText(raw, sep);
-      return text === null ? fail() : ok(new Big(text));
+      if (text === null) return fail();
+      return withAmbiguity(ok(new Big(text)), raw);
     }
 
     case 'integer': {
@@ -49,6 +55,7 @@ export function coerceValue(raw: RawValue, type: DataType, opts: CoerceOptions =
         const text = normalizeNumberText(raw, sep);
         if (text === null) return fail();
         n = Number(text);
+        return Number.isSafeInteger(n) ? withAmbiguity(ok(n), raw) : fail();
       } else return fail();
       return Number.isSafeInteger(n) ? ok(n) : fail();
     }
@@ -95,6 +102,19 @@ export function normalizeNumberText(text: string, decimalSeparator: '.' | ','): 
   if (out.startsWith('.')) out = `0${out}`;
   if (out.startsWith('-.')) out = `-0${out.slice(1)}`;
   return out;
+}
+
+/**
+ * True when a number typed as text has one separator ("," or ".") followed by exactly 3 digits
+ * and 1–3 digits before it ("1,500", "1.500"): it is 1500 when the separator means thousands but
+ * 1.5 when it is the decimal separator, so the reading depends on the file's convention.
+ */
+export function isAmbiguousNumberText(text: string): boolean {
+  return /^[+-]?\d{1,3}[.,]\d{3}$/.test(text.replace(/[\s\u00a0]/g, ''));
+}
+
+function withAmbiguity(r: CoerceResult, raw: string): CoerceResult {
+  return r.ok && isAmbiguousNumberText(raw) ? { ...r, ambiguous: true } : r;
 }
 
 function escapeRegex(s: string): string {

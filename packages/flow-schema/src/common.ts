@@ -28,3 +28,9 @@ export const DecimalLiteralSchema = z.union([
   z.string().regex(/^-?\d+(\.\d+)?$/, 'must be a decimal string like "0.5"'),
 ]);
 export type DecimalLiteral = z.infer<typeof DecimalLiteralSchema>;
+
+/** Decimal literal that must be >= 0 (e.g. a compare tolerance). */
+export const NonNegativeDecimalLiteralSchema = DecimalLiteralSchema.refine(
+  (v) => (typeof v === 'number' ? v >= 0 : !v.startsWith('-')),
+  'must be >= 0',
+);

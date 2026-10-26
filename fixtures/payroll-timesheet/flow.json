@@ -13,16 +13,16 @@
       "headerRow": 4,
       "dataStartRow": 5,
       "stopAt": { "blankRows": 2 },
-      "skipRows": { "whenBlank": ["ma_nv"] },
+      "skipRows": { "whenBlank": ["ma_nv"], "whenKeyContains": ["TỔNG CỘNG"] },
       "columns": [
         { "key": "ma_nv", "label": "Mã NV", "aliases": ["Mã NV", "MSNV"], "type": "string", "required": true,
           "rules": [{ "unique": true }, { "regex": "^NV\\d{5}$" }] },
         { "key": "ho_ten", "label": "Họ tên", "aliases": ["Họ và tên"], "type": "string" },
         { "key": "chi_nhanh", "label": "Chi nhánh", "aliases": ["Chi nhánh"], "type": "string" },
-        { "key": "cong", "label": "Công", "aliases": ["Công tính lương"], "type": "decimal", "required": true, "rules": [{ "min": 0 }] },
-        { "key": "ot", "label": "OT (giờ)", "aliases": ["Giờ OT"], "type": "decimal", "required": true, "rules": [{ "min": 0 }] },
-        { "key": "phep", "label": "Phép", "aliases": ["Ngày phép"], "type": "decimal", "required": true, "rules": [{ "min": 0 }] },
-        { "key": "khong_luong", "label": "Không lương", "aliases": ["Nghỉ không lương"], "type": "decimal", "required": true, "rules": [{ "min": 0 }] }
+        { "key": "cong", "label": "Công", "aliases": ["Công tính lương"], "type": "decimal", "presence": "required", "defaultValue": 0, "rules": [{ "min": 0 }] },
+        { "key": "ot", "label": "OT (giờ)", "aliases": ["Giờ OT"], "type": "decimal", "presence": "required", "defaultValue": 0, "rules": [{ "min": 0 }] },
+        { "key": "phep", "label": "Phép", "aliases": ["Ngày phép"], "type": "decimal", "presence": "required", "defaultValue": 0, "rules": [{ "min": 0 }] },
+        { "key": "khong_luong", "label": "Không lương", "aliases": ["Nghỉ không lương"], "type": "decimal", "presence": "required", "defaultValue": 0, "rules": [{ "min": 0 }] }
       ],
       "extraColumns": "drop",
       "multiple": { "enabled": true, "minFiles": 1, "maxFiles": 50 }
@@ -35,16 +35,16 @@
       "sheet": { "mode": "byName", "value": "ChamCong" },
       "headerRow": 1,
       "stopAt": { "blankRows": 2 },
-      "skipRows": { "whenBlank": ["ma_nv"] },
+      "skipRows": { "whenBlank": ["ma_nv"], "whenKeyContains": ["TỔNG CỘNG"] },
       "columns": [
         { "key": "ma_nv", "label": "Mã NV", "aliases": ["Mã nhân viên"], "type": "string", "required": true,
           "rules": [{ "unique": true }, { "regex": "^NV\\d{5}$" }] },
         { "key": "ho_ten", "label": "Họ tên", "aliases": ["Họ tên"], "type": "string" },
         { "key": "chi_nhanh", "label": "Chi nhánh", "aliases": ["Chi nhánh"], "type": "string" },
-        { "key": "cong", "label": "Công", "aliases": ["Công thực tế"], "type": "decimal", "required": true, "rules": [{ "min": 0 }] },
-        { "key": "ot", "label": "OT (giờ)", "aliases": ["OT (giờ)"], "type": "decimal", "required": true, "rules": [{ "min": 0 }] },
-        { "key": "phep", "label": "Phép", "aliases": ["Phép (ngày)"], "type": "decimal", "required": true, "rules": [{ "min": 0 }] },
-        { "key": "khong_luong", "label": "Không lương", "aliases": ["Không lương (ngày)"], "type": "decimal", "required": true, "rules": [{ "min": 0 }] }
+        { "key": "cong", "label": "Công", "aliases": ["Công thực tế"], "type": "decimal", "presence": "required", "defaultValue": 0, "rules": [{ "min": 0 }] },
+        { "key": "ot", "label": "OT (giờ)", "aliases": ["OT (giờ)"], "type": "decimal", "presence": "required", "defaultValue": 0, "rules": [{ "min": 0 }] },
+        { "key": "phep", "label": "Phép", "aliases": ["Phép (ngày)"], "type": "decimal", "presence": "required", "defaultValue": 0, "rules": [{ "min": 0 }] },
+        { "key": "khong_luong", "label": "Không lương", "aliases": ["Không lương (ngày)"], "type": "decimal", "presence": "required", "defaultValue": 0, "rules": [{ "min": 0 }] }
       ],
       "extraColumns": "drop",
       "multiple": { "enabled": true, "minFiles": 1, "maxFiles": 50 }

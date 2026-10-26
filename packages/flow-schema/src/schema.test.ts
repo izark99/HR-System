@@ -28,6 +28,42 @@ describe('InputSlotSchema', () => {
   });
 });
 
+describe('SlotColumnSchema: presence vs required (spec §10)', () => {
+  const parseCol = (c: Record<string, unknown>) =>
+    InputSlotSchema.safeParse({
+      key: 's',
+      label: 'S',
+      columns: [{ key: 'c', aliases: ['C'], type: 'decimal', ...c }],
+    });
+  const col = (c: Record<string, unknown>) => {
+    const r = parseCol(c);
+    if (!r.success) throw new Error(r.error.message);
+    return r.data.columns[0]!;
+  };
+
+  it('presence defaults follow required (backward compatible)', () => {
+    expect(col({})).toMatchObject({ presence: 'optional', required: false });
+    expect(col({ required: true })).toMatchObject({ presence: 'required', required: true });
+    expect(col({ presence: 'required' })).toMatchObject({ presence: 'required', required: false });
+    expect(col({ presence: 'optional', required: true })).toMatchObject({
+      presence: 'optional',
+      required: true,
+    });
+  });
+
+  it('defaultValue must fit the column type and is not allowed with required: true', () => {
+    expect(col({ presence: 'required', defaultValue: 0 }).defaultValue).toBe(0);
+    expect(parseCol({ defaultValue: '0.5' }).success).toBe(true);
+    expect(parseCol({ defaultValue: 'abc' }).success).toBe(false);
+    expect(parseCol({ defaultValue: true }).success).toBe(false);
+    expect(parseCol({ required: true, defaultValue: 0 }).success).toBe(false);
+    expect(parseCol({ type: 'integer', defaultValue: 1.5 }).success).toBe(false);
+    expect(parseCol({ type: 'string', defaultValue: 'N/A' }).success).toBe(true);
+    expect(parseCol({ type: 'date', defaultValue: '2026-09-01' }).success).toBe(true);
+    expect(parseCol({ type: 'date', defaultValue: '01/09/2026' }).success).toBe(false);
+  });
+});
+
 describe('FlowDefinitionSchema', () => {
   const base = {
     schemaVersion: 1,

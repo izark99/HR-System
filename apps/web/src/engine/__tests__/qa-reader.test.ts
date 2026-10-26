@@ -1,7 +1,6 @@
 /**
  * QA (tester) — input slot reader & validation report edge cases (spec §10, AC-01..03, 07, 08).
- * Fake data only. Tests in the "KNOWN BUGS" block use `it.fails`: they assert the expected
- * behaviour and currently fail; flip them to `it` once the bug is fixed.
+ * Fake data only.
  */
 import { describe, expect, it } from 'vitest';
 import * as XLSX from 'xlsx';
@@ -43,27 +42,47 @@ describe('QA reader: skipRows / total rows (AC-03)', () => {
     expect(report.errorCount).toBe(0);
   });
 
-  it('a total row with text in the key column is NOT skipped: it fails the regex rule (blocks the run)', () => {
+  it('a total row with "TỔNG CỘNG" in the key column is skipped (skipRows.whenKeyContains)', () => {
     // Real files often merge "TỔNG CỘNG" across STT+Mã NV, so the text lands in the key column.
     const file = payrollFile('bl.xlsx', fakeEmployees(2), {
       tail: [[null, 'TỔNG CỘNG', null, null, 52, 8, 2, 0]],
     });
     const { table, report } = readSlot(acceptanceSlot('bang_luong'), [file]);
-    expect(keys(errors(report))).toEqual(['validation.regex']);
-    expect(errors(report)[0]).toMatchObject({ row: 7, column: 'ma_nv' });
-    // The row is still in the table (with an error) — the run is blocked by errorCount > 0.
-    expect(table.rows.map((r) => r.ma_nv)).toContain('TỔNG CỘNG');
+    expect(report.issues).toEqual([]);
+    expect(table.rows.map((r) => r.ma_nv)).toEqual([nv(1), nv(2)]);
+    expect(report.skippedRows).toHaveLength(1);
+    expect(report.skippedRows[0]).toMatchObject({ row: 7, messageKey: 'skipped.keyContains' });
+    expect(report.skippedRows[0]!.params).toMatchObject({ column: 'Mã NV', text: 'TỔNG CỘNG' });
   });
 
-  it('without a regex rule, a total row with text in the key column becomes an "employee" silently', () => {
+  it('whenKeyContains matches after normalization and as a substring, even without a regex rule', () => {
     const s = acceptanceSlot('bang_luong');
     s.columns[0]!.rules = [{ unique: true, severity: 'error' }];
+    const file = payrollFile('bl.xlsx', fakeEmployees(2), {
+      tail: [
+        [null, '  tong   cong chi nhanh ', null, null, 52, 8, 2, 0],
+        [null, 'Tổng Cộng'.normalize('NFD'), null, null, 52, 8, 2, 0],
+      ],
+    });
+    const { table, report } = readSlot(s, [file]);
+    expect(report.errorCount).toBe(0);
+    expect(table.rows).toHaveLength(2);
+    expect(report.skippedRows.map((r) => r.messageKey)).toEqual([
+      'skipped.keyContains',
+      'skipped.keyContains',
+    ]);
+  });
+
+  it('without whenKeyContains, a total row with text in the key column becomes an "employee"', () => {
+    const s = acceptanceSlot('bang_luong');
+    s.columns[0]!.rules = [{ unique: true, severity: 'error' }];
+    s.skipRows = { whenBlank: ['ma_nv'], whenKeyContains: [] };
     const file = payrollFile('bl.xlsx', fakeEmployees(2), {
       tail: [[null, 'TỔNG CỘNG', null, null, 52, 8, 2, 0]],
     });
     const { table, report } = readSlot(s, [file]);
     expect(report.errorCount).toBe(0);
-    expect(table.rows).toHaveLength(3); // documented: needs a regex (or a future text rule) to catch
+    expect(table.rows).toHaveLength(3);
   });
 
   it('a signature block below the total row is skipped when the key column is blank', () => {
@@ -80,25 +99,29 @@ describe('QA reader: skipRows / total rows (AC-03)', () => {
     expect(report.skippedRows.map((s) => s.row)).toEqual([7, 9]);
   });
 
-  it('skipRows column missing from the file: rule is inactive and the missing column is an error (not silent)', () => {
-    // Header "Mã số" is not an alias → ma_nv missing; the total row must not vanish silently.
+  it('key column missing from the file: exactly one columnMissing error, no per-row errors', () => {
+    // MEMORY 20261026: header "Mã số" is not an alias → ma_nv missing → 1 error, rows not read.
     const file = payrollFile('bl.xlsx', fakeEmployees(2), { idHeader: 'Mã số' });
     const { table, report } = readSlot(acceptanceSlot('bang_luong'), [file]);
-    const missing = errors(report).filter((i) => i.messageKey === 'validation.columnMissing');
-    expect(missing.map((i) => i.column)).toEqual(['ma_nv']);
+    expect(report.issues.map((i) => [i.severity, i.messageKey, i.column])).toEqual([
+      ['error', 'validation.columnMissing', 'ma_nv'],
+    ]);
     expect(report.skippedRows).toEqual([]);
-    // Side effect today: the total row (row 7) is read as data and its blank metrics add extra
-    // "required" errors on row 7 (noisy, not silent). Any other error must be on that row.
-    const others = errors(report).filter((i) => i.messageKey !== 'validation.columnMissing');
-    expect(others.every((i) => i.row === 7)).toBe(true);
-    // All rows incl. the total row are read with ma_nv = null; the run is blocked anyway.
-    expect(table.rows).toHaveLength(3);
-    expect(table.rows.every((r) => r.ma_nv === null)).toBe(true);
+    expect(table.rows).toHaveLength(0);
+    expect(report.files[0]!.dataRows).toBe(0);
+  });
+
+  it('key column missing: row-level problems elsewhere are not reported either', () => {
+    const rows = fakeEmployees(2);
+    rows[0]![3] = 'abc'; // would be a type error in "Công"
+    const file = payrollFile('bl.xlsx', rows, { idHeader: 'Mã số' });
+    const { report } = readSlot(acceptanceSlot('bang_luong'), [file]);
+    expect(keys(report.issues)).toEqual(['validation.columnMissing']);
   });
 
   it('skipRows on an optional column that is missing: total row is read and caught by required key', () => {
     const s = acceptanceSlot('bang_luong');
-    s.skipRows = { whenBlank: ['ho_ten'] }; // admin chose an optional column
+    s.skipRows = { whenBlank: ['ho_ten'], whenKeyContains: [] }; // admin chose an optional column
     const headers = [
       'STT',
       'Mã NV',
@@ -112,16 +135,17 @@ describe('QA reader: skipRows / total rows (AC-03)', () => {
     const file = payrollFile('bl.xlsx', fakeEmployees(2), { headers });
     const { report } = readSlot(s, [file]);
     expect(keys(report.issues)).toContain('validation.columnMissingOptional');
-    // "TỔNG CỘNG" row: ma_nv blank and every metric blank → required errors, not silent data.
-    expect(errors(report).every((i) => i.row === 7)).toBe(true);
-    expect(keys(errors(report))).toContain('validation.required');
+    // "TỔNG CỘNG" row: ma_nv blank → required error on that row, not silent data (blank metrics
+    // are 0 by defaultValue, so the key is the only error).
+    expect(errors(report).map((i) => [i.messageKey, i.column, i.row])).toEqual([
+      ['validation.required', 'ma_nv', 7],
+    ]);
   });
 });
 
 // -------------------------------------------------------------------------------------------
 describe('QA reader: metric columns must exist; key value must be filled', () => {
-  // Blank metric cells → 0 is decided (docs/MEMORY.md 20261026) but not implemented yet;
-  // see "KNOWN BUGS (reader)" below for those tests.
+  // Blank metric cells → 0 (docs/MEMORY.md 20261026): see the BUG-R1 tests below.
   it('blank Mã NV on an employee row (no skipRows) is still a required error', () => {
     const s = acceptanceSlot('bang_luong');
     delete s.skipRows;
@@ -168,8 +192,8 @@ describe('QA reader: metric columns must exist; key value must be filled', () =>
     const { report } = readSlot(acceptanceSlot('bang_luong'), [ok, bad]);
     const missing = errors(report).filter((i) => i.messageKey === 'validation.columnMissing');
     expect(missing).toHaveLength(1);
-    // Only CN02 has errors (column missing + the total row's blank metrics, see skipRows test).
-    expect(errors(report).every((i) => i.file === 'CN02.xlsx')).toBe(true);
+    // Only CN02 has an error, and only the missing column (no per-row errors).
+    expect(errors(report)).toHaveLength(1);
     expect(missing[0]).toMatchObject({
       messageKey: 'validation.columnMissing',
       file: 'CN02.xlsx',
@@ -208,11 +232,32 @@ describe('QA reader: numbers (decimalSeparator, float noise)', () => {
     expect(dec(table.rows[1]!.cong)).toBe('1234.5');
   });
 
-  it('decimalSeparator "." silently reads "1,500" as 1500 (thousands grouping)', () => {
-    // Documented ambiguity: a VN-style "1,500" meaning 1.5 becomes 1500 with the default ".".
-    const { table, report } = read('.', ['1,500']);
+  it('ambiguous numeric text ("1,500" / "1.500") is read per decimalSeparator with a warning', () => {
+    // MEMORY 20261026: VN-style "1,500" may mean 1.5 → warning (does not block the run).
+    const dot = read('.', ['1,500', '1.500', '1,234.5', '1,500,000', '26']);
+    expect(dot.table.rows.map((r) => dec(r.cong))).toEqual([
+      '1500',
+      '1.5',
+      '1234.5',
+      '1500000',
+      '26',
+    ]);
+    expect(dot.report.errorCount).toBe(0);
+    expect(dot.report.issues.map((i) => [i.severity, i.messageKey, i.row])).toEqual([
+      ['warning', 'validation.numberAmbiguous', 2],
+      ['warning', 'validation.numberAmbiguous', 3],
+    ]);
+    expect(formatIssue(dot.report.issues[0]!, t)).toContain('"1,500"');
+    expect(formatIssue(dot.report.issues[0]!, t)).toContain('1500');
+
+    const comma = read(',', ['1.500', '1,500', '1.234,5']);
+    expect(comma.table.rows.map((r) => dec(r.cong))).toEqual(['1500', '1.5', '1234.5']);
+    expect(comma.report.issues.map((i) => i.row)).toEqual([2, 3]);
+  });
+
+  it('numeric cells (not text) are never ambiguous', () => {
+    const { report } = read('.', [1.5, 1500]);
     expect(report.issues).toEqual([]);
-    expect(dec(table.rows[0]!.cong)).toBe('1500');
   });
 
   it('numeric cells are independent of decimalSeparator', () => {
@@ -310,8 +355,28 @@ describe('QA reader: dates', () => {
     expect(table.rows.map((r) => r.ngay)).toEqual(['1904-01-01', '2026-09-01']);
   });
 
-  it('a date column restricted to dd/MM/yyyy rejects a real Excel date cell (serial)', () => {
-    // Documented: the admin must add "excelSerial" to dateFormats — easy to forget (product Q).
+  it('a date column restricted to dd/MM/yyyy still accepts a real Excel date cell', () => {
+    // MEMORY 20261026: real date cells (date number format) are always accepted.
+    const file = workbookFile(
+      'd.xlsx',
+      { Sheet1: [['Mã NV', 'Ngày', 'Ghi chú']] },
+      {
+        cells: {
+          Sheet1: {
+            A2: { t: 's', v: nv(1) },
+            B2: { t: 'n', v: 46266, z: 'dd/mm/yyyy' },
+            A3: { t: 's', v: nv(2) },
+            B3: { t: 'n', v: 46266.5, z: 'yyyy-mm-dd hh:mm' },
+          },
+        },
+      },
+    );
+    const { table, report } = readSlot(dateSlot(['dd/MM/yyyy']), [file]);
+    expect(report.issues).toEqual([]);
+    expect(table.rows.map((r) => r.ngay)).toEqual(['2026-09-01', '2026-09-01']);
+  });
+
+  it('a plain number (no date format) in a dd/MM/yyyy-only date column is still a type error', () => {
     const file = workbookFile('d.xlsx', {
       Sheet1: [
         ['Mã NV', 'Ngày'],
@@ -333,9 +398,8 @@ describe('QA reader: dates', () => {
     expect(keys(errors(report))).toEqual(['validation.type']);
   });
 
-  it('a string column receiving a date cell gets the raw serial, not the displayed date', () => {
-    // Current behaviour (cellText: false). Product question: should string columns use the
-    // formatted text ("01/09/2026")?
+  it('a string column receiving a date cell gets the displayed date text', () => {
+    // MEMORY 20261026: string columns take the text Excel displays.
     const file = workbookFile(
       'd.xlsx',
       { Sheet1: [['Mã NV', 'Ngày', 'Ghi chú']] },
@@ -349,18 +413,46 @@ describe('QA reader: dates', () => {
       },
     );
     const { table } = readSlot(dateSlot(), [file]);
-    expect(table.rows[0]!.ghi_chu).toBe('46266');
+    expect(table.rows[0]!.ghi_chu).toBe('01/09/2026');
   });
 
-  it('a numeric id with a "00000" number format loses its leading zeros in a string column', () => {
-    // Current behaviour. Matters for flows whose key is a numeric employee code (product Q).
+  it('a string column renders the Excel locale short date (format 14, "m/d/yy") as dd/mm/yyyy', () => {
+    const file = workbookFile(
+      'd.xlsx',
+      { Sheet1: [['Mã NV', 'Ngày', 'Ghi chú']] },
+      {
+        cells: {
+          Sheet1: {
+            A2: { t: 's', v: nv(1) },
+            C2: { t: 'n', v: 46266, z: 'm/d/yy' },
+          },
+        },
+      },
+    );
+    const { table } = readSlot(dateSlot(), [file]);
+    expect(table.rows[0]!.ghi_chu).toBe('01/09/2026');
+  });
+
+  it('unformatted numbers in a string column keep the 15-digit cleanup (no "General" rounding)', () => {
+    const file = workbookFile('n.xlsx', {
+      Sheet1: [
+        ['Mã NV', 'Ngày', 'Ghi chú'],
+        [123456789012, null, 0.1 + 0.2],
+      ],
+    });
+    const { table } = readSlot(dateSlot(), [file]);
+    expect(table.rows[0]).toMatchObject({ ma_nv: '123456789012', ghi_chu: '0.3' });
+  });
+
+  it('a numeric id with a "00000" number format keeps its leading zeros in a string column', () => {
+    // MEMORY 20261026: displayed text "00123", not 123.
     const file = workbookFile(
       'id.xlsx',
       { Sheet1: [['Mã NV', 'Ngày']] },
       { cells: { Sheet1: { A2: { t: 'n', v: 123, z: '00000' } } } },
     );
     const { table } = readSlot(dateSlot(), [file]);
-    expect(table.rows[0]!.ma_nv).toBe('123');
+    expect(table.rows[0]!.ma_nv).toBe('00123');
   });
 });
 
@@ -403,7 +495,7 @@ describe('QA reader: headers, sheets, layout', () => {
     expect(missing.map((i) => i.column)).toEqual(['ma_nv', 'cong']);
   });
 
-  it('duplicate header (two "Mã NV" columns) → ambiguity warning, first column used', () => {
+  it('duplicate header matching a presence-required column (two "Mã NV") → error', () => {
     const file = workbookFile('dup.xlsx', {
       Sheet1: [
         ['Mã NV', 'Công', 'Mã NV'],
@@ -416,10 +508,32 @@ describe('QA reader: headers, sheets, layout', () => {
         { key: 'cong', aliases: ['Công'], type: 'decimal' },
       ],
     });
+    const { report } = readSlot(s, [file]);
+    // MEMORY 20261026: "File có 2 cột trùng tên với cột bắt buộc → lỗi".
+    expect(report.issues.map((i) => [i.severity, i.messageKey, i.column])).toEqual([
+      ['error', 'validation.columnAmbiguousRequired', 'ma_nv'],
+    ]);
+    expect(formatIssue(report.issues[0]!, t)).toContain('"Mã NV", "Mã NV"');
+  });
+
+  it('duplicate header matching an optional column → warning, first column used', () => {
+    const file = workbookFile('dup.xlsx', {
+      Sheet1: [
+        ['Mã NV', 'Công', 'Công'],
+        [nv(1), 26, 99],
+      ],
+    });
+    const s = slot({
+      columns: [
+        { key: 'ma_nv', aliases: ['Mã NV'], type: 'string', required: true },
+        { key: 'cong', aliases: ['Công'], type: 'decimal' },
+      ],
+    });
     const { table, report } = readSlot(s, [file]);
-    expect(keys(report.issues)).toEqual(['validation.columnAmbiguous']);
-    expect(report.issues[0]!.severity).toBe('warning');
-    expect(table.rows[0]!.ma_nv).toBe(nv(1));
+    expect(report.issues.map((i) => [i.severity, i.messageKey])).toEqual([
+      ['warning', 'validation.columnAmbiguous'],
+    ]);
+    expect(dec(table.rows[0]!.cong)).toBe('26');
   });
 
   it('wrong header row offset (header actually on row 5) → required columns reported missing', () => {
@@ -456,12 +570,22 @@ describe('QA reader: headers, sheets, layout', () => {
     expect(errors(report)).toHaveLength(5);
   });
 
-  it('header-only file passes validation with 0 data rows (no warning today)', () => {
-    // Product question: should an empty branch file at least warn?
+  it('header-only file → noDataRows warning (does not block the run)', () => {
+    // MEMORY 20261026: "File có header nhưng không có dòng dữ liệu → cảnh báo".
     const file = payrollFile('h.xlsx', [], { tail: [] });
     const { report } = readSlot(acceptanceSlot('bang_luong'), [file]);
-    expect(report.issues).toEqual([]);
+    expect(report.issues.map((i) => [i.severity, i.messageKey, i.file])).toEqual([
+      ['warning', 'validation.noDataRows', 'h.xlsx'],
+    ]);
+    expect(report.errorCount).toBe(0);
     expect(report.files[0]!.dataRows).toBe(0);
+  });
+
+  it('a file whose only row is a total row also gets the noDataRows warning', () => {
+    const file = payrollFile('h.xlsx', []);
+    const { report } = readSlot(acceptanceSlot('bang_luong'), [file]);
+    expect(keys(report.issues)).toEqual(['validation.noDataRows']);
+    expect(report.skippedRows).toHaveLength(1);
   });
 
   it('0-byte and garbage files are reported as unreadable or as missing sheet, never crash', () => {
@@ -646,10 +770,10 @@ describe('QA reader: injection-ish cell values stay data', () => {
 });
 
 // -------------------------------------------------------------------------------------------
-describe('KNOWN BUGS (reader)', () => {
+describe('QA reader: fixed bugs (were KNOWN BUGS)', () => {
   // Decision docs/MEMORY.md 20261026: blank metric cells (công, OT, phép, không lương) = 0; the
-  // metric column must still exist. Current code: required:true → blank cell is an error.
-  it.fails('BUG-R1: blank OT cell on an employee row is read as 0 without an error', () => {
+  // metric column must still exist (flow.json: presence "required", defaultValue 0).
+  it('BUG-R1: blank OT cell on an employee row is read as 0 without an error', () => {
     const rows = fakeEmployees(3);
     rows[1]![4] = null; // OT blank for NV00002
     const { table, report } = readSlot(acceptanceSlot('bang_luong'), [payrollFile('a.xlsx', rows)]);
@@ -657,7 +781,7 @@ describe('KNOWN BUGS (reader)', () => {
     expect(dec(table.rows[1]!.ot)).toBe('0');
   });
 
-  it.fails('BUG-R1: blank cells in all 4 metric columns of the timesheet are read as 0', () => {
+  it('BUG-R1: blank cells in all 4 metric columns of the timesheet are read as 0', () => {
     const { table, report } = readSlot(acceptanceSlot('cham_cong'), [
       timesheetFile('cc.xlsx', [[nv(1), 'A', 'CN01', null, '   ', null, null]]),
     ]);
@@ -666,7 +790,7 @@ describe('KNOWN BUGS (reader)', () => {
     expect([r.cong, r.ot, r.phep, r.khong_luong].map(dec)).toEqual(['0', '0', '0', '0']);
   });
 
-  // Guard for the fix: the column itself must still be mandatory (passes today, must keep passing).
+  // Guard for the fix: the column itself must still be mandatory.
   it('BUG-R1 guard: a missing metric column is still an error', () => {
     const headers = TS_HEADERS_WITHOUT_OT;
     const { report } = readSlot(acceptanceSlot('cham_cong'), [
@@ -677,19 +801,15 @@ describe('KNOWN BUGS (reader)', () => {
     ]);
   });
 
-  // excel-reader.ts readSlot: `rows.push(...result.rows)` (and issues/refs/skipped) spreads the
-  // whole array as call arguments → RangeError above ~125k rows in ONE file (V8 arg limit).
-  // Spec §13 / MEMORY: target is ~1M rows per run.
-  it.fails(
-    'BUG-R2: a single file with 200k rows is read without "Maximum call stack size exceeded"',
-    () => {
-      const n = 200_000;
-      const text = 'Mã NV\n' + Array.from({ length: n }, (_, i) => `NV${i}`).join('\n');
-      const s = slot({ columns: [{ key: 'ma_nv', aliases: ['Mã NV'], type: 'string' }] });
-      const { table } = readSlot(s, [csvFile('big.csv', text)]);
-      expect(table.rows).toHaveLength(n);
-    },
-  );
+  // readSlot used `rows.push(...result.rows)` → RangeError above ~125k rows in ONE file (V8 arg
+  // limit). Spec §13 / MEMORY: target is ~1M rows per run.
+  it('BUG-R2: a single file with 200k rows is read without "Maximum call stack size exceeded"', () => {
+    const n = 200_000;
+    const text = 'Mã NV\n' + Array.from({ length: n }, (_, i) => `NV${i}`).join('\n');
+    const s = slot({ columns: [{ key: 'ma_nv', aliases: ['Mã NV'], type: 'string' }] });
+    const { table } = readSlot(s, [csvFile('big.csv', text)]);
+    expect(table.rows).toHaveLength(n);
+  });
 });
 
 const TS_HEADERS_WITHOUT_OT = [

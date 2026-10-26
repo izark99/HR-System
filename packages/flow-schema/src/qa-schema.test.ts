@@ -1,4 +1,4 @@
-/** QA (tester) — schema edge cases. "KNOWN BUGS" tests use `it.fails`. */
+/** QA (tester) — schema edge cases. */
 import { describe, expect, it } from 'vitest';
 import { CompareConfigSchema, InputSlotSchema, OutputExcelConfigSchema } from './index';
 
@@ -53,24 +53,38 @@ describe('QA schema: compare & output', () => {
   });
 });
 
-describe('KNOWN BUGS (schema)', () => {
-  it.fails('BUG-W1: output sheet name with a leading/trailing apostrophe is rejected', () => {
-    // ExcelJS throws at write time for such names; the schema should catch it at design time.
-    const r = OutputExcelConfigSchema.safeParse({ sheets: [{ name: "'Lệch'", port: 'p' }] });
-    expect(r.success).toBe(false);
+describe('QA schema: fixed bugs (were KNOWN BUGS)', () => {
+  it('BUG-W1: output sheet name with a leading/trailing apostrophe is rejected', () => {
+    // ExcelJS throws at write time for such names; the schema catches it at design time.
+    for (const name of ["'Lệch'", "'Lệch", "Lệch'"]) {
+      expect(
+        OutputExcelConfigSchema.safeParse({ sheets: [{ name, port: 'p' }] }).success,
+        name,
+      ).toBe(false);
+    }
+    // An apostrophe inside the name is allowed.
+    expect(
+      OutputExcelConfigSchema.safeParse({ sheets: [{ name: "NV's", port: 'p' }] }).success,
+    ).toBe(true);
   });
 
-  it.fails('BUG-C1: negative tolerance is rejected', () => {
+  it('BUG-C1: negative tolerance is rejected', () => {
     const r = CompareConfigSchema.safeParse({
       keys: ['k'],
       metrics: [{ left: 'a', right: 'a', label: 'A', tolerance: -0.5 }],
     });
     expect(r.success).toBe(false);
+    const ok = (tolerance: string | number) =>
+      CompareConfigSchema.safeParse({
+        keys: ['k'],
+        metrics: [{ left: 'a', right: 'a', label: 'A', tolerance }],
+      }).success;
+    expect([ok('-1'), ok(-0.5)]).toEqual([false, false]);
+    expect([ok('0'), ok(0), ok('0.5'), ok(1)]).toEqual([true, true, true, true]);
   });
 
-  it.fails('BUG-S1: output sheet names must be unique (case-insensitive)', () => {
-    // Today two sheets "Lệch" and "LỆCH" pass the schema; the writer silently renames the second
-    // to "LỆCH (2)", so the delivered file does not match the configured sheet names.
+  it('BUG-S1: output sheet names must be unique (case-insensitive)', () => {
+    // Previously "Lệch" and "LỆCH" passed and the writer silently renamed the second to "LỆCH (2)".
     const r = OutputExcelConfigSchema.safeParse({
       sheets: [
         { name: 'Lệch', port: 'a' },

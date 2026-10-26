@@ -1,5 +1,11 @@
 import { z } from 'zod';
-import { DataTypeSchema, DecimalLiteralSchema, IdentifierSchema, SeveritySchema } from './common';
+import {
+  DataTypeSchema,
+  DecimalLiteralSchema,
+  IdentifierSchema,
+  SeveritySchema,
+  type DataType,
+} from './common';
 
 /** Input slot definition (spec §10). */
 
@@ -31,19 +37,90 @@ export const DateFormatSchema = z.union([
   z.string().regex(/^[dMyHms/.\-: T]+$/, 'unsupported date format'),
 ]);
 
-export const SlotColumnSchema = z.strictObject({
-  key: IdentifierSchema,
-  label: z.string().optional(),
-  /** Header texts accepted for this column; compared after normalization (no diacritics, lowercase, collapsed spaces). */
-  aliases: z.array(z.string().min(1)).min(1),
-  type: DataTypeSchema,
-  /** Column must exist in the file and every data row must have a value. */
-  required: z.boolean().default(false),
-  rules: z.array(ColumnRuleSchema).default([]),
-  dateFormats: z.array(DateFormatSchema).min(1).optional(),
-  /** For numbers stored as text: which character is the decimal separator (the other is thousands). */
-  decimalSeparator: z.enum(['.', ',']).default('.'),
-});
+/** Whether the column itself must exist in the file (spec §10). */
+export const ColumnPresenceSchema = z.enum(['required', 'optional']);
+export type ColumnPresence = z.infer<typeof ColumnPresenceSchema>;
+
+/**
+ * Value used for a blank cell when `required` is false. Its JSON type must fit the column type:
+ * number or decimal string for `decimal`/`integer` (integral for `integer`), string for `string`,
+ * boolean for `boolean`, "yyyy-MM-dd" for `date`, "yyyy-MM-ddTHH:mm:ss" for `datetime`.
+ */
+export const ColumnDefaultValueSchema = z.union([z.string(), z.number().finite(), z.boolean()]);
+export type ColumnDefaultValue = z.infer<typeof ColumnDefaultValueSchema>;
+
+const DECIMAL_TEXT = /^-?\d+(\.\d+)?$/;
+const DATE_TEXT = /^\d{4}-\d{2}-\d{2}$/;
+const DATETIME_TEXT = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}$/;
+
+function defaultFitsType(v: ColumnDefaultValue, type: DataType): boolean {
+  switch (type) {
+    case 'string':
+      return typeof v === 'string';
+    case 'boolean':
+      return typeof v === 'boolean';
+    case 'decimal':
+      return typeof v === 'number' || (typeof v === 'string' && DECIMAL_TEXT.test(v));
+    case 'integer':
+      return typeof v === 'number'
+        ? Number.isSafeInteger(v)
+        : typeof v === 'string' && /^-?\d+$/.test(v) && Number.isSafeInteger(Number(v));
+    case 'date':
+      return typeof v === 'string' && DATE_TEXT.test(v);
+    case 'datetime':
+      return typeof v === 'string' && DATETIME_TEXT.test(v);
+  }
+}
+
+/**
+ * Column of an input slot. Two independent checks (spec §10):
+ * - `presence`: the column must be found in the header (`required` → missing column is an error;
+ *   `optional` → a warning and the column is null on every row).
+ * - `required`: every data row must have a value (blank cell → error). When false, a blank cell
+ *   gets `defaultValue`, or null without one.
+ *
+ * Backward compatibility: when `presence` is omitted it follows `required` (`required: true` ⇒
+ * `presence: "required"`, else `"optional"`), i.e. the pre-split meaning of `required: true`
+ * ("column must exist and every row must have a value"). The parsed output always has `presence`.
+ */
+export const SlotColumnSchema = z
+  .strictObject({
+    key: IdentifierSchema,
+    label: z.string().optional(),
+    /** Header texts accepted for this column; compared after normalization (no diacritics, lowercase, collapsed spaces). */
+    aliases: z.array(z.string().min(1)).min(1),
+    type: DataTypeSchema,
+    /** Column must exist in the header. Default: follows `required` (see above). */
+    presence: ColumnPresenceSchema.optional(),
+    /** Every data row must have a value (blank cell → error). Default false. */
+    required: z.boolean().default(false),
+    /** Value for blank cells when `required` is false. Not allowed together with `required: true`. */
+    defaultValue: ColumnDefaultValueSchema.optional(),
+    rules: z.array(ColumnRuleSchema).default([]),
+    dateFormats: z.array(DateFormatSchema).min(1).optional(),
+    /** For numbers stored as text: which character is the decimal separator (the other is thousands). */
+    decimalSeparator: z.enum(['.', ',']).default('.'),
+  })
+  .superRefine((col, ctx) => {
+    if (col.defaultValue === undefined) return;
+    if (col.required) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['defaultValue'],
+        message: 'defaultValue is only used when required is false',
+      });
+    } else if (!defaultFitsType(col.defaultValue, col.type)) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['defaultValue'],
+        message: `defaultValue does not fit column type "${col.type}"`,
+      });
+    }
+  })
+  .transform((col) => ({
+    ...col,
+    presence: col.presence ?? (col.required ? 'required' : 'optional'),
+  }));
 export type SlotColumn = z.infer<typeof SlotColumnSchema>;
 export type SlotColumnInput = z.input<typeof SlotColumnSchema>;
 
@@ -51,7 +128,7 @@ export const SheetSelectorSchema = z.discriminatedUnion('mode', [
   z.strictObject({ mode: z.literal('byName'), value: z.string().min(1) }),
   /** 0-based sheet index. */
   z.strictObject({ mode: z.literal('byIndex'), value: z.number().int().min(0) }),
-  /** First sheet whose header row contains every required column. */
+  /** First sheet whose header row contains every column with `presence: "required"`. */
   z.strictObject({ mode: z.literal('firstMatchingHeaders') }),
 ]);
 export type SheetSelector = z.infer<typeof SheetSelectorSchema>;
@@ -76,7 +153,18 @@ export const InputSlotSchema = z
      * signature block). They are excluded and listed in the report's `skippedRows`, not as errors.
      * Without this, a blank value in a required column is reported as an error.
      */
-    skipRows: z.strictObject({ whenBlank: z.array(IdentifierSchema).min(1) }).optional(),
+    skipRows: z
+      .strictObject({
+        /** Key columns of the slot (they identify a data row). */
+        whenBlank: z.array(IdentifierSchema).min(1),
+        /**
+         * Also skip a row when any `whenBlank` (key) column contains one of these texts, compared
+         * after normalization (no diacritics, lowercase, collapsed spaces), e.g. "TỔNG CỘNG" merged
+         * into the key column.
+         */
+        whenKeyContains: z.array(z.string().trim().min(1)).default([]),
+      })
+      .optional(),
     /** `fillDown`: every cell of a merged range in the data area gets the top-left value. */
     unmergeCells: z.enum(['none', 'fillDown']).default('none'),
     columns: z.array(SlotColumnSchema).min(1),

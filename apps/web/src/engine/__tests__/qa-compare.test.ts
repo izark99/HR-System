@@ -1,7 +1,6 @@
 /**
  * QA (tester) — control.compare at engine level, alone and fed by the reader (spec §24.2,
  * AC-04, AC-05, AC-07 at compare level, engine half of AC-10). Fake data only.
- * "KNOWN BUGS" tests use `it.fails` (they assert the expected behaviour and currently fail).
  */
 import { CompareConfigSchema, type CompareConfigInput } from '@hrflow/flow-schema';
 import { describe, expect, it } from 'vitest';
@@ -158,18 +157,24 @@ describe('QA compare: null handling', () => {
     { ma_nv: nv(3), cong: null, ot: d(0) },
   ]);
 
-  it('nullAsZero = true: null vs 0.5 is within tolerance 0.5; output shows 0 for the blank side', () => {
+  it('nullAsZero = true: null vs 0.5 is within tolerance 0.5; output shows the blank side as blank', () => {
     const out = cmp(left, right, { nullAsZero: true });
     expect(total(out)).toMatchObject({ matched: 3, mismatched: 0 });
     const tight = cmp(left, right, {
       nullAsZero: true,
       metrics: [{ left: 'cong', right: 'cong', label: 'Công', tolerance: '0' }],
     });
+    // MEMORY 20261026: blank source cells stay blank in "Lệch" but are compared as 0.
     expect(
-      tight.mismatched.rows.map((r) => [r.ma_nv, str(r.cong__left), str(r.cong__diff)]),
+      tight.mismatched.rows.map((r) => [
+        r.ma_nv,
+        str(r.cong__left),
+        str(r.cong__right),
+        str(r.cong__diff),
+      ]),
     ).toEqual([
-      [nv(2), '0', '0.5'], // blank payroll value is displayed as 0 (product Q)
-      [nv(3), '0.4', '-0.4'],
+      [nv(2), null, '0.5', '0.5'],
+      [nv(3), '0.4', null, '-0.4'],
     ]);
   });
 
@@ -215,12 +220,40 @@ describe('QA compare: keys', () => {
     });
   });
 
-  it('keys are exact: different case → only_left + only_right (no fuzzy match)', () => {
+  it('keys match case-insensitively and ignore extra whitespace; output keeps the left value', () => {
+    // MEMORY 20261026: "So khớp khóa không phân biệt hoa thường, bỏ khoảng trắng thừa".
     const out = cmp(
-      tbl([{ ma_nv: 'nv00001', cong: d(1), ot: d(0) }]),
+      tbl([
+        { ma_nv: 'nv00001', cong: d(1), ot: d(0) },
+        { ma_nv: 'NV 00002', cong: d(1), ot: d(0) },
+      ]),
+      tbl([
+        { ma_nv: ' NV00001 ', cong: d(3), ot: d(0) },
+        { ma_nv: 'nv  00002', cong: d(1), ot: d(0) },
+      ]),
+    );
+    expect(total(out)).toMatchObject({ matched: 1, mismatched: 1, only_left: 0, only_right: 0 });
+    expect(out.mismatched.rows[0]!.ma_nv).toBe('nv00001');
+  });
+
+  it('key normalization does not merge genuinely different keys', () => {
+    const out = cmp(
       tbl([{ ma_nv: 'NV00001', cong: d(1), ot: d(0) }]),
+      tbl([{ ma_nv: 'NV000010', cong: d(1), ot: d(0) }]),
     );
     expect(total(out)).toMatchObject({ matched: 0, only_left: 1, only_right: 1 });
+  });
+
+  it('keys equal after normalization on one side → duplicateKey (original value in message)', () => {
+    expect(() =>
+      cmp(
+        tbl([
+          { ma_nv: 'NV00001', cong: d(1), ot: d(0) },
+          { ma_nv: 'nv00001 ', cong: d(1), ot: d(0) },
+        ]),
+        tbl([]),
+      ),
+    ).toThrowError(expect.objectContaining({ messageKey: 'compare.error.duplicateKey' }));
   });
 
   it('composite keys do not collide on separator characters', () => {
@@ -268,9 +301,9 @@ describe('QA compare: keys', () => {
 });
 
 // -------------------------------------------------------------------------------------------
-describe('KNOWN BUGS (compare)', () => {
-  it.fails('BUG-C1: a negative tolerance is rejected by CompareConfigSchema', () => {
-    // Today "-1" is accepted and then every row mismatches (|0| > −1), even identical values.
+describe('QA compare: fixed bugs (were KNOWN BUGS)', () => {
+  it('BUG-C1: a negative tolerance is rejected by CompareConfigSchema', () => {
+    // "-1" used to be accepted, then every row mismatched (|0| > −1), even identical values.
     const r = CompareConfigSchema.safeParse({
       keys: ['ma_nv'],
       metrics: [{ left: 'cong', right: 'cong', label: 'Công', tolerance: '-1' }],
@@ -278,9 +311,9 @@ describe('KNOWN BUGS (compare)', () => {
     expect(r.success).toBe(false);
   });
 
-  it.fails('BUG-C2: two metrics on the same column pair keep separate output columns', () => {
-    // e.g. "Công" with tolerance 0.5 and "Công (chặt)" with tolerance 0: both map to cong__left /
-    // cong__right / cong__diff → duplicate column keys in `mismatched`, sheet gets duplicate data.
+  it('BUG-C2: two metrics on the same column pair keep separate output columns', () => {
+    // e.g. "Công" with tolerance 0.5 and "Công (chặt)" with tolerance 0 used to both map to
+    // cong__left / cong__right / cong__diff.
     const out = cmp(
       tbl([{ ma_nv: nv(1), cong: d(26), ot: d(0) }]),
       tbl([{ ma_nv: nv(1), cong: d('26.3'), ot: d(0) }]),
@@ -293,5 +326,11 @@ describe('KNOWN BUGS (compare)', () => {
     );
     const colKeys = out.mismatched.columns.map((c) => c.key);
     expect(new Set(colKeys).size).toBe(colKeys.length);
+    // First metric keeps its stable keys; the second gets the metric index as suffix.
+    expect(colKeys).toEqual(expect.arrayContaining(['cong__diff', 'cong_2__diff']));
+    const row = out.mismatched.rows[0]!;
+    expect(row.cong__diff?.toString()).toBe('0.3');
+    expect(row.cong_2__diff?.toString()).toBe('0.3');
+    expect(row._mismatched_metrics).toBe('Công (chặt)');
   });
 });

@@ -11,13 +11,16 @@
     "columnMissing": "File {{file}}, sheet {{sheet}}: thiếu cột bắt buộc \"{{column}}\" (tên chấp nhận: {{aliases}}) ở dòng tiêu đề {{headerRow}}.",
     "columnMissingOptional": "File {{file}}, sheet {{sheet}}: không có cột \"{{column}}\"; giá trị sẽ để trống.",
     "columnAmbiguous": "File {{file}}, sheet {{sheet}}: có nhiều cột khớp với \"{{column}}\" ({{headers}}); dùng cột đầu tiên.",
+    "columnAmbiguousRequired": "File {{file}}, sheet {{sheet}}: có nhiều cột khớp với cột bắt buộc \"{{column}}\" ({{headers}}); chỉ được giữ 1 cột.",
     "required": "File {{file}}, dòng {{row}}: cột \"{{column}}\" không được để trống.",
     "type": "File {{file}}, dòng {{row}}: giá trị \"{{value}}\" ở cột \"{{column}}\" không phải {{type}}.",
+    "numberAmbiguous": "File {{file}}, dòng {{row}}: giá trị \"{{value}}\" ở cột \"{{column}}\" có thể hiểu theo 2 cách; đang đọc là {{parsed}}, hãy kiểm tra lại.",
     "unique": "Giá trị \"{{value}}\" của cột \"{{column}}\" bị trùng: {{file}} dòng {{row}} và {{otherFile}} dòng {{otherRow}}.",
     "regex": "File {{file}}, dòng {{row}}: giá trị \"{{value}}\" ở cột \"{{column}}\" không đúng định dạng.",
     "min": "File {{file}}, dòng {{row}}: giá trị {{value}} ở cột \"{{column}}\" nhỏ hơn {{min}}.",
     "max": "File {{file}}, dòng {{row}}: giá trị {{value}} ở cột \"{{column}}\" lớn hơn {{max}}.",
     "rowsTooMany": "File {{file}} có {{count}} dòng, vượt ngưỡng {{max}} dòng.",
+    "noDataRows": "File {{file}}, sheet {{sheet}}: có dòng tiêu đề nhưng không có dòng dữ liệu nào.",
     "type_string": "chuỗi",
     "type_integer": "số nguyên",
     "type_decimal": "số",
@@ -26,7 +29,8 @@
     "type_datetime": "ngày giờ"
   },
   "skipped": {
-    "keyBlank": "Bỏ qua dòng {{row}} của {{file}} (không phải dòng dữ liệu: trống cột {{columns}})."
+    "keyBlank": "Bỏ qua dòng {{row}} của {{file}} (không phải dòng dữ liệu: trống cột {{columns}}).",
+    "keyContains": "Bỏ qua dòng {{row}} của {{file}} (không phải dòng dữ liệu: cột {{column}} chứa \"{{text}}\")."
   },
   "compare": {
     "side": {

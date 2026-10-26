@@ -1,7 +1,6 @@
 /**
  * QA (tester) — ExcelJS writer (spec §11 output.excel, AC-06). Output is read back with
  * SheetJS and by inspecting the raw sheet XML. Fake data only.
- * "KNOWN BUGS" tests use `it.fails` (they assert the expected behaviour and currently fail).
  */
 import { describe, expect, it } from 'vitest';
 import * as XLSX from 'xlsx';
@@ -153,14 +152,13 @@ describe('QA writer: XML safety', () => {
   });
 });
 
-describe('KNOWN BUGS (writer)', () => {
-  it.fails(
-    'BUG-W1: a sheet name starting/ending with an apostrophe is sanitized instead of throwing',
-    async () => {
-      // Excel forbids a leading/trailing "'" in sheet names; ExcelJS throws, writeWorkbook does not
-      // sanitize it and OutputExcelConfigSchema does not reject it.
-      const bytes = await writeWorkbook([{ name: "'Lệch'", table: table([]) }]);
-      expect(bytes.byteLength).toBeGreaterThan(0);
-    },
-  );
+describe('QA writer: fixed bugs (were KNOWN BUGS)', () => {
+  it('BUG-W1: a sheet name starting/ending with an apostrophe is sanitized instead of throwing', async () => {
+    // Excel forbids a leading/trailing "'" in sheet names and ExcelJS throws; the schema rejects
+    // them and the writer strips them defensively.
+    const bytes = await writeWorkbook([{ name: "'Lệch'", table: table([]) }]);
+    expect(bytes.byteLength).toBeGreaterThan(0);
+    expect(uniqueSheetName("''", new Set())).toBe('Sheet');
+    expect(uniqueSheetName(`${'x'.repeat(30)}'y`, new Set())).toBe('x'.repeat(30));
+  });
 });

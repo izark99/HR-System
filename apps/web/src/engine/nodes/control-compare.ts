@@ -28,17 +28,33 @@ interface MetricPlan {
   keyDiff: string;
 }
 
+/**
+ * Output column keys are `<column>__left/right/diff`. Two metrics may compare the same column pair
+ * (e.g. different tolerances), so a key already taken — by an earlier metric or by a key/carry
+ * column — gets the 1-based metric index as suffix (`cong_2__left`). Keys of the first metric on a
+ * pair stay stable.
+ */
 function metricPlans(config: CompareConfig): MetricPlan[] {
-  return config.metrics.map((m) => {
-    const id = m.left === m.right ? m.left : `${m.left}_${m.right}`;
+  const taken = new Set<string>([
+    ...config.keys,
+    ...config.carryColumns,
+    MISMATCHED_METRICS_COLUMN,
+  ]);
+  return config.metrics.map((m, i) => {
+    const base = m.left === m.right ? m.left : `${m.left}_${m.right}`;
+    const keysFor = (id: string) => [`${id}__left`, `${id}__right`, `${id}__diff`] as const;
+    let keys = keysFor(base);
+    for (let n = i + 1; keys.some((k) => taken.has(k)); n++) keys = keysFor(`${base}_${n}`);
+    for (const k of keys) taken.add(k);
+    const [keyLeft, keyRight, keyDiff] = keys;
     return {
       label: m.label,
       left: m.left,
       right: m.right,
       tolerance: decimalFrom(m.tolerance),
-      keyLeft: `${id}__left`,
-      keyRight: `${id}__right`,
-      keyDiff: `${id}__diff`,
+      keyLeft,
+      keyRight,
+      keyDiff,
     };
   });
 }
@@ -150,16 +166,24 @@ function toDecimal(v: Value): Decimal | null {
   throw new EngineError('compare.error.notNumeric', { side: '', column: String(v) });
 }
 
+/**
+ * Key values match case-insensitively with surrounding/repeated whitespace ignored
+ * ("nv00001 " = "NV00001"). Output rows keep each side's original values.
+ */
+export function normalizeKeyPart(v: Value | undefined): string {
+  if (v === null || v === undefined) return '';
+  const s = isDecimal(v) ? v.toString() : String(v);
+  return s.normalize('NFC').replace(/\s+/g, ' ').trim().toLowerCase();
+}
+
 function indexByKey(table: Table, keys: string[], side: string): Map<string, Row> {
   const index = new Map<string, Row>();
   for (const row of table.rows) {
-    const parts = keys.map((k) => {
-      const v = row[k];
-      return v === null || v === undefined ? '' : isDecimal(v) ? v.toString() : String(v);
-    });
+    const parts = keys.map((k) => normalizeKeyPart(row[k]));
     const id = JSON.stringify(parts);
     if (index.has(id)) {
-      throw new EngineError('compare.error.duplicateKey', { side, key: parts.join(' | ') });
+      const shown = keys.map((k) => normalizeKeyPart(row[k]) && String(row[k]).trim());
+      throw new EngineError('compare.error.duplicateKey', { side, key: shown.join(' | ') });
     }
     index.set(id, row);
   }
@@ -197,8 +221,10 @@ export function executeCompare(
     const failed: string[] = [];
 
     plans.forEach((m, i) => {
-      let l = toDecimal(lrow[m.left] ?? null);
-      let r = toDecimal(rrow[m.right] ?? null);
+      const srcL = toDecimal(lrow[m.left] ?? null);
+      const srcR = toDecimal(rrow[m.right] ?? null);
+      let l = srcL;
+      let r = srcR;
       if (config.nullAsZero) {
         l ??= ZERO;
         r ??= ZERO;
@@ -219,8 +245,9 @@ export function executeCompare(
       } else {
         perMetric[i]!.matched++;
       }
-      out[m.keyLeft] = l;
-      out[m.keyRight] = r;
+      // Blank source values stay blank in the output, even when compared as 0.
+      out[m.keyLeft] = srcL;
+      out[m.keyRight] = srcR;
       out[m.keyDiff] = diff;
     });
 

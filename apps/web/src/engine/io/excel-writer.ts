@@ -96,9 +96,18 @@ function estimateWidth(col: ColumnDef, table: Table): number {
   return Math.min(MAX_WIDTH, Math.max(MIN_WIDTH, max + 2));
 }
 
-/** Excel sheet names: max 31 chars, no : \ / ? * [ ], unique case-insensitively. */
+/**
+ * Excel sheet names: max 31 chars, no : \ / ? * [ ], no leading/trailing apostrophe, unique
+ * case-insensitively. The schema rejects such names at design time; this keeps the writer from
+ * throwing if one slips through.
+ */
 export function uniqueSheetName(requested: string, used: Set<string>): string {
-  const base = (requested.replace(/[:\\/?*[\]]/g, '_').trim() || 'Sheet').slice(0, 31);
+  const clean = (s: string) =>
+    s
+      .trim()
+      .replace(/^'+|'+$/g, '')
+      .trim();
+  const base = clean(clean(requested.replace(/[:\\/?*[\]]/g, '_')).slice(0, 31)) || 'Sheet';
   let name = base;
   for (let i = 2; used.has(name.toLowerCase()); i++) {
     const suffix = ` (${i})`;

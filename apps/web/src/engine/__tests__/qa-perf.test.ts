@@ -2,8 +2,7 @@
  * QA (tester) — performance sanity check, SKIPPED by default so CI stays fast.
  * Run: HRFLOW_PERF=1 pnpm --filter @hrflow/web test -- qa-perf
  * Rows: HRFLOW_PERF_ROWS (default 100000) per side. Fake data only, in memory.
- * Note: > ~125k rows per file currently crashes in readSlot (BUG-R2, see qa-reader.test.ts);
- * generating > ~250k rows with SheetJS also needs NODE_OPTIONS=--max-old-space-size=6144.
+ * Note: generating > ~250k rows with SheetJS needs NODE_OPTIONS=--max-old-space-size=6144.
  */
 import { CompareConfigSchema } from '@hrflow/flow-schema';
 import { describe, expect, it } from 'vitest';
