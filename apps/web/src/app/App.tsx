@@ -1,12 +1,12 @@
-import { useTranslation } from 'react-i18next';
+import { RouterProvider } from '@tanstack/react-router';
+import { localFlowSource } from '../features/runner/local-flow-source';
+import { RunStoreProvider } from '../features/runner/run-context';
+import { router } from './router';
 
 export function App() {
-  const { t } = useTranslation();
   return (
-    <main className="mx-auto flex min-h-screen max-w-2xl flex-col justify-center gap-3 p-8">
-      <h1 className="text-2xl font-semibold text-slate-900">{t('app.title')}</h1>
-      <p className="text-slate-600">{t('app.tagline')}</p>
-      <p className="text-sm text-slate-400">{t('app.status')}</p>
-    </main>
+    <RunStoreProvider source={localFlowSource}>
+      <RouterProvider router={router} />
+    </RunStoreProvider>
   );
 }

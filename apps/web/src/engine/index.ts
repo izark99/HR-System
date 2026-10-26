@@ -19,3 +19,7 @@ export {
   executeCompare,
   MISMATCHED_METRICS_COLUMN,
 } from './nodes/control-compare';
+export { inputExcelPlugin, INPUT_EXCEL_PORT } from './nodes/input-excel';
+export { outputExcelPlugin, resolveFileName, XLSX_MIME } from './nodes/output-excel';
+export * from './core/executor';
+export { EngineSession } from './session';

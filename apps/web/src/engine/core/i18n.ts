@@ -15,6 +15,8 @@ export function createEngineTranslator(lng: 'vi' | 'en' = 'vi'): Translate {
     ns: ['engine'],
     defaultNS: 'engine',
     resources: { vi: { engine: viEngine }, en: { engine: enEngine } },
+    // No console output from the library (spec §17: nothing logged in production).
+    showSupportNotice: false,
     // Output goes to Excel/plain text, not HTML.
     interpolation: { escapeValue: false },
     initAsync: false,

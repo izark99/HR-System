@@ -11,3 +11,5 @@ coverage/
 # generated test output must never be committed
 tmp/
 out/
+test-results/
+playwright-report/

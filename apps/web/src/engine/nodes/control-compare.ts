@@ -1,7 +1,7 @@
 import { CompareConfigSchema, type CompareConfig } from '@hrflow/flow-schema';
 import { Big, decimalFrom, isDecimal, ZERO, type Decimal } from '../core/decimal';
 import { normalizeKeyPart } from '../core/keys';
-import type { NodePlugin } from '../core/plugin';
+import type { NodeOutputs, NodePlugin } from '../core/plugin';
 import {
   EngineError,
   type ColumnDef,
@@ -58,6 +58,11 @@ function metricPlans(config: CompareConfig): MetricPlan[] {
       keyDiff,
     };
   });
+}
+
+/** Diff column of each metric in the `mismatched` output (used to highlight failing cells). */
+export function compareDiffColumns(config: CompareConfig): { label: string; key: string }[] {
+  return metricPlans(config).map((m) => ({ label: m.label, key: m.keyDiff }));
 }
 
 function sideLabels(config: CompareConfig, ctx: EngineContext) {
@@ -281,7 +286,7 @@ export function executeCompare(
   };
 }
 
-export const controlComparePlugin: NodePlugin<CompareConfig> = {
+export const controlComparePlugin: NodePlugin<CompareConfig, NodeOutputs> = {
   type: 'control.compare',
   configSchema: CompareConfigSchema,
   inputs: [

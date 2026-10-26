@@ -9,8 +9,11 @@
 # worker-src 'self' blob: engine Web Workers (DuckDB creates workers from blob: URLs).
 # style-src 'unsafe-inline': Monaco/ECharts/React Flow inject <style> elements at runtime.
 #   Inline *scripts* stay blocked.
+# style-src/font-src Google Fonts: the Be Vietnam Pro stylesheet (fonts.googleapis.com) and its
+#   font files (fonts.gstatic.com). Only CSS/fonts are fetched; connect-src stays app + Supabase,
+#   so no data can be sent there. Self-host the font to drop these two origins.
 /*
-  Content-Security-Policy: default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; worker-src 'self' blob:; connect-src 'self' https://YOUR-PROJECT-REF.supabase.co wss://YOUR-PROJECT-REF.supabase.co; img-src 'self' data: blob:; style-src 'self' 'unsafe-inline'; font-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'
+  Content-Security-Policy: default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; worker-src 'self' blob:; connect-src 'self' https://YOUR-PROJECT-REF.supabase.co wss://YOUR-PROJECT-REF.supabase.co; img-src 'self' data: blob:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'
   X-Content-Type-Options: nosniff
   X-Frame-Options: DENY
   Referrer-Policy: no-referrer

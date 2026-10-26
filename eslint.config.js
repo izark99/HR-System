@@ -19,6 +19,7 @@ export default tseslint.config(
           './apps/web/tsconfig.test.json',
           './apps/web/tsconfig.node.json',
           './packages/flow-schema/tsconfig.json',
+          './e2e/tsconfig.json',
         ],
         tsconfigRootDir: import.meta.dirname,
       },

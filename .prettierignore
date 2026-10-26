@@ -5,3 +5,5 @@ pnpm-lock.yaml
 fixtures
 *.md
 .claude
+test-results
+playwright-report

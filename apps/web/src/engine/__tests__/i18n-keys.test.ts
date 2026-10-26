@@ -24,7 +24,9 @@ describe('engine i18n', () => {
     const keys = new Set<string>();
     for (const file of sourceFiles(ENGINE_DIR)) {
       const src = readFileSync(file, 'utf8');
-      for (const m of src.matchAll(/'((?:validation|compare|skipped)\.[A-Za-z_.]+)'/g))
+      for (const m of src.matchAll(
+        /'((?:validation|compare|skipped|executor|report)\.[A-Za-z_.]+)'/g,
+      ))
         keys.add(m[1]!);
     }
     expect(keys.size).toBeGreaterThan(20);

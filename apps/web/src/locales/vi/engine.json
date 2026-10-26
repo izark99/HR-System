@@ -59,5 +59,40 @@
       "notNumeric": "Cột \"{{column}}\" của bảng {{side}} không phải kiểu số.",
       "missingInput": "Node đối chiếu cần đủ 2 bảng đầu vào (left, right)."
     }
+  },
+  "executor": {
+    "error": {
+      "duplicateNode": "Flow có 2 node trùng mã \"{{node}}\".",
+      "unknownNodeType": "Loại node \"{{type}}\" chưa được hỗ trợ.",
+      "invalidConfig": "Cấu hình của node \"{{node}}\" không hợp lệ (mục {{path}}).",
+      "unknownNode": "Đường nối tham chiếu tới node không tồn tại \"{{node}}\".",
+      "ambiguousPort": "Node \"{{node}}\" có nhiều cổng; đường nối phải ghi rõ cổng.",
+      "unknownPort": "Node \"{{node}}\" không có cổng \"{{port}}\".",
+      "portConnectedTwice": "Cổng \"{{port}}\" của node \"{{node}}\" được nối nhiều lần.",
+      "missingPort": "Cổng bắt buộc \"{{port}}\" của node \"{{node}}\" chưa được nối.",
+      "cycle": "Flow có vòng lặp (tại node \"{{node}}\"); flow phải là đồ thị không vòng.",
+      "paramRequired": "Chưa nhập tham số bắt buộc \"{{param}}\".",
+      "paramInvalid": "Giá trị tham số \"{{param}}\" không hợp lệ.",
+      "cancelled": "Đã hủy lần chạy.",
+      "nodeFailed": "Node \"{{node}}\" bị lỗi: {{message}}",
+      "missingInput": "Node \"{{node}}\" thiếu dữ liệu ở cổng \"{{port}}\".",
+      "unknownSlot": "Flow không có mục upload \"{{slot}}\".",
+      "noRunContext": "Node chỉ chạy được trong lúc chạy flow.",
+      "inputInvalid": "Mục \"{{slot}}\" còn {{count}} lỗi; hãy sửa file rồi upload lại."
+    }
+  },
+  "report": {
+    "sheetName": "Báo cáo kiểm tra",
+    "slot": "Mục upload",
+    "severity": "Mức",
+    "file": "File",
+    "sheet": "Sheet",
+    "row": "Dòng",
+    "column": "Cột",
+    "message": "Nội dung",
+    "severity_error": "Lỗi",
+    "severity_warning": "Cảnh báo",
+    "severity_skipped": "Bỏ qua",
+    "fileName": "BaoCaoKiemTra.xlsx"
   }
 }

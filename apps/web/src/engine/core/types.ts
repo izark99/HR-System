@@ -1,4 +1,5 @@
-import type { DataType } from '@hrflow/flow-schema';
+import type { DataType, FlowDefinition } from '@hrflow/flow-schema';
+import type { SlotReadResult } from '../io/excel-reader';
 import type { Decimal } from './decimal';
 
 /**
@@ -34,6 +35,30 @@ export type Translate = (key: string, params?: Record<string, unknown>) => strin
 export interface EngineContext {
   /** Translator bound to the engine namespace; used for generated column titles. */
   t: Translate;
+  /** The flow being designed/run (input slots etc.). Absent in isolated node tests. */
+  flow?: FlowDefinition;
+  /** Run-scoped services; only present while the executor runs a node. */
+  run?: RunServices;
+}
+
+/** Runtime parameter value as entered by the User (e.g. month "2026-09"). */
+export type ParamValue = string | number | boolean | null;
+
+/** A file produced by an output node (kept in the browser, offered as a download). */
+export interface RunArtifact {
+  nodeId: string;
+  fileName: string;
+  mimeType: string;
+  data: Uint8Array;
+}
+
+export interface RunServices {
+  nodeId: string;
+  params: Readonly<Record<string, ParamValue>>;
+  /** Read + validate the files of an input slot (the caller may serve a cached result). */
+  readSlot(slotKey: string): SlotReadResult | Promise<SlotReadResult>;
+  emitArtifact(artifact: Omit<RunArtifact, 'nodeId'>): void;
+  signal: AbortSignal | undefined;
 }
 
 /** Error with an i18n message key (engine namespace) + params, so the UI can localize it. */

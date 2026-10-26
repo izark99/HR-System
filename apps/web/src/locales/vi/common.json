@@ -1,7 +1,161 @@
 {
   "app": {
     "title": "Nền tảng xử lý dữ liệu HR",
+    "name": "HR Data Flow",
     "tagline": "Xử lý file Excel ngay trên trình duyệt — dữ liệu không rời khỏi máy của bạn.",
-    "status": "Đang xây dựng (Phase 1)"
+    "status": "Đang xây dựng (Phase 1)",
+    "skipToContent": "Bỏ qua, tới nội dung chính",
+    "home": "Trang chủ HR Data Flow"
+  },
+  "nav": {
+    "label": "Menu chính",
+    "runFlows": "Chạy flow"
+  },
+  "common": {
+    "loading": "Đang tải…",
+    "yes": "Có",
+    "no": "Không",
+    "required": "bắt buộc"
+  },
+  "flows": {
+    "eyebrow": "Flow của bạn",
+    "title": "Chọn quy trình cần chạy hôm nay",
+    "subtitle": "Các flow Admin đã gán cho bạn hoặc nhóm của bạn.",
+    "searchLabel": "Tìm flow",
+    "searchPlaceholder": "Nhập tên flow…",
+    "categoriesLabel": "Lọc theo nhóm",
+    "allCategories": "Tất cả",
+    "inputs_one": "{{count}} đầu vào",
+    "inputs_other": "{{count}} đầu vào",
+    "run": "Chạy flow",
+    "runNamed": "Chạy flow {{name}}",
+    "empty": "Không tìm thấy flow phù hợp.",
+    "loadError": "Không tải được danh sách flow."
+  },
+  "recent": {
+    "title": "Lần chạy gần đây",
+    "empty": "Chưa có lần chạy",
+    "note": "Lịch sử chỉ lưu thông tin lần chạy, không lưu nội dung dữ liệu."
+  },
+  "run": {
+    "back": "Danh sách flow",
+    "notFound": "Không tìm thấy flow này hoặc bạn chưa được gán flow.",
+    "loadFailed": "Flow chưa hợp lệ nên chưa chạy được. Hãy báo Admin.",
+    "instructions": "Hướng dẫn của Admin:",
+    "stepsLabel": "Các bước",
+    "step": {
+      "params": "Tham số",
+      "upload": "Upload & kiểm tra",
+      "run": "Chạy",
+      "result": "Kết quả",
+      "done": "Đã xong",
+      "current": "Đang ở bước này"
+    },
+    "paramsTitle": "Tham số",
+    "safety": {
+      "label": "An toàn dữ liệu:",
+      "text": "file được xử lý ngay trên máy bạn, không gửi lên server."
+    },
+    "actions": {
+      "back": "Quay lại",
+      "run": "Chạy",
+      "fixErrors_one": "Chạy (sửa {{count}} lỗi trước)",
+      "fixErrors_other": "Chạy (sửa {{count}} lỗi trước)",
+      "needFiles": "Chạy (cần upload đủ file)",
+      "needParams": "Chạy (cần nhập tham số)",
+      "validating": "Đang kiểm tra file…",
+      "running": "Đang chạy…",
+      "cancel": "Hủy",
+      "cancelling": "Đang hủy…"
+    },
+    "progress": {
+      "title": "Đang chạy flow",
+      "percent": "{{percent}}%",
+      "pending": "Chờ",
+      "running": "Đang chạy",
+      "done": "Xong · {{seconds}} giây",
+      "rows_one": "{{count, number}} dòng",
+      "rows_other": "{{count, number}} dòng"
+    },
+    "failed": "Chạy không thành công:",
+    "cancelled": "bạn có thể chạy lại khi sẵn sàng.",
+    "restoring": "đang nạp lại file sau khi hủy…",
+    "cancelledLabel": "Đã hủy lần chạy:"
+  },
+  "slot": {
+    "multiple": "Nhiều file · {{accept}}",
+    "single": "1 file · {{accept}}",
+    "drop": "Kéo thả file vào đây hoặc",
+    "choose": "chọn file",
+    "chooseFor": "Chọn file cho {{slot}}",
+    "dropActive": "Thả file để thêm vào {{slot}}",
+    "files": "File đã chọn cho {{slot}}",
+    "remove": "Bỏ file {{name}}",
+    "validating": "Đang kiểm tra…",
+    "rows_one": "{{count, number}} dòng",
+    "rows_other": "{{count, number}} dòng",
+    "errors_one": "{{count}} lỗi",
+    "errors_other": "{{count}} lỗi",
+    "warnings_one": "{{count}} cảnh báo",
+    "warnings_other": "{{count}} cảnh báo",
+    "readFailed": "Không đọc được file. Hãy thử chọn lại."
+  },
+  "report": {
+    "title": "Báo cáo kiểm tra file",
+    "errors_one": "{{count}} lỗi",
+    "errors_other": "{{count}} lỗi",
+    "warnings_one": "{{count}} cảnh báo",
+    "warnings_other": "{{count}} cảnh báo",
+    "skipped_one": "{{count}} dòng đã bỏ qua",
+    "skipped_other": "{{count}} dòng đã bỏ qua",
+    "empty": "Upload file để hệ thống kiểm tra trước khi chạy.",
+    "validLabel": "Hợp lệ:",
+    "valid": "các file không có lỗi hay cảnh báo, có thể chạy.",
+    "warningsOnlyLabel": "Lưu ý:",
+    "warningsOnly": "chỉ có cảnh báo, bạn vẫn chạy được nhưng nên kiểm tra lại.",
+    "truncated": "Đang hiển thị {{shown}}/{{total}} dòng. Tải báo cáo để xem đủ.",
+    "download": "Tải báo cáo lỗi (.xlsx)",
+    "col": {
+      "severity": "Mức",
+      "file": "File",
+      "row": "Dòng",
+      "column": "Cột",
+      "message": "Nội dung"
+    },
+    "severity": {
+      "error": "Lỗi",
+      "warning": "Cảnh báo"
+    }
+  },
+  "result": {
+    "eyebrow": "Chạy xong · {{rows}} dòng · {{seconds}} giây",
+    "titleMismatched": "Kỳ {{period}} có {{count}} nhân viên lệch cần xử lý",
+    "titleMismatchedNoPeriod": "Có {{count}} nhân viên lệch cần xử lý",
+    "titleMatched": "Kỳ {{period}}: tất cả nhân viên đều khớp",
+    "titleMatchedNoPeriod": "Tất cả nhân viên đều khớp",
+    "titleGeneric": "Flow đã chạy xong",
+    "thresholds": "Ngưỡng: {{list}}",
+    "rerun": "Chạy lại",
+    "download_one": "Tải Excel ({{count}} sheet)",
+    "download_other": "Tải Excel ({{count}} sheet)",
+    "downloadNamed": "Tải {{name}}",
+    "kpi": {
+      "label": "Tóm tắt kết quả",
+      "matched": "Khớp",
+      "mismatched": "Lệch",
+      "onlyLeft": "Chỉ có trong {{side}}",
+      "onlyRight": "Chỉ có trong {{side}}"
+    },
+    "tabsLabel": "Sheet kết quả",
+    "tabCount": "{{name}} ({{count}})",
+    "filterAll": "Tất cả",
+    "filtersLabel": "Bộ lọc",
+    "showing_one": "{{count, number}} dòng",
+    "showing_other": "{{count, number}} dòng",
+    "empty": "Không có dòng nào.",
+    "noSession": "Chưa có kết quả trong phiên này. Kết quả chỉ nằm trong trình duyệt và sẽ mất khi tải lại trang.",
+    "goRun": "Về trang chạy flow",
+    "noteLabel": "Lưu ý:",
+    "note": "kết quả chỉ nằm trong trình duyệt. Hãy tải file về trước khi đóng tab."
   }
 }

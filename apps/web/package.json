@@ -12,7 +12,11 @@
   },
   "dependencies": {
     "@hrflow/flow-schema": "workspace:*",
+    "@tanstack/react-router": "^1.170.46",
+    "@tanstack/react-table": "^8.21.3",
+    "@tanstack/react-virtual": "^3.14.22",
     "big.js": "^7.0.1",
+    "comlink": "^4.4.2",
     "exceljs": "^4.4.0",
     "i18next": "^25.10.10",
     "react": "^19.2.0",

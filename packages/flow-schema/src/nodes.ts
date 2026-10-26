@@ -1,5 +1,11 @@
 import { z } from 'zod';
-import { NonNegativeDecimalLiteralSchema } from './common';
+import { IdentifierSchema, NonNegativeDecimalLiteralSchema } from './common';
+
+/** Config of node `input.excel` (spec §10): reads the files of one input slot. */
+export const InputExcelConfigSchema = z.strictObject({
+  slot: IdentifierSchema,
+});
+export type InputExcelConfig = z.infer<typeof InputExcelConfigSchema>;
 
 /** Config of node `control.compare` (spec §24.2). */
 export const CompareMetricSchema = z.strictObject({
@@ -53,6 +59,7 @@ export const ExcelSheetNameSchema = z
 /** Config of node `output.excel` (spec §11): one sheet per input port. */
 export const OutputExcelConfigSchema = z
   .strictObject({
+    /** File name; `{param_key}` placeholders are replaced by runtime params. */
     fileName: z.string().min(1).default('output.xlsx'),
     sheets: z
       .array(
