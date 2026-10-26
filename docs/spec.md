@@ -1,7 +1,7 @@
 # HR Data Flow Platform — Đặc tả hệ thống (spec.md)
 
-> Phiên bản: 0.1 (draft) · Ngày: 2026-10-26 · Chủ sở hữu: Harold (HR Analytics)
-> Trạng thái: Chờ review
+> Phiên bản: 0.2 (draft) · Ngày: 2026-10-26 · Chủ sở hữu: Harold (HR Analytics)
+> Trạng thái: Chờ review · 0.2: bổ sung phạm vi Bước 3 (Flow Designer, DuckDB-WASM, nhóm transform cơ bản, Version & diff, tự đăng xuất) theo quyết định 2026-10-26 22:52
 
 ---
 
@@ -85,7 +85,7 @@ Hệ thống được thiết kế như một **framework**: logic nghiệp vụ
 ┌────────────── Supabase (Free tier) ──────────────┐   ┌──── Cloudflare ────┐
 │ Auth (username → email nội bộ, password)          │   │ Pages: host SPA    │
 │ Postgres + RLS: users, groups, flows, versions…   │   │                    │
-│ Storage: template .xlsx (private bucket)          │   │  ping Supabase     │
+│ Storage: template .xlsx (private bucket)          │   │                    │
 │ Edge Functions: admin-users (service role)        │   └────────────────────┘
 └───────────────────────────────────────────────────┘
 ```
@@ -97,6 +97,9 @@ Hệ thống được thiết kế như một **framework**: logic nghiệp vụ
 | Hosting SPA | **Cloudflare Pages** | Free, **cho phép dùng thương mại**, CDN nhanh | Vercel Hobby **cấm dùng thương mại** → không chọn |
 | Backend | **Supabase Free** | Auth + Postgres + RLS + Storage + Edge Functions trong 1 gói | Project tự **pause sau 7 ngày không hoạt động** → cần keep-alive (§16) ; DB 500MB, Storage 1GB |
 | Keep-alive | GitHub Actions (schedule) | Free, không cần đăng nhập thêm dịch vụ | Ping 1 lần/ngày; GitHub tắt lịch nếu repo không hoạt động 60 ngày |
+
+- Keep-alive Supabase do GitHub Actions thực hiện (không dùng Cloudflare Cron Worker, chốt 2026-10-26 20:27).
+- Ref tables, Templates và Storage template thuộc Phase 2 (chốt 2026-10-26 22:52).
 
 Kiến trúc giữ tính **portable**: frontend là static build; backend chỉ dùng chuẩn Postgres + Supabase Auth → có thể chuyển sang Supabase self-host (Docker) trong hạ tầng nội bộ của công ty khi cần.
 
@@ -112,12 +115,13 @@ Kiến trúc giữ tính **portable**: frontend là static build; backend chỉ 
 | Routing / server state | TanStack Router, TanStack Query | |
 | Form & validation | React Hook Form + Zod | Zod cũng là nguồn sinh JSON Schema cho flow |
 | Canvas flow | @xyflow/react (React Flow) + ELK.js auto-layout | |
-| Code editor | Monaco Editor | Highlight SQL / Python / formula, autocomplete tên cột |
+| Code editor | Monaco Editor *(chưa chốt, xem §22 Q12)* | Highlight SQL / Python / formula, autocomplete tên cột; chỉ tải trong chunk Designer |
 | Data grid preview | TanStack Table + virtualization | Hiển thị hàng trăm nghìn dòng mượt |
 | Chart | Apache ECharts | |
 | Đọc Excel | SheetJS (bản CE từ cdn.sheetjs.com, vendor tại `vendor/`) | Đọc .xlsx, .xls (CSV không nhận, chốt 2026-10-26) |
 | Ghi Excel | ExcelJS | Giữ style/format khi đổ vào template |
-| Engine SQL | DuckDB-WASM | Chạy trong Web Worker |
+| Engine SQL | DuckDB-WASM (bundle `eh`, đơn luồng) | Chạy trong engine worker; tự host, tách file `.wasm` thành phần < 25 MiB (§13.1) |
+| Định dạng cột | Apache Arrow JS (Apache-2.0) | Trao đổi bảng giữa engine (TS) và DuckDB |
 | Engine Python | Pyodide (pandas, numpy) | Worker riêng, lazy load khi flow có node Python |
 | Worker RPC | Comlink | |
 | i18n | i18next + react-i18next | `vi` mặc định, cấu trúc sẵn `en` |
@@ -136,7 +140,17 @@ Kiến trúc giữ tính **portable**: frontend là static build; backend chỉ 
 - Chính sách mật khẩu: tối thiểu 10 ký tự, kiểm tra danh sách mật khẩu yếu (leaked password protection của Supabase nếu có trên free tier).
 - Admin có thể **khóa** (disable) tài khoản; tài khoản bị khóa không đăng nhập được, session hiện tại bị thu hồi.
 - Không có 2FA (theo yêu cầu). Có thể bổ sung TOTP sau (Supabase hỗ trợ sẵn).
-- Session: access token ngắn hạn + refresh token, lưu trong `sessionStorage` (đóng tab là phải đăng nhập lại). Tự đăng xuất sau 8 giờ không thao tác, đếm phía client (bước 3) (chốt 2026-10-26).
+- Session: access token ngắn hạn + refresh token, lưu trong `sessionStorage` (đóng tab là phải đăng nhập lại) (chốt 2026-10-26).
+
+### 6.1 Tự đăng xuất khi không thao tác (bước 3, chốt 2026-10-26 22:52)
+
+- **Ngưỡng**: 8 giờ không thao tác. Đếm hoàn toàn phía trình duyệt, áp dụng cho cả Admin và User.
+- **Thao tác** = sự kiện chuột (`pointerdown`, `pointermove`), phím (`keydown`), cuộn (`wheel`, `scroll`), chạm (`touchstart`) **trong tab hiện tại**. Mỗi tab có phiên riêng (`sessionStorage`) nên đếm riêng theo tab. Sự kiện được gộp (throttle, tối đa 1 lần ghi nhận / 30 giây) để không ảnh hưởng hiệu năng.
+- **Khi engine đang làm việc không tính là không thao tác**: trong lúc worker đang kiểm tra file, chạy flow, chạy xem trước node (Designer) hoặc xuất file, bộ đếm tạm dừng; khi tác vụ kết thúc (thành công, lỗi hoặc hủy), bộ đếm bắt đầu lại từ thời điểm kết thúc.
+- **Đếm theo đồng hồ thực**: lưu thời điểm thao tác cuối (trong bộ nhớ) và so với `Date.now()`; kiểm tra lại khi tab hiện lại (`visibilitychange`) hoặc máy thức dậy. Nếu đã quá 8 giờ thì đăng xuất ngay, không hiện cảnh báo.
+- **Cảnh báo trước 5 phút** (tại mốc 7 giờ 55 phút): dialog có đồng hồ đếm ngược và nút chính "Tiếp tục làm việc". Khi dialog đang mở, chỉ thao tác bấm nút (hoặc Enter khi nút có focus) mới gia hạn; di chuột không tự đóng dialog. Nếu Designer còn thay đổi chưa lưu, dialog nêu rõ: "Flow đang thiết kế còn thay đổi chưa lưu. Nếu bị đăng xuất, các thay đổi này sẽ mất." (không tự lưu, theo quyết định Designer không tự lưu).
+- **Hết giờ**: gọi đăng xuất cục bộ (xóa session trong `sessionStorage`), kết thúc engine worker để giải phóng dữ liệu trong RAM (file đã upload, kết quả, file mẫu), bỏ qua cảnh báo "thay đổi chưa lưu" của Designer, chuyển về màn đăng nhập kèm thông báo: "Bạn đã được đăng xuất do không thao tác trong 8 giờ. Vui lòng đăng nhập lại."
+- Không ghi thời điểm thao tác vào localStorage/server; không gửi sự kiện thao tác ra ngoài.
 - Admin được tự reset mật khẩu, tự khóa, tự đổi role của mình; Admin thấy và chạy mọi flow đã publish (chốt 2026-10-26).
 
 ---
@@ -155,9 +169,9 @@ Kiến trúc giữ tính **portable**: frontend là static build; backend chỉ 
 | `flows` | Flow (định danh logic) | `id`, `code` (unique), `name`, `description`, `category`, `is_archived` |
 | `flow_versions` | Phiên bản flow | `id`, `flow_id`, `version_no`, `status` (`draft`/`published`/`retired`), `effective_from` (date), `effective_to` (date, null = vô thời hạn), `definition` (jsonb), `schema_version`, `change_note`, `published_by`, `published_at` |
 | `flow_assignments` | Gán flow cho user/group | `flow_id`, `user_id` *hoặc* `group_id` |
-| `ref_tables` | Bảng tham chiếu (định danh) | `id`, `code`, `name`, `columns` (jsonb: tên, kiểu) |
-| `ref_table_versions` | Phiên bản bảng tham chiếu | `id`, `ref_table_id`, `effective_from`, `effective_to`, `rows` (jsonb) *hoặc* `storage_path` (Parquet nếu lớn), `row_count`, `status` |
-| `templates` | Template Excel | `id`, `code`, `name`, `storage_path`, `sheets` (jsonb: metadata sheet/named range), `checksum` |
+| `ref_tables` *(Phase 2)* | Bảng tham chiếu (định danh) | `id`, `code`, `name`, `columns` (jsonb: tên, kiểu) |
+| `ref_table_versions` *(Phase 2)* | Phiên bản bảng tham chiếu | `id`, `ref_table_id`, `effective_from`, `effective_to`, `rows` (jsonb) *hoặc* `storage_path` (Parquet nếu lớn), `row_count`, `status` |
+| `templates` *(Phase 2)* | Template Excel | `id`, `code`, `name`, `storage_path`, `sheets` (jsonb: metadata sheet/named range), `checksum` |
 | `run_logs` | Nhật ký chạy (**không chứa nội dung dữ liệu**) | `id`, `user_id`, `flow_version_id`, `params` (jsonb), `inputs_meta` (jsonb: tên slot, số dòng, kích thước, SHA-256), `status`, `duration_ms`, `rows_out`, `error_code`, `error_node_id`, `client_info` |
 | `audit_logs` | Nhật ký thao tác Admin | `id`, `actor_id`, `action`, `entity`, `entity_id`, `diff` (jsonb) |
 | `app_settings` | Cấu hình hệ thống | `key`, `value` (jsonb) |
@@ -166,7 +180,9 @@ Kiến trúc giữ tính **portable**: frontend là static build; backend chỉ 
 
 - **Không chồng lấn effective date** giữa các version `published` của cùng flow / ref table: dùng exclusion constraint
   `EXCLUDE USING gist (flow_id WITH =, daterange(effective_from, effective_to, '[)') WITH &&) WHERE (status = 'published')` (cần extension `btree_gist`).
-- Version `published` là **bất biến (immutable)**: trigger chặn UPDATE `definition`; chỉ cho đổi `effective_to` và `status → retired`.
+- Version `published` là **bất biến (immutable)**: trigger `private.flow_versions_guard` chặn UPDATE `definition`; chỉ cho đổi `effective_to` và `status → retired`. Version `retired` không đổi được nữa; chỉ version `draft` được xóa. Không INSERT trực tiếp với `status = retired`.
+- Mỗi flow tối đa 1 draft: unique index `flow_versions_one_draft_idx` (`where status = 'draft'`).
+- `effective_to` là cận trên **không bao gồm** (`[from, to)`), phải lớn hơn `effective_from`. Version `published` bắt buộc có `effective_from`. Exclusion constraint `flow_versions_no_overlap` chỉ xét version `published` (version `retired` không còn tham gia kiểm tra chồng lấn).
 - `run_logs.params` chỉ lưu tham số kiểu kỳ/chi nhánh; Admin đánh dấu tham số nhạy cảm (`log: false`) để không ghi log.
 
 ### 7.3 RLS (tóm tắt)
@@ -220,7 +236,8 @@ Flow là một **DAG** (đồ thị có hướng, không vòng) gồm các node 
 }
 ```
 
-- `ui` chỉ phục vụ canvas, engine bỏ qua.
+- Ví dụ trên minh họa định dạng đầy đủ, có cả node chưa thuộc bước 3 (`input.refTable`, `transform.formula`, `code.python`, `output.template`); danh sách node của bước 3 xem §12.
+- `ui` chỉ phục vụ canvas, engine bỏ qua. Từ bước 3, `ui` gồm: `positions` (`{ [nodeId]: [x, y] }`), `notes` (sticky note: `{ id, text, position: [x, y], size?: [w, h] }[]`). Thay đổi chỉ trong `ui` không làm flow khác về nghiệp vụ (diff version bỏ qua, §14.3).
 - Khi lưu: validate schema, kiểm tra DAG (không vòng), kiểm tra mọi port bắt buộc đã nối, kiểm tra tham chiếu (`refTable`, `template`, `slot`) tồn tại.
 
 ### 8.1 Tương thích schema (schema compatibility)
@@ -258,9 +275,9 @@ Ba ngôn ngữ đều là **công dân hạng nhất** và có thể dùng ở h
 
 ### 9.2 SQL
 
-- Dialect DuckDB. Mỗi input port của node xuất hiện dưới dạng một **view** cùng tên port (`left`, `right`, `df`, hoặc alias do Admin đặt).
-- Câu lệnh phải là một `SELECT`/`WITH … SELECT` duy nhất; chặn `COPY`, `ATTACH`, `INSTALL`, `LOAD`, `EXPORT`, `PRAGMA` và các lệnh đọc file/URL (`read_csv('http…')`…).
-- Tham số: `$ky_luong`, `$chi_nhanh` → bind bằng prepared statement.
+- Dialect DuckDB. Mỗi input port của node `code.sql` xuất hiện dưới dạng một **view** cùng tên port do Admin đặt (VD `luong`, `cham_cong`). Chi tiết node: §12.1.8.
+- Câu lệnh phải là một `SELECT`/`WITH … SELECT` duy nhất; kiểm tra bằng parser của DuckDB (không dùng regex): chặn `COPY`, `ATTACH`, `INSTALL`, `LOAD`, `EXPORT`, `PRAGMA`, `SET`, DDL/DML và các hàm đọc file/URL (`read_csv`, `read_parquet`, `read_json`…). Thêm một lớp chặn ở cấu hình DuckDB (§13.1: `enable_external_access = false`, khóa cấu hình).
+- Tham số: `$ky_luong`, `$chi_nhanh` → bind bằng prepared statement, **chỉ dưới dạng giá trị**, không thay chuỗi vào câu SQL. Mọi tham số được bind dưới dạng `VARCHAR` theo định dạng chuẩn (`month` → `'2026-09'`, `date` → `'2026-09-15'`, `number` → `'1.5'`, `boolean` → `'true'`/`'false'`, `string`/`select` → nguyên giá trị; trống → `NULL`); Admin tự `CAST` khi cần (VD `CAST($ky_luong || '-01' AS DATE)`). Tham chiếu tới tham số không khai báo trong `params` → lỗi khi thiết kế.
 
 ### 9.3 Python
 
@@ -282,7 +299,22 @@ def run(inputs: dict[str, pd.DataFrame], params: dict) -> pd.DataFrame | dict[st
 
 ### 9.4 Kiểu dữ liệu chuẩn
 
-`string`, `integer`, `decimal`, `boolean`, `date`, `datetime`. Tiền lương dùng `decimal(18,2)` (không dùng float) để tránh sai số làm tròn.
+`string`, `integer`, `decimal`, `boolean`, `date`, `datetime`. Tiền lương, ngày công dùng `decimal` (không dùng float) để tránh sai số làm tròn.
+
+Ánh xạ giữa engine (TypeScript, big.js) và DuckDB (từ bước 3):
+
+| Kiểu engine | Giá trị trong engine | Kiểu trong DuckDB | Quy tắc chuyển đổi |
+|-------------|---------------------|-------------------|--------------------|
+| `string` | `string` | `VARCHAR` | Nguyên văn |
+| `integer` | `number` (safe integer) | `BIGINT` | Kết quả ngoài phạm vi safe integer → chuyển thành `decimal` |
+| `decimal` | `Big` | `DECIMAL(38,10)` | Chuyển qua Arrow dưới dạng **chuỗi thập phân** rồi `CAST`; trước khi chuyển, engine làm tròn half-up về tối đa 10 chữ số thập phân. Chiều về: `CAST(... AS VARCHAR)` → `Big`. Không đi qua `DOUBLE` |
+| `boolean` | `boolean` | `BOOLEAN` | Nguyên văn |
+| `date` | `"YYYY-MM-DD"` | `DATE` | Qua chuỗi ISO |
+| `datetime` | `"YYYY-MM-DDTHH:mm:ss"` | `TIMESTAMP` (không múi giờ) | Qua chuỗi ISO, cắt phần lẻ giây |
+
+- Kết quả `DOUBLE`/`FLOAT` (VD phép chia, `AVG` trong `code.sql`) được nhận về thành `decimal` bằng quy tắc 15 chữ số có nghĩa giống số đọc từ Excel (`decimalFromNumber`); Designer hiển thị cảnh báo khuyên Admin `CAST(... AS DECIMAL(38,10))` cho cột đó.
+- Kiểu DuckDB `HUGEINT`/`DECIMAL(p,s)` khác → `decimal`; `TIMESTAMP WITH TIME ZONE`, `INTERVAL`, `LIST`, `STRUCT`, `MAP`, `BLOB`, `UUID`… → lỗi `sql.error.unsupportedType` (kèm tên cột), Admin phải `CAST`.
+- Vượt `DECIMAL(38,10)` (quá 28 chữ số phần nguyên) → lỗi `duckdb.error.decimalOverflow` kèm node và cột.
 
 ### 9.5 An toàn khi chạy code
 
@@ -367,35 +399,160 @@ Admin khai báo **input slot** cho mỗi flow — mô tả file mà User cần u
 
 ## 12. Danh mục node (Node catalog)
 
-| Nhóm | Node | Chức năng |
-|------|------|-----------|
-| **Input** | `input.excel` | Đọc file từ input slot |
-| | `input.refTable` | Bảng tham chiếu (tự chọn version theo effective date) |
-| | `input.params` | Bảng 1 dòng chứa tham số runtime |
-| **Cột** | `transform.select` | Chọn / đổi tên / sắp xếp thứ tự cột |
-| | `transform.formula` | Thêm/sửa cột bằng Excel, SQL hoặc Python |
-| | `transform.cast` | Đổi kiểu dữ liệu |
-| | `transform.split` / `transform.merge` | Tách / gộp cột |
-| | `transform.fillDown` | Điền giá trị xuống (dữ liệu có ô merge) |
-| **Dòng** | `transform.filter` | Lọc theo điều kiện (builder hoặc biểu thức) |
-| | `transform.sort` | Sắp xếp |
-| | `transform.dedupe` | Loại trùng theo khóa |
-| | `transform.sample` / `transform.limit` | Lấy mẫu / giới hạn số dòng |
-| **Kết hợp** | `transform.join` | Inner / left / right / full / anti join |
-| | `transform.union` | Gộp dọc nhiều bảng (khớp theo tên cột) |
-| | `transform.lookup` | Tra cứu nhanh (giống XLOOKUP) |
-| **Tổng hợp** | `transform.groupBy` | Group + SUM/COUNT/AVG/MIN/MAX/COUNT DISTINCT |
-| | `transform.pivot` / `transform.unpivot` | Xoay bảng |
-| | `transform.window` | Running total, rank, lag/lead |
-| **Kiểm soát** | `control.assert` | Kiểm tra điều kiện (VD: tổng lương 2 file khớp) → error/warning |
-| | `control.compare` | Đối chiếu 2 bảng theo khóa → các bảng khớp / lệch / chỉ có ở A / chỉ có ở B |
-| | `control.branch` | Chia luồng theo điều kiện tham số |
-| **Code** | `code.sql` | SQL tùy chỉnh (§9.2) |
-| | `code.python` | Python tùy chỉnh (§9.3) |
-| **Output** | `output.preview`, `output.chart`, `output.excel`, `output.template` | §11 |
-| **Tái sử dụng** | `subflow` (Phase 3) | Nhúng một flow khác như một node |
+Cột "Bước": **Đã có** = đã chạy được từ bước 1; **B3** = làm trong bước 3 (chốt 2026-10-26 22:52); **P2**/**P3** = Phase 2/3; **Chưa chốt** = chưa xếp lịch.
 
-Mỗi node type được định nghĩa bằng một **plugin** gồm: Zod schema cấu hình, form cấu hình, hàm `compile` (sinh SQL) hoặc `execute` (chạy trực tiếp), hàm suy diễn schema output. Nhờ vậy việc thêm node mới không đụng đến core engine.
+| Nhóm | Node | Chức năng | Bước | Thực thi |
+|------|------|-----------|------|----------|
+| **Input** | `input.excel` | Đọc file từ input slot | Đã có | TS |
+| | `input.refTable` | Bảng tham chiếu (tự chọn version theo effective date) | P2 | — |
+| | `input.params` | Bảng 1 dòng chứa tham số runtime | Chưa chốt | — |
+| **Cột** | `transform.select` | Chọn / đổi tên / sắp xếp thứ tự cột | **B3** | DuckDB |
+| | `transform.formula` | Thêm/sửa cột bằng Excel, SQL hoặc Python | Chưa chốt (§22 Q9) | — |
+| | `transform.cast` | Đổi kiểu dữ liệu | P2 | — |
+| | `transform.split` / `transform.merge` | Tách / gộp cột | P2 | — |
+| | `transform.fillDown` | Điền giá trị xuống (dữ liệu có ô merge) | P2 | — |
+| **Dòng** | `transform.filter` | Lọc theo điều kiện (builder) | **B3** | DuckDB |
+| | `transform.sort` | Sắp xếp | **B3** | DuckDB / TS (§12.1.3) |
+| | `transform.dedupe` | Loại trùng theo khóa | **B3** | DuckDB |
+| | `transform.sample` / `transform.limit` | Lấy mẫu / giới hạn số dòng | P2 | — |
+| **Kết hợp** | `transform.join` | Inner / left / right / full / anti join | **B3** | DuckDB |
+| | `transform.union` | Gộp dọc nhiều bảng (khớp theo tên cột) | **B3** | DuckDB |
+| | `transform.lookup` | Tra cứu nhanh (giống XLOOKUP) | P2 | — |
+| **Tổng hợp** | `transform.groupBy` | Group + SUM/COUNT/AVG/MIN/MAX/COUNT DISTINCT | **B3** | DuckDB |
+| | `transform.pivot` / `transform.unpivot` | Xoay bảng | P2 | — |
+| | `transform.window` | Running total, rank, lag/lead | P2 | — |
+| **Kiểm soát** | `control.assert` | Kiểm tra điều kiện (VD: tổng lương 2 file khớp) → error/warning | P2 | — |
+| | `control.compare` | Đối chiếu 2 bảng theo khóa → các bảng khớp / lệch / chỉ có ở A / chỉ có ở B | Đã có (§24.2) | TS |
+| | `control.branch` | Chia luồng theo điều kiện tham số | P3 | — |
+| **Code** | `code.sql` | SQL tùy chỉnh (§9.2) | **B3** | DuckDB |
+| | `code.python` | Python tùy chỉnh (§9.3) | P2 | — |
+| **Output** | `output.excel` | §11 | Đã có | TS |
+| | `output.preview` | §11 | Chưa chốt (§22 Q13) | — |
+| | `output.chart`, `output.template` | §11 | P2 | — |
+| **Tái sử dụng** | `subflow` | Nhúng một flow khác như một node | P3 | — |
+
+Mỗi node type được định nghĩa bằng một **plugin** gồm: Zod schema cấu hình (trong `packages/flow-schema`), form cấu hình, hàm `compile` (sinh SQL DuckDB) hoặc `execute` (chạy trực tiếp bằng TypeScript), hàm suy diễn schema output. Nhờ vậy việc thêm node mới không đụng đến core engine.
+
+### 12.1 Đặc tả node bước 3
+
+**Quy ước chung**
+
+- **Port**: node một đầu vào dùng input port `in`; node một đầu ra dùng output port `out`. Node `input.excel` giữ output port `table` (đã có).
+- **Tham chiếu cột** bằng `key` của cột (snake_case, `IdentifierSchema`) trong schema suy diễn của node phía trước; `title` (tiêu đề hiển thị/Excel) đi kèm cột và được truyền xuống.
+- **Kiểm tra lúc thiết kế**: `configSchema` (Zod) + `checkConfig` + `inferSchema` phát hiện cột không tồn tại, sai kiểu, trùng tên. Lỗi gắn `node_id` và đường dẫn trường cấu hình để Designer tô đỏ đúng ô; flow có lỗi không publish được (§14.4).
+- **Mã lỗi** là i18n key theo dạng `<node>.error.<code>` / `<node>.warning.<code>` trong `locales/vi/engine.json` (VD `join.error.keyTypeMismatch`).
+- **Giá trị hằng trong cấu hình** (VD giá trị lọc) và **tham số** luôn được bind dưới dạng giá trị của prepared statement; tên cột chỉ được đưa vào SQL sau khi kiểm tra khớp `IdentifierSchema` và đặt trong dấu nháy kép.
+- **Thứ tự dòng tất định**: mỗi bảng đưa vào DuckDB có cột ẩn `__ord` (thứ tự dòng). Mọi node giữ nguyên thứ tự dòng đầu vào trừ khi quy định khác bên dưới; cột `__ord` không hiển thị cho Admin và không có trong view của `code.sql`.
+- **Ô trống** (blank) = `null`; với cột `string`, chuỗi rỗng sau khi bỏ khoảng trắng cũng là trống.
+- **Chuẩn hóa khóa** `normalizeKeys` (join, dedupe): dùng **đúng** quy tắc của `normalizeKeyPart` (`engine/core/keys.ts`): NFC, gộp mọi khoảng trắng Unicode, trim, lowercase — giống `control.compare` và rule `unique`. Bản SQL của quy tắc này phải cho kết quả trùng khớp với bản TS (golden test có NBSP, tab, chữ hoa có dấu tiếng Việt). Chỉ áp dụng cho cột `string`; cột kiểu khác so sánh theo giá trị. Giá trị mặc định `true` đang chờ Harold xác nhận (§22 Q10).
+
+#### 12.1.1 `transform.select`
+
+- Port: `in` → `out`.
+- Config: `{ columns: [{ from: string, key?: Identifier, title?: string }] }` (tối thiểu 1).
+- Output schema: đúng các cột được liệt kê, theo thứ tự liệt kê; `key` mặc định = `from`; `title` mặc định = title của cột nguồn; kiểu giữ nguyên. Một cột nguồn có thể được chọn nhiều lần với `key` khác nhau.
+- Lỗi: `select.error.unknownColumn` (cột nguồn không tồn tại), `select.error.duplicateKey` (2 cột output trùng `key`), `select.error.reservedKey` (`key` mới bắt đầu bằng `_`; cột hệ thống như `_source_file` chỉ được giữ nguyên tên).
+
+#### 12.1.2 `transform.filter`
+
+- Port: `in` → `out`.
+- Config:
+  ```ts
+  {
+    match: 'all' | 'any',            // mặc định 'all' (AND)
+    conditions: [{                   // tối thiểu 1
+      column: string,
+      op: 'eq'|'neq'|'gt'|'gte'|'lt'|'lte'|'in'|'notIn'|'isBlank'|'notBlank'
+        |'contains'|'notContains'|'startsWith'|'endsWith',
+      value?: Literal | { param: Identifier },   // op so sánh 1 giá trị
+      values?: Literal[]                          // op in / notIn (1..500 giá trị)
+    }],
+    normalizeText: boolean           // mặc định true: so sánh chuỗi sau chuẩn hóa như khóa
+  }
+  ```
+  `Literal` = string | number | boolean; giá trị phải đọc được theo kiểu cột (`date` dạng `YYYY-MM-DD`, `decimal` dạng chuỗi thập phân).
+- Ngữ nghĩa: `gt/gte/lt/lte` dùng cho `integer`, `decimal`, `date`, `datetime`, `string`; `contains/startsWith/endsWith` chỉ cho `string`. Ô trống chỉ thỏa `isBlank`, `neq`, `notIn`, `notContains`. Điều kiện dùng `{ param }` mà tham số để trống lúc chạy → điều kiện đó **bị bỏ qua** (cho phép tham số lọc tùy chọn, VD "Chi nhánh: tất cả").
+- Output schema: giống đầu vào.
+- Lỗi: `filter.error.unknownColumn`, `filter.error.opNotForType`, `filter.error.invalidValue`, `filter.error.unknownParam`.
+
+#### 12.1.3 `transform.sort`
+
+- Port: `in` → `out`.
+- Config: `{ by: [{ column: string, direction: 'asc'|'desc' (mặc định 'asc'), blanks: 'first'|'last' (mặc định 'last') }] }` (tối thiểu 1).
+- Sắp xếp ổn định: dòng bằng nhau giữ thứ tự cũ (`__ord`). Cột `string` so sánh không phân biệt hoa thường. Thứ tự chữ cái tiếng Việt (VD "Đ" sau "D", trước "E") **đề xuất** làm bằng `Intl.Collator('vi')` phía TS cho cột `string` (DuckDB-WASM không có collation tiếng Việt khi không tải extension ICU từ domain ngoài) — chờ Harold chốt (§22 Q11).
+- Output schema: giống đầu vào.
+- Lỗi: `sort.error.unknownColumn`.
+
+#### 12.1.4 `transform.join`
+
+- Port: `left`, `right` (bắt buộc) → `out`.
+- Config:
+  ```ts
+  {
+    how: 'inner' | 'left' | 'right' | 'full' | 'anti',   // anti = dòng của left không khớp right
+    on: [{ left: string, right: string }],               // tối thiểu 1
+    normalizeKeys: boolean,                              // mặc định true (§22 Q10)
+    rightColumns?: string[],                             // cột lấy từ right; mặc định tất cả cột không phải khóa
+    rightSuffix: string                                  // mặc định '_r'; regex ^_[a-z0-9_]+$
+  }
+  ```
+- Output schema: toàn bộ cột của `left` (theo thứ tự), rồi các cột được chọn của `right`. Cột khóa xuất hiện một lần theo tên bên `left`; với `right`/`full`, giá trị khóa = giá trị bên left, nếu không có thì lấy bên right. Cột `right` trùng `key` với cột `left` → đổi thành `key + rightSuffix`; vẫn trùng → lỗi. `anti`: chỉ cột của `left`.
+- Khớp khóa: ô trống không bao giờ khớp. Khóa `string` so sánh sau chuẩn hóa khi `normalizeKeys = true`. Hai khóa phải cùng kiểu (`integer` và `decimal` được coi là tương thích).
+- Thứ tự dòng: theo `__ord` của left, rồi `__ord` của right; dòng chỉ có ở right (`right`/`full`) xếp sau, theo `__ord` của right.
+- Nhiều–nhiều được phép; nếu một khóa bên left khớp nhiều dòng bên right → cảnh báo `join.warning.rowsMultiplied` (kèm số khóa bị nhân dòng, không kèm giá trị khóa trong log).
+- Lỗi: `join.error.unknownColumn`, `join.error.keyTypeMismatch`, `join.error.columnConflict`.
+
+#### 12.1.5 `transform.union`
+
+- Port: `in_1` … `in_N` (đều bắt buộc, `N = inputCount`) → `out`. Số port phụ thuộc cấu hình (`inputPorts(config)`).
+- Config: `{ inputCount: 2..10 (mặc định 2), missingColumns: 'null' | 'error' (mặc định 'null'), sourceColumn?: { key: Identifier, labels: string[] /* đúng N nhãn */ } }`.
+- Khớp cột theo `key`. Thứ tự cột: theo `in_1`, sau đó các cột mới theo thứ tự xuất hiện ở các port sau. Cột thiếu ở một đầu vào → để trống (`'null'`) hoặc lỗi (`'error'`). `sourceColumn` thêm một cột `string` ghi nhãn của đầu vào cho từng dòng.
+- Kiểu: phải giống nhau; `integer` + `decimal` → `decimal`; khác → `union.error.typeMismatch`.
+- Thứ tự dòng: toàn bộ dòng `in_1`, rồi `in_2`… giữ thứ tự trong từng đầu vào.
+- Ghi chú: gộp nhiều file **cùng một slot** đã do input slot thực hiện (§10); node này dùng để gộp các nhánh/slot khác nhau.
+- Lỗi: `union.error.typeMismatch`, `union.error.missingColumn`, `union.error.duplicateKey` (trùng `sourceColumn.key`).
+
+#### 12.1.6 `transform.groupBy`
+
+- Port: `in` → `out`.
+- Config:
+  ```ts
+  {
+    by: string[],                         // 0..n cột nhóm; rỗng = 1 dòng tổng
+    aggregations: [{                      // tối thiểu 1
+      key: Identifier, title?: string,
+      fn: 'sum'|'avg'|'min'|'max'|'count'|'countDistinct'|'countRows',
+      column?: string                     // bắt buộc, trừ countRows
+    }]
+  }
+  ```
+- Kiểu kết quả: `sum(integer)` → `integer` (vượt safe integer → `decimal`); `sum(decimal)` → `decimal`; `avg` → `decimal`, tính chính xác: `SUM` và `COUNT` lấy từ DuckDB, phép chia bằng big.js, làm tròn half-up 10 chữ số thập phân; `min/max` → kiểu của cột (`integer`, `decimal`, `date`, `datetime`, `string`); `count`, `countDistinct`, `countRows` → `integer`.
+- Ô trống: bị bỏ qua trong mọi hàm (trừ `countRows`). `sum` của toàn ô trống = 0 (giống Excel SUM); `avg/min/max` của toàn ô trống = trống.
+- Cột nhóm so sánh theo giá trị chính xác (không chuẩn hóa); ô trống tạo thành một nhóm riêng. Thứ tự dòng: theo lần xuất hiện đầu tiên của nhóm. `by` rỗng luôn ra đúng 1 dòng, kể cả khi đầu vào 0 dòng.
+- Output schema: các cột `by` (giữ kiểu, title) rồi các cột tổng hợp theo thứ tự cấu hình.
+- Lỗi: `groupBy.error.unknownColumn`, `groupBy.error.fnNotForType`, `groupBy.error.duplicateKey`.
+
+#### 12.1.7 `transform.dedupe`
+
+- Port: `in` → `out` (dòng giữ lại), `removed` (dòng bị loại, tùy chọn nối).
+- Config: `{ keys: string[] (tối thiểu 1), keep: 'first' | 'last' (mặc định 'first'), normalizeKeys: boolean (mặc định true, §22 Q10) }`.
+- Hai dòng trùng khi mọi cột khóa bằng nhau (cột `string` so sánh sau chuẩn hóa nếu bật). Dòng có **toàn bộ** cột khóa trống không bị coi là trùng (luôn giữ lại).
+- Output schema: cả hai port giống đầu vào; thứ tự dòng giữ theo đầu vào.
+- Lỗi: `dedupe.error.unknownColumn`.
+
+#### 12.1.8 `code.sql`
+
+- Port: một input port cho mỗi phần tử `inputs` (bắt buộc) → `out`.
+- Config: `{ inputs: [{ port: Identifier }] (1..10, không trùng), sql: string (1..100.000 ký tự) }`.
+- Thực thi: mỗi input port là một view tên = `port`, cột = `key` của schema đầu vào (không có `__ord`), kiểu theo §9.4. Tham số `$key` theo §9.2. Câu lệnh được kiểm tra theo §9.2 trước khi chạy. Thứ tự dòng kết quả = thứ tự DuckDB trả về; muốn ổn định phải có `ORDER BY` (Designer nhắc khi câu lệnh không có `ORDER BY` ở cấp ngoài cùng).
+- Output schema: suy ra bằng `DESCRIBE` câu lệnh trên các bảng rỗng có đúng schema đầu vào (không cần file mẫu; cần DuckDB đã tải trong worker của Designer). Tên cột kết quả phải khớp `IdentifierSchema`, không trùng; cột không bắt đầu bằng `_` trừ khi trùng tên một cột hệ thống của đầu vào. `title` = title của cột đầu vào cùng `key` nếu có, ngược lại = `key`. Kiểu theo §9.4.
+- Lỗi: `sql.error.syntax`, `sql.error.notSelect`, `sql.error.multipleStatements`, `sql.error.forbidden`, `sql.error.unknownParam`, `sql.error.invalidColumnName`, `sql.error.duplicateColumn`, `sql.error.unsupportedType`, `sql.error.runtime`. Thông báo gốc của DuckDB (có thể trích giá trị ô) **chỉ hiển thị trên UI** của máy đang chạy, rút gọn tối đa 500 ký tự; không ghi console, không vào `run_logs` (`run_logs.error_code` chỉ chứa key, VD `sql.error.runtime`).
+
+#### 12.1.9 Node đã có trong Designer
+
+- `input.excel`: config `{ slot }`; output schema = các cột của slot (`key`, `type`; `title` = `label`, không có thì alias đầu tiên) + `_source_file` (string) khi slot nhận nhiều file. Với `extraColumns: 'keep'`, cột thêm không biết trước nên không có trong schema thiết kế (§22 Q14).
+- `control.compare` (§24.2): giữ thực thi TS; output schema 4 port như hiện có.
+- `output.excel` (§11): mỗi sheet là một input port (`sheets[].port`); không có output port.
 
 ---
 
@@ -410,17 +567,55 @@ Mỗi node type được định nghĩa bằng một **plugin** gồm: Zod schem
 7. **Log**: ghi `run_logs` (metadata, §7.1).
 
 Đặc điểm:
-- **Cancel** bất kỳ lúc nào (terminate worker).
-- **Schema inference**: canvas hiển thị danh sách cột ở mỗi node → autocomplete trong editor, phát hiện lỗi tên cột ngay khi thiết kế.
-- **Preview từng node** trong Designer với file mẫu (chỉ nằm trong RAM của Admin, không upload).
-- **Giới hạn bộ nhớ**: WASM 32-bit ≈ 4GB/tab. Mục tiêu thiết kế: ổn định tới **1 triệu dòng × 50 cột**. Flow cảnh báo khi file vượt ngưỡng do Admin cấu hình (`maxRows` mỗi slot).
-- File rất lớn: tối ưu đọc .xlsx theo luồng (streaming) sẽ xem xét khi tích hợp DuckDB; hiện không nhận CSV (chốt 2026-10-26).
+- **Cancel** bất kỳ lúc nào (terminate worker; khởi động lại worker và kiểm tra lại file, chốt 2026-10-26 13:08).
+- **Giới hạn bộ nhớ**: WASM 32-bit ≈ 4GB/tab. Mục tiêu thiết kế: ổn định tới **1 triệu dòng × 50 cột**. Flow cảnh báo khi file vượt ngưỡng do Admin cấu hình (`maxRows` mỗi slot). Việc chuyển bảng sang DuckDB tạo thêm một bản sao dữ liệu; engine giải phóng bảng TS trung gian ngay khi không còn node nào cần.
+- File rất lớn: tối ưu đọc .xlsx theo luồng (streaming) sẽ xem xét sau; hiện không nhận CSV (chốt 2026-10-26).
+
+### 13.1 DuckDB-WASM runtime (bước 3, chốt 2026-10-26 22:52)
+
+**Lưu trữ và tải**
+
+- DuckDB-WASM được **tự host** trên Cloudflare Pages cùng app; không tải từ CDN/domain ngoài, CSP không thêm domain.
+- Dùng bundle `eh` (đơn luồng, không cần `SharedArrayBuffer`/COOP/COEP). File `.wasm` (~34 MB) vượt giới hạn 25 MiB/file của Cloudflare Pages nên **lúc build** được tách thành các phần `< 25 MiB` (VD `duckdb-eh.wasm.part0`, `.part1`) kèm manifest `duckdb-manifest.json`: `{ version, totalBytes, sha256, parts: [{ file, bytes, sha256 }] }`. Script build kiểm tra mọi file trong `dist/` đều `< 25 MiB`.
+- Engine worker tải các phần (same-origin), kiểm tra SHA-256 từng phần và toàn bộ file sau khi ghép, rồi khởi tạo DuckDB. Sai checksum → xóa cache, tải lại 1 lần; vẫn sai → lỗi `duckdb.error.loadFailed` (không chạy flow).
+- Cache bằng **Cache Storage** (khóa theo `version` + `sha256` của manifest); phiên bản mới tự thay cache cũ. Cache Storage chỉ chứa file WASM, không bao giờ chứa dữ liệu.
+- **Tải lười**: DuckDB chỉ được tải khi flow có ít nhất một node chạy bằng DuckDB (§12) — kể cả khi chạy, xem trước, hoặc Designer cần suy diễn schema `code.sql`. Flow chỉ gồm `input.excel` / `control.compare` / `output.excel` (như flow nghiệm thu) không tải DuckDB. Trong lúc tải hiển thị tiến độ "Đang tải bộ xử lý dữ liệu (lần đầu khoảng 34 MB)".
+- Nếu API khởi tạo của DuckDB-WASM chỉ nhận URL (không nhận bytes đã ghép), cách cấp file đã ghép cho DuckDB cần Harold chốt vì có thể phải chỉnh CSP (§22 Q8).
+
+**Cấu hình an toàn** (đặt ngay sau khi mở kết nối, rồi khóa)
+
+- Database `:memory:` (không OPFS, không file); `enable_external_access = false`; `autoinstall_known_extensions = false`; `autoload_known_extensions = false`; `lock_configuration = true`.
+- Không có dữ liệu nào được lưu bền vững: đóng tab / terminate worker là mất.
+
+**Thực thi**
+
+- DuckDB nằm trong engine worker (hoặc worker con do engine worker tạo); dữ liệu không đi qua main thread.
+- Ranh giới TS ↔ DuckDB: bảng TS (`Table`, §9.4) được chuyển sang Arrow (cột `decimal` dạng chuỗi), đăng ký vào DuckDB rồi tạo bảng có kiểu chuẩn (`CAST`) và cột `__ord`. Kết quả cần đưa về TS được đọc qua Arrow và chuyển ngược theo §9.4.
+- **Gộp node SQL liên tiếp** (pushdown): chuỗi node DuckDB liên tiếp được biên dịch thành view/CTE và chỉ vật chất hóa (materialize) khi: node kế tiếp chạy bằng TS (`control.compare`, `output.excel`), output được xem trước, hoặc một output được nhiều node dùng.
+- Mỗi node vẫn báo tiến độ riêng (số dòng output); khi gộp, số dòng được đếm khi vật chất hóa.
+- Hủy: terminate worker (DuckDB-WASM không ngắt được câu lệnh đang chạy).
+
+### 13.2 Schema inference (bước 3)
+
+- Danh sách cột ở mỗi node được suy ra từ **định nghĩa input slot** và cấu hình node (`inferSchema` theo §12.1), **không cần file mẫu** (chốt 2026-10-26 22:52). Chạy trong worker mỗi khi flow trên canvas thay đổi (debounce ~300 ms).
+- Kết quả dùng cho: dropdown chọn cột trong form node, autocomplete trong SQL editor, phát hiện lỗi tên cột/kiểu ngay khi thiết kế, hiển thị số cột trên node.
+- Node lỗi → các node phía sau hiển thị "Chưa xác định được cột (node phía trước đang lỗi)" thay vì báo lỗi dây chuyền.
+- `code.sql` cần DuckDB để `DESCRIBE`; khi DuckDB chưa tải xong, schema của node hiển thị trạng thái "Đang xác định cột…". Hợp đồng plugin cho phép `inferSchema` bất đồng bộ cho node này.
+
+### 13.3 Xem trước từng node trong Designer (bước 3, chốt 2026-10-26 22:52)
+
+- Admin chọn **file mẫu** cho từng input slot trong panel dữ liệu của Designer. File chỉ nằm trong RAM của worker: không upload, không lưu localStorage/IndexedDB, không ghi `run_logs`. Đóng Designer, đóng tab hoặc tự đăng xuất là mất.
+- Bấm "Xem trước" trên node đang chọn → engine chạy **chỉ các node tổ tiên** của node đó và chính node đó (theo bản flow hiện tại trên canvas, kể cả chưa lưu), với tham số do Admin nhập trong panel (mặc định: giá trị trống; tham số bắt buộc chưa nhập → yêu cầu nhập).
+- Hiển thị **200 dòng đầu** của mỗi output port kèm tổng số dòng; node `control.compare` hiển thị cả 4 bảng (tab: Tổng hợp / Lệch / Chỉ có trong A / Chỉ có trong B). Node `output.excel` xem trước dưới dạng danh sách sheet + 200 dòng đầu mỗi sheet, không tạo file tải về.
+- Kết quả kiểm tra file mẫu (validation report) hiển thị như ở Run Wizard; slot có lỗi `error` thì các node phụ thuộc không chạy được và báo rõ slot nào lỗi.
+- Kết quả trung gian của lần xem trước được giữ trong worker; lần xem trước tiếp theo chỉ chạy lại các node có cấu hình (hoặc tổ tiên) đã thay đổi. Có thể đơn giản hóa thành chạy lại toàn bộ tổ tiên nếu cần (xem báo cáo phân việc).
+- Xem trước không yêu cầu flow đã lưu và không ghi gì lên server.
 
 ---
 
 ## 14. Versioning theo Effective Date
 
-Áp dụng cho **flow** và **bảng tham chiếu**.
+Áp dụng cho **flow** và **bảng tham chiếu** (bảng tham chiếu từ Phase 2). Bước 3 làm màn Version cho flow (chốt 2026-10-26 22:52).
 
 ### 14.1 Vòng đời
 
@@ -430,11 +625,13 @@ Draft ──(Publish + chọn effective_from)──► Published ──(hết hi
   └────────────(Clone thành draft mới)─────────┘
 ```
 
-- Mỗi flow có tối đa **1 draft** đang mở.
-- Publish yêu cầu: `effective_from` (bắt buộc), `effective_to` (tùy chọn), `change_note`.
-- Khi publish version mới có `effective_from = D` và version trước đang mở (`effective_to = null`) → hệ thống đề xuất tự đặt `effective_to = D` cho version trước (có xác nhận).
+- Mỗi flow có tối đa **1 draft** đang mở (unique index, §7.2).
+- Publish yêu cầu: `effective_from` (bắt buộc), `effective_to` (tùy chọn, không bao gồm), `change_note` (bắt buộc, không rỗng sau khi bỏ khoảng trắng, tối đa 1000 ký tự).
+- Khi publish version mới có `effective_from = D` và version trước đang mở (`effective_to = null`, `effective_from < D`) → dialog đề xuất tự đặt `effective_to = D` cho version đó (checkbox bật sẵn, Admin bỏ chọn được). Đóng version trước và publish thực hiện **trong cùng một giao dịch**.
 - Không cho phép khoảng hiệu lực chồng nhau (constraint DB, §7.2). Cho phép **khoảng trống** nhưng cảnh báo.
-- **Rollback** = publish lại nội dung của một version cũ thành version mới với effective date mới (không sửa lịch sử).
+- **Retire**: chuyển version `published` sang `retired` (có xác nhận). Version retired không còn được chọn khi chạy và không tham gia kiểm tra chồng lấn; không thể đưa lại thành published (muốn dùng lại → rollback).
+- **Rollback** = tạo draft từ nội dung của một version cũ rồi publish thành version mới với effective date mới (không sửa lịch sử). Nếu flow đang có draft, phải lưu/publish hoặc hủy draft đó trước.
+- **Hủy draft**: xóa draft (có xác nhận); chỉ draft được xóa (trigger, §7.2).
 
 ### 14.2 Quy tắc chọn version khi chạy
 
@@ -446,7 +643,49 @@ Draft ──(Publish + chọn effective_from)──► Published ──(hết hi
 
 ### 14.3 So sánh version
 
-Designer có chức năng **diff** giữa 2 version: node thêm/xóa/sửa, cấu hình thay đổi, code thay đổi (side-by-side).
+Màn Version có chức năng **diff** giữa 2 version bất kỳ của cùng flow (kể cả draft), làm trong bước 3 (chốt 2026-10-26 22:52). Mặc định so version được chọn với version liền trước.
+
+- **Node**: so theo `id` → danh sách **thêm** / **xóa** / **sửa** (đổi `type`, `label` hoặc `config`). Node bị sửa hiển thị cấu hình JSON **side-by-side** (trái: version cũ, phải: version mới), khóa object sắp theo thứ tự cố định, dòng khác nhau được tô màu (coral = bỏ, teal = thêm). Chuỗi nhiều dòng (VD `sql` của `code.sql`) hiển thị theo từng dòng để dễ đọc.
+- **Edge**: liệt kê kết nối thêm/xóa (`from.fromPort → to.toPort`).
+- **Tham số** (`params`) và **input slot** (`inputSlots`): so theo `key` → thêm / xóa / sửa, phần sửa hiển thị JSON side-by-side như node.
+- Bỏ qua khác biệt chỉ nằm trong `ui` (vị trí node, sticky note). Hai version giống nhau về nghiệp vụ → thông báo "Hai phiên bản giống nhau về nội dung xử lý".
+- Diff tính hoàn toàn phía trình duyệt trên `definition` (cấu hình flow, không chứa dữ liệu nhân sự).
+
+### 14.4 Màn Version & hiệu lực (Admin, bước 3)
+
+Truy cập từ danh sách flow của Admin và từ Designer (wireframe màn 6).
+
+- **Danh sách version** (mới nhất trên cùng): số version, trạng thái (chip: Draft = blue, Published = teal, Retired = xám trung tính), khoảng hiệu lực "từ dd/MM/yyyy đến trước dd/MM/yyyy" (hoặc "từ dd/MM/yyyy, không thời hạn"), cùng cách hiển thị với màn Flow hiện có, ghi chú thay đổi, người và thời điểm publish. Version đang hiệu lực hôm nay được đánh dấu "Đang áp dụng".
+- **Dải thời gian hiệu lực** (timeline) các version published; **khoảng trống** giữa các version (và sau version cuối nếu nó có `effective_to`) hiện cảnh báo amber: "Từ 01/03/2026 đến 31/03/2026 không có phiên bản hiệu lực. User chạy kỳ này sẽ bị báo lỗi."
+- **Hành động** theo trạng thái:
+
+| Trạng thái | Hành động |
+|------------|-----------|
+| Draft | Mở Designer · Publish · Hủy draft · So sánh |
+| Published | Tạo draft từ version này (rollback/sửa tiếp) · Đổi ngày kết thúc (`effective_to`) · Retire · So sánh · Xuất JSON |
+| Retired | Tạo draft từ version này · So sánh · Xuất JSON |
+
+- **Dialog Publish**: "Hiệu lực từ ngày" (`effective_from`, DatePicker, bắt buộc), "Hiệu lực đến trước ngày" (`effective_to`, tùy chọn, phải sau ngày bắt đầu; cận không bao gồm, cùng cách nhập với dialog Import flow đã có), "Ghi chú thay đổi" (`change_note`, bắt buộc), checkbox "Đặt v{n} hiệu lực đến trước ngày {D}" khi có version mở (§14.1). Trước khi gửi: chạy kiểm tra đầy đủ của engine (`planFlow` + `checkConfig` + `inferSchema`); còn lỗi → không cho publish, liệt kê lỗi theo node. Hiển thị trước cảnh báo khoảng trống nếu publish tạo ra khoảng trống. Lỗi chồng lấn từ DB (SQLSTATE `23P01`) → "Khoảng hiệu lực bị chồng với v{n} ({khoảng}). Hãy chọn ngày khác hoặc đặt ngày kết thúc cho v{n}."
+- **Tạo draft từ version**: nếu flow đã có draft → thông báo "Flow đang có bản nháp v{n}. Hãy publish hoặc hủy bản nháp đó trước." (không ghi đè).
+- **Đổi `effective_to`** của version published: chỉ trường này được sửa (trigger cho phép); kiểm tra chồng lấn như publish.
+- Mọi thao tác ghi `audit_logs` qua trigger sẵn có.
+
+### 14.5 Thay đổi database cho bước 3
+
+Đối chiếu với `supabase/migrations/` hiện có: trạng thái `draft/published/retired`, ràng buộc ngày, exclusion constraint, unique 1 draft, trigger bất biến và `admin_publish_flow_version` (import) **đã có**. Cần thêm **một file migration mới** (không sửa file cũ), VD `supabase/migrations/2026102700xxxx_designer_versions.sql`:
+
+| Đối tượng | Mục đích |
+|-----------|----------|
+| `admin_create_flow(p_code, p_name, p_description, p_category, p_instructions, p_definition)` | Tạo flow mới + draft v1 trong một giao dịch (Designer "Tạo flow mới") |
+| `admin_save_flow_draft(p_version_id, p_definition, p_expected_updated_at)` | Lưu draft có kiểm tra xung đột: chỉ cập nhật khi `updated_at = p_expected_updated_at`; nếu không → lỗi `HF002 draft_conflict`; trả `updated_at` mới |
+| `admin_create_draft_from_version(p_version_id)` | Clone `definition` của một version thành draft mới (rollback/sửa tiếp); đã có draft → lỗi unique (`23505`) được map thành thông báo §14.4 |
+| `admin_publish_flow_draft(p_version_id, p_effective_from, p_effective_to, p_change_note, p_close_previous, p_expected_updated_at)` | Publish draft: kiểm tra `change_note` không rỗng, xung đột `updated_at`, tùy chọn đóng version mở trước đó — cùng một giao dịch |
+| `admin_publish_flow_version` (thay bằng `create or replace`, giữ chữ ký) | Bổ sung bắt buộc `change_note` không rỗng cho đường import |
+
+- Tất cả là `SECURITY INVOKER`, kiểm tra `private.is_admin()` bên trong, `set search_path = ''`, `revoke` khỏi `public, anon`, `grant execute` cho `authenticated`; RLS hiện có vẫn áp dụng.
+- Retire, đổi `effective_to`, hủy draft dùng UPDATE/DELETE trực tiếp qua PostgREST (RLS chỉ cho Admin, trigger kiểm soát) — không cần hàm mới.
+- Không thêm CHECK `change_note` ở mức bảng vì version đã publish có thể đang có `change_note = ''` (kiểm tra ở các hàm publish).
+- Vận hành: file migration mới không chứa `drop`/`delete` thì áp dụng bằng kết nối Supabase như bước 2; phần nào bắt buộc chứa `drop` hoặc `delete` phải gửi SQL để Harold dán vào SQL Editor (HANDOFF §3). Cập nhật `supabase/tests/rls.sql` cho các hàm mới (User gọi → `42501`).
 
 ---
 
@@ -466,15 +705,52 @@ Designer có chức năng **diff** giữa 2 version: node thêm/xóa/sửa, cấ
 
 - **Dashboard**: số lượt chạy, tỉ lệ lỗi theo flow, flow sắp hết hiệu lực.
 - **Users & Groups**: tạo, khóa, reset mật khẩu, gán group, import danh sách user từ Excel.
-- **Flow Designer** (canvas):
-  - Bảng node bên trái (kéo thả), canvas ở giữa, panel cấu hình bên phải.
-  - Panel dữ liệu bên dưới: preview output của node đang chọn (dùng file mẫu cục bộ).
-  - Validate realtime (node lỗi viền đỏ + tooltip).
-  - Undo/redo, copy/paste node, auto-layout, minimap, ghi chú (sticky note) trên canvas.
-  - Export/Import flow ra file JSON (chuyển giữa môi trường, backup).
+- **Flow Designer** (canvas, bước 3 — wireframe màn 5): mô tả chi tiết ở §15.3.
 - **Ref Tables**: tạo/sửa bằng grid hoặc import từ Excel; quản lý version theo effective date.
 - **Templates**: upload, xem danh sách sheet/named range.
 - **Logs**: run log, audit log; lọc, xuất Excel.
+- **Version & hiệu lực**: §14.4.
+
+### 15.3 Flow Designer (bước 3)
+
+Chỉ Admin; chỉ desktop (≥ 1280px). Route riêng, lazy-load (React Flow, ELK, code editor không nằm trong chunk của User). Designer luôn chỉnh **draft** của flow; version published/retired chỉ mở ở chế độ chỉ xem (có nút "Tạo draft từ version này").
+
+**Bố cục**
+
+- Bảng node bên trái: các node của bước 3 (§12), nhóm theo Input / Biến đổi / Kiểm soát / Code / Output, có tìm kiếm; kéo thả vào canvas hoặc nhấn Enter để thêm vào giữa canvas.
+- Canvas ở giữa (React Flow): node theo design system (§25.3, vạch màu theo nhóm), hiển thị nhãn, loại node, số cột output; port vào/ra có tên. Nối dây bằng kéo từ port; không cho nối tạo vòng hoặc nối 2 dây vào cùng một input port.
+- Panel cấu hình bên phải: form của node đang chọn; tab "Tham số" và "Input slot" khi không chọn node.
+- Panel dữ liệu bên dưới (thu gọn được): file mẫu theo slot, tham số xem trước, kết quả xem trước (§13.3), validation report của file mẫu.
+
+**Lưu (chốt 2026-10-26 22:52)**
+
+- Không tự lưu. Lưu bằng nút **Lưu** hoặc **Ctrl+S** (Cmd+S trên macOS; chặn hộp "Save page" của trình duyệt). Nút Lưu hiển thị trạng thái "Đã lưu" / "Có thay đổi chưa lưu".
+- Draft được lưu kể cả khi flow còn lỗi kiểm tra (lỗi chỉ chặn publish), nhưng JSON phải parse được theo `FlowDefinitionSchema` ở mức cấu trúc.
+- **Cảnh báo rời trang** khi có thay đổi chưa lưu: chuyển route trong app → dialog "Rời trang / Ở lại"; đóng tab/tải lại → `beforeunload` của trình duyệt. Ngoại lệ: tự đăng xuất do không thao tác (§6.1).
+- **Kiểm tra xung đột** theo `updated_at`: khi lưu gửi `updated_at` đã tải; nếu draft đã được lưu bởi phiên khác (`HF002 draft_conflict`) → dialog "Bản nháp vừa được lưu ở nơi khác lúc {giờ}." với lựa chọn: "Tải bản mới nhất" (bỏ thay đổi của mình), "Xuất JSON thay đổi của tôi" (để không mất công) — không có lựa chọn ghi đè.
+
+**Form cấu hình**
+
+- Mỗi node có form riêng sinh từ cấu hình §12.1: chọn cột bằng dropdown từ schema suy diễn (§13.2), không gõ tay tên cột; SQL editor có highlight + autocomplete tên view/cột/tham số.
+- **Input slot**: form đầy đủ **mọi trường** của `InputSlotSchema` (`packages/flow-schema/src/input-slot.ts`), Admin không phải sửa JSON (chốt 2026-10-26 22:52): `key`, `label`, `required`, `accept` (.xlsx/.xls), `sheet` (byName / byIndex / firstMatchingHeaders), `headerRow`, `headerRows`, `dataStartRow`, `stopAt.blankRows`, `skipRows` (`whenBlank`, `whenKeyContains`), `unmergeCells`, `extraColumns`, `multiple` (`enabled`, `minFiles`, `maxFiles`), `maxRows`; bảng cột với từng cột: `key`, `label`, `aliases` (nhiều giá trị), `type`, `presence`, `required`, `defaultValue` (theo kiểu), `rules` (`unique`, `regex`, `min`, `max`, mỗi rule có `severity`), `dateFormats`, `decimalSeparator`. Form tuân theo các ràng buộc chéo của schema (VD `defaultValue` chỉ hiện khi `required = false`; `dataStartRow` phải sau dòng header; `minFiles ≤ maxFiles`; key không bắt đầu bằng `_`).
+- **Tham số**: form cho `params`: `key`, `label`, `type`, `required`, `log` (mặc định theo kiểu, giải thích rõ khi nào bị ghi log), `isAsOfDate` (tối đa 1 tham số), `options` (danh sách value/label cho `select`; `fromRefTable` để Phase 2).
+- Đổi `key` của slot/tham số/cột mà node khác đang dùng → cảnh báo và liệt kê node bị ảnh hưởng (không tự đổi theo).
+
+**Kiểm tra realtime**
+
+- Sau mỗi thay đổi (debounce ~300 ms) chạy kiểm tra của engine trong worker: schema flow, DAG, port bắt buộc chưa nối, cấu hình node, schema suy diễn.
+- Node lỗi: **viền coral** + biểu tượng; hover/focus hiện **tooltip** nội dung lỗi; trường lỗi trong form viền coral kèm thông báo. Cảnh báo (không chặn) dùng amber. Thanh trạng thái hiển thị tổng số lỗi/cảnh báo, bấm để nhảy tới node.
+
+**Thao tác canvas**
+
+- **Undo/redo** (Ctrl+Z / Ctrl+Shift+Z, Ctrl+Y): mọi thay đổi trên canvas và form, tối thiểu 100 bước, xóa khi tải lại draft.
+- **Copy/paste** node (Ctrl+C / Ctrl+V, nhiều node cùng lúc, giữ dây nối nội bộ giữa các node được chọn; id mới tự sinh; nhân bản cả `ui.positions`). Clipboard chỉ trong app (không chứa dữ liệu nhân sự vì chỉ là cấu hình).
+- Xóa node/dây bằng Delete/Backspace (có undo).
+- **Auto-layout** (ELK.js, trái → phải), có undo.
+- **Minimap**, zoom, fit view.
+- **Sticky note**: thêm/sửa/xóa ghi chú văn bản trên canvas, lưu trong `ui.notes`.
+- **Export JSON**: tải `definition` hiện tại (kể cả chưa lưu) thành file `.json`; **Import JSON** giữ luồng đã có ở màn Flow của Admin (§8.1).
+- Bàn phím: mọi hành động chính có phím tắt và nút tương ứng; node chọn được bằng Tab.
 
 ---
 
@@ -485,13 +761,14 @@ Designer có chức năng **diff** giữa 2 version: node thêm/xóa/sửa, cấ
 | Supabase pause sau 7 ngày không hoạt động | GitHub Actions theo lịch ping 1 truy vấn nhẹ mỗi ngày; Admin dashboard cảnh báo nếu ping thất bại |
 | Free tier không có backup tự động đầy đủ | GitHub Actions hằng tuần chạy `pg_dump` cấu hình (không chứa dữ liệu cá nhân) → lưu vào artifact private / Google Drive của HR; Export flow JSON định kỳ |
 | Giới hạn DB 500MB / Storage 1GB | Run log tự xóa sau 12 tháng (cấu hình được); ref table lớn lưu dạng Parquet trong Storage |
-| Pyodide/DuckDB tải chậm lần đầu | Service Worker cache asset WASM; preload ở màn hình đăng nhập |
+| Pyodide/DuckDB tải chậm lần đầu | DuckDB: Cache Storage trong worker, chỉ tải khi flow cần (§13.1). Pyodide (Phase 2): cơ chế cache tương tự |
+| Giới hạn 25 MiB/file của Cloudflare Pages | File `.wasm` của DuckDB tách thành phần < 25 MiB lúc build, ghép lại trong worker (§13.1) |
 
 ---
 
 ## 17. Bảo mật & tuân thủ
 
-- **Dữ liệu cá nhân không lưu trên server**: file Excel chỉ nằm trong bộ nhớ trình duyệt; đóng tab là mất. Không dùng IndexedDB để lưu file (trừ khi Admin bật tính năng "nhớ file mẫu" cho Designer — chỉ trên máy Admin).
+- **Dữ liệu cá nhân không lưu trên server**: file Excel chỉ nằm trong bộ nhớ trình duyệt; đóng tab là mất. Không dùng IndexedDB/localStorage/Cache Storage để lưu file; file mẫu của Designer cũng chỉ nằm trong RAM (chốt 2026-10-26 22:52).
 - **Bảng tham chiếu** chỉ chứa dữ liệu **không mang tính cá nhân** (danh mục, mapping mã, biểu thuế, hệ số). Khi import, hệ thống cảnh báo nếu phát hiện cột có tên dạng `họ tên`, `CCCD`, `số điện thoại`, `email`, `mã NV`… (heuristic) và yêu cầu Admin xác nhận.
 - **Run log** không chứa nội dung; tên file gốc được hash (SHA-256) thay vì lưu nguyên văn (tên file có thể chứa tên người).
 - Tham chiếu pháp lý: Nghị định 13/2023/NĐ-CP; Luật Bảo vệ dữ liệu cá nhân 2025 (hiệu lực 01/01/2026). Thiết kế local-first giúp hạn chế tối đa việc xử lý/chuyển dữ liệu cá nhân ra nước ngoài. *(Cần bộ phận Pháp chế/IT của công ty xác nhận.)*
@@ -529,7 +806,8 @@ HR-System/
 │  │  ├─ engine/                  # chạy trong worker
 │  │  │  ├─ core/                 # planner, executor, types
 │  │  │  ├─ nodes/                # mỗi node type là 1 plugin
-│  │  │  ├─ formula/              # Excel formula parser + transpiler → SQL
+│  │  │  ├─ duckdb/               # nạp WASM (ghép phần, checksum, cache), chuyển Arrow, biên dịch SQL
+│  │  │  ├─ formula/              # Excel formula parser + transpiler → SQL (chưa chốt lịch)
 │  │  │  ├─ io/                   # excel reader/writer, template filler
 │  │  │  └─ python/               # pyodide worker
 │  │  ├─ lib/                     # supabase client, utils
@@ -558,6 +836,7 @@ Package manager: pnpm workspace.
 - **Engine integration**: chạy flow mẫu với file Excel mẫu (dữ liệu giả) → so sánh với output kỳ vọng.
 - **RLS test**: chạy test SQL trên Supabase local (`supabase test db` / pgTAP) để đảm bảo User không đọc được flow chưa được gán.
 - **E2E (Playwright)**: đăng nhập → chạy flow → tải file; Admin tạo flow → publish → User thấy flow.
+- **DuckDB (bước 3)**: test node chạy được trong Node (Vitest, dùng DuckDB-WASM chạy trên Node, cùng phiên bản với bản trình duyệt) cùng bộ golden case với bản trình duyệt; test tương đương chuẩn hóa khóa TS ↔ SQL; E2E kiểm tra tải các phần `.wasm`, checksum và cache.
 - **Performance test**: bộ dữ liệu giả 100k / 500k / 1M dòng.
 - Dữ liệu test **luôn là dữ liệu giả** (Faker), không dùng dữ liệu thật của công ty.
 
@@ -567,19 +846,30 @@ Package manager: pnpm workspace.
 
 ### Phase 1 — MVP (mục tiêu: chạy được flow nghiệm thu **đối chiếu bảng lương – chấm công**)
 - Auth (username/password, đổi mật khẩu lần đầu, khóa tài khoản), Users, Groups, gán flow.
-- Flow Designer canvas với các node: `input.excel`, `input.refTable`, `select`, `formula` (Excel + SQL), `filter`, `sort`, `join`, `union`, `groupBy`, `dedupe`, `control.compare`, `code.sql`, `output.preview`, `output.excel`.
+Bước 1–2 đã xong (engine, Run Wizard, Supabase, Admin Users & Groups, import flow JSON, run log, deploy). Bước 3 (chốt 2026-10-26 22:52):
+
+- Flow Designer canvas (§15.3) với các node: `input.excel`, `control.compare`, `output.excel` (đã có) và `transform.select`, `transform.filter`, `transform.sort`, `transform.join`, `transform.union`, `transform.groupBy`, `transform.dedupe`, `code.sql` (mới, chạy bằng DuckDB-WASM, §12.1, §13.1).
+- Xem trước từng node bằng file mẫu chỉ trong RAM (§13.3); schema suy diễn từ input slot (§13.2).
+- Màn Version & hiệu lực: Draft/Published/Retired, publish, retire, rollback, **diff version** (§14.3, §14.4).
+- Export flow JSON từ Designer (import đã có từ bước 2).
+- Tự đăng xuất sau 8 giờ không thao tác (§6.1).
+- Xem trước kết quả trong app: màn Kết quả của Run Wizard (đã có) hiển thị các bảng của `output.excel`; node `output.preview` riêng chưa chốt (§22 Q13).
+
+Toàn bộ Phase 1:
+- Auth (username/password, đổi mật khẩu lần đầu, khóa tài khoản), Users, Groups, gán flow.
 - Input slot (hỗ trợ nhiều file / slot) + validation report.
 - Flow nghiệm thu §24 chạy đúng với bộ dữ liệu giả `fixtures/payroll-timesheet/`.
-- Draft/Published + effective date cho flow.
+- Draft/Published + effective date cho flow, diff version.
 - Run Wizard + run log.
 - Deploy Cloudflare Pages + Supabase + keep-alive.
 
+Không thuộc bước 3: `transform.formula` (hàm Excel → SQL) — chưa xếp lịch (§22 Q9); `input.refTable`, bảng tham chiếu, template — Phase 2.
+
 ### Phase 2 — Mở rộng xử lý & báo cáo
 - `code.python` + formula Python (Pyodide).
-- `output.template` (template Excel), `output.chart`.
-- Ref table có effective date, import từ Excel.
-- `control.assert`, `pivot/unpivot`, `window`, `lookup`, `fillDown`.
-- Diff version, Export/Import flow JSON.
+- `output.template` (template Excel, bảng `templates`), `output.chart`.
+- Bảng tham chiếu (`ref_tables`, `ref_table_versions`) có effective date, import từ Excel, node `input.refTable` (chốt 2026-10-26 22:52).
+- `control.assert`, `pivot/unpivot`, `window`, `lookup`, `fillDown`, `cast`, `split/merge`, `sample/limit`.
 
 ### Phase 3 — Nâng cao
 - `subflow` (tái sử dụng), `control.branch`.
@@ -599,7 +889,15 @@ Package manager: pnpm workspace.
 | Q4 | Có cần Admin "giả lập" (impersonate) quyền User để kiểm tra không? | Phân quyền |
 | ~~Q5~~ | Đã chốt 2026-10-26: `sessionStorage` | — |
 | ~~Q6~~ | Đã chốt 2026-10-26: Admin thấy/chạy mọi flow đã publish | — |
-| ~~Q7~~ | Đã chốt 2026-10-26: tự đăng xuất sau 8 giờ không thao tác, làm phía client ở bước 3 | — |
+| ~~Q7~~ | Đã chốt 2026-10-26: tự đăng xuất sau 8 giờ không thao tác, làm phía client ở bước 3; chi tiết chốt 2026-10-26 22:52 (§6.1) | — |
+| ~~—~~ | Đã chốt 2026-10-26 22:52: phạm vi node bước 3, DuckDB-WASM tự host, draft lưu bằng nút Lưu, xem trước bằng file mẫu trong RAM, bảng tham chiếu sang Phase 2, diff version trong bước 3 | — |
+| Q8 | Nếu DuckDB-WASM chỉ khởi tạo được từ URL: cấp file `.wasm` đã ghép bằng cách nào? (A) thêm `blob:` vào `connect-src` — chỉ là URL cục bộ, không thêm domain, nhưng là thay đổi CSP; (B) vá bộ nạp của DuckDB để nhận bytes trực tiếp — không đổi CSP, phải duy trì bản vá khi nâng cấp; (C) Service Worker phục vụ file đã ghép dưới URL same-origin — không đổi CSP, thêm một thành phần phải bảo trì | CSP, §13.1 |
+| Q9 | `transform.formula` (hàm Excel → SQL) xếp vào bước 4 hay Phase 2? | Roadmap §21 |
+| Q10 | `normalizeKeys` của `join`/`dedupe` (và `normalizeText` của `filter`) mặc định bật như `control.compare`? | Kết quả join/dedupe/filter |
+| Q11 | Sắp xếp chữ tiếng Việt trong `transform.sort`: theo bảng chữ cái tiếng Việt (`Intl.Collator('vi')`, chậm hơn) hay theo mã ký tự (nhanh, "Đ" xếp sau "Z")? | Kết quả sort |
+| Q12 | SQL editor trong Designer: Monaco (theo §5, nặng ~3–5 MB, cần worker riêng) hay CodeMirror 6 (MIT, nhẹ hơn nhiều) hay textarea có highlight đơn giản? | Kích thước chunk Designer, bảo trì |
+| Q13 | Có cần node `output.preview` (bảng xem trước trong app, không xuất file) ở bước 3 không, hay màn Kết quả hiện các sheet của `output.excel` là đủ? | Phạm vi node |
+| Q14 | Slot có `extraColumns: 'keep'`: cột thêm không biết trước lúc thiết kế — chỉ cho dùng trong `code.sql` lúc chạy, hay cấm dùng `keep` khi slot nối vào node transform? | Schema inference §13.2 |
 
 ---
 
@@ -696,6 +994,8 @@ Flow (DAG):
 | AC-12 | Khi chọn file mẫu cục bộ, Admin xem được preview từng port output của node compare ngay trên Designer. |
 | AC-13 | Flow không publish được nếu thiếu effective_from, còn port bắt buộc chưa nối, hoặc khóa/chỉ tiêu tham chiếu tới cột không tồn tại. |
 
+AC-11 … AC-13 được chi tiết hóa ở §26 (AC-B3-33, AC-B3-53, AC-B3-61, AC-B3-62).
+
 ### 24.4 Dữ liệu kiểm thử
 
 `fixtures/payroll-timesheet/` — dữ liệu **giả** sinh bằng `generate.py` (seed cố định):
@@ -752,7 +1052,7 @@ Toàn bộ UI dùng **một** design language ("bright executive"), áp dụng n
 | Menu trái | Item cao 44px, radius 12px; item đang chọn nền `#DDF5EF`, chữ `#0F766E` 700 |
 | Callout | Nền tint, radius 14–16px, mở đầu bằng nhãn in đậm (`An toàn dữ liệu:`, `Lưu ý:`, `Hợp lệ:`) |
 | Bảng | Trong card; header `#475569` 600; dòng cần chú ý tô nền tint; ô chênh lệch tô coral tint |
-| Node trên canvas | Card radius 16px; vạch màu trên theo nhóm node (blue đầu vào, coral kiểm soát, amber đầu ra); node đang chọn có ring teal |
+| Node trên canvas | Card radius 16px; vạch màu trên theo nhóm node (blue đầu vào, teal `#14B8A6` biến đổi, coral kiểm soát, `#475569` code, amber đầu ra); node đang chọn có ring teal; node lỗi viền coral `#F97362` 2px; sticky note nền amber tint `#FFF8E1` |
 | Month/Date picker | Tự làm, không dùng picker mặc định của trình duyệt. Nút trigger giống input, hiển thị "Tháng 10/2026" / `dd/MM/yyyy`; popover card radius 20px; lưới 12 tháng ("Th 1"…"Th 12") hoặc lịch tuần bắt đầu thứ Hai; ô chọn nền `#0F766E` chữ trắng; điều hướng bằng phím mũi tên, PageUp/PageDown đổi năm, Esc đóng (chốt 2026-10-26) |
 | Vùng kéo thả file | Viền đứt 2px `#99E0D2`, nền `#F3FBF8`, radius 16px |
 
@@ -762,3 +1062,129 @@ Toàn bộ UI dùng **một** design language ("bright executive"), áp dụng n
 - Định dạng số kiểu Việt Nam (`0,5`, `1.234.567`).
 - Không dùng ký hiệu có thể thiếu trong font (≤ ≥ → × −) trong text UI; dùng chữ hoặc `-`.
 - Touch target tối thiểu 44px; tương phản chữ đạt WCAG AA.
+
+---
+
+## 26. Bước 3: Flow Designer, Version, tự đăng xuất — User story & Acceptance criteria
+
+> Phạm vi theo quyết định 2026-10-26 22:52. Các AC gắn với câu hỏi mở (§22 Q8, Q10–Q14) được viết theo phương án đề xuất và cần chỉnh nếu Harold chọn khác. Dữ liệu kiểm thử luôn là dữ liệu giả.
+
+### 26.1 (a) DuckDB runtime & nhóm transform
+
+**US-B3-01** — Là Admin, tôi muốn các node transform và SQL chạy nhanh trên trình duyệt, để xử lý file tới ~1 triệu dòng mà dữ liệu không rời máy.
+
+| # | Given / When / Then |
+|---|---------------------|
+| AC-B3-01 | **Given** bản build production, **when** liệt kê `dist/`, **then** mọi file `< 25 MiB`, có `duckdb-manifest.json` với SHA-256 từng phần và toàn bộ. |
+| AC-B3-02 | **Given** cache trống, **when** chạy flow có node DuckDB, **then** worker tải đủ các phần từ cùng origin, ghép, kiểm tra checksum, khởi tạo DuckDB; không có request tới domain nào khác ngoài app và Supabase. |
+| AC-B3-03 | **Given** đã tải một lần, **when** tải lại trang và chạy lại, **then** không tải lại các phần `.wasm` (lấy từ Cache Storage). |
+| AC-B3-04 | **Given** một phần `.wasm` bị sai checksum, **when** khởi tạo, **then** xóa cache, tải lại 1 lần; vẫn sai thì báo `duckdb.error.loadFailed` và không chạy flow. |
+| AC-B3-05 | **Given** flow nghiệm thu (chỉ `input.excel`, `control.compare`, `output.excel`), **when** chạy, **then** không tải DuckDB và kết quả vẫn khớp `expected.json`. |
+| AC-B3-06 | **When** DuckDB khởi tạo, **then** `enable_external_access = false`, không autoload/autoinstall extension, cấu hình bị khóa; `code.sql` gọi `read_csv('https://…')` hoặc `INSTALL httpfs` → lỗi `sql.error.forbidden`, không có request mạng. |
+| AC-B3-07 | **Given** cột `decimal` có giá trị `0.1`, `0.2`, `1234567890123.25`, **when** đi qua `select` → `groupBy sum`, **then** tổng đúng chính xác (`1234567890123.55`), không có sai số float. |
+| AC-B3-08 | **Given** cột `string` "00123" và cột `date` 2026-09-01, **when** đi qua chuỗi node DuckDB và quay về TS, **then** giữ nguyên "00123" và "2026-09-01". |
+| AC-B3-09 | `select`: chọn/đổi tên/sắp lại cột đúng thứ tự cấu hình; chọn cột không tồn tại → `select.error.unknownColumn` trên đúng node; 2 cột output trùng key → `select.error.duplicateKey`. |
+| AC-B3-10 | `filter`: `match = all` với 2 điều kiện cho đúng giao; `any` cho đúng hợp; ô trống chỉ thỏa `isBlank/neq/notIn/notContains`; điều kiện dùng tham số để trống bị bỏ qua; `contains` trên cột `decimal` → `filter.error.opNotForType`; giá trị "abc" cho cột `date` → `filter.error.invalidValue`. |
+| AC-B3-11 | `filter` với `normalizeText = true`: điều kiện `eq "cn01"` giữ dòng "CN01 " và "cn01". |
+| AC-B3-12 | `sort`: nhiều cột, asc/desc, ô trống cuối theo mặc định; dòng bằng nhau giữ thứ tự cũ; (theo Q11-A) "Đặng" xếp sau "Dương" và trước "Em". |
+| AC-B3-13 | `join` inner/left/right/full/anti cho đúng số dòng trên bộ fixture nhỏ có khóa chỉ bên trái, chỉ bên phải, trùng nhiều–nhiều; thứ tự dòng theo §12.1.4. |
+| AC-B3-14 | `join` với `normalizeKeys = true`: "NV001" khớp " nv001" và "NV001 " (NBSP); ô khóa trống không khớp với nhau. Kết quả chuẩn hóa SQL trùng `normalizeKeyPart` trên bộ golden test. |
+| AC-B3-15 | `join` khóa `string` với khóa `decimal` → `join.error.keyTypeMismatch`; cột right trùng tên → đổi thành `<key>_r`; một khóa trái khớp 3 dòng phải → cảnh báo `join.warning.rowsMultiplied`, không chứa giá trị khóa. |
+| AC-B3-16 | `union` 3 đầu vào: cột theo thứ tự `in_1` rồi cột mới; cột thiếu để trống (`missingColumns = 'null'`) hoặc lỗi `union.error.missingColumn` (`'error'`); `integer` + `decimal` → `decimal`; `string` + `date` → `union.error.typeMismatch`; `sourceColumn` ghi đúng nhãn từng dòng. |
+| AC-B3-17 | `groupBy`: theo `chi_nhanh` cho sum/avg/min/max/count/countDistinct/countRows đúng trên fixture; `sum` toàn ô trống = 0; `avg` = SUM/COUNT làm tròn half-up 10 chữ số; `by` rỗng với 0 dòng đầu vào → 1 dòng (sum 0, count 0); `sum` trên cột `string` → `groupBy.error.fnNotForType`. |
+| AC-B3-18 | `dedupe`: `keep = first/last` đúng; `removed` chứa đúng các dòng bị loại; dòng toàn khóa trống không bị loại; "NV001" và "nv001 " là trùng khi `normalizeKeys = true`. |
+| AC-B3-19 | `code.sql` 2 input port `luong`, `cham_cong`: `SELECT … FROM luong JOIN cham_cong …` chạy đúng; schema output suy ra bằng `DESCRIBE` khớp kết quả chạy thật. |
+| AC-B3-20 | `code.sql` từ chối: 2 câu lệnh (`sql.error.multipleStatements`), `CREATE TABLE`/`COPY`/`ATTACH`/`PRAGMA`/`SET` (`sql.error.notSelect` hoặc `sql.error.forbidden`), `$khong_co` (`sql.error.unknownParam`), cột kết quả tên "Họ tên" (`sql.error.invalidColumnName`), cột kiểu `LIST` (`sql.error.unsupportedType`). |
+| AC-B3-21 | `code.sql` dùng `$chi_nhanh` với giá trị User nhập `x' OR 1=1 --` → giá trị được bind nguyên văn (lọc ra 0 dòng), không thay đổi câu lệnh. |
+| AC-B3-22 | `code.sql` lỗi runtime (VD `CAST('abc' AS INTEGER)`): UI hiện thông báo DuckDB rút gọn ≤ 500 ký tự gắn đúng node; `run_logs.error_code = 'sql.error.runtime'`, không có text gốc; console không in thông báo này ở bản production. |
+| AC-B3-23 | Kết quả `DOUBLE` từ `code.sql` (VD `x / 3`) được nhận về `decimal` theo 15 chữ số có nghĩa; Designer hiện cảnh báo khuyên `CAST`. |
+| AC-B3-24 | Hiệu năng: flow `input.excel` (100k dòng × 30 cột) → `filter` → `join` → `groupBy` → `output.excel` chạy < 10 giây trên laptop 8 GB (không tính lần tải DuckDB đầu tiên); 1 triệu dòng không làm crash tab. |
+| AC-B3-25 | Bấm Hủy khi đang chạy node DuckDB → worker bị terminate, trạng thái "Đã hủy", có thể chạy lại sau khi kiểm tra lại file. |
+
+### 26.2 (b) Designer: canvas & form
+
+**US-B3-02** — Là Admin, tôi muốn dựng và sửa flow bằng canvas kéo thả cùng form cấu hình đầy đủ, để tạo flow mới mà không phải sửa JSON.
+
+| # | Given / When / Then |
+|---|---------------------|
+| AC-B3-30 | **Given** User thường, **when** truy cập URL Designer/Version, **then** bị chuyển hướng như các route Admin khác và không tải chunk Designer. |
+| AC-B3-31 | Admin tạo flow mới (mã, tên, mô tả, nhóm, hướng dẫn) → tạo flow + draft v1 trong một thao tác; mã trùng → báo lỗi rõ ràng. |
+| AC-B3-32 | Kéo node từ bảng bên trái vào canvas, nối port, xóa node/dây; không nối được dây tạo vòng, không nối 2 dây vào cùng input port (có thông báo). |
+| AC-B3-33 | Dựng lại flow nghiệm thu §24 hoàn toàn qua UI (2 slot nhiều file, compare với khóa/chỉ tiêu/ngưỡng, output 4 sheet), lưu, publish; User chạy cho kết quả khớp `expected.json` (thay AC-11). |
+| AC-B3-34 | Form input slot có đủ mọi trường của `InputSlotSchema` (§15.3); mỗi trường đổi trên form phản ánh đúng vào JSON đã lưu; ràng buộc chéo hiển thị lỗi ngay (VD `dataStartRow` trước dòng header, `minFiles > maxFiles`, `defaultValue` sai kiểu, regex không biên dịch, key bắt đầu bằng `_`). |
+| AC-B3-35 | Form tham số: tạo `month` bắt buộc làm as-of date; đánh dấu `isAsOfDate` cho tham số thứ hai → báo lỗi; `select` nhập danh sách lựa chọn. |
+| AC-B3-36 | Dropdown chọn cột trong form node chỉ liệt kê cột của schema suy diễn từ node phía trước (không cần file mẫu); đổi cột của slot → dropdown cập nhật trong ≤ 1 giây. |
+| AC-B3-37 | Đổi `key` của cột slot đang được compare dùng → node compare viền coral, tooltip nêu cột không tồn tại; cảnh báo liệt kê node bị ảnh hưởng. |
+| AC-B3-38 | Kiểm tra realtime: node lỗi viền coral + tooltip (hover và focus bàn phím); thanh trạng thái đếm lỗi/cảnh báo, bấm chuyển tới node lỗi. |
+| AC-B3-39 | Lưu bằng nút Lưu và Ctrl+S (không mở hộp "Save page"); trạng thái chuyển "Đã lưu"; tải lại trang thấy đúng nội dung; draft còn lỗi kiểm tra vẫn lưu được. |
+| AC-B3-40 | Có thay đổi chưa lưu: chuyển route trong app → dialog Rời trang / Ở lại; đóng tab/tải lại → cảnh báo `beforeunload`; không có thay đổi → không cảnh báo. |
+| AC-B3-41 | Xung đột: mở cùng draft ở 2 tab, lưu tab A rồi lưu tab B → tab B nhận dialog xung đột (Tải bản mới nhất / Xuất JSON thay đổi của tôi), bản của tab A không bị ghi đè. |
+| AC-B3-42 | Undo/redo (Ctrl+Z, Ctrl+Shift+Z/Ctrl+Y) hoàn tác được thêm/xóa/di chuyển node, nối dây, sửa form, auto-layout; tối thiểu 100 bước. |
+| AC-B3-43 | Copy/paste 2 node có dây nối giữa chúng → bản sao có id mới, giữ dây nội bộ, không nối vào node gốc. |
+| AC-B3-44 | Auto-layout sắp node trái → phải không chồng nhau; minimap, zoom, fit view hoạt động. |
+| AC-B3-45 | Sticky note thêm/sửa/xóa, lưu vào `ui.notes`, không ảnh hưởng engine và không xuất hiện trong diff. |
+| AC-B3-46 | Export JSON tải file `.json` của bản hiện tại (kể cả chưa lưu); import lại file này qua màn Import cho ra flow tương đương. |
+| AC-B3-47 | Version published/retired mở trong Designer ở chế độ chỉ xem: không sửa được, có nút "Tạo draft từ version này". |
+
+### 26.3 (c) Xem trước từng node
+
+**US-B3-03** — Là Admin, tôi muốn xem trước kết quả từng node bằng file mẫu trên máy, để kiểm tra cấu hình trước khi publish.
+
+| # | Given / When / Then |
+|---|---------------------|
+| AC-B3-50 | Chọn file mẫu cho slot trong panel dữ liệu → hiện validation report như Run Wizard; không có request mạng chứa nội dung file; không có gì ghi vào localStorage/IndexedDB/Cache Storage ngoài file WASM. |
+| AC-B3-51 | Chọn node `join` → "Xem trước" → chỉ các node tổ tiên của `join` được chạy (node khác nhánh và node phía sau không chạy, kiểm chứng qua sự kiện tiến độ). |
+| AC-B3-52 | Bảng xem trước hiện tối đa 200 dòng đầu và tổng số dòng; node có nhiều port (VD `dedupe`) có tab cho từng port. |
+| AC-B3-53 | Xem trước node `control.compare` hiện cả 4 bảng (Tổng hợp / Lệch / Chỉ có trong A / Chỉ có trong B) với số liệu khớp `expected.json` khi dùng fixture. |
+| AC-B3-54 | Xem trước dùng cấu hình đang trên canvas kể cả chưa lưu; không tạo bản ghi `run_logs`. |
+| AC-B3-55 | Slot thiếu file mẫu hoặc file mẫu lỗi `error` → node phụ thuộc báo rõ "Chưa có file mẫu cho {slot}" / "File mẫu của {slot} có lỗi"; tham số bắt buộc chưa nhập → yêu cầu nhập. |
+| AC-B3-56 | Đóng Designer, tự đăng xuất hoặc đóng tab → file mẫu và kết quả xem trước bị giải phóng; mở lại Designer phải chọn lại file. |
+| AC-B3-57 | File mẫu có header nhưng 0 dòng → xem trước hiện bảng rỗng có đủ cột và cảnh báo `noDataRows`. |
+
+### 26.4 (d) Version & diff
+
+**US-B3-04** — Là Admin, tôi muốn quản lý version và khoảng hiệu lực của flow, so sánh các version, để thay đổi quy định theo kỳ mà vẫn chạy lại được kỳ cũ.
+
+| # | Given / When / Then |
+|---|---------------------|
+| AC-B3-60 | Màn Version liệt kê mọi version với trạng thái, khoảng hiệu lực, ghi chú, người/thời điểm publish; version đang áp dụng hôm nay có nhãn "Đang áp dụng". |
+| AC-B3-61 | Publish draft thiếu ngày bắt đầu hoặc ghi chú (kể cả chỉ có khoảng trắng) → không gửi được, trường lỗi viền coral; gọi thẳng RPC với ghi chú rỗng → DB từ chối. |
+| AC-B3-62 | Draft còn lỗi kiểm tra (port bắt buộc chưa nối, cột không tồn tại) → nút Publish bị chặn và liệt kê lỗi theo node (thay AC-13). |
+| AC-B3-63 | **Given** v1 published từ 2026-01-01 không thời hạn, **when** publish v2 từ 2026-10-01 với checkbox bật, **then** v1 thành "từ 01/01/2026 đến trước 01/10/2026" và v2 published, trong cùng một giao dịch; User chạy kỳ 09/2026 dùng v1, kỳ 10/2026 dùng v2. |
+| AC-B3-64 | Cùng tình huống nhưng bỏ chọn checkbox → DB từ chối do chồng lấn; UI hiện thông báo chồng lấn nêu v1, không có thay đổi nào được ghi. |
+| AC-B3-65 | Publish tạo khoảng trống (VD v1 đến trước 2026-03-01, v2 từ 2026-04-01) → dialog cảnh báo khoảng trống trước khi xác nhận; sau publish, timeline hiện cảnh báo amber cho khoảng đó. |
+| AC-B3-66 | Retire version published (có xác nhận) → trạng thái Retired, không còn được chọn khi chạy; User chạy kỳ thuộc khoảng của nó nhận lỗi "chưa có phiên bản hiệu lực"; không có nút đưa lại thành Published. |
+| AC-B3-67 | Rollback: từ v1 (published/retired) "Tạo draft từ version này" → draft mới có `definition` giống hệt v1; publish thành v3 với ngày mới; v1 không thay đổi. |
+| AC-B3-68 | Flow đã có draft → "Tạo draft từ version này" bị từ chối với thông báo §14.4, draft hiện có không bị ghi đè. |
+| AC-B3-69 | Hủy draft (có xác nhận) → draft bị xóa; không có cách xóa version published/retired (UI không có nút; gọi API → lỗi `flow_version_immutable`). |
+| AC-B3-70 | Đổi `effective_to` của version published → chỉ trường này thay đổi; chồng lấn → từ chối; mọi thao tác version có bản ghi `audit_logs`. |
+| AC-B3-71 | Diff v1 với v2 (v2 thêm node `filter`, xóa một edge, đổi tolerance OT của compare từ 1 thành 5, đổi label một slot): liệt kê đúng 1 node thêm, 1 node sửa (JSON side-by-side tô dòng `tolerance`), edge thêm/xóa, 1 slot sửa. |
+| AC-B3-72 | Hai version chỉ khác vị trí node/sticky note → "Hai phiên bản giống nhau về nội dung xử lý". |
+| AC-B3-73 | Diff node `code.sql` hiển thị SQL theo từng dòng, dòng thay đổi được tô màu. |
+| AC-B3-74 | User thường gọi các RPC mới (`admin_*`) → lỗi `42501`; `supabase/tests/rls.sql` có test tương ứng. |
+
+### 26.5 (e) Tự đăng xuất sau 8 giờ
+
+**US-B3-05** — Là người dùng (Admin hoặc User), tôi muốn được tự đăng xuất khi bỏ máy quá lâu, để người khác không dùng phiên của tôi; nhưng không bị đăng xuất giữa lúc flow đang chạy.
+
+> Test dùng đồng hồ giả (fake timers / `page.clock`).
+
+| # | Given / When / Then |
+|---|---------------------|
+| AC-B3-80 | **Given** đã đăng nhập, không thao tác, **when** tới mốc 7 giờ 55 phút, **then** hiện dialog cảnh báo có đếm ngược 5 phút và nút "Tiếp tục làm việc". |
+| AC-B3-81 | Bấm "Tiếp tục làm việc" → dialog đóng, bộ đếm bắt đầu lại 8 giờ; di chuột khi dialog đang mở không đóng dialog. |
+| AC-B3-82 | Không bấm → tại mốc 8 giờ: đăng xuất, session bị xóa khỏi `sessionStorage`, worker bị kết thúc, về màn đăng nhập với thông báo lý do (§6.1). |
+| AC-B3-83 | Có thao tác chuột/phím/cuộn/chạm ở mốc 7 giờ → không có cảnh báo ở mốc 7 giờ 55 phút (bộ đếm đã bắt đầu lại). |
+| AC-B3-84 | Flow chạy liên tục 9 giờ không thao tác → không bị đăng xuất trong lúc chạy; sau khi chạy xong, bộ đếm bắt đầu từ thời điểm kết thúc. Tương tự với xem trước trong Designer. |
+| AC-B3-85 | Designer có thay đổi chưa lưu → dialog cảnh báo có thêm dòng nêu thay đổi chưa lưu sẽ mất; hết giờ thì đăng xuất mà không bị chặn bởi cảnh báo rời trang. |
+| AC-B3-86 | Máy ngủ/tab ẩn 9 giờ rồi mở lại → đăng xuất ngay khi tab hiện lại (không hiện cảnh báo 5 phút). |
+| AC-B3-87 | Hai tab cùng mở: thao tác ở tab A không gia hạn cho tab B (mỗi tab có phiên riêng). |
+| AC-B3-88 | Không có request mạng hay ghi localStorage nào chứa sự kiện thao tác. |
+
+### 26.6 (f) Sửa lỗi tồn từ bước 2 (HANDOFF §4)
+
+| # | Given / When / Then |
+|---|---------------------|
+| AC-B3-90 | **Given** flow đang chạy, **when** User đổi kỳ (as-of date đổi version) rồi hủy cứng, **then** sau khi hủy, trạng thái kiểm tra version không kẹt ở "đang kiểm tra": hệ thống tự kiểm tra lại cho kỳ mới và nút Chạy dùng được mà không cần đổi kỳ lần nữa (`run-store.ts`: khi bỏ câu trả lời vì token đổi, lưu lại `deferredAsOf` để thử lại). Có unit test tái hiện. |
+| AC-B3-91 | **Given** file import có slot chỉ nhận `.csv`, **when** import, **then** dialog hiện thông báo riêng cho `acceptCsvOnlyReplaced` ("chỉ nhận .csv nên đã chuyển sang nhận .xlsx, .xls"), còn slot có `.csv` lẫn định dạng khác hiện thông báo `acceptCsvRemoved`; cả hai theo nhãn hiển thị của slot. |
+| AC-B3-92 | **Given** đăng nhập bằng User thường, **when** mở danh sách flow và trang chạy, **then** không có request nào tải chunk của khu vực Admin (kể cả Designer/Version) — kiểm bằng E2E theo dõi request JS; Admin vẫn vào khu Admin bình thường. |

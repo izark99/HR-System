@@ -9,6 +9,10 @@
 
 ## Phạm vi & sản phẩm
 
+2026-10-26 22:52 - Bước 3 gồm: Flow Designer (React Flow) với node `input.excel`, `control.compare`, `output.excel` + DuckDB-WASM và nhóm transform cơ bản `transform.select`, `transform.filter`, `transform.sort`, `transform.join`, `transform.union`, `transform.groupBy`, `transform.dedupe`, `code.sql`; màn Version & hiệu lực (kèm diff); tự đăng xuất sau 8 giờ. `transform.formula` (hàm Excel → SQL) chưa nằm trong bước 3.
+
+2026-10-26 22:52 - Bảng tham chiếu (`ref_tables`, `ref_table_versions`), `templates` và node `input.refTable` để sang Phase 2.
+
 2026-10-26 13:37 - Bước 2 (Supabase) gồm: đăng nhập/đổi mật khẩu, RLS, lưu flow/version (flow nạp bằng lệnh import JSON), run log metadata, màn Admin Users & Groups (tạo tài khoản, reset mật khẩu, khóa, gán flow). Màn Version & Flow Designer để bước 3.
 
 2026-10-26 09:27 - Thứ tự làm Phase 1: (1) chạy được flow nghiệm thu trên trình duyệt (DAG executor + Web Worker + 3 màn User), (2) Supabase (auth, RLS, lưu flow/version), (3) Flow Designer Admin.
@@ -73,6 +77,8 @@
 
 ## Hạ tầng
 
+2026-10-26 22:52 - DuckDB-WASM tự host trên Cloudflare Pages: lúc build tách file `.wasm` (~34 MB, vượt giới hạn 25 MiB/file) thành các phần < 25 MiB; worker tải, kiểm tra checksum, ghép lại rồi khởi tạo; cache bằng Cache Storage. Không thêm domain ngoài, CSP giữ nguyên.
+
 2026-10-26 20:27 - Giữ Supabase không bị pause bằng GitHub Actions chạy theo lịch mỗi ngày (`.github/workflows/keep-alive.yml`, chỉ dùng publishable key); bỏ Cloudflare Cron Worker.
 
 2026-10-26 20:27 - `main` là nhánh production: Cloudflare Pages deploy từ `main`; code được đưa lên `main` sau khi qua test/review.
@@ -88,6 +94,8 @@
 2026-10-26 08:20 - Hosting phải miễn phí: Cloudflare Pages (frontend) + Supabase Free (Auth, Postgres, Storage, Edge Functions). Không dùng Vercel Hobby vì cấm dùng thương mại.
 
 ## Xác thực & phân quyền
+
+2026-10-26 22:52 - Tự đăng xuất sau 8 giờ không thao tác: thao tác = chuột/phím/cuộn/chạm trong tab; khi flow đang chạy không tính là không thao tác; cảnh báo trước 5 phút với nút "Tiếp tục làm việc" (nêu rõ nếu Designer còn thay đổi chưa lưu); hết giờ đăng xuất và về màn đăng nhập kèm thông báo lý do.
 
 2026-10-26 18:49 - Tài khoản bị khóa hoặc chưa có profile: hiện chung thông báo "Tài khoản bị khóa hoặc chưa được cấp quyền. Vui lòng liên hệ Admin."
 
@@ -108,6 +116,12 @@
 2026-10-26 08:20 - Đăng nhập bằng username + password do Admin cấp; bắt đổi mật khẩu lần đầu; Admin reset mật khẩu; không có 2FA; không public sign-up.
 
 ## Flow & xử lý
+
+2026-10-26 22:52 - Designer: form cấu hình input slot cho toàn bộ trường của schema (Admin không phải sửa JSON).
+
+2026-10-26 22:52 - Designer: draft lưu bằng nút Lưu / Ctrl+S (không tự lưu); cảnh báo khi rời trang có thay đổi chưa lưu; khi lưu kiểm tra xung đột theo `updated_at` để không ghi đè bản người khác vừa lưu.
+
+2026-10-26 22:52 - Designer: xem trước từng node bằng file mẫu (chỉ trong RAM, xử lý trong worker): chạy flow tới node đang chọn, hiện 200 dòng đầu (node compare hiện cả 4 bảng); danh sách cột ở mỗi node suy ra từ định nghĩa slot, không cần file mẫu.
 
 2026-10-26 18:49 - Import flow JSON có `.csv` trong `accept`: tự bỏ `.csv` và lưu bản đã làm sạch lên server, báo cho Admin biết đã bỏ.
 
@@ -136,6 +150,8 @@
 2026-10-26 08:20 - Admin cấu hình flow bằng canvas kéo-thả node (React Flow); flow lưu dạng JSON (DAG).
 
 ## Versioning
+
+2026-10-26 22:52 - Diff version làm trong bước 3: liệt kê node thêm/xóa/sửa và cấu hình JSON side-by-side cho node bị sửa.
 
 2026-10-26 08:20 - Version đã Published là bất biến; rollback = publish lại nội dung cũ thành version mới.
 
