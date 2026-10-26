@@ -1,0 +1,19 @@
+# Cloudflare Pages security headers (spec §9.5, §17).
+#
+# connect-src: ONLY the app itself + the Supabase project. Replace YOUR-PROJECT-REF with the real
+# project ref (same domain as VITE_SUPABASE_URL) before deploying. wss:// is for Supabase Realtime.
+# This is what prevents any code (incl. admin SQL/Python) from sending data elsewhere.
+#
+# script-src 'wasm-unsafe-eval': required to instantiate WebAssembly (DuckDB-WASM, Pyodide).
+#   WASM binaries are self-hosted; no third-party script origins are allowed.
+# worker-src 'self' blob: engine Web Workers (DuckDB creates workers from blob: URLs).
+# style-src 'unsafe-inline': Monaco/ECharts/React Flow inject <style> elements at runtime.
+#   Inline *scripts* stay blocked.
+/*
+  Content-Security-Policy: default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; worker-src 'self' blob:; connect-src 'self' https://YOUR-PROJECT-REF.supabase.co wss://YOUR-PROJECT-REF.supabase.co; img-src 'self' data: blob:; style-src 'self' 'unsafe-inline'; font-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'
+  X-Content-Type-Options: nosniff
+  X-Frame-Options: DENY
+  Referrer-Policy: no-referrer
+  Permissions-Policy: camera=(), microphone=(), geolocation=(), payment=(), usb=(), interest-cohort=()
+  Strict-Transport-Security: max-age=31536000; includeSubDomains
+  Cross-Origin-Opener-Policy: same-origin

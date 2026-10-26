@@ -1,0 +1,59 @@
+{
+  "validation": {
+    "fileUnreadable": "Không đọc được file {{file}}: định dạng không hợp lệ hoặc file bị hỏng.",
+    "fileTypeNotAccepted": "File {{file}} không đúng định dạng cho phép ({{accept}}).",
+    "filesTooFew": "Cần ít nhất {{min}} file, mới có {{count}} file.",
+    "filesTooMany": "Tối đa {{max}} file, đang có {{count}} file.",
+    "slotRequired": "Chưa upload file cho mục \"{{slot}}\".",
+    "sheetNotFound": "File {{file}}: không tìm thấy sheet \"{{sheet}}\".",
+    "sheetIndexNotFound": "File {{file}}: không có sheet thứ {{index}}.",
+    "sheetNoMatchingHeaders": "File {{file}}: không có sheet nào chứa đủ các cột bắt buộc.",
+    "columnMissing": "File {{file}}, sheet {{sheet}}: thiếu cột bắt buộc \"{{column}}\" (tên chấp nhận: {{aliases}}) ở dòng tiêu đề {{headerRow}}.",
+    "columnMissingOptional": "File {{file}}, sheet {{sheet}}: không có cột \"{{column}}\"; giá trị sẽ để trống.",
+    "columnAmbiguous": "File {{file}}, sheet {{sheet}}: có nhiều cột khớp với \"{{column}}\" ({{headers}}); dùng cột đầu tiên.",
+    "required": "File {{file}}, dòng {{row}}: cột \"{{column}}\" không được để trống.",
+    "type": "File {{file}}, dòng {{row}}: giá trị \"{{value}}\" ở cột \"{{column}}\" không phải {{type}}.",
+    "unique": "Giá trị \"{{value}}\" của cột \"{{column}}\" bị trùng: {{file}} dòng {{row}} và {{otherFile}} dòng {{otherRow}}.",
+    "regex": "File {{file}}, dòng {{row}}: giá trị \"{{value}}\" ở cột \"{{column}}\" không đúng định dạng.",
+    "min": "File {{file}}, dòng {{row}}: giá trị {{value}} ở cột \"{{column}}\" nhỏ hơn {{min}}.",
+    "max": "File {{file}}, dòng {{row}}: giá trị {{value}} ở cột \"{{column}}\" lớn hơn {{max}}.",
+    "rowsTooMany": "File {{file}} có {{count}} dòng, vượt ngưỡng {{max}} dòng.",
+    "type_string": "chuỗi",
+    "type_integer": "số nguyên",
+    "type_decimal": "số",
+    "type_boolean": "đúng/sai",
+    "type_date": "ngày",
+    "type_datetime": "ngày giờ"
+  },
+  "skipped": {
+    "keyBlank": "Bỏ qua dòng {{row}} của {{file}} (không phải dòng dữ liệu: trống cột {{columns}})."
+  },
+  "compare": {
+    "side": {
+      "left": "A",
+      "right": "B"
+    },
+    "column": {
+      "left": "{{metric}} ({{side}})",
+      "right": "{{metric}} ({{side}})",
+      "diff": "{{metric}} (chênh lệch)",
+      "mismatchedMetrics": "Chỉ tiêu lệch"
+    },
+    "summary": {
+      "metric": "Chỉ tiêu",
+      "tolerance": "Ngưỡng",
+      "matched": "Khớp",
+      "mismatched": "Lệch",
+      "onlyLeft": "Chỉ có ở {{side}}",
+      "onlyRight": "Chỉ có ở {{side}}",
+      "totalDiff": "Tổng chênh lệch",
+      "totalRow": "Tổng (theo khóa)"
+    },
+    "error": {
+      "missingColumn": "Bảng {{side}} không có cột \"{{column}}\".",
+      "duplicateKey": "Bảng {{side}} có khóa trùng: {{key}}.",
+      "notNumeric": "Cột \"{{column}}\" của bảng {{side}} không phải kiểu số.",
+      "missingInput": "Node đối chiếu cần đủ 2 bảng đầu vào (left, right)."
+    }
+  }
+}

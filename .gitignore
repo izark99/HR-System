@@ -1,0 +1,13 @@
+node_modules/
+dist/
+coverage/
+*.tsbuildinfo
+.vite/
+.env
+.env.*
+!.env.example
+*.log
+.DS_Store
+# generated test output must never be committed
+tmp/
+out/

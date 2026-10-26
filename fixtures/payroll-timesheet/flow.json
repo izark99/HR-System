@@ -1,0 +1,96 @@
+{
+  "schemaVersion": 1,
+  "params": [
+    { "key": "ky_luong", "label": "Kỳ lương", "type": "month", "required": true, "log": true, "isAsOfDate": true }
+  ],
+  "inputSlots": [
+    {
+      "key": "bang_luong",
+      "label": "Bảng lương (nhiều chi nhánh)",
+      "required": true,
+      "accept": [".xlsx", ".xls", ".csv"],
+      "sheet": { "mode": "byName", "value": "Luong" },
+      "headerRow": 4,
+      "dataStartRow": 5,
+      "stopAt": { "blankRows": 2 },
+      "skipRows": { "whenBlank": ["ma_nv"] },
+      "columns": [
+        { "key": "ma_nv", "label": "Mã NV", "aliases": ["Mã NV", "MSNV"], "type": "string", "required": true,
+          "rules": [{ "unique": true }, { "regex": "^NV\\d{5}$" }] },
+        { "key": "ho_ten", "label": "Họ tên", "aliases": ["Họ và tên"], "type": "string" },
+        { "key": "chi_nhanh", "label": "Chi nhánh", "aliases": ["Chi nhánh"], "type": "string" },
+        { "key": "cong", "label": "Công", "aliases": ["Công tính lương"], "type": "decimal", "required": true, "rules": [{ "min": 0 }] },
+        { "key": "ot", "label": "OT (giờ)", "aliases": ["Giờ OT"], "type": "decimal", "required": true, "rules": [{ "min": 0 }] },
+        { "key": "phep", "label": "Phép", "aliases": ["Ngày phép"], "type": "decimal", "required": true, "rules": [{ "min": 0 }] },
+        { "key": "khong_luong", "label": "Không lương", "aliases": ["Nghỉ không lương"], "type": "decimal", "required": true, "rules": [{ "min": 0 }] }
+      ],
+      "extraColumns": "drop",
+      "multiple": { "enabled": true, "minFiles": 1, "maxFiles": 50 }
+    },
+    {
+      "key": "cham_cong",
+      "label": "Chấm công (nhiều chi nhánh)",
+      "required": true,
+      "accept": [".xlsx", ".xls", ".csv"],
+      "sheet": { "mode": "byName", "value": "ChamCong" },
+      "headerRow": 1,
+      "stopAt": { "blankRows": 2 },
+      "skipRows": { "whenBlank": ["ma_nv"] },
+      "columns": [
+        { "key": "ma_nv", "label": "Mã NV", "aliases": ["Mã nhân viên"], "type": "string", "required": true,
+          "rules": [{ "unique": true }, { "regex": "^NV\\d{5}$" }] },
+        { "key": "ho_ten", "label": "Họ tên", "aliases": ["Họ tên"], "type": "string" },
+        { "key": "chi_nhanh", "label": "Chi nhánh", "aliases": ["Chi nhánh"], "type": "string" },
+        { "key": "cong", "label": "Công", "aliases": ["Công thực tế"], "type": "decimal", "required": true, "rules": [{ "min": 0 }] },
+        { "key": "ot", "label": "OT (giờ)", "aliases": ["OT (giờ)"], "type": "decimal", "required": true, "rules": [{ "min": 0 }] },
+        { "key": "phep", "label": "Phép", "aliases": ["Phép (ngày)"], "type": "decimal", "required": true, "rules": [{ "min": 0 }] },
+        { "key": "khong_luong", "label": "Không lương", "aliases": ["Không lương (ngày)"], "type": "decimal", "required": true, "rules": [{ "min": 0 }] }
+      ],
+      "extraColumns": "drop",
+      "multiple": { "enabled": true, "minFiles": 1, "maxFiles": 50 }
+    }
+  ],
+  "nodes": [
+    { "id": "in_luong", "type": "input.excel", "label": "Bảng lương", "config": { "slot": "bang_luong" } },
+    { "id": "in_cc", "type": "input.excel", "label": "Chấm công", "config": { "slot": "cham_cong" } },
+    {
+      "id": "cmp",
+      "type": "control.compare",
+      "label": "Đối chiếu",
+      "config": {
+        "keys": ["ma_nv"],
+        "metrics": [
+          { "left": "cong", "right": "cong", "label": "Công", "tolerance": "0.5" },
+          { "left": "ot", "right": "ot", "label": "OT (giờ)", "tolerance": "1" },
+          { "left": "phep", "right": "phep", "label": "Phép", "tolerance": "0" },
+          { "left": "khong_luong", "right": "khong_luong", "label": "Không lương", "tolerance": "0" }
+        ],
+        "carryColumns": ["ho_ten", "chi_nhanh"],
+        "nullAsZero": true,
+        "sideLabels": { "left": "lương", "right": "chấm công" }
+      }
+    },
+    {
+      "id": "out",
+      "type": "output.excel",
+      "label": "File đối chiếu",
+      "config": {
+        "fileName": "DoiChieu_{ky_luong}.xlsx",
+        "sheets": [
+          { "name": "Tổng hợp", "port": "summary" },
+          { "name": "Lệch", "port": "mismatched" },
+          { "name": "Chỉ có trong lương", "port": "only_left" },
+          { "name": "Chỉ có trong chấm công", "port": "only_right" }
+        ]
+      }
+    }
+  ],
+  "edges": [
+    { "from": "in_luong", "to": "cmp", "toPort": "left" },
+    { "from": "in_cc", "to": "cmp", "toPort": "right" },
+    { "from": "cmp", "fromPort": "summary", "to": "out", "toPort": "summary" },
+    { "from": "cmp", "fromPort": "mismatched", "to": "out", "toPort": "mismatched" },
+    { "from": "cmp", "fromPort": "only_left", "to": "out", "toPort": "only_left" },
+    { "from": "cmp", "fromPort": "only_right", "to": "out", "toPort": "only_right" }
+  ]
+}
