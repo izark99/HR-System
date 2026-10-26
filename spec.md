@@ -315,6 +315,10 @@ Admin khai báo **input slot** cho mỗi flow — mô tả file mà User cần u
 
 - **Upload nhiều file vào một slot** (`multiple.enabled = true`): mỗi file được đọc và validate riêng theo cùng cấu hình, sau đó gộp dọc (union theo `key` cột). Hệ thống thêm cột hệ thống `_source_file` (tên file, chỉ tồn tại trong trình duyệt) để truy vết dòng lỗi về đúng file. Rule `unique` được kiểm tra trên **dữ liệu sau khi gộp**.
 - Dòng không phải dữ liệu (dòng tổng cộng, dòng chữ ký…) bị loại theo `stopAt` hoặc rule `required` của cột khóa.
+- Tách 2 khái niệm cho mỗi cột:
+  - `presence`: `required` (thiếu cột trong file → lỗi) | `optional`.
+  - `required` (giá trị): ô trống → lỗi. Nếu không bắt buộc, ô trống nhận `defaultValue` (VD `0`) hoặc `null`.
+  - Cột chỉ tiêu số trong flow nghiệm thu: `presence: required`, ô trống → `0`.
 
 - So khớp tên cột: chuẩn hóa (bỏ dấu tiếng Việt, lowercase, bỏ khoảng trắng thừa) rồi so với `aliases`.
 - **Báo cáo validation** trước khi chạy: thiếu cột, sai kiểu, vi phạm rule — kèm số dòng Excel gốc. Mỗi rule có mức `error` (chặn chạy) hoặc `warning` (cho chạy tiếp).
