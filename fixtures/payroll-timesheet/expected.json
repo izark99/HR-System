@@ -1,0 +1,86 @@
+{
+  "period": "09/2026",
+  "tolerance": {
+    "cong": "0.5",
+    "ot": "1",
+    "phep": "0",
+    "khong_luong": "0"
+  },
+  "counts": {
+    "payroll_rows": 75,
+    "timesheet_rows": 75,
+    "matched": 63,
+    "mismatched": 9,
+    "only_in_payroll": 3,
+    "only_in_timesheet": 3
+  },
+  "mismatched": [
+    {
+      "ma_nv": "NV00001",
+      "diffs": {
+        "cong": "-2.0"
+      }
+    },
+    {
+      "ma_nv": "NV00007",
+      "diffs": {
+        "cong": "-1.0",
+        "phep": "1.0"
+      }
+    },
+    {
+      "ma_nv": "NV00025",
+      "diffs": {
+        "ot": "4.0"
+      }
+    },
+    {
+      "ma_nv": "NV00036",
+      "diffs": {
+        "cong": "-1.0",
+        "phep": "1.0"
+      }
+    },
+    {
+      "ma_nv": "NV00046",
+      "diffs": {
+        "ot": "4.0"
+      }
+    },
+    {
+      "ma_nv": "NV00049",
+      "diffs": {
+        "cong": "-2.0"
+      }
+    },
+    {
+      "ma_nv": "NV00062",
+      "diffs": {
+        "cong": "-1.0",
+        "phep": "1.0"
+      }
+    },
+    {
+      "ma_nv": "NV00066",
+      "diffs": {
+        "cong": "-2.0"
+      }
+    },
+    {
+      "ma_nv": "NV00072",
+      "diffs": {
+        "ot": "4.0"
+      }
+    }
+  ],
+  "only_in_payroll": [
+    "NV00011",
+    "NV00039",
+    "NV00057"
+  ],
+  "only_in_timesheet": [
+    "NV90031",
+    "NV90056",
+    "NV90076"
+  ]
+}
