@@ -688,3 +688,62 @@ Flow (DAG):
 - 3 chi nhánh (CN01 30 NV, CN02 25 NV, CN03 20 NV) × 2 loại file.
 - Sai lệch có chủ đích mỗi chi nhánh: 1 lệch công trong ngưỡng, 1 lệch công vượt ngưỡng, 1 lệch OT, 1 lệch phép + công, 1 NV chỉ có trong lương, 1 NV chỉ có trong chấm công.
 - `expected.json` — kết quả kỳ vọng để tester so sánh.
+
+---
+
+## 25. Design system (UI)
+
+Toàn bộ UI dùng **một** design language ("bright executive"), áp dụng như nhau cho phần User và Admin. Wireframe tham chiếu: https://claude.ai/artifact/BUfBGjG3F8XyXmctD86QzW (7 màn hình).
+
+### 25.1 Typography
+
+| Token | Giá trị |
+|-------|---------|
+| Font | `Be Vietnam Pro` (400–800), fallback `Arial, sans-serif`. Một family duy nhất, hỗ trợ đầy đủ tiếng Việt |
+| Page title | 30px / 700 / letter-spacing −0.8px; viết như một câu kết luận ("Kỳ 09/2026 có 9 nhân viên lệch công cần xử lý") |
+| Section title | 18px / 700 |
+| Body | 14–15px / 400 |
+| Label | 13–14px / 600 |
+| Big number (KPI) | 44px / 800 |
+| Eyebrow pill | 12px / 700 / uppercase / letter-spacing 0.06em |
+
+### 25.2 Màu
+
+| Vai trò | Fill | Text | Tint (nền nhạt) |
+|---------|------|------|-----------------|
+| Text | — | `#1F2A44` (đậm) · `#334155` (body) · `#475569` (phụ — không dùng xám nhạt hơn cho chữ) | — |
+| Nền | `#F7FAF9` (trang) · `#FFFFFF` (card) · `#F1F5F9` (trung tính) | — | — |
+| Teal — chính / tốt | `#14B8A6` (trang trí) · `#0F766E` (nút chính) | `#0F766E` | `#DDF5EF` / `#E3F8F3` |
+| Coral — rủi ro / lỗi | `#F97362` | `#C2410C` | `#FFF1E7` |
+| Amber — cảnh báo | `#FBBF24` | `#B45309` | `#FFF8E1` |
+| Blue — thông tin / Admin | `#3B82F6` | `#1D4ED8` | `#EAF2FF` |
+| Viền input / nút phụ | `#CBD5E1` | — | — |
+| Đường kẻ bảng | `#E2E8F0` | — | — |
+
+- Chữ trắng chỉ đặt trên `#0F766E`, `#1F2A44` hoặc `#1D4ED8` (đạt WCAG AA). Không đặt chữ trắng trên `#14B8A6`.
+- Trang đăng nhập: nền gradient `linear-gradient(135deg, #E3F8F3, #F4FBFF, #FFF1E7)` + 3 vòng tròn trang trí (teal, coral, blue; opacity 0.35–0.5).
+
+### 25.3 Component
+
+| Component | Quy cách |
+|-----------|----------|
+| Card | Nền trắng, radius 20px (card lớn 24px), padding 24px, shadow `0 8px 28px rgba(31,42,68,0.08)`, không viền |
+| KPI card | Như card + viền trên 8px theo ý nghĩa (teal khớp, coral lệch, amber cần xem) |
+| Eyebrow pill | Trên mỗi tiêu đề trang; chữ màu trên nền tint; radius 999px |
+| Status chip | 12px / 700, radius 999px, chữ màu trên nền tint |
+| Nút chính | Cao 44px, radius 12px, nền `#0F766E`, chữ trắng 700 |
+| Nút phụ | Cao 44px, radius 12px, nền trắng, viền `#CBD5E1`, chữ `#1F2A44` 600 |
+| Input / select | Cao 42–46px, radius 12px, viền `#CBD5E1` |
+| Tab | Dạng pill; tab đang chọn dùng nền tint + chữ màu đậm |
+| Menu trái | Item cao 44px, radius 12px; item đang chọn nền `#DDF5EF`, chữ `#0F766E` 700 |
+| Callout | Nền tint, radius 14–16px, mở đầu bằng nhãn in đậm (`An toàn dữ liệu:`, `Lưu ý:`, `Hợp lệ:`) |
+| Bảng | Trong card; header `#475569` 600; dòng cần chú ý tô nền tint; ô chênh lệch tô coral tint |
+| Node trên canvas | Card radius 16px; vạch màu trên theo nhóm node (blue đầu vào, coral kiểm soát, amber đầu ra); node đang chọn có ring teal |
+| Vùng kéo thả file | Viền đứt 2px `#99E0D2`, nền `#F3FBF8`, radius 16px |
+
+### 25.4 Giọng văn UI
+
+- Xưng "bạn", câu ngắn, rõ hành động. Tiêu đề trang nói được kết luận chính.
+- Định dạng số kiểu Việt Nam (`0,5`, `1.234.567`).
+- Không dùng ký hiệu có thể thiếu trong font (≤ ≥ → × −) trong text UI; dùng chữ hoặc `-`.
+- Touch target tối thiểu 44px; tương phản chữ đạt WCAG AA.
