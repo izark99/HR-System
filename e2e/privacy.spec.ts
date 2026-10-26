@@ -87,7 +87,8 @@ test.describe('AC-09 data stays in the browser', () => {
     for (const r of sameOrigin) {
       const path = new URL(r.url).pathname;
       expect(path, `${r.resourceType} ${r.url}`).toMatch(
-        /^\/($|run\/|assets\/[\w.-]+\.(js|css|woff2?)$)/,
+        // App icons in public/ are the only non-hashed static files.
+        /^\/($|run\/|assets\/[\w.-]+\.(js|css|woff2?)$|favicon\.svg$|icon-[\w-]+\.png$|apple-touch-icon\.png$|manifest\.webmanifest$)/,
       );
       expect(r.body).toBe('');
     }
