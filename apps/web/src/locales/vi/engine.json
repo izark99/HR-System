@@ -15,7 +15,7 @@
     "required": "File {{file}}, dòng {{row}}: cột \"{{column}}\" không được để trống.",
     "type": "File {{file}}, dòng {{row}}: giá trị \"{{value}}\" ở cột \"{{column}}\" không phải {{type}}.",
     "numberAmbiguous": "File {{file}}, dòng {{row}}: giá trị \"{{value}}\" ở cột \"{{column}}\" có thể hiểu theo 2 cách; đang đọc là {{parsed}}, hãy kiểm tra lại.",
-    "unique": "Giá trị \"{{value}}\" của cột \"{{column}}\" bị trùng: {{file}} dòng {{row}} và {{otherFile}} dòng {{otherRow}}.",
+    "unique": "Cột \"{{column}}\" bị trùng giá trị: \"{{value}}\" ở {{file}} dòng {{row}} và \"{{otherValue}}\" ở {{otherFile}} dòng {{otherRow}}.",
     "regex": "File {{file}}, dòng {{row}}: giá trị \"{{value}}\" ở cột \"{{column}}\" không đúng định dạng.",
     "min": "File {{file}}, dòng {{row}}: giá trị {{value}} ở cột \"{{column}}\" nhỏ hơn {{min}}.",
     "max": "File {{file}}, dòng {{row}}: giá trị {{value}} ở cột \"{{column}}\" lớn hơn {{max}}.",

@@ -1,6 +1,7 @@
 export * from './core/types';
 export * from './core/decimal';
 export * from './core/plugin';
+export { normalizeKeyPart } from './core/keys';
 export { createEngineTranslator } from './core/i18n';
 export * from './io/validation';
 export {

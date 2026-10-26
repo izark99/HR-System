@@ -1,0 +1,16 @@
+version: 2
+updates:
+  # Bumps the SHA-pinned actions in .github/workflows and their "# vX.Y.Z" comments.
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+
+  # pnpm workspace (root pnpm-lock.yaml). The vendored SheetJS tarball (vendor/) is not on the
+  # npm registry and is upgraded by hand — see vendor/README.md.
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+    ignore:
+      - dependency-name: xlsx

@@ -1,6 +1,7 @@
 import type { InputSlot, SlotColumn } from '@hrflow/flow-schema';
 import * as XLSX from 'xlsx';
 import { Big, decimalFrom, isDecimal } from '../core/decimal';
+import { normalizeKeyPart } from '../core/keys';
 import type { ColumnDef, Row, Table, Value } from '../core/types';
 import { coerceValue, isBlank, type RawValue } from './coerce';
 import { normalizeHeader, slugifyHeader } from './normalize';
@@ -574,30 +575,39 @@ function compiledRegex(source: string): RegExp {
   return re;
 }
 
+/**
+ * `unique` rules on the union of all files. String columns compare with the same key
+ * normalization as `control.compare` (case, whitespace, NFC; decision 20261026) so a duplicate the
+ * compare node would reject is reported here, at validation time. Messages show the original
+ * values of both occurrences.
+ */
 function checkUnique(slot: InputSlot, rows: Row[], refs: RowRef[]): ValidationIssue[] {
   const out: ValidationIssue[] = [];
   for (const col of slot.columns) {
     const rule = col.rules.find((r) => 'unique' in r);
     if (!rule) continue;
-    const first = new Map<string, RowRef>();
+    const keyOf = col.type === 'string' ? normalizeKeyPart : displayValue;
+    const first = new Map<string, { ref: RowRef; value: string }>();
     rows.forEach((row, i) => {
       const v = row[col.key];
       if (v === null || v === undefined) return;
-      const k = displayValue(v);
+      const k = keyOf(v);
+      const value = displayValue(v);
       const seen = first.get(k);
       const ref = refs[i]!;
       if (!seen) {
-        first.set(k, ref);
+        first.set(k, { ref, value });
         return;
       }
       out.push({
         ...issue(rule.severity, 'unique', 'validation.unique', {
-          value: k,
+          value,
           column: columnTitle(col),
           file: ref.file,
           row: ref.row,
-          otherFile: seen.file,
-          otherRow: seen.row,
+          otherValue: seen.value,
+          otherFile: seen.ref.file,
+          otherRow: seen.ref.row,
         }),
         file: ref.file,
         row: ref.row,
@@ -693,8 +703,8 @@ function columnTitle(col: SlotColumn): string {
   return col.label ?? col.aliases[0] ?? col.key;
 }
 
-function displayValue(v: Value): string {
-  if (v === null) return '';
+function displayValue(v: Value | undefined): string {
+  if (v === null || v === undefined) return '';
   if (isDecimal(v)) return v.toString();
   return String(v);
 }

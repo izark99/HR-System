@@ -13,9 +13,18 @@ const severity = SeveritySchema.default('error');
 
 export const UniqueRuleSchema = z.strictObject({ unique: z.literal(true), severity });
 export const RegexRuleSchema = z.strictObject({
-  regex: z.string().min(1),
+  regex: z.string().min(1).refine(compiles, 'regex does not compile'),
   severity,
 });
+
+function compiles(source: string): boolean {
+  try {
+    new RegExp(source);
+    return true;
+  } catch {
+    return false;
+  }
+}
 export const MinRuleSchema = z.strictObject({ min: DecimalLiteralSchema, severity });
 export const MaxRuleSchema = z.strictObject({ max: DecimalLiteralSchema, severity });
 
@@ -181,6 +190,17 @@ export const InputSlotSchema = z
   })
   .superRefine((slot, ctx) => {
     const keys = slot.columns.map((c) => c.key);
+    // Keys starting with "_" are reserved for engine system columns (`_source_file`,
+    // `_mismatched_metrics`, …); a slot column must never shadow one.
+    slot.columns.forEach((c, i) => {
+      if (c.key.startsWith('_')) {
+        ctx.addIssue({
+          code: 'custom',
+          path: ['columns', i, 'key'],
+          message: `column key "${c.key}" must not start with "_" (reserved for system columns)`,
+        });
+      }
+    });
     const dup = keys.find((k, i) => keys.indexOf(k) !== i);
     if (dup) {
       ctx.addIssue({ code: 'custom', path: ['columns'], message: `duplicate column key "${dup}"` });

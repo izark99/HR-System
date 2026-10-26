@@ -115,7 +115,7 @@ Kiến trúc giữ tính **portable**: frontend là static build; backend chỉ 
 | Code editor | Monaco Editor | Highlight SQL / Python / formula, autocomplete tên cột |
 | Data grid preview | TanStack Table + virtualization | Hiển thị hàng trăm nghìn dòng mượt |
 | Chart | Apache ECharts | |
-| Đọc Excel | SheetJS (bản CE từ cdn.sheetjs.com) | Đọc .xlsx, .xls, .xlsb, .csv |
+| Đọc Excel | SheetJS (bản CE từ cdn.sheetjs.com, vendor tại `vendor/`) | Đọc .xlsx, .xls, .xlsb, .csv |
 | Ghi Excel | ExcelJS | Giữ style/format khi đổ vào template |
 | Engine SQL | DuckDB-WASM | Chạy trong Web Worker |
 | Engine Python | Pyodide (pandas, numpy) | Worker riêng, lazy load khi flow có node Python |

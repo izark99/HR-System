@@ -678,7 +678,7 @@ describe('QA reader: multiple files & unique after union (AC-07)', () => {
       value: nv(2),
     });
     expect(formatIssue(u, t)).toBe(
-      'Giá trị "NV00002" của cột "Mã NV" bị trùng: bang_luong_CN02.xlsx dòng 6 và bang_luong_CN01.xlsx dòng 6.',
+      'Cột "Mã NV" bị trùng giá trị: "NV00002" ở bang_luong_CN02.xlsx dòng 6 và "NV00002" ở bang_luong_CN01.xlsx dòng 6.',
     );
   });
 

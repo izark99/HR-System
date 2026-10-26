@@ -26,6 +26,40 @@ describe('InputSlotSchema', () => {
     });
     expect(r.success).toBe(false);
   });
+
+  it('rejects a regex rule that does not compile, accepts a valid one', () => {
+    const parse = (regex: string) =>
+      InputSlotSchema.safeParse({
+        key: 's',
+        label: 'S',
+        columns: [{ key: 'ma_nv', aliases: ['Mã NV'], type: 'string', rules: [{ regex }] }],
+      });
+    for (const bad of ['^NV(\\d{5}$', '[a-', '*abc', '(?<x>a)(?<x>b)']) {
+      const r = parse(bad);
+      expect(r.success, bad).toBe(false);
+      expect(r.error?.issues[0]).toMatchObject({
+        path: ['columns', 0, 'rules', 0, 'regex'],
+        message: 'regex does not compile',
+      });
+    }
+    expect(parse('^NV\\d{5}$').success).toBe(true);
+  });
+
+  it('rejects slot column keys starting with "_" (reserved system columns)', () => {
+    for (const key of ['_source_file', '_mismatched_metrics', '_x']) {
+      const r = InputSlotSchema.safeParse({
+        key: 's',
+        label: 'S',
+        columns: [
+          { key: 'ma_nv', aliases: ['Mã NV'], type: 'string' },
+          { key, aliases: ['X'], type: 'string' },
+        ],
+      });
+      expect(r.success, key).toBe(false);
+      expect(r.error?.issues.map((i) => i.path)).toEqual([['columns', 1, 'key']]);
+      expect(r.error?.issues[0]?.message).toContain('reserved for system columns');
+    }
+  });
 });
 
 describe('SlotColumnSchema: presence vs required (spec §10)', () => {

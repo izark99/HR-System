@@ -1,5 +1,6 @@
 import { CompareConfigSchema, type CompareConfig } from '@hrflow/flow-schema';
 import { Big, decimalFrom, isDecimal, ZERO, type Decimal } from '../core/decimal';
+import { normalizeKeyPart } from '../core/keys';
 import type { NodePlugin } from '../core/plugin';
 import {
   EngineError,
@@ -164,16 +165,6 @@ function toDecimal(v: Value): Decimal | null {
   if (typeof v === 'number') return new Big(v);
   // Column types were checked up front; anything else is a programming error.
   throw new EngineError('compare.error.notNumeric', { side: '', column: String(v) });
-}
-
-/**
- * Key values match case-insensitively with surrounding/repeated whitespace ignored
- * ("nv00001 " = "NV00001"). Output rows keep each side's original values.
- */
-export function normalizeKeyPart(v: Value | undefined): string {
-  if (v === null || v === undefined) return '';
-  const s = isDecimal(v) ? v.toString() : String(v);
-  return s.normalize('NFC').replace(/\s+/g, ' ').trim().toLowerCase();
 }
 
 function indexByKey(table: Table, keys: string[], side: string): Map<string, Row> {

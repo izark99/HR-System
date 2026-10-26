@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import * as XLSX from 'xlsx';
 import type { Big } from '../core/decimal';
 import { createEngineTranslator } from '../core/i18n';
+import { normalizeKeyPart } from '../core/keys';
 import { readSlot } from '../io/excel-reader';
 import { formatIssue, type ValidationReport } from '../io/validation';
 import { csvFile, slot, xlsxFile } from './helpers';
@@ -266,7 +267,7 @@ describe('readSlot: multiple files', () => {
       params: { value: 'NV00002', file: 'cn02.xlsx', row: 3, otherFile: 'cn01.xlsx', otherRow: 3 },
     });
     expect(formatIssue(dup[0]!, t)).toBe(
-      'Giá trị "NV00002" của cột "Mã NV" bị trùng: cn02.xlsx dòng 3 và cn01.xlsx dòng 3.',
+      'Cột "Mã NV" bị trùng giá trị: "NV00002" ở cn02.xlsx dòng 3 và "NV00002" ở cn01.xlsx dòng 3.',
     );
   });
 
@@ -291,5 +292,73 @@ describe('readSlot: multiple files', () => {
     const { report } = readSlot(employeeSlot(), [junk]);
     expect(report.errorCount).toBe(1);
     expect(report.issues[0]!.rule === 'file' || report.issues[0]!.rule === 'sheet').toBe(true);
+  });
+});
+
+describe('readSlot: unique uses the compare key normalization (decision 20261026)', () => {
+  const uniqueOnly = (type: 'string' | 'integer' = 'string') =>
+    employeeSlot({
+      columns: [
+        {
+          key: 'ma_nv',
+          label: 'Mã NV',
+          aliases: ['Mã NV'],
+          type,
+          required: true,
+          rules: [{ unique: true }],
+        },
+      ],
+    });
+
+  it('"NV00001" and " nv00001" in two files (no regex rule) → validation.unique error, run blocked', () => {
+    const a = xlsxFile('cn01.xlsx', { Data: [['Mã NV'], ['NV00001']] });
+    const b = xlsxFile('cn02.xlsx', { Data: [['Mã NV'], ['NV00002'], [' nv00001']] });
+    const { report } = readSlot(uniqueOnly(), [a, b]);
+    expect(report.errorCount).toBe(1);
+    const dup = report.issues[0]!;
+    // Original values of both occurrences are shown (the reader trims, case is kept).
+    expect(dup).toMatchObject({
+      messageKey: 'validation.unique',
+      severity: 'error',
+      file: 'cn02.xlsx',
+      row: 3,
+      column: 'ma_nv',
+      params: { value: 'nv00001', otherValue: 'NV00001', otherFile: 'cn01.xlsx', otherRow: 2 },
+    });
+    expect(formatIssue(dup, t)).toBe(
+      'Cột "Mã NV" bị trùng giá trị: "nv00001" ở cn02.xlsx dòng 3 và "NV00001" ở cn01.xlsx dòng 2.',
+    );
+  });
+
+  it('collapses inner whitespace and applies NFC, like compare key matching', () => {
+    const composed = 'NVÁ'; // "NVÁ" precomposed
+    const decomposed = 'nvá'; // "nvá" with a combining accent
+    const a = xlsxFile('a.xlsx', { Data: [['Mã NV'], ['NV  00001'], [composed]] });
+    const b = xlsxFile('b.xlsx', { Data: [['Mã NV'], ['nv 00001'], [decomposed]] });
+    const { report } = readSlot(uniqueOnly(), [a, b]);
+    expect(report.issues.map((i) => [i.messageKey, i.params.value, i.params.otherValue])).toEqual([
+      ['validation.unique', 'nv 00001', 'NV  00001'],
+      ['validation.unique', decomposed, composed],
+    ]);
+  });
+
+  it('agrees with normalizeKeyPart for every pair', () => {
+    const values = ['NV00001', 'nv00001', 'NV 00001', 'NV00002', 'NV0000l', 'NV00001x'];
+    for (const x of values) {
+      for (const y of values) {
+        if (x === y) continue;
+        const a = xlsxFile('a.xlsx', { Data: [['Mã NV'], [x]] });
+        const b = xlsxFile('b.xlsx', { Data: [['Mã NV'], [y]] });
+        const dup = readSlot(uniqueOnly(), [a, b]).report.errorCount > 0;
+        expect(dup, `${x} vs ${y}`).toBe(normalizeKeyPart(x) === normalizeKeyPart(y));
+      }
+    }
+  });
+
+  it('non-string columns keep value equality', () => {
+    const a = xlsxFile('a.xlsx', { Data: [['Mã NV'], [1], [2]] });
+    const b = xlsxFile('b.xlsx', { Data: [['Mã NV'], [3], [2]] });
+    const { report } = readSlot(uniqueOnly('integer'), [a, b]);
+    expect(report.issues.map((i) => i.params.value)).toEqual(['2']);
   });
 });
