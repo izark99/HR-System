@@ -87,6 +87,18 @@
 
 ## Flow & xử lý
 
+2026-10-26 13:08 - Định dạng mã (VD Mã NV) không fix cứng trong code: là cấu hình của Admin (rule regex tùy chọn trên từng cột của input slot). Flow nghiệm thu chỉ yêu cầu Mã NV bắt buộc + không trùng, không giới hạn độ dài.
+
+2026-10-26 13:08 - Hủy khi dữ liệu lớn: chấp nhận khởi động lại worker và kiểm tra lại file (khoảng 6–8 giây) cho MVP.
+
+2026-10-26 13:08 - Trang chạy flow có nút "Xem kết quả" khi kết quả của lần chạy trước còn trong bộ nhớ.
+
+2026-10-26 13:08 - Mã trùng giữa 2 file: đánh dấu lỗi trên cả 2 file liên quan.
+
+2026-10-26 13:08 - Không nhận file CSV: bỏ `.csv` khỏi danh sách định dạng nhận của input slot (chỉ .xlsx, .xls).
+
+2026-10-26 13:08 - Tham số kiểu ngày trong tên file kết quả định dạng `YYYY-MM-DD`.
+
 2026-10-26 12:37 - Tham số kiểu tháng trong tên file kết quả định dạng `YYYY-MM` (VD `DoiChieu_2026-09.xlsx`) để sắp xếp theo tên đúng thứ tự thời gian.
 
 2026-10-26 08:20 - Output: xuất Excel nhiều sheet + preview/chart trong app + đổ dữ liệu vào template .xlsx do Admin upload.

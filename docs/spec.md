@@ -115,7 +115,7 @@ Kiến trúc giữ tính **portable**: frontend là static build; backend chỉ 
 | Code editor | Monaco Editor | Highlight SQL / Python / formula, autocomplete tên cột |
 | Data grid preview | TanStack Table + virtualization | Hiển thị hàng trăm nghìn dòng mượt |
 | Chart | Apache ECharts | |
-| Đọc Excel | SheetJS (bản CE từ cdn.sheetjs.com, vendor tại `vendor/`) | Đọc .xlsx, .xls, .xlsb, .csv |
+| Đọc Excel | SheetJS (bản CE từ cdn.sheetjs.com, vendor tại `vendor/`) | Đọc .xlsx, .xls (CSV không nhận, chốt 2026-10-26) |
 | Ghi Excel | ExcelJS | Giữ style/format khi đổ vào template |
 | Engine SQL | DuckDB-WASM | Chạy trong Web Worker |
 | Engine Python | Pyodide (pandas, numpy) | Worker riêng, lazy load khi flow có node Python |
@@ -293,7 +293,7 @@ Admin khai báo **input slot** cho mỗi flow — mô tả file mà User cần u
   "key": "bang_luong",
   "label": "Bảng lương tháng",
   "required": true,
-  "accept": [".xlsx", ".xls", ".csv"],
+  "accept": [".xlsx", ".xls"],                            // không nhận CSV (chốt 2026-10-26)
   "sheet": { "mode": "byName", "value": "Luong" },        // hoặc byIndex / firstMatchingHeaders
   "headerRow": 3,                                          // header ở dòng 3
   "headerRows": 1,                                         // >1 nếu header nhiều tầng → nối tên bằng " / "
@@ -302,7 +302,7 @@ Admin khai báo **input slot** cho mỗi flow — mô tả file mà User cần u
   "unmergeCells": "fillDown",
   "columns": [
     { "key": "ma_nv", "aliases": ["Mã NV", "MSNV", "Employee ID"], "type": "string",
-      "required": true, "rules": [{ "unique": true }, { "regex": "^NV\\d{5}$" }] },
+      "required": true, "rules": [{ "unique": true }, { "regex": "<tùy Admin cấu hình>" }] },
     { "key": "luong_cb", "aliases": ["Lương CB", "Lương cơ bản"], "type": "decimal",
       "rules": [{ "min": 0 }] },
     { "key": "ngay_vao", "aliases": ["Ngày vào làm"], "type": "date",
@@ -315,6 +315,8 @@ Admin khai báo **input slot** cho mỗi flow — mô tả file mà User cần u
 
 - **Upload nhiều file vào một slot** (`multiple.enabled = true`): mỗi file được đọc và validate riêng theo cùng cấu hình, sau đó gộp dọc (union theo `key` cột). Hệ thống thêm cột hệ thống `_source_file` (tên file, chỉ tồn tại trong trình duyệt) để truy vết dòng lỗi về đúng file. Rule `unique` được kiểm tra trên **dữ liệu sau khi gộp**.
 - Dòng không phải dữ liệu (dòng tổng cộng, dòng chữ ký…) bị loại theo `stopAt` hoặc rule `required` của cột khóa.
+- Định dạng mã (VD Mã NV) **không fix cứng trong code**: Admin tự khai báo rule `regex` (tùy chọn) cho từng cột. Flow nghiệm thu chỉ dùng `required` + `unique` cho Mã NV (chốt 2026-10-26).
+- Lỗi trùng giá trị giữa 2 file được gắn cho **cả 2 file** trong báo cáo và trạng thái từng file (chốt 2026-10-26).
 - Tách 2 khái niệm cho mỗi cột:
   - `presence`: `required` (thiếu cột trong file → lỗi) | `optional`.
   - `required` (giá trị): ô trống → lỗi. Nếu không bắt buộc, ô trống nhận `defaultValue` (VD `0`) hoặc `null`.
@@ -350,7 +352,7 @@ Admin khai báo **input slot** cho mỗi flow — mô tả file mà User cần u
   - **Ô đơn** (scalar): `{ "cell": "B2", "value": "=PARAM(\"ky_luong\")" }` hoặc lấy giá trị tổng hợp từ một bảng.
   - **Vùng bảng** (table range): `{ "sheet": "BaoCao", "anchor": "A6", "source": "node_id", "columns": ["ma_nv", "ho_ten", …], "insertRows": true }` → chèn dòng, giữ style của dòng mẫu, tự mở rộng công thức tổng bên dưới.
   - **Named range / Excel Table** có sẵn trong template.
-- Tên file output cấu hình được: `DoiChieu_{ky_luong}_{chi_nhanh}.xlsx`. Tham số kiểu tháng được định dạng `YYYY-MM` trong tên file (VD `DoiChieu_2026-09.xlsx`) (chốt 2026-10-26).
+- Tên file output cấu hình được: `DoiChieu_{ky_luong}_{chi_nhanh}.xlsx`. Tham số kiểu tháng định dạng `YYYY-MM`, kiểu ngày `YYYY-MM-DD` trong tên file (VD `DoiChieu_2026-09.xlsx`) (chốt 2026-10-26).
 
 ---
 
@@ -403,7 +405,7 @@ Mỗi node type được định nghĩa bằng một **plugin** gồm: Zod schem
 - **Schema inference**: canvas hiển thị danh sách cột ở mỗi node → autocomplete trong editor, phát hiện lỗi tên cột ngay khi thiết kế.
 - **Preview từng node** trong Designer với file mẫu (chỉ nằm trong RAM của Admin, không upload).
 - **Giới hạn bộ nhớ**: WASM 32-bit ≈ 4GB/tab. Mục tiêu thiết kế: ổn định tới **1 triệu dòng × 50 cột**. Flow cảnh báo khi file vượt ngưỡng do Admin cấu hình (`maxRows` mỗi slot).
-- Với file rất lớn, khuyến nghị dùng CSV (đọc stream trực tiếp bằng DuckDB, không qua SheetJS).
+- File rất lớn: tối ưu đọc .xlsx theo luồng (streaming) sẽ xem xét khi tích hợp DuckDB; hiện không nhận CSV (chốt 2026-10-26).
 
 ---
 
