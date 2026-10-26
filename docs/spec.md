@@ -523,7 +523,10 @@ HR-System/
 │  └─ seed.sql
 ├─ workers/keep-alive/            # Cloudflare Cron Worker
 ├─ e2e/                           # Playwright
-└─ spec.md
+├─ docs/
+│  ├─ spec.md                     # đặc tả (file này)
+│  └─ MEMORY.md                   # nhật ký quyết định
+└─ CLAUDE.md                      # hướng dẫn cho Claude (phải nằm ở root)
 ```
 
 Package manager: pnpm workspace.

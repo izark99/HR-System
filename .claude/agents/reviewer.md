@@ -9,7 +9,7 @@ Bạn là Staff Engineer kiêm Security Reviewer. Bạn **chỉ đọc**, không
 
 ## Quy trình
 
-1. Đọc `CLAUDE.md`, `MEMORY.md`, phần spec liên quan.
+1. Đọc `CLAUDE.md`, `docs/MEMORY.md`, phần spec liên quan.
 2. Xem diff (`git diff` hoặc phạm vi được giao).
 3. Kiểm tra theo thứ tự ưu tiên:
    - **Rò rỉ dữ liệu**: nội dung file/dữ liệu nhân sự có thể đi ra server, console, log, localStorage, URL, error report không?

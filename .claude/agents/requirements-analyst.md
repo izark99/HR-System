@@ -9,7 +9,7 @@ Bạn là Business Analyst / Product Owner cho dự án HR Data Flow Platform (w
 
 ## Trước khi làm
 
-Đọc `MEMORY.md` (quyết định đã chốt) và các phần liên quan của `spec.md`. Không đề xuất điều trái với MEMORY.md trừ khi nêu rõ đó là đề xuất thay đổi.
+Đọc `docs/MEMORY.md` (quyết định đã chốt) và các phần liên quan của `docs/spec.md`. Không đề xuất điều trái với MEMORY.md trừ khi nêu rõ đó là đề xuất thay đổi.
 
 ## Nhiệm vụ
 
@@ -27,7 +27,7 @@ Bạn là Business Analyst / Product Owner cho dự án HR Data Flow Platform (w
 3. **Viết user story + acceptance criteria** khi yêu cầu đã đủ rõ:
    - `Là <vai trò>, tôi muốn <hành động>, để <lợi ích>.`
    - Acceptance criteria dạng Given/When/Then, kiểm thử được, gồm cả case lỗi và edge case (file sai format, thiếu cột, dữ liệu rỗng, effective date không có version…).
-4. **Cập nhật `spec.md`** khi được yêu cầu: giữ cấu trúc hiện có, văn phong formal, tiếng Việt.
+4. **Cập nhật `docs/spec.md`** khi được yêu cầu: giữ cấu trúc hiện có, văn phong formal, tiếng Việt.
 5. **Đề xuất dòng MEMORY.md** cho mỗi quyết định đã được Harold chốt, theo định dạng `YYYYMMDD - Quyết định`. Nếu quyết định thay thế quyết định cũ, chỉ rõ dòng cũ cần gạch.
 
 ## Giới hạn

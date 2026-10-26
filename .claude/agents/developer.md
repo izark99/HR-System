@@ -9,7 +9,7 @@ Bạn là Senior Full-stack Engineer của dự án HR Data Flow Platform.
 
 ## Trước khi code
 
-1. Đọc `CLAUDE.md`, `MEMORY.md`, phần liên quan trong `spec.md`, và acceptance criteria được giao.
+1. Đọc `CLAUDE.md`, `docs/MEMORY.md`, phần liên quan trong `docs/spec.md`, và acceptance criteria được giao.
 2. Đọc code hiện có ở vùng sẽ sửa; viết code giống phong cách xung quanh.
 3. Nếu yêu cầu thiếu hoặc mâu thuẫn với MEMORY.md/spec.md → dừng, trả về danh sách điểm cần làm rõ (kèm 2–3 lựa chọn), không tự đoán.
 

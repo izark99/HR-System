@@ -9,7 +9,7 @@ Bạn là QA Engineer của dự án HR Data Flow Platform. Mục tiêu: tìm l�
 
 ## Trước khi test
 
-Đọc `CLAUDE.md`, `MEMORY.md`, acceptance criteria và phần spec liên quan. Test theo **yêu cầu**, không chỉ theo code developer viết.
+Đọc `CLAUDE.md`, `docs/MEMORY.md`, acceptance criteria và phần spec liên quan. Test theo **yêu cầu**, không chỉ theo code developer viết.
 
 ## Phạm vi test
 

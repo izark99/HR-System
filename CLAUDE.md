@@ -1,22 +1,22 @@
 # CLAUDE.md — HR Data Flow Platform
 
-Webapp nội bộ xử lý dữ liệu Excel **trực tiếp trên trình duyệt** theo các flow do Admin cấu hình. Chi tiết: `spec.md`.
+Webapp nội bộ xử lý dữ liệu Excel **trực tiếp trên trình duyệt** theo các flow do Admin cấu hình. Chi tiết: `docs/spec.md`.
 
 ## Nguồn sự thật (đọc trước khi làm bất kỳ việc gì)
 
-1. `MEMORY.md` — các quyết định đã chốt. **Quyết định trong MEMORY.md thắng mọi giả định.**
-2. `spec.md` — đặc tả chi tiết.
+1. `docs/MEMORY.md` — các quyết định đã chốt. **Quyết định trong MEMORY.md thắng mọi giả định.**
+2. `docs/spec.md` — đặc tả chi tiết.
 3. Code hiện có.
 
 Nếu yêu cầu mới mâu thuẫn với MEMORY.md hoặc spec.md → dừng lại, nêu rõ mâu thuẫn và hỏi Harold, không tự quyết.
 
-@MEMORY.md
+@docs/MEMORY.md
 
 ## Quy tắc cập nhật MEMORY.md (bắt buộc)
 
 - Mỗi khi Harold chốt một quyết định (phạm vi, kiến trúc, UX, quy tắc nghiệp vụ, công nghệ) → thêm ngay 1 dòng vào đúng nhóm: `YYYYMMDD - Quyết định` (ngày thực tế, viết ngắn, rõ, không mơ hồ).
 - Khi quyết định thay đổi → **không xóa**; gạch dòng cũ `~~...~~ → thay bởi YYYYMMDD` và thêm dòng mới.
-- Cập nhật `spec.md` cho khớp trong cùng commit.
+- Cập nhật `docs/spec.md` cho khớp trong cùng commit.
 - Không ghi vào MEMORY.md những điều chưa được Harold xác nhận.
 
 ## Cách giao tiếp với Harold
@@ -60,25 +60,27 @@ Nếu yêu cầu mới mâu thuẫn với MEMORY.md hoặc spec.md → dừng l�
 ## Stack & quy ước code
 
 - TypeScript strict, React 19, Vite, Tailwind v4, shadcn/ui, TanStack Router/Query, Zod, @xyflow/react, DuckDB-WASM, Pyodide, SheetJS (đọc), ExcelJS (ghi), i18next, Supabase.
-- pnpm workspace. Cấu trúc thư mục theo `spec.md` §19.
+- pnpm workspace. Cấu trúc thư mục theo `docs/spec.md` §19.
 - Mỗi node type là 1 plugin trong `apps/web/src/engine/nodes/` (Zod schema + form + compile/execute + suy diễn schema output).
 - Text UI luôn qua i18next (`vi` mặc định), không hard-code chuỗi tiếng Việt trong component.
 - Tên biến/hàm bằng tiếng Anh; comment ngắn, chỉ khi cần giải thích "tại sao".
 
 ## Lệnh thường dùng
 
-> Cập nhật khi đã scaffold dự án.
+Yêu cầu: Node ≥ 22, pnpm 10 (`corepack enable`).
 
 ```bash
-pnpm install
-pnpm dev          # chạy app
-pnpm lint
-pnpm typecheck
-pnpm test         # Vitest
-pnpm test:e2e     # Playwright
-supabase start    # Supabase local
-supabase test db  # test RLS (pgTAP)
+pnpm install          # cài dependency cho toàn workspace
+pnpm dev              # chạy app (apps/web, Vite)
+pnpm build            # build mọi package có script build
+pnpm lint             # ESLint (flat config, type-aware) toàn repo
+pnpm typecheck        # tsc --noEmit cho từng package
+pnpm test             # Vitest cho từng package (engine chạy trong Node)
+pnpm format           # Prettier ghi đè; pnpm format:check để kiểm tra (CI dùng)
+pnpm --filter @hrflow/web test -- excel-reader   # chạy 1 file test
 ```
+
+Chưa có (các bước sau): `pnpm test:e2e` (Playwright), `supabase start`, `supabase test db` (pgTAP).
 
 ## Git
 

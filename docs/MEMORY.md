@@ -2,9 +2,9 @@
 
 > Quy tắc ghi:
 > - Mỗi quyết định ghi 1 dòng theo định dạng: `YYYYMMDD - Quyết định`.
-> - Chỉ ghi quyết định **đã chốt** với Harold. Ý tưởng chưa chốt thì ghi vào mục "Câu hỏi mở" trong `spec.md`.
+> - Chỉ ghi quyết định **đã chốt** với Harold. Ý tưởng chưa chốt thì ghi vào mục "Câu hỏi mở" trong `docs/spec.md`.
 > - **Không xóa** quyết định cũ. Khi thay đổi: thêm dòng mới, đánh dấu dòng cũ bằng `~~gạch ngang~~` kèm `→ thay bởi YYYYMMDD`.
-> - Quyết định mới nhất đặt ở cuối từng nhóm. Khi đổi quyết định, cập nhật luôn `spec.md` cho khớp.
+> - Quyết định mới nhất đặt ở cuối từng nhóm. Khi đổi quyết định, cập nhật luôn `docs/spec.md` cho khớp.
 
 ## Phạm vi & sản phẩm
 
@@ -63,4 +63,5 @@
 20261026 - Stack: TypeScript + React + Vite + Tailwind + shadcn/ui; Harold tự maintain.
 20261026 - Giao diện tiếng Việt mặc định, có cấu trúc i18n để thêm tiếng Anh.
 20261026 - Dùng CLAUDE.md (hướng dẫn dự án) + MEMORY.md (nhật ký quyết định) + team agent trong `.claude/agents/`.
+20261026 - Tài liệu dự án đặt trong `docs/` (spec.md, MEMORY.md); CLAUDE.md và README.md giữ ở root.
 20261026 - Team agent gồm: requirements-analyst (viết yêu cầu), developer (code), tester (test), reviewer (review code & bảo mật, read-only).
