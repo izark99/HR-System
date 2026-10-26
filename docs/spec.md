@@ -136,7 +136,8 @@ Kiến trúc giữ tính **portable**: frontend là static build; backend chỉ 
 - Chính sách mật khẩu: tối thiểu 10 ký tự, kiểm tra danh sách mật khẩu yếu (leaked password protection của Supabase nếu có trên free tier).
 - Admin có thể **khóa** (disable) tài khoản; tài khoản bị khóa không đăng nhập được, session hiện tại bị thu hồi.
 - Không có 2FA (theo yêu cầu). Có thể bổ sung TOTP sau (Supabase hỗ trợ sẵn).
-- Session: access token ngắn hạn + refresh token, tự đăng xuất sau 8 giờ không hoạt động (cấu hình được).
+- Session: access token ngắn hạn + refresh token, lưu trong `sessionStorage` (đóng tab là phải đăng nhập lại). Tự đăng xuất sau 8 giờ không thao tác, đếm phía client (bước 3) (chốt 2026-10-26).
+- Admin được tự reset mật khẩu, tự khóa, tự đổi role của mình; Admin thấy và chạy mọi flow đã publish (chốt 2026-10-26).
 
 ---
 
@@ -595,9 +596,9 @@ Package manager: pnpm workspace.
 | Q2 | IT/Pháp chế công ty có yêu cầu gì khi dùng cloud nước ngoài cho metadata không? | Hosting |
 | Q3 | Số lượng user dự kiến? | Free tier (Supabase Free: 50k MAU — dư) |
 | Q4 | Có cần Admin "giả lập" (impersonate) quyền User để kiểm tra không? | Phân quyền |
-| Q5 | Phiên đăng nhập lưu ở `sessionStorage` (đóng tab là đăng xuất, mỗi tab đăng nhập riêng — đang làm) hay `localStorage` (giữ đăng nhập giữa các tab)? | Bảo mật / tiện dụng |
-| Q6 | Admin thấy và chạy được mọi flow đã publish mà không cần tự gán (đang làm), hay chỉ flow được gán như User? | Phân quyền |
-| Q7 | Tự đăng xuất sau 8 giờ không hoạt động (§6): Supabase Free không có "inactivity timeout"; làm phía client (đếm thời gian không thao tác) ở bước sau? | Bảo mật |
+| ~~Q5~~ | Đã chốt 2026-10-26: `sessionStorage` | — |
+| ~~Q6~~ | Đã chốt 2026-10-26: Admin thấy/chạy mọi flow đã publish | — |
+| ~~Q7~~ | Đã chốt 2026-10-26: tự đăng xuất sau 8 giờ không thao tác, làm phía client ở bước 3 | — |
 
 ---
 

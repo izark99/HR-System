@@ -85,6 +85,14 @@
 
 ## Xác thực & phân quyền
 
+2026-10-26 18:09 - Admin được tự reset mật khẩu, tự khóa, tự đổi role của chính mình (không chặn). Nếu Admin duy nhất tự khóa/hạ quyền, khôi phục bằng SQL trên Supabase dashboard.
+
+2026-10-26 18:09 - Tự đăng xuất sau 8 giờ không thao tác: làm phía trình duyệt ở bước 3.
+
+2026-10-26 18:09 - Admin thấy và chạy được mọi flow đã publish mà không cần tự gán cho mình.
+
+2026-10-26 18:09 - Phiên đăng nhập lưu trong `sessionStorage` (đóng tab là phải đăng nhập lại).
+
 2026-10-26 08:20 - Chỉ Admin được viết code SQL/Python.
 
 2026-10-26 08:20 - User chỉ chạy flow (chọn flow → nhập tham số → upload → chạy → xem trước → tải về), không được chỉnh/clone flow.
