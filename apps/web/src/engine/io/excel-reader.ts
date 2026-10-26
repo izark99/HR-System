@@ -383,38 +383,69 @@ function startsWith(bytes: Uint8Array, signature: readonly number[]): boolean {
   return signature.every((b, i) => bytes[i] === b);
 }
 
-/** First non-blank byte (after an optional UTF-8 BOM) is "<": an HTML/XML spreadsheet export. */
+const UTF8_BOM = [0xef, 0xbb, 0xbf];
+const UTF16LE_BOM = [0xff, 0xfe];
+const UTF16BE_BOM = [0xfe, 0xff];
+const isSpaceUnit = (c: number) => c === 0x20 || c === 0x09 || c === 0x0a || c === 0x0d;
+
+/**
+ * First non-blank character is "<": an HTML/XML spreadsheet export ("Excel" files many HR systems
+ * produce). Plain UTF-8, UTF-8 with BOM and UTF-16 (LE/BE, with BOM) are recognised.
+ */
 function looksLikeMarkup(bytes: Uint8Array): boolean {
-  let i = startsWith(bytes, [0xef, 0xbb, 0xbf]) ? 3 : 0;
-  const end = Math.min(bytes.length, i + 512);
-  while (
-    i < end &&
-    (bytes[i] === 0x20 || bytes[i] === 0x09 || bytes[i] === 0x0a || bytes[i] === 0x0d)
-  )
-    i++;
+  const LIMIT = 512;
+  if (startsWith(bytes, UTF16LE_BOM) || startsWith(bytes, UTF16BE_BOM)) {
+    const le = bytes[0] === 0xff;
+    const end = Math.min(bytes.length - 1, 2 + LIMIT * 2);
+    for (let i = 2; i < end; i += 2) {
+      const unit = le ? bytes[i]! | (bytes[i + 1]! << 8) : (bytes[i]! << 8) | bytes[i + 1]!;
+      if (!isSpaceUnit(unit)) return unit === 0x3c;
+    }
+    return false;
+  }
+  let i = startsWith(bytes, UTF8_BOM) ? 3 : 0;
+  const end = Math.min(bytes.length, i + LIMIT);
+  while (i < end && isSpaceUnit(bytes[i]!)) i++;
   return bytes[i] === 0x3c;
 }
 
 /**
  * SheetJS falls back to reading unknown bytes as plain text (one "Sheet1"), which would surface as
  * a misleading "sheet not found". Check the container format first so empty/corrupt files are
- * reported as unreadable. `.xls` also covers the HTML/XML "Excel" exports many HR systems produce.
+ * reported as unreadable. The extension (already checked against the slot's `accept`) does not
+ * decide the parser: SheetJS detects the format from the content, so an OLE workbook named
+ * .xlsx or an OOXML package named .xls are read fine. Plain text/CSV/TSV is always refused,
+ * whatever its extension (CSV is not accepted, MEMORY 13:08).
  */
-function hasExcelSignature(bytes: Uint8Array, ext: string): boolean {
-  if (ext === '.xlsx') return startsWith(bytes, ZIP_SIGNATURE);
-  if (ext === '.xls') {
-    return (
-      startsWith(bytes, OLE_SIGNATURE) || startsWith(bytes, ZIP_SIGNATURE) || looksLikeMarkup(bytes)
-    );
-  }
-  return false;
+function hasExcelSignature(bytes: Uint8Array): boolean {
+  return (
+    startsWith(bytes, ZIP_SIGNATURE) || startsWith(bytes, OLE_SIGNATURE) || looksLikeMarkup(bytes)
+  );
+}
+
+/**
+ * A markup export with a byte-order mark, decoded to text. SheetJS mis-decodes UTF-16 and treats
+ * "BOM + line break + <html>" as delimited text, so these are handed over as a string instead.
+ */
+function decodeBomMarkup(bytes: Uint8Array): string | null {
+  const encoding = startsWith(bytes, UTF16LE_BOM)
+    ? 'utf-16le'
+    : startsWith(bytes, UTF16BE_BOM)
+      ? 'utf-16be'
+      : startsWith(bytes, UTF8_BOM)
+        ? 'utf-8'
+        : null;
+  if (!encoding || !looksLikeMarkup(bytes)) return null;
+  // TextDecoder drops the BOM; leading blanks would make SheetJS sniff plain text.
+  return new TextDecoder(encoding).decode(bytes).trimStart();
 }
 
 function parseWorkbook(file: SourceFile): XLSX.WorkBook {
   const bytes = file.data instanceof Uint8Array ? file.data : new Uint8Array(file.data);
-  if (!hasExcelSignature(bytes, extensionOf(file.name))) throw new Error('not an Excel file');
-  return XLSX.read(bytes, {
-    type: 'array',
+  if (!hasExcelSignature(bytes)) throw new Error('not an Excel file');
+  const text = decodeBomMarkup(bytes);
+  return XLSX.read(text ?? bytes, {
+    type: text === null ? 'array' : 'string',
     dense: true,
     cellDates: false, // dates as Excel serials; converted by the column's date rules
     cellFormula: false,

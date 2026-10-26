@@ -11,6 +11,8 @@ import {
   LockIcon,
   PageHeader,
 } from '../../components/ui';
+import { formatMonth } from '../../lib/format';
+import { asOfParam } from './as-of';
 import { ParamsCard } from './components/ParamsCard';
 import { RunProgress } from './components/RunProgress';
 import { SlotCard } from './components/SlotCard';
@@ -32,11 +34,83 @@ function runLabel(state: SessionState, ready: Readiness, t: TFunction) {
     return t('run.actions.running');
   }
   if (state.restoreFailed) return t('run.actions.restoreFailed');
+  if (state.versionCheck === 'resolving') return t('run.actions.resolvingVersion');
+  if (state.versionCheck === 'none') return t('run.actions.noVersion');
+  if (state.versionCheck === 'error') return t('run.actions.versionError');
   if (ready.validating || state.restoring) return t('run.actions.validating');
   if (ready.errors > 0) return t('run.actions.fixErrors', { count: ready.errors });
   if (ready.missingSlots.length > 0) return t('run.actions.needFiles');
   if (ready.missingParams.length > 0) return t('run.actions.needParams');
   return t('run.actions.run');
+}
+
+/** "dd/MM/yyyy" from an ISO date. */
+function formatIsoDate(iso: string): string {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso);
+  return m ? `${m[3]}/${m[2]}/${m[1]}` : iso;
+}
+
+/** The day before an exclusive upper bound, as dd/MM/yyyy. */
+function lastDay(exclusiveTo: string): string {
+  const d = new Date(`${exclusiveTo}T00:00:00Z`);
+  d.setUTCDate(d.getUTCDate() - 1);
+  return formatIsoDate(d.toISOString().slice(0, 10));
+}
+
+/** Which period the as-of date comes from, for the callout text. */
+function periodText(state: SessionState, t: TFunction): string {
+  const p = state.flow ? asOfParam(state.flow.params) : undefined;
+  const v = p ? String(state.params[p.key] ?? '') : '';
+  if (!p || !v) return t('run.version.today');
+  return p.type === 'month'
+    ? t('run.version.period', { period: formatMonth(v) })
+    : t('run.version.date', { date: formatIsoDate(v) });
+}
+
+/** "Phiên bản áp dụng: v3, hiệu lực từ 01/09/2026, theo kỳ đã chọn." (wireframe, spec §15.1). */
+function VersionCallout({ state, onRetry }: { state: SessionState; onRetry: () => void }) {
+  const { t } = useTranslation();
+  const v = state.version;
+  if (!v) return null;
+  const className = 'flex-[1_1_320px]';
+  if (state.versionCheck === 'resolving') {
+    return (
+      <Callout tone="blue" label={t('run.version.label')} role="status" className={className}>
+        {t('run.version.resolving')}
+      </Callout>
+    );
+  }
+  if (state.versionCheck === 'none') {
+    return (
+      <Callout tone="coral" label={t('run.version.noneLabel')} role="alert" className={className}>
+        {t('run.version.none', { when: periodText(state, t) })}
+      </Callout>
+    );
+  }
+  if (state.versionCheck === 'error') {
+    return (
+      <div className={cx('flex flex-col gap-2', className)}>
+        <Callout tone="coral" label={t('run.version.errorLabel')} role="alert">
+          {t('run.version.error')}
+        </Callout>
+        <Button className="self-start" onClick={onRetry}>
+          {t('run.version.retry')}
+        </Button>
+      </div>
+    );
+  }
+  const p = state.flow ? asOfParam(state.flow.params) : undefined;
+  const chosen = p && String(state.params[p.key] ?? '') !== '';
+  return (
+    <Callout tone="blue" label={t('run.version.label')} role="status" className={className}>
+      {t(v.effectiveTo ? 'run.version.rangeTo' : 'run.version.range', {
+        version: `v${v.versionNo}`,
+        from: formatIsoDate(v.effectiveFrom),
+        to: v.effectiveTo ? lastDay(v.effectiveTo) : '',
+      })}
+      {chosen ? t('run.version.forPeriod') : t('run.version.forToday')}
+    </Callout>
+  );
 }
 
 export function useOpenFlow(flowCode: string) {
@@ -87,6 +161,16 @@ export function RunPage() {
 
       {state.load === 'loading' && <p className="m-0 text-muted">{t('common.loading')}</p>}
       {state.load === 'notFound' && <Callout tone="coral" label={t('run.notFound')} role="alert" />}
+      {state.load === 'error' && (
+        <div className="flex flex-col gap-3">
+          <Callout tone="coral" label={t('run.loadErrorLabel')} role="alert">
+            {t('run.loadError')}
+          </Callout>
+          <Button className="self-start" onClick={() => void store.open(flowCode)}>
+            {t('run.version.retry')}
+          </Button>
+        </div>
+      )}
       {state.load === 'invalid' && (
         <Callout tone="coral" label={t('run.loadFailed')} role="alert">
           {state.problems.join('; ')}
@@ -115,6 +199,7 @@ export function RunPage() {
             values={state.params}
             disabled={busy}
             onChange={(k, v) => store.setParam(k, v)}
+            aside={<VersionCallout state={state} onRetry={() => store.retryVersion()} />}
           />
 
           <div className="grid grid-cols-1 gap-5 md:grid-cols-2">

@@ -96,5 +96,11 @@
     "severity_warning": "Cảnh báo",
     "severity_skipped": "Bỏ qua",
     "fileName": "BaoCaoKiemTra.xlsx"
+  },
+  "flow": {
+    "migration": {
+      "acceptCsvRemoved": "Mục upload \"{{slot}}\": đã bỏ định dạng .csv (hệ thống không còn nhận CSV).",
+      "acceptCsvOnlyReplaced": "Mục upload \"{{slot}}\": chỉ nhận .csv nên đã chuyển sang nhận .xlsx, .xls (hệ thống không còn nhận CSV)."
+    }
   }
 }

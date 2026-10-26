@@ -25,7 +25,7 @@ describe('engine i18n', () => {
     for (const file of sourceFiles(ENGINE_DIR)) {
       const src = readFileSync(file, 'utf8');
       for (const m of src.matchAll(
-        /'((?:validation|compare|skipped|executor|report)\.[A-Za-z_.]+)'/g,
+        /'((?:validation|compare|skipped|executor|report|flow)\.[A-Za-z_.]+)'/g,
       ))
         keys.add(m[1]!);
     }

@@ -1,7 +1,7 @@
 # Cloudflare Pages security headers (spec §9.5, §17).
 #
-# connect-src: ONLY the app itself + the Supabase project. Replace YOUR-PROJECT-REF with the real
-# project ref (same domain as VITE_SUPABASE_URL) before deploying. wss:// is for Supabase Realtime.
+# connect-src: ONLY the app itself + the Supabase project rzakjtgvbyxqsmbpcomw (same domain as
+# VITE_SUPABASE_URL; update both if the project ever changes). wss:// is for Supabase Realtime.
 # This is what prevents any code (incl. admin SQL/Python) from sending data elsewhere.
 #
 # script-src 'wasm-unsafe-eval': required to instantiate WebAssembly (DuckDB-WASM, Pyodide).
@@ -11,7 +11,7 @@
 #   Inline *scripts* stay blocked.
 # font-src 'self': Be Vietnam Pro is self-hosted (bundled woff2); no third-party font origin.
 /*
-  Content-Security-Policy: default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; worker-src 'self' blob:; connect-src 'self' https://YOUR-PROJECT-REF.supabase.co wss://YOUR-PROJECT-REF.supabase.co; img-src 'self' data: blob:; style-src 'self' 'unsafe-inline'; font-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'
+  Content-Security-Policy: default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; worker-src 'self' blob:; connect-src 'self' https://rzakjtgvbyxqsmbpcomw.supabase.co wss://rzakjtgvbyxqsmbpcomw.supabase.co; img-src 'self' data: blob:; style-src 'self' 'unsafe-inline'; font-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'
   X-Content-Type-Options: nosniff
   X-Frame-Options: DENY
   Referrer-Policy: no-referrer

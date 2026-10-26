@@ -1,9 +1,91 @@
 import { Link } from '@tanstack/react-router';
 import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { buttonClass, Card, cx, PageHeader } from '../../components/ui';
-import type { FlowSummary } from './flow-source';
+import { buttonClass, Card, Chip, cx, PageHeader, type Tone } from '../../components/ui';
+import { formatMonth } from '../../lib/format';
+import { todayIso } from './as-of';
+import type { FlowSummary, RecentRun } from './flow-source';
 import { useRunStore } from './run-context';
+
+const STATUS_TONE: Record<RecentRun['status'], Tone> = {
+  succeeded: 'teal',
+  failed: 'coral',
+  cancelled: 'neutral',
+};
+
+function formatDateTime(iso: string): string {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return iso;
+  const p = (n: number) => String(n).padStart(2, '0');
+  return `${p(d.getDate())}/${p(d.getMonth() + 1)}/${d.getFullYear()} ${p(d.getHours())}:${p(d.getMinutes())}`;
+}
+
+function paramText(p: RecentRun['params'][number]): string {
+  const value =
+    p.type === 'month'
+      ? formatMonth(p.value)
+      : p.type === 'date'
+        ? p.value.replace(/^(\d{4})-(\d{2})-(\d{2})$/, '$3/$2/$1')
+        : p.value;
+  return `${p.label}: ${value}`;
+}
+
+function RecentRuns({ runs, failed }: { runs: RecentRun[] | null; failed: boolean }) {
+  const { t } = useTranslation();
+  return (
+    <Card aria-labelledby="recent-runs" className="flex flex-col gap-3.5">
+      <h2 id="recent-runs" className="m-0 text-section text-ink">
+        {t('recent.title')}
+      </h2>
+      {failed && <p className="m-0 text-coral-text">{t('recent.loadError')}</p>}
+      {!failed && runs === null && <p className="m-0 text-muted">{t('common.loading')}</p>}
+      {runs !== null && runs.length === 0 && (
+        <p className="m-0 rounded-callout bg-neutral px-4 py-6 text-center text-label text-muted">
+          {t('recent.empty')}
+        </p>
+      )}
+      {runs !== null && runs.length > 0 && (
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-160 border-collapse text-label text-body">
+            <thead>
+              <tr className="border-b border-line text-left text-muted">
+                <th scope="col" className="px-2 py-2.5 font-semibold">
+                  {t('recent.col.time')}
+                </th>
+                <th scope="col" className="px-2 py-2.5 font-semibold">
+                  {t('recent.col.flow')}
+                </th>
+                <th scope="col" className="px-2 py-2.5 font-semibold">
+                  {t('recent.col.params')}
+                </th>
+                <th scope="col" className="px-2 py-2.5 font-semibold">
+                  {t('recent.col.version')}
+                </th>
+                <th scope="col" className="px-2 py-2.5 font-semibold">
+                  {t('recent.col.status')}
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              {runs.map((r) => (
+                <tr key={r.id} className="border-b border-line last:border-b-0">
+                  <td className="px-2 py-3 whitespace-nowrap">{formatDateTime(r.createdAt)}</td>
+                  <td className="px-2 py-3">{r.flowName}</td>
+                  <td className="px-2 py-3">{r.params.map(paramText).join(', ') || '-'}</td>
+                  <td className="px-2 py-3">v{r.versionNo}</td>
+                  <td className="px-2 py-3">
+                    <Chip tone={STATUS_TONE[r.status]}>{t(`recent.status.${r.status}`)}</Chip>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+      <p className="m-0 text-small text-muted">{t('recent.note')}</p>
+    </Card>
+  );
+}
 
 function normalize(s: string): string {
   return s.normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/đ/g, 'd').replace(/Đ/g, 'D').toLowerCase();
@@ -16,13 +98,22 @@ export function FlowListPage() {
   const [failed, setFailed] = useState(false);
   const [query, setQuery] = useState('');
   const [category, setCategory] = useState<string | null>(null);
+  // Without run history (bundled flows) the card shows its empty state right away.
+  const [runs, setRuns] = useState<RecentRun[] | null>(() => (source.recentRuns ? null : []));
+  const [runsFailed, setRunsFailed] = useState(false);
 
   useEffect(() => {
     let alive = true;
-    source.list().then(
+    source.list(todayIso()).then(
       (list) => alive && setFlows(list),
       () => alive && setFailed(true),
     );
+    if (source.recentRuns) {
+      source.recentRuns(10).then(
+        (list) => alive && setRuns(list),
+        () => alive && setRunsFailed(true),
+      );
+    }
     return () => {
       alive = false;
     };
@@ -50,6 +141,12 @@ export function FlowListPage() {
           className="flex min-h-target items-center rounded-control bg-teal-tint px-3.5 text-label font-bold text-teal-strong no-underline"
         >
           {t('nav.runFlows')}
+        </Link>
+        <Link
+          to="/change-password"
+          className="flex min-h-target items-center rounded-control px-3.5 text-label font-medium text-body no-underline hover:bg-teal-tint hover:text-teal-strong"
+        >
+          {t('nav.changePassword')}
         </Link>
       </nav>
 
@@ -123,7 +220,7 @@ export function FlowListPage() {
                 <p className="m-0 text-label text-muted">{f.description}</p>
                 <p className="m-0 text-small text-muted">
                   {t('flows.inputs', { count: f.inputCount })}
-                  {f.versionLabel ? ` · ${f.versionLabel}` : ''}
+                  {f.versionLabel ? ` · ${t('flows.version', { version: f.versionLabel })}` : ''}
                 </p>
                 <Link
                   to="/run/$flowCode"
@@ -138,15 +235,7 @@ export function FlowListPage() {
           ))}
         </ul>
 
-        <Card aria-labelledby="recent-runs" className="flex flex-col gap-3.5">
-          <h2 id="recent-runs" className="m-0 text-section text-ink">
-            {t('recent.title')}
-          </h2>
-          <p className="m-0 rounded-callout bg-neutral px-4 py-6 text-center text-label text-muted">
-            {t('recent.empty')}
-          </p>
-          <p className="m-0 text-small text-muted">{t('recent.note')}</p>
-        </Card>
+        <RecentRuns runs={runs} failed={runsFailed} />
       </main>
     </div>
   );

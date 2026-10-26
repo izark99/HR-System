@@ -1,17 +1,22 @@
 import type { FlowDefinition } from '@hrflow/flow-schema';
-import type {
-  EngineErrorInfo,
-  FilterOption,
-  ParamValues,
-  RowQuery,
-  RowPage,
-  RunProgressEvent,
-  RunSummary,
-  SlotValidation,
+import {
+  ENGINE_CRASHED_KEY,
+  type EngineErrorInfo,
+  type FilterOption,
+  type LoadFlowResult,
+  type ParamValues,
+  type RowQuery,
+  type RowPage,
+  type RunProgressEvent,
+  type RunSummary,
+  type SlotValidation,
 } from '../../engine/protocol';
+import type { RunLogStatus } from '../../lib/database.types';
 import { saveFile } from '../../lib/download';
 import { EngineClient } from './engine-client';
-import type { FlowSource, FlowSummary } from './flow-source';
+import { asOfFromParams, todayIso } from './as-of';
+import type { FlowSource, FlowSummary, FlowVersionInfo, LoadedFlow } from './flow-source';
+import { buildRunLog, type RunLogger } from './run-log';
 
 /**
  * State of the run wizard for the open flow. Files stay as `File` handles on the main thread
@@ -50,7 +55,13 @@ export interface RunState {
   params: ParamValues;
 }
 
-export type LoadStatus = 'idle' | 'loading' | 'ready' | 'notFound' | 'invalid';
+export type LoadStatus = 'idle' | 'loading' | 'ready' | 'notFound' | 'invalid' | 'error';
+
+/**
+ * Version resolution for the as-of date (spec §14.2). `none`: no published version is effective
+ * on that date (Run blocked); `error`: the server could not be asked (Run blocked, retry).
+ */
+export type VersionCheck = 'ok' | 'resolving' | 'none' | 'error';
 
 export interface SessionState {
   code: string | null;
@@ -65,6 +76,11 @@ export interface SessionState {
   restoring: boolean;
   /** The fresh worker could not be prepared after a hard cancel; the User must retry. */
   restoreFailed: boolean;
+  /** As-of date (YYYY-MM-DD) the version was resolved for. */
+  asOf: string;
+  /** Version in use (null for bundled flows). */
+  version: FlowVersionInfo | null;
+  versionCheck: VersionCheck;
 }
 
 const IDLE_RUN: RunState = { status: 'idle', nodes: [], error: null, summary: null, params: {} };
@@ -80,13 +96,34 @@ const INITIAL: SessionState = {
   run: IDLE_RUN,
   restoring: false,
   restoreFailed: false,
+  asOf: '',
+  version: null,
+  versionCheck: 'ok',
 };
 
 /**
  * Generic message for unexpected failures (worker crashed / call rejected). The raw exception is
- * never stored: this state may feed a future run log, which must stay metadata only.
+ * never stored: this state feeds the run log, which must stay metadata only.
  */
-const ENGINE_CRASHED: EngineErrorInfo = { messageKey: 'executor.error.engineCrashed', params: {} };
+const ENGINE_CRASHED: EngineErrorInfo = { messageKey: ENGINE_CRASHED_KEY, params: {} };
+
+export interface RunStoreOptions {
+  /** Metadata-only run logging (Supabase); absent for bundled flows. */
+  logger?: RunLogger | null;
+  /** Today as YYYY-MM-DD (injectable for tests). */
+  today?: () => string;
+}
+
+/** What a run needs for its log entry, captured when it starts. */
+interface RunRecord {
+  token: number;
+  startedAt: number;
+  versionId: string | null;
+  flow: FlowDefinition;
+  params: ParamValues;
+  slots: { key: string; files: { name: string; size: number }[]; rows: number | null }[];
+  logged: boolean;
+}
 
 /** Grace period for a cooperative cancel before the worker is terminated. */
 const CANCEL_GRACE_MS = 400;
@@ -100,8 +137,19 @@ export class RunStore {
   /** Bumped by every open/run/restart; late worker answers with an old token are dropped. */
   private token = 0;
   private readonly slotVersions = new Map<string, number>();
+  /** Bumped by every version resolution; late answers are dropped. */
+  private versionToken = 0;
+  private currentRun: RunRecord | null = null;
+  private readonly logger: RunLogger | null;
+  private readonly today: () => string;
 
-  constructor(readonly source: FlowSource) {}
+  constructor(
+    readonly source: FlowSource,
+    options: RunStoreOptions = {},
+  ) {
+    this.logger = options.logger ?? null;
+    this.today = options.today ?? (() => todayIso());
+  }
 
   subscribe = (listener: () => void): (() => void) => {
     this.listeners.add(listener);
@@ -128,17 +176,45 @@ export class RunStore {
   }
 
   async open(code: string): Promise<void> {
-    if (this.state.code === code && this.state.load !== 'idle') return;
+    if (this.state.code === code && this.state.load !== 'idle' && this.state.load !== 'error') {
+      return;
+    }
     const token = ++this.token;
-    this.set(() => ({ ...INITIAL, code, load: 'loading' }));
-    const loaded = await this.source.get(code);
+    ++this.versionToken;
+    const asOf = this.today();
+    this.set(() => ({ ...INITIAL, code, load: 'loading', asOf }));
+    let loaded: LoadedFlow | null;
+    try {
+      loaded = await this.source.get(code, asOf);
+    } catch {
+      if (token === this.token) this.set((s) => ({ ...s, load: 'error' }));
+      return;
+    }
     if (token !== this.token) return;
     if (!loaded) {
       this.set((s) => ({ ...s, load: 'notFound' }));
       return;
     }
+    await this.applyDefinition(loaded, token, {});
+  }
+
+  /**
+   * Load a definition into the worker and (re)build the wizard state. Files of slots that still
+   * exist are kept and re-validated against the new definition; params keep their values.
+   */
+  private async applyDefinition(
+    loaded: LoadedFlow,
+    token: number,
+    keep: { params?: ParamValues; slots?: Record<string, SlotState> },
+  ): Promise<void> {
     this.definition = loaded.definition;
-    const result = await this.engine().api.loadFlow(loaded.definition);
+    let result: LoadFlowResult;
+    try {
+      result = await this.engine().api.loadFlow(loaded.definition);
+    } catch {
+      if (token === this.token) this.set((s) => ({ ...s, load: 'error' }));
+      return;
+    }
     if (token !== this.token) return;
     if (!result.ok) {
       this.set((s) => ({
@@ -151,20 +227,86 @@ export class RunStore {
     }
     const slots: Record<string, SlotState> = {};
     for (const slot of result.flow.inputSlots) {
-      slots[slot.key] = { files: [], validating: false, validation: null, failed: false };
+      slots[slot.key] = {
+        files: keep.slots?.[slot.key]?.files ?? [],
+        validating: false,
+        validation: null,
+        failed: false,
+      };
     }
+    const version = loaded.version ?? null;
     this.set((s) => ({
       ...s,
       load: 'ready',
       summary: loaded.summary,
       flow: result.flow,
       slots,
-      params: Object.fromEntries(result.flow.params.map((p) => [p.key, ''])),
+      params: Object.fromEntries(
+        result.flow.params.map((p) => [p.key, keep.params?.[p.key] ?? '']),
+      ),
+      version,
+      versionCheck: !version || version.applies ? 'ok' : 'none',
+      run: IDLE_RUN,
     }));
+    for (const [key, slot] of Object.entries(slots)) {
+      if (slot.files.length > 0) void this.validateSlot(key);
+    }
   }
 
   setParam(key: string, value: string): void {
     this.set((s) => ({ ...s, params: { ...s.params, [key]: value } }));
+    const { flow, version, asOf } = this.state;
+    if (!flow || !version) return;
+    const next = asOfFromParams(flow.params, this.state.params, this.today());
+    if (next !== asOf || this.state.versionCheck === 'error') void this.resolveVersion(next);
+  }
+
+  /** Retry after a failed version lookup. */
+  retryVersion(): void {
+    if (this.state.versionCheck === 'error') void this.resolveVersion(this.state.asOf);
+  }
+
+  /**
+   * Re-resolve the published version for a new as-of date (the period param changed). A
+   * different effective version replaces the definition in the worker; files are kept.
+   */
+  private async resolveVersion(asOf: string): Promise<void> {
+    const code = this.state.code;
+    if (!code) return;
+    const vToken = ++this.versionToken;
+    const token = this.token;
+    this.set((s) => ({ ...s, asOf, versionCheck: 'resolving' }));
+    let loaded: LoadedFlow | null;
+    try {
+      loaded = await this.source.get(code, asOf);
+    } catch {
+      loaded = null;
+    }
+    if (vToken !== this.versionToken || token !== this.token) return;
+    const next = loaded?.version;
+    if (!loaded || !next) {
+      this.set((s) => ({ ...s, versionCheck: 'error' }));
+      return;
+    }
+    if (!next.applies) {
+      this.set((s) => ({ ...s, versionCheck: 'none', version: next }));
+      return;
+    }
+    if (next.id === this.state.version?.id || this.isBusy()) {
+      this.set((s) => ({ ...s, versionCheck: 'ok', version: next }));
+      return;
+    }
+    // Another version applies: reload it (drops in-flight answers of the old definition).
+    const reload = ++this.token;
+    this.set((s) => ({ ...s, versionCheck: 'resolving' }));
+    await this.applyDefinition(loaded, reload, {
+      params: this.state.params,
+      slots: this.state.slots,
+    });
+  }
+
+  private isBusy(): boolean {
+    return this.state.run.status === 'running' || this.state.run.status === 'cancelling';
   }
 
   addFiles(slotKey: string, files: readonly File[]): void {
@@ -194,9 +336,10 @@ export class RunStore {
     void this.validateSlot(slotKey);
   }
 
-  private async validateSlot(slotKey: string): Promise<void> {
+  /** Resolves false only when the worker call itself failed (crash), not for invalid files. */
+  private async validateSlot(slotKey: string): Promise<boolean> {
     const slot = this.state.slots[slotKey];
-    if (!slot) return;
+    if (!slot) return true;
     // The worker gets the same version and commits only the latest one (calls overlap while file
     // bytes are read), so worker cache and UI agree on which files the slot holds.
     const version = (this.slotVersions.get(slotKey) ?? 0) + 1;
@@ -211,12 +354,14 @@ export class RunStore {
     });
     try {
       const validation = await this.engine().api.setSlotFiles(slotKey, uploads, version);
-      if (!current() || uploads.length === 0) return;
+      if (!current() || uploads.length === 0) return true;
       // null = superseded inside the worker; the newer call will report.
       if (validation) this.patchSlot(slotKey, { validating: false, validation });
+      return true;
     } catch {
-      if (!current()) return;
+      if (!current()) return false;
       this.patchSlot(slotKey, { validating: false, validation: null, failed: uploads.length > 0 });
+      return false;
     }
   }
 
@@ -225,8 +370,25 @@ export class RunStore {
     if (!flow || this.state.run.status === 'running' || this.state.run.status === 'cancelling') {
       return;
     }
+    if (this.state.versionCheck !== 'ok') return;
     const token = ++this.token;
     const params = { ...this.state.params };
+    this.currentRun = {
+      token,
+      startedAt: Date.now(),
+      versionId: this.state.version?.id ?? null,
+      flow,
+      params,
+      slots: flow.inputSlots.map((slot) => {
+        const st = this.state.slots[slot.key];
+        return {
+          key: slot.key,
+          files: (st?.files ?? []).map((f) => ({ name: f.file.name, size: f.file.size })),
+          rows: st?.validation?.rowCount ?? null,
+        };
+      }),
+      logged: false,
+    };
     const nodes: NodeProgress[] = flow.nodes.map((n) => ({
       id: n.id,
       type: n.type,
@@ -266,6 +428,8 @@ export class RunStore {
           ? { ...s.run, status: 'done', summary: outcome.summary }
           : { ...s.run, status: outcome.cancelled ? 'cancelled' : 'failed', error: outcome.error },
       }));
+      if (outcome.ok) this.logRun(token, 'succeeded', outcome.summary, null);
+      else this.logRun(token, outcome.cancelled ? 'cancelled' : 'failed', null, outcome.error);
     } catch {
       if (token !== this.token) return;
       this.set((s) => ({
@@ -276,7 +440,36 @@ export class RunStore {
           error: ENGINE_CRASHED,
         },
       }));
+      this.logRun(token, 'failed', null, ENGINE_CRASHED);
     }
+  }
+
+  /**
+   * Fire-and-forget, at most once per run. Hashing or network failures are swallowed: logging
+   * must never break or delay the run (spec §13 step 7).
+   */
+  private logRun(
+    token: number,
+    status: RunLogStatus,
+    summary: RunSummary | null,
+    error: EngineErrorInfo | null,
+  ): void {
+    const run = this.currentRun;
+    if (!this.logger || !run || run.token !== token || run.logged || !run.versionId) return;
+    run.logged = true;
+    const logger = this.logger;
+    void buildRunLog({
+      flowVersionId: run.versionId,
+      flowParams: run.flow.params,
+      params: run.params,
+      slots: run.slots,
+      status,
+      durationMs: summary?.durationMs ?? Date.now() - run.startedAt,
+      summary,
+      error,
+    })
+      .then((entry) => logger.logRun(entry))
+      .catch(() => undefined);
   }
 
   /** Cooperative cancel first; if the worker is stuck in synchronous work, terminate it. */
@@ -294,6 +487,7 @@ export class RunStore {
     if (token !== this.token || status !== 'cancelling') return;
 
     this.set((s) => ({ ...s, run: { ...s.run, status: 'cancelled' } }));
+    this.logRun(token, 'cancelled', null, null);
     await this.restartEngine();
   }
 
@@ -316,8 +510,11 @@ export class RunStore {
       const loaded = await this.engine().api.loadFlow(this.definition);
       if (token !== this.token) return;
       if (!loaded.ok) return;
-      await Promise.all(Object.keys(this.state.slots).map((k) => this.validateSlot(k)));
-      ok = true;
+      // A slot whose re-validation call failed (worker crashed again) is not restored either.
+      const results = await Promise.all(
+        Object.keys(this.state.slots).map((k) => this.validateSlot(k)),
+      );
+      ok = results.every(Boolean);
     } catch {
       // ok stays false
     } finally {

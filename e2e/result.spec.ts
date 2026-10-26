@@ -2,8 +2,16 @@
  * Result screen (spec §15.1 step 6; AC-04, AC-06): tabs, branch + metric filters, the downloaded
  * workbook read back with ExcelJS, and direct navigation / reload of the run routes.
  */
-import { expect, test } from '@playwright/test';
-import { ExcelJS, FLOW_URL, RESULT_URL, runButton, runToResult, uploadFixtures } from './helpers';
+import { expect, test } from './fixtures';
+import {
+  ExcelJS,
+  FLOW_URL,
+  periodButton,
+  RESULT_URL,
+  runButton,
+  runToResult,
+  uploadFixtures,
+} from './helpers';
 
 test.describe('result page', () => {
   test.beforeEach(async ({ page }) => {
@@ -192,7 +200,7 @@ test.describe('direct navigation and reload', () => {
     await page.reload();
     await expect(page.getByRole('heading', { level: 1 })).toHaveText(/Đối chiếu/);
     await expect(page.getByRole('list', { name: /File đã chọn/ })).toHaveCount(0);
-    await expect(page.getByLabel(/Kỳ lương/)).toHaveValue('');
+    await expect(periodButton(page)).toContainText('Chọn tháng');
   });
 
   test('unknown flow code shows "not found"', async ({ page }) => {

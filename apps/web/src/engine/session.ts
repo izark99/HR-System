@@ -1,6 +1,7 @@
 import {
   CompareConfigSchema,
   FlowDefinitionSchema,
+  migrateFlowDefinition,
   type CompareConfig,
   type FlowDefinition,
 } from '@hrflow/flow-schema';
@@ -32,11 +33,11 @@ import type {
   SlotValidation,
   UploadFile,
 } from './protocol';
+import { ENGINE_CRASHED_KEY } from './protocol';
 
 /** Max distinct values for a carried column to be offered as a filter (e.g. branch). */
 const MAX_FILTER_VALUES = 50;
 const LIST_SEPARATOR = ', ';
-export const ENGINE_CRASHED_KEY = 'executor.error.engineCrashed';
 
 interface SheetState {
   info: SheetInfo;
@@ -86,7 +87,10 @@ export class EngineSession {
 
   loadFlow(raw: unknown): LoadFlowResult {
     this.reset();
-    const parsed = FlowDefinitionSchema.safeParse(raw);
+    // Published versions must stay loadable: old shapes are upgraded in memory first (spec §8).
+    const migrated = migrateFlowDefinition(raw);
+    const notices = migrated.notes.map((n) => this.t(`flow.migration.${n.code}`, { slot: n.slot }));
+    const parsed = FlowDefinitionSchema.safeParse(migrated.definition);
     if (!parsed.success) {
       return {
         ok: false,
@@ -100,7 +104,7 @@ export class EngineSession {
       return { ok: false, problems: [this.t(info.messageKey, info.params)] };
     }
     this.flow = parsed.data;
-    return { ok: true, flow: parsed.data };
+    return { ok: true, flow: parsed.data, notices };
   }
 
   private requireFlow(): FlowDefinition {

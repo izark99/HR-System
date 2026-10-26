@@ -14,7 +14,7 @@
     "test": "pnpm -r run test",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "test:e2e": "pnpm --filter @hrflow/web build && playwright test"
+    "test:e2e": "pnpm --filter @hrflow/web build:e2e && playwright test"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

@@ -9,7 +9,8 @@
   },
   "nav": {
     "label": "Menu chính",
-    "runFlows": "Chạy flow"
+    "runFlows": "Chạy flow",
+    "changePassword": "Đổi mật khẩu"
   },
   "common": {
     "loading": "Đang tải…",
@@ -30,12 +31,26 @@
     "run": "Chạy flow",
     "runNamed": "Chạy flow {{name}}",
     "empty": "Không tìm thấy flow phù hợp.",
-    "loadError": "Không tải được danh sách flow."
+    "loadError": "Không tải được danh sách flow.",
+    "version": "Phiên bản {{version}}"
   },
   "recent": {
     "title": "Lần chạy gần đây",
     "empty": "Chưa có lần chạy",
-    "note": "Lịch sử chỉ lưu thông tin lần chạy, không lưu nội dung dữ liệu."
+    "note": "Lịch sử chỉ lưu thông tin lần chạy, không lưu nội dung dữ liệu.",
+    "loadError": "Không tải được lịch sử chạy.",
+    "col": {
+      "time": "Thời gian",
+      "flow": "Flow",
+      "params": "Tham số",
+      "version": "Phiên bản",
+      "status": "Trạng thái"
+    },
+    "status": {
+      "succeeded": "Thành công",
+      "failed": "Lỗi",
+      "cancelled": "Đã hủy"
+    }
   },
   "run": {
     "back": "Danh sách flow",
@@ -69,7 +84,10 @@
       "cancelling": "Đang hủy…",
       "restoreFailed": "Chạy (cần nạp lại file)",
       "retryRestore": "Thử lại",
-      "viewResult": "Xem kết quả"
+      "viewResult": "Xem kết quả",
+      "resolvingVersion": "Đang xác định phiên bản…",
+      "noVersion": "Chạy (chưa có phiên bản cho kỳ này)",
+      "versionError": "Chạy (chưa xác định được phiên bản)"
     },
     "progress": {
       "title": "Đang chạy flow",
@@ -85,7 +103,25 @@
     "restoring": "đang nạp lại file sau khi hủy…",
     "cancelledLabel": "Đã hủy lần chạy:",
     "restoreFailedLabel": "Chưa nạp lại được file:",
-    "restoreFailed": "sau khi hủy, hệ thống không chuẩn bị lại được file của bạn. Bấm Thử lại; nếu vẫn lỗi, tải lại trang."
+    "restoreFailed": "sau khi hủy, hệ thống không chuẩn bị lại được file của bạn. Bấm Thử lại; nếu vẫn lỗi, tải lại trang.",
+    "loadErrorLabel": "Chưa tải được flow:",
+    "loadError": "không kết nối được máy chủ. Kiểm tra mạng rồi thử lại.",
+    "version": {
+      "label": "Phiên bản áp dụng:",
+      "range": "{{version}}, hiệu lực từ {{from}}",
+      "rangeTo": "{{version}}, hiệu lực từ {{from}} đến {{to}}",
+      "forPeriod": ", theo kỳ đã chọn.",
+      "forToday": ", theo ngày hôm nay (chọn kỳ để kiểm tra lại).",
+      "resolving": "đang xác định phiên bản theo kỳ đã chọn…",
+      "noneLabel": "Chưa có phiên bản:",
+      "none": "flow chưa có phiên bản hiệu lực {{when}}. Chọn kỳ khác hoặc liên hệ Admin.",
+      "period": "cho kỳ {{period}}",
+      "date": "cho ngày {{date}}",
+      "today": "cho ngày hôm nay",
+      "errorLabel": "Chưa xác định được phiên bản:",
+      "error": "không kết nối được máy chủ.",
+      "retry": "Thử lại"
+    }
   },
   "slot": {
     "multiple": "Nhiều file · {{accept}}",
@@ -165,5 +201,307 @@
     "retry": "Thử lại",
     "noteLabel": "Lưu ý:",
     "note": "kết quả chỉ nằm trong trình duyệt. Hãy tải file về trước khi đóng tab."
+  },
+  "config": {
+    "title": "Ứng dụng chưa được cấu hình",
+    "text": "Thiếu địa chỉ máy chủ hoặc khóa công khai (publishable key) khi build. Liên hệ người quản trị hệ thống."
+  },
+  "picker": {
+    "chooseMonth": "Chọn tháng",
+    "chooseDate": "Chọn ngày",
+    "monthValue": "Tháng {{month}}/{{year}}",
+    "monthShort": "Th {{month}}",
+    "monthCell": "Tháng {{month}} năm {{year}}",
+    "monthYear": "Tháng {{month}} năm {{year}}",
+    "dayCell": "Ngày {{day}} tháng {{month}} năm {{year}}",
+    "prevYear": "Năm trước",
+    "nextYear": "Năm sau",
+    "prevMonth": "Tháng trước",
+    "nextMonth": "Tháng sau",
+    "thisMonth": "Tháng này",
+    "today": "Hôm nay",
+    "clear": "Xóa",
+    "weekday": {
+      "1": "T2",
+      "2": "T3",
+      "3": "T4",
+      "4": "T5",
+      "5": "T6",
+      "6": "T7",
+      "7": "CN"
+    },
+    "weekdayLong": {
+      "1": "Thứ Hai",
+      "2": "Thứ Ba",
+      "3": "Thứ Tư",
+      "4": "Thứ Năm",
+      "5": "Thứ Sáu",
+      "6": "Thứ Bảy",
+      "7": "Chủ Nhật"
+    }
+  },
+  "userMenu": {
+    "open": "Tài khoản {{name}}",
+    "admin": "Quản trị",
+    "signOut": "Đăng xuất",
+    "role": {
+      "admin": "Admin",
+      "user": "User"
+    }
+  },
+  "auth": {
+    "eyebrow": "Nền tảng xử lý dữ liệu nhân sự",
+    "tagline": "Xử lý file Excel ngay trên máy bạn, theo quy trình Admin thiết lập.",
+    "errorLabel": "Chưa thành công:",
+    "login": {
+      "title": "Đăng nhập",
+      "note": "Tài khoản do Admin cấp. Quên mật khẩu, vui lòng liên hệ Admin.",
+      "username": "Tên đăng nhập",
+      "password": "Mật khẩu",
+      "submit": "Đăng nhập",
+      "submitting": "Đang đăng nhập…",
+      "safety": "file Excel chỉ được xử lý trên máy bạn, không tải lên server."
+    },
+    "password": {
+      "eyebrowFirst": "Lần đăng nhập đầu tiên",
+      "eyebrow": "Tài khoản",
+      "title": "Đặt mật khẩu mới",
+      "introFirst": "Bạn cần đổi mật khẩu tạm trước khi bắt đầu. Tối thiểu {{min}} ký tự.",
+      "intro": "Mật khẩu mới tối thiểu {{min}} ký tự.",
+      "new": "Mật khẩu mới",
+      "confirm": "Nhập lại mật khẩu mới",
+      "save": "Lưu mật khẩu",
+      "saving": "Đang lưu…",
+      "back": "Quay lại",
+      "doneLabel": "Đã đổi mật khẩu:",
+      "done": "lần đăng nhập sau dùng mật khẩu mới.",
+      "problem": {
+        "empty": "hãy nhập mật khẩu mới.",
+        "tooShort": "mật khẩu cần ít nhất {{min}} ký tự.",
+        "tooLong": "mật khẩu quá dài (tối đa 72 byte).",
+        "mismatch": "hai mật khẩu chưa khớp nhau."
+      }
+    },
+    "errors": {
+      "missingFields": "nhập tên đăng nhập và mật khẩu.",
+      "invalidCredentials": "tên đăng nhập hoặc mật khẩu không đúng.",
+      "locked": "tài khoản đã bị khóa. Liên hệ Admin.",
+      "rateLimited": "thử quá nhiều lần. Đợi vài phút rồi thử lại.",
+      "network": "không kết nối được máy chủ. Kiểm tra mạng rồi thử lại.",
+      "weakPassword": "mật khẩu chưa đủ mạnh. Dùng mật khẩu dài hơn, khó đoán hơn.",
+      "samePassword": "mật khẩu mới phải khác mật khẩu hiện tại.",
+      "reauthNeeded": "phiên đăng nhập quá cũ. Đăng xuất, đăng nhập lại rồi đổi mật khẩu.",
+      "sessionExpired": "phiên đăng nhập đã hết hạn. Đăng nhập lại.",
+      "unknown": "có lỗi không xác định. Thử lại hoặc liên hệ Admin."
+    },
+    "reason": {
+      "locked": {
+        "label": "Tài khoản đã bị khóa:",
+        "text": "liên hệ Admin để được mở khóa."
+      },
+      "profileMissing": {
+        "label": "Tài khoản chưa sẵn sàng:",
+        "text": "liên hệ Admin để được cấp quyền."
+      },
+      "profileError": {
+        "label": "Chưa tải được tài khoản:",
+        "text": "kiểm tra mạng rồi đăng nhập lại."
+      },
+      "sessionExpired": {
+        "label": "Phiên đã hết hạn:",
+        "text": "hãy đăng nhập lại. File đã chọn trước đó không được giữ lại."
+      },
+      "signedOut": {
+        "label": "Đã đăng xuất:",
+        "text": "dữ liệu của phiên trước đã được xóa khỏi trình duyệt."
+      }
+    }
+  },
+  "admin": {
+    "badge": "Admin",
+    "errorLabel": "Chưa thành công:",
+    "cancel": "Hủy",
+    "localMode": "Khu vực quản trị cần kết nối Supabase (đang chạy chế độ flow cục bộ).",
+    "dialog": {
+      "close": "Đóng"
+    },
+    "nav": {
+      "label": "Menu Admin",
+      "dashboard": "Tổng quan",
+      "flows": "Flows",
+      "refTables": "Bảng tham chiếu",
+      "templates": "Template",
+      "users": "Users & Groups",
+      "logs": "Logs",
+      "soon": "Sắp có"
+    },
+    "errors": {
+      "origin_not_allowed": "trang này chưa được phép gọi chức năng quản trị (cấu hình ALLOWED_ORIGINS).",
+      "unauthorized": "phiên đăng nhập đã hết hạn. Đăng nhập lại.",
+      "forbidden": "bạn không có quyền thực hiện thao tác này.",
+      "invalid_input": "thông tin chưa hợp lệ. Username 3-32 ký tự: chữ thường không dấu, số, dấu chấm, gạch dưới, gạch ngang.",
+      "username_taken": "username đã tồn tại.",
+      "not_found": "không tìm thấy tài khoản.",
+      "group_not_found": "có nhóm không còn tồn tại. Tải lại trang.",
+      "self_action_forbidden": "không thể tự khóa, tự reset mật khẩu hoặc tự đổi role của chính mình.",
+      "duplicate": "tên/mã này đã tồn tại.",
+      "overlap": "khoảng hiệu lực chồng lấn với một phiên bản đã publish.",
+      "immutable": "phiên bản đã publish không được sửa nội dung.",
+      "invalid_definition": "nội dung flow không hợp lệ.",
+      "check_failed": "dữ liệu không thỏa ràng buộc của hệ thống.",
+      "network": "không kết nối được máy chủ. Kiểm tra mạng rồi thử lại.",
+      "unknown": "có lỗi không xác định. Thử lại sau."
+    },
+    "users": {
+      "eyebrow": "Users & Groups",
+      "title": "Quản lý tài khoản và quyền chạy flow",
+      "createButton": "+ Tạo tài khoản",
+      "listLabel": "Tài khoản và nhóm",
+      "tabsLabel": "Danh sách",
+      "tabUsers": "Tài khoản ({{count}})",
+      "tabGroups": "Nhóm ({{count}})",
+      "caption": "Danh sách tài khoản",
+      "username": "Username",
+      "fullName": "Họ tên",
+      "role": "Role",
+      "groups": "Nhóm",
+      "status": "Trạng thái",
+      "actions": "Thao tác",
+      "edit": "Sửa",
+      "reset": "Reset MK",
+      "lock": "Khóa",
+      "unlock": "Mở khóa",
+      "editNamed": "Sửa tài khoản {{username}}",
+      "resetNamed": "Reset mật khẩu {{username}}",
+      "lockNamed": "Khóa tài khoản {{username}}",
+      "unlockNamed": "Mở khóa tài khoản {{username}}"
+    },
+    "status": {
+      "active": "Hoạt động",
+      "mustChange": "Chưa đổi MK lần đầu",
+      "locked": "Đã khóa"
+    },
+    "create": {
+      "title": "Tạo tài khoản",
+      "usernameHint": "3-32 ký tự: chữ thường không dấu, số, dấu chấm, gạch dưới, gạch ngang.",
+      "tempLabel": "Mật khẩu tạm:",
+      "temp": "hệ thống tự tạo, user phải đổi ở lần đăng nhập đầu.",
+      "submit": "Tạo và hiện mật khẩu tạm",
+      "submitting": "Đang tạo…"
+    },
+    "temp": {
+      "title": "Mật khẩu tạm của {{username}}",
+      "intro": "Gửi mật khẩu này riêng cho người dùng (không gửi kèm username trong cùng tin nhắn công khai).",
+      "passwordLabel": "Mật khẩu tạm",
+      "copy": "Sao chép",
+      "copied": "Đã sao chép",
+      "warningLabel": "Lưu ý:",
+      "warning": "mật khẩu chỉ hiện một lần và không lưu ở đâu cả. Đóng hộp thoại là không xem lại được; khi đó hãy reset lại.",
+      "done": "Đã lưu, đóng"
+    },
+    "reset": {
+      "title": "Reset mật khẩu {{username}}?",
+      "body": "Hệ thống tạo mật khẩu tạm mới, đăng xuất mọi phiên của tài khoản này và bắt đổi mật khẩu ở lần đăng nhập tới.",
+      "action": "Reset mật khẩu"
+    },
+    "lock": {
+      "title": "Khóa tài khoản {{username}}?",
+      "body": "Tài khoản không đăng nhập được nữa; các phiên đang mở bị thu hồi."
+    },
+    "unlock": {
+      "title": "Mở khóa tài khoản {{username}}?",
+      "body": "Tài khoản đăng nhập lại được bằng mật khẩu hiện có."
+    },
+    "edit": {
+      "title": "Sửa tài khoản {{username}}",
+      "save": "Lưu thay đổi",
+      "selfRole": "Bạn không thể tự đổi role của chính mình."
+    },
+    "groups": {
+      "none": "Chưa có nhóm nào.",
+      "caption": "Danh sách nhóm",
+      "name": "Tên nhóm",
+      "description": "Mô tả",
+      "members": "Thành viên",
+      "create": "Tạo nhóm",
+      "createTitle": "Tạo nhóm",
+      "save": "Lưu nhóm",
+      "delete": "Xóa",
+      "editNamed": "Sửa nhóm {{name}}",
+      "deleteNamed": "Xóa nhóm {{name}}",
+      "editTitle": "Sửa nhóm {{name}}",
+      "deleteTitle": "Xóa nhóm {{name}}?",
+      "deleteBody": "Thành viên rời khỏi nhóm và các flow đã gán cho nhóm sẽ bị gỡ. Tài khoản không bị xóa."
+    },
+    "assign": {
+      "title": "Gán flow",
+      "titleGroup": "Gán flow cho nhóm \"{{name}}\"",
+      "titleUser": "Gán flow cho tài khoản \"{{name}}\"",
+      "target": "Gán cho",
+      "groups": "Nhóm",
+      "users": "Tài khoản",
+      "flowsLegend": "Flow được gán",
+      "noFlows": "Chưa có flow nào. Nhập flow ở mục Flows.",
+      "added": "Đã gán flow \"{{flow}}\".",
+      "removed": "Đã gỡ flow \"{{flow}}\".",
+      "note": "User thấy flow nếu được gán trực tiếp hoặc qua nhóm. Admin thấy mọi flow đã publish."
+    },
+    "flows": {
+      "eyebrow": "Flows",
+      "title": "Flow và phiên bản",
+      "subtitle": "Nhập flow từ file JSON; mỗi lần nhập tạo một phiên bản published với ngày hiệu lực.",
+      "listTitle": "Danh sách flow ({{count}})",
+      "empty": "Chưa có flow nào. Bấm \"Nhập flow JSON\" để thêm flow đầu tiên.",
+      "name": "Tên flow",
+      "code": "Mã",
+      "category": "Nhóm",
+      "versions": "Phiên bản",
+      "archived": "Đã lưu trữ",
+      "status": {
+        "published": "Published",
+        "draft": "Draft",
+        "retired": "Retired"
+      },
+      "rangeOpen": "từ {{from}}",
+      "rangeTo": "từ {{from}} đến trước {{to}}",
+      "note": "Phiên bản đã publish không sửa được; muốn thay đổi thì nhập phiên bản mới. Màn quản lý version và Flow Designer có ở bước sau."
+    },
+    "import": {
+      "button": "Nhập flow JSON",
+      "checking": "Đang kiểm tra file…",
+      "choose": "Chọn file flow JSON",
+      "title": "Nhập flow từ JSON",
+      "file": "File: {{name}} (hợp lệ)",
+      "noticesLabel": "Đã tự điều chỉnh:",
+      "code": "Mã flow (dùng trong đường dẫn)",
+      "codeHint": "Chữ thường không dấu, số và gạch ngang. Trùng mã có sẵn = thêm phiên bản mới.",
+      "existingLabel": "Flow đã có:",
+      "existing": "\"{{name}}\" sẽ có thêm một phiên bản mới.",
+      "name": "Tên flow",
+      "category": "Nhóm flow",
+      "description": "Mô tả ngắn",
+      "instructions": "Hướng dẫn cho User",
+      "effectiveFrom": "Hiệu lực từ ngày",
+      "effectiveTo": "Hiệu lực đến trước ngày",
+      "rangeHint": "Để trống \"đến trước ngày\" = không thời hạn.",
+      "closePrevious": "Kết thúc {{version}} (đang hiệu lực không thời hạn) vào ngày {{date}}",
+      "changeNote": "Ghi chú thay đổi",
+      "publish": "Publish phiên bản",
+      "publishing": "Đang publish…",
+      "doneLabel": "Đã nhập:",
+      "done": "{{name}} {{version}}.",
+      "invalidLabel": "File chưa hợp lệ:",
+      "read": {
+        "tooLarge": "file lớn hơn 1 MB.",
+        "notJson": "file không phải JSON.",
+        "invalid": "nội dung không đúng định dạng flow.",
+        "engine": "không kiểm tra được file (engine lỗi). Tải lại trang rồi thử lại."
+      },
+      "errors": {
+        "codeInvalid": "mã flow chưa hợp lệ (3-64 ký tự: chữ thường không dấu, số, gạch ngang).",
+        "nameRequired": "nhập tên flow.",
+        "range": "ngày kết thúc phải sau ngày bắt đầu."
+      }
+    }
   }
 }

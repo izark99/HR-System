@@ -26,8 +26,19 @@ function pagesHeaders(): Record<string, string> {
   return headers;
 }
 
-export default defineConfig({
+/**
+ * `vite build --mode e2e`: production build pointed at the real project URL (the only Supabase
+ * origin the CSP allows) with a FAKE publishable key. Playwright intercepts every request to that
+ * origin (e2e/supabase-mock.ts), so E2E never reaches the real project.
+ */
+const E2E_ENV = {
+  'import.meta.env.VITE_SUPABASE_URL': JSON.stringify('https://rzakjtgvbyxqsmbpcomw.supabase.co'),
+  'import.meta.env.VITE_SUPABASE_ANON_KEY': JSON.stringify('sb_publishable_e2e_fake_key'),
+};
+
+export default defineConfig(({ mode }) => ({
   plugins: [react(), tailwindcss()],
+  define: mode === 'e2e' ? E2E_ENV : {},
   build: {
     sourcemap: false,
   },
@@ -43,4 +54,4 @@ export default defineConfig({
     include: ['src/**/*.test.ts'],
     testTimeout: 30_000,
   },
-});
+}));

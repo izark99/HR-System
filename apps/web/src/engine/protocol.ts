@@ -1,6 +1,7 @@
 /**
- * Messages between the UI (main thread) and the engine worker. Types only: the main thread
- * imports this file with `import type`, so no engine code ends up in the main bundle.
+ * Messages between the UI (main thread) and the engine worker. Types plus a few plain constants:
+ * every import below is `import type`, so importing this file from the main thread never pulls
+ * engine code into the main bundle.
  *
  * Everything here is structured-clone friendly: decimals cross the boundary as strings
  * ("-2", "0.5") and are formatted for display by the UI, never converted to float for math.
@@ -17,7 +18,9 @@ export interface UploadFile {
   blob: Blob;
 }
 
-export type LoadFlowResult = { ok: true; flow: FlowDefinition } | { ok: false; problems: string[] };
+export type LoadFlowResult =
+  /** `notices`: localized notes of in-memory upgrades applied to an older definition. */
+  { ok: true; flow: FlowDefinition; notices: string[] } | { ok: false; problems: string[] };
 
 export interface SlotValidation {
   slotKey: string;
@@ -25,6 +28,13 @@ export interface SlotValidation {
   /** Data rows after union (only meaningful when the report has no errors). */
   rowCount: number;
 }
+
+/**
+ * i18n key of the generic "engine crashed" error: unexpected (non-engine) failures, worker crash,
+ * rejected worker call. Used by the worker (session.ts) and the main thread (run-store.ts); the
+ * raw exception text is never forwarded (it may contain cell values).
+ */
+export const ENGINE_CRASHED_KEY = 'executor.error.engineCrashed';
 
 /** Error raised by the engine, localizable by the UI (engine i18n namespace). */
 export interface EngineErrorInfo {

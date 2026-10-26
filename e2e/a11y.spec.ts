@@ -3,12 +3,14 @@
  * on every control, focus visibility, touch targets, primary button contrast, and no horizontal
  * page scroll at 390px.
  */
-import { expect, test, type Page } from '@playwright/test';
+import { expect, test, type Page } from './fixtures';
 import {
   contrastRatio,
   fixtures,
   FLOW_URL,
   openFlow,
+  periodButton,
+  pickMonth,
   runButton,
   runToResult,
   uploadFixtures,
@@ -31,6 +33,29 @@ async function tabTo(page: Page, name: RegExp): Promise<void> {
     if (name.test(current)) return;
   }
   throw new Error(`could not reach ${name} with Tab`);
+}
+
+/**
+ * With the period trigger focused: Enter opens the month grid on the current month; PageUp/
+ * PageDown move years, arrows move months, Enter selects (focus returns to the trigger).
+ */
+async function keyboardPickMonth(page: Page, year: number, month: number): Promise<void> {
+  await page.keyboard.press('Enter');
+  const dialog = page.getByRole('dialog');
+  await expect(dialog).toBeVisible();
+  const label = await page.evaluate(() => document.activeElement?.getAttribute('aria-label') ?? '');
+  const m = /^Tháng (\d+) năm (\d+)$/.exec(label);
+  expect(m, `focused cell: ${label}`).not.toBeNull();
+  const [cur, curYear] = [Number(m![1]), Number(m![2])];
+  for (let y = curYear; y !== year; y += y < year ? 1 : -1) {
+    await page.keyboard.press(y < year ? 'PageDown' : 'PageUp');
+  }
+  for (let i = cur; i !== month; i += i < month ? 1 : -1) {
+    await page.keyboard.press(i < month ? 'ArrowRight' : 'ArrowLeft');
+  }
+  await expect(page.locator(':focus')).toHaveAttribute('aria-label', `Tháng ${month} năm ${year}`);
+  await page.keyboard.press('Enter');
+  await expect(dialog).toHaveCount(0);
 }
 
 /** Interactive elements without any accessible name source. */
@@ -104,20 +129,19 @@ async function settledColors(page: Page) {
 
 test('keyboard only: params, file pickers, run, tabs, filter and download', async ({ page }) => {
   await page.goto('/');
+  await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
   // Skip link is the first Tab stop.
   await page.keyboard.press('Tab');
   await expect(page.getByRole('link', { name: 'Bỏ qua, tới nội dung chính' })).toBeFocused();
   await tabTo(page, /^Chạy flow Đối chiếu/);
   await page.keyboard.press('Enter');
   await expect(page).toHaveURL(new RegExp(`${FLOW_URL}$`));
-  await expect(page.getByLabel(/Kỳ lương/)).toBeVisible();
+  await expect(periodButton(page)).toBeVisible();
 
   await tabTo(page, /Kỳ lương/);
-  // Chromium month field (vi-VN): month segment takes arrows, Tab moves to the year segment.
-  for (let i = 0; i < 9; i++) await page.keyboard.press('ArrowUp');
-  await page.keyboard.press('Tab');
-  await page.keyboard.type('2026');
-  await expect(page.getByLabel(/Kỳ lương/)).toHaveValue('2026-09');
+  await keyboardPickMonth(page, 2026, 9);
+  await expect(periodButton(page)).toContainText('Tháng 09/2026');
+  await expect(periodButton(page)).toBeFocused();
 
   // "chọn file" buttons open the native picker from the keyboard.
   await tabTo(page, /^chọn file$/);
@@ -298,5 +322,105 @@ test.describe('mobile 390px', () => {
     await noHorizontalScroll(page);
     await page.getByRole('tab', { name: 'Tổng hợp' }).click();
     await noHorizontalScroll(page);
+  });
+});
+
+test.describe('month picker (MEMORY 13:48: custom picker, keyboard operable)', () => {
+  test('keyboard: grid roving focus, Home/End, PageUp/PageDown, Escape returns focus', async ({
+    page,
+  }) => {
+    await openFlow(page, '');
+    const trigger = periodButton(page);
+    await expect(trigger).toContainText('Chọn tháng');
+    await expect(trigger).toHaveAttribute('aria-haspopup', 'dialog');
+    await trigger.focus();
+    await page.keyboard.press('Enter');
+    const dialog = page.getByRole('dialog', { name: /Kỳ lương/ });
+    await expect(dialog).toBeVisible();
+    await expect(dialog).toHaveAttribute('aria-modal', 'false');
+    // Exactly one cell is in the tab order (roving tabindex), and it has focus.
+    await expect(dialog.locator('[role="gridcell"][tabindex="0"]')).toHaveCount(1);
+    await expect(dialog.locator('[role="gridcell"][tabindex="0"]')).toBeFocused();
+    await expect(dialog.getByRole('gridcell')).toHaveCount(12);
+    await expect(dialog.getByRole('gridcell').first()).toHaveText('Th 1');
+
+    // Jump to a known place: End of the row then PageUp/PageDown change only the year.
+    await page.keyboard.press('Home');
+    const start = await page.evaluate(() => document.activeElement?.getAttribute('aria-label'));
+    expect(start).toMatch(/^Tháng (1|5|9) năm \d{4}$/);
+    const year = Number(/năm (\d{4})/.exec(start!)![1]);
+    await page.keyboard.press('PageUp');
+    await expect(page.locator(':focus')).toHaveAttribute(
+      'aria-label',
+      start!.replace(String(year), String(year - 1)),
+    );
+    await expect(dialog.getByText(String(year - 1), { exact: true })).toBeVisible();
+    await page.keyboard.press('PageDown');
+    await page.keyboard.press('End');
+    const end = await page.evaluate(() => document.activeElement?.getAttribute('aria-label'));
+    expect(end).toMatch(/^Tháng (4|8|12) năm \d{4}$/);
+
+    // Escape closes without changing the value and returns focus to the trigger.
+    await page.keyboard.press('Escape');
+    await expect(dialog).toHaveCount(0);
+    await expect(trigger).toBeFocused();
+    await expect(trigger).toContainText('Chọn tháng');
+
+    // Space selects too; the selected cell is marked and styled teal-strong.
+    await page.keyboard.press('Enter');
+    await page.keyboard.press(' ');
+    await expect(dialog).toHaveCount(0);
+    await expect(trigger).toContainText(/Tháng \d{2}\/\d{4}/);
+    await page.keyboard.press('Enter');
+    const selected = dialog.locator('[aria-selected="true"]');
+    await expect(selected).toHaveCount(1);
+    const colors = await selected.evaluate((el) => {
+      const cs = getComputedStyle(el);
+      return { bg: cs.backgroundColor, fg: cs.color };
+    });
+    expect(contrastRatio(colors.fg, colors.bg)).toBeGreaterThanOrEqual(4.5);
+    // Required param: no "Xóa" action; "Tháng này" is there.
+    await expect(dialog.getByRole('button', { name: 'Xóa' })).toHaveCount(0);
+    await expect(dialog.getByRole('button', { name: 'Tháng này' })).toBeVisible();
+    // Click outside closes.
+    await page.getByRole('heading', { level: 1 }).click();
+    await expect(dialog).toHaveCount(0);
+  });
+
+  test('changing the period re-resolves the version; callout shows it (wireframe)', async ({
+    page,
+    supabase,
+  }) => {
+    await openFlow(page, '2026-09');
+    await expect(page.getByRole('status').filter({ hasText: 'Phiên bản áp dụng:' })).toContainText(
+      'v3, hiệu lực từ 01/01/2026, theo kỳ đã chọn',
+    );
+    const asOf = () =>
+      supabase.calls
+        .filter((c) => c.path === '/rest/v1/rpc/resolve_flow_version')
+        .map((c) => (JSON.parse(c.body) as { p_as_of: string }).p_as_of);
+    expect(asOf()).toContain('2026-09-01');
+    await pickMonth(page, '2025-03');
+    await expect(page.getByRole('alert')).toContainText(
+      'flow chưa có phiên bản hiệu lực cho kỳ 03/2025',
+    );
+    expect(asOf()).toContain('2025-03-01');
+    await expect(runButton(page)).toHaveText('Chạy (chưa có phiên bản cho kỳ này)');
+    await expect(runButton(page)).toBeDisabled();
+  });
+
+  test('popover fits a 390px viewport and cells are 44px targets', async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await openFlow(page, '');
+    await periodButton(page).click();
+    const box = await page.getByRole('dialog').boundingBox();
+    expect(box).not.toBeNull();
+    expect(box!.x).toBeGreaterThanOrEqual(0);
+    expect(box!.x + box!.width).toBeLessThanOrEqual(390);
+    for (const cell of await page.getByRole('gridcell').all()) {
+      const b = (await cell.boundingBox())!;
+      expect(b.height).toBeGreaterThanOrEqual(44);
+      expect(b.width).toBeGreaterThanOrEqual(44);
+    }
   });
 });

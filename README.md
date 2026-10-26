@@ -12,8 +12,8 @@ Webapp nội bộ xử lý dữ liệu Excel **trực tiếp trên trình duyệ
 |----------|-----------|
 | Đặc tả, nhật ký quyết định, design system | ✅ `docs/` |
 | Engine: đọc Excel theo input slot, validation, node `control.compare`, xuất Excel nhiều sheet | ✅ có test (khớp `fixtures/payroll-timesheet/expected.json`) |
-| DAG executor + Web Worker + 3 màn hình User | 🚧 đang làm |
-| Supabase: đăng nhập, phân quyền (RLS), lưu flow/version | ⏳ tiếp theo |
+| DAG executor + Web Worker + 3 màn hình User | ✅ |
+| Supabase: đăng nhập, đổi mật khẩu lần đầu, RLS, flow/version theo ngày hiệu lực, run log metadata, Admin Users & Groups, nhập flow JSON | ✅ (bước 2) |
 | Flow Designer cho Admin | ⏳ sau đó |
 | Python (Pyodide), template Excel | Phase 2 |
 
@@ -35,7 +35,13 @@ Chi tiết: [`docs/spec.md`](docs/spec.md).
 
 ```
 apps/web/              React SPA + engine (src/engine: core, io, nodes)
-packages/flow-schema/  Zod schema cho flow, input slot, cấu hình node
+packages/flow-schema/  Zod schema cho flow, input slot, cấu hình node (+ migrate.ts: tương thích schema)
+supabase/
+  migrations/          Schema, RLS, RPC (SQL thuần, áp dụng theo thứ tự tên file)
+  tests/rls.sql        Kiểm thử RLS (chạy trong BEGIN … ROLLBACK, in "RLS OK")
+  functions/admin-users/  Edge Function quản lý tài khoản (Deno; test bằng Vitest)
+  seed/create_first_admin.sql  Tạo Admin đầu tiên (chạy 1 lần)
+workers/keep-alive/    Cloudflare Cron Worker ping Supabase hằng ngày
 fixtures/              Dữ liệu GIẢ cho kiểm thử (+ script sinh dữ liệu)
 vendor/                Thư viện vendored (SheetJS CE), có checksum
 docs/
@@ -52,7 +58,9 @@ Yêu cầu: Node ≥ 22, pnpm 10 (`corepack enable`).
 
 ```bash
 pnpm install
+cp apps/web/.env.example apps/web/.env.local   # URL + publishable key của Supabase
 pnpm dev            # chạy app (Vite)
+pnpm test:e2e       # Playwright (build --mode e2e + preview; Supabase được mock hoàn toàn)
 pnpm lint           # ESLint
 pnpm typecheck      # TypeScript
 pnpm test           # Vitest (engine chạy được trong Node)
@@ -68,6 +76,34 @@ python3 fixtures/payroll-timesheet/generate.py
 
 CI (GitHub Actions) chạy install → lint → format:check → typecheck → test → build trên mỗi push/PR.
 
+### Biến môi trường (apps/web)
+
+| Biến | Giá trị | Ghi chú |
+|------|---------|---------|
+| `VITE_SUPABASE_URL` | `https://rzakjtgvbyxqsmbpcomw.supabase.co` | Phải khớp `connect-src` trong `apps/web/public/_headers` |
+| `VITE_SUPABASE_ANON_KEY` | publishable key `sb_publishable_…` | Công khai được. **Không bao giờ** dùng service role / secret key (app từ chối chạy) |
+| `VITE_FLOW_SOURCE` | `local` (tùy chọn) | Chỉ khi dev: flow mẫu đóng gói sẵn, không đăng nhập. Bị bỏ qua ở bản production |
+
+Thiếu biến khi build → app hiện màn "Ứng dụng chưa được cấu hình" (build vẫn thành công).
+
+## Supabase (một lần khi dựng môi trường)
+
+1. **Migrations**: chạy lần lượt `supabase/migrations/*.sql` theo thứ tự tên file (SQL editor hoặc `psql`).
+2. **Kiểm thử RLS**: chạy `supabase/tests/rls.sql` (tự rollback); kết quả cuối phải là `RLS OK`.
+   Không có Supabase? Chạy trên PostgreSQL ≥ 15 thường: nạp `supabase/tests/support/supabase_stub.sql` trước (chỉ dùng local).
+3. **Edge Function `admin-users`**: deploy 4 file trong `supabase/functions/admin-users/` (`index.ts`, `handler.ts`, `backend.ts`, `deno.json`). Secret cần đặt: `ALLOWED_ORIGINS` = các origin của app, cách nhau dấu phẩy (VD `https://<tên>.pages.dev,http://localhost:5173`). `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY` do Supabase cung cấp sẵn. Hàm tự kiểm tra JWT + role Admin.
+4. **Admin đầu tiên**: chạy `supabase/seed/create_first_admin.sql` một lần (hướng dẫn tham số ở đầu file); script từ chối nếu đã có Admin.
+5. **Dashboard → Authentication**:
+   - Sign In / Providers: **tắt "Allow new users to sign up"** (không public sign-up).
+   - Email provider: đặt **Minimum password length = 10** (tài khoản do Admin tạo đã được xác nhận email sẵn, không gửi thư).
+   - Leaked password protection chỉ có ở gói Pro → hệ thống tự kiểm tra độ dài tối thiểu ở client (10 ký tự) và server (cài đặt trên).
+6. **Run log retention** (§16): lên lịch `select public.purge_run_logs();` hằng ngày bằng pg_cron (Database → Extensions → bật `pg_cron`), xem ví dụ trong `20261026080200_rpc.sql`. Mặc định giữ 12 tháng (`app_settings.run_log_retention_months`).
+
+## Deploy
+
+- **Cloudflare Pages** (frontend): build command `pnpm install --frozen-lockfile && pnpm --filter @hrflow/web build`, output `apps/web/dist`, env `NODE_VERSION=22`, `PNPM_VERSION=10.28.0`, `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`. Header bảo mật (CSP…) lấy từ `apps/web/public/_headers`.
+- **Keep-alive**: xem `workers/keep-alive/README.md` (`npx wrangler@4 deploy`, cron 08:00 giờ VN).
+
 ## Nguyên tắc bắt buộc
 
 - Không gửi nội dung file Excel / dữ liệu nhân sự lên server, không log ra console.
@@ -79,4 +115,4 @@ CI (GitHub Actions) chạy install → lint → format:check → typecheck → t
 
 ## Công nghệ
 
-TypeScript · React 19 · Vite · Tailwind CSS v4 · Zod · big.js · SheetJS CE · ExcelJS · i18next · Vitest — sắp tới: DuckDB-WASM, Pyodide, React Flow, Supabase, Cloudflare Pages.
+TypeScript · React 19 · Vite · Tailwind CSS v4 · Zod · big.js · SheetJS CE · ExcelJS · i18next · Supabase (supabase-js) · Vitest · Playwright · Cloudflare Pages/Workers — sắp tới: DuckDB-WASM, Pyodide, React Flow.

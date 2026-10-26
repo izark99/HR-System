@@ -166,6 +166,9 @@
   --color-blue-text: #1d4ed8;
   --color-blue-tint: #eaf2ff;
 
+  /* Login gradient middle stop (spec §25.2: #E3F8F3 → #F4FBFF → #FFF1E7) */
+  --color-sky-tint: #f4fbff;
+
   /* Lines */
   --color-line-input: #cbd5e1;
   --color-line: #e2e8f0;

@@ -7,7 +7,7 @@
  * longer (NV100000…).
  * Files are generated once into the OS temp dir and reused.
  */
-import { expect, test, type Page } from '@playwright/test';
+import { expect, test, type Page } from './fixtures';
 import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -16,6 +16,7 @@ import {
   openFlow,
   PAYROLL_HEADERS,
   payrollInput,
+  periodButton,
   RESULT_URL,
   runButton,
   TIMESHEET_HEADERS,
@@ -93,7 +94,7 @@ async function expectUsable(page: Page): Promise<void> {
   await expect(runButton(page)).toHaveText('Chạy', { timeout: 5 * 60_000 });
   await expect(runButton(page)).toBeEnabled();
   await expect(page.getByRole('button', { name: /^Bỏ file bang_luong_heavy/ })).toBeEnabled();
-  await expect(page.getByLabel(/Kỳ lương/)).toBeEditable();
+  await expect(periodButton(page)).toBeEnabled();
 }
 
 test.beforeAll(() => {

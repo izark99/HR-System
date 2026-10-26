@@ -2,7 +2,7 @@
  * Validation report in the run wizard (spec §10, §15.1 step 4; AC-07, AC-08; MEMORY 08:59/09:12).
  * Files are built in memory with SheetJS; fake data only.
  */
-import { expect, test, type Page } from '@playwright/test';
+import { expect, test, type Page } from './fixtures';
 import {
   employees,
   fixtures,

@@ -49,6 +49,9 @@ function state(p: Partial<SessionState> = {}): SessionState {
     run: { status: 'idle', nodes: [], error: null, summary: null, params: {} },
     restoring: false,
     restoreFailed: false,
+    asOf: '2026-09-01',
+    version: null,
+    versionCheck: 'ok',
     ...p,
   };
 }
@@ -56,6 +59,15 @@ function state(p: Partial<SessionState> = {}): SessionState {
 describe('readiness (Run button rules, spec §15.1 step 4)', () => {
   it('a failed restore after a hard cancel blocks running', () => {
     expect(readiness(state({ restoreFailed: true })).canRun).toBe(false);
+  });
+
+  it('no usable version for the as-of date blocks running (spec §14.2)', () => {
+    for (const versionCheck of ['resolving', 'none', 'error'] as const) {
+      expect(readiness(state({ versionCheck }))).toMatchObject({
+        canRun: false,
+        versionBlocked: true,
+      });
+    }
   });
 
   it('all good → canRun', () => {

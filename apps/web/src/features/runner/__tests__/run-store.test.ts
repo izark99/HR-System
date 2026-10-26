@@ -15,7 +15,9 @@ import type {
   UploadFile,
 } from '../../../engine/protocol';
 import { readiness } from '../readiness';
+import type { RunLogInsert } from '../../../lib/database.types';
 import type { FlowSource } from '../flow-source';
+import type { RunLogger } from '../run-log';
 
 const FIXTURES = resolve(import.meta.dirname, '../../../../../../fixtures/payroll-timesheet');
 const flowJson: unknown = JSON.parse(readFileSync(join(FIXTURES, 'flow.json'), 'utf8'));
@@ -214,8 +216,12 @@ describe('RunStore with the real engine session', () => {
 /** Scripted worker: every call is a deferred the test settles. */
 function deferred<T>() {
   let resolve!: (v: T) => void;
-  const promise = new Promise<T>((r) => (resolve = r));
-  return { promise, resolve };
+  let reject!: (e: Error) => void;
+  const promise = new Promise<T>((r, j) => {
+    resolve = r;
+    reject = j;
+  });
+  return { promise, resolve, reject };
 }
 
 interface Script {
@@ -594,5 +600,259 @@ describe('RunStore: stale replies, cancel timing and restore', () => {
     } finally {
       process.off('unhandledRejection', onUnhandled);
     }
+  });
+});
+
+describe('RunStore: restore treats a crashed slot re-validation as restoreFailed (reviewer MINOR b)', () => {
+  let scripts: Script[];
+  beforeEach(() => {
+    scripts = [];
+    engine.factory = scriptedApi(scripts);
+  });
+
+  it('fresh worker loads the flow but setSlotFiles rejects → restoreFailed', async () => {
+    const store = new RunStore(source);
+    await store.open('payroll-timesheet');
+    store.setParam('ky_luong', '2026-09');
+    store.addFiles('bang_luong', [new File(['a'], 'a.xlsx')]);
+    store.addFiles('cham_cong', [new File(['b'], 'b.xlsx')]);
+    for (const v of scripts[0]!.validations) v.d.resolve(okReport(v.slot, 1));
+    await until(() => readiness(store.getSnapshot()).canRun);
+
+    void store.run();
+    const cancelling = store.cancel();
+    await until(() => scripts.length === 2 && scripts[1]!.validations.length === 2, 3_000);
+    scripts[1]!.validations[0]!.d.resolve(okReport('bang_luong', 1));
+    scripts[1]!.validations[1]!.d.reject(new Error('worker crashed'));
+    await cancelling;
+    const s = store.getSnapshot();
+    expect(s.restoreFailed).toBe(true);
+    expect(s.restoring).toBe(false);
+    expect(readiness(s).canRun).toBe(false);
+  });
+});
+
+describe('RunStore: version by as-of date and run logging (Supabase source)', () => {
+  let scripts: Script[];
+  beforeEach(() => {
+    scripts = [];
+    engine.factory = scriptedApi(scripts);
+  });
+
+  type Version = { id: string; no: number; from: string; to: string | null };
+  const V1: Version = { id: 'v1', no: 1, from: '2026-01-01', to: '2026-09-01' };
+  const V2: Version = { id: 'v2', no: 2, from: '2026-09-01', to: null };
+
+  /** Fake Supabase source: v1 until 2026-08-31, v2 from 2026-09-01; v2 renames slot labels. */
+  function versionedSource(calls: string[], fail = { on: '' }): FlowSource {
+    const pick = (asOf: string) => (asOf >= V2.from ? V2 : asOf >= V1.from ? V1 : null);
+    return {
+      list: () => Promise.resolve([]),
+      get: (code, asOf) => {
+        calls.push(asOf);
+        if (asOf === fail.on) return Promise.reject(new Error('offline'));
+        if (code !== 'payroll-timesheet') return Promise.resolve(null);
+        const v = pick(asOf) ?? V2;
+        const def = structuredClone(flowJson) as { inputSlots: { label: string }[] };
+        def.inputSlots[0]!.label = `Bảng lương (${v.id})`;
+        return Promise.resolve({
+          summary: {
+            code,
+            name: 'Đối chiếu',
+            description: '',
+            category: 'Lương',
+            inputCount: 2,
+            versionLabel: `v${v.no}`,
+          },
+          definition: def,
+          version: {
+            id: v.id,
+            versionNo: v.no,
+            effectiveFrom: v.from,
+            effectiveTo: v.to,
+            applies: pick(asOf) !== null,
+          },
+        });
+      },
+    };
+  }
+
+  it('opens with today, re-resolves when the period changes, reloads a different version and keeps files', async () => {
+    const calls: string[] = [];
+    const store = new RunStore(versionedSource(calls), { today: () => '2026-10-26' });
+    await store.open('payroll-timesheet');
+    expect(calls).toEqual(['2026-10-26']);
+    expect(store.getSnapshot()).toMatchObject({ versionCheck: 'ok', version: { id: 'v2' } });
+
+    store.addFiles('bang_luong', [new File(['a'], 'a.xlsx')]);
+    for (const v of scripts[0]!.validations) v.d.resolve(okReport(v.slot, 1));
+
+    // Same version for 09/2026: no reload.
+    store.setParam('ky_luong', '2026-09');
+    await until(() => store.getSnapshot().versionCheck === 'ok' && calls.length === 2);
+    expect(calls[1]).toBe('2026-09-01');
+    expect(scripts[0]!.loads).toBe(1);
+
+    // 08/2026 → v1: definition reloaded in the worker, the picked file is re-validated.
+    store.setParam('ky_luong', '2026-08');
+    expect(store.getSnapshot().versionCheck).toBe('resolving');
+    expect(readiness(store.getSnapshot()).canRun).toBe(false);
+    await until(() => scripts[0]!.loads === 2);
+    await until(() => scripts[0]!.validations.length === 2);
+    const s = store.getSnapshot();
+    expect(s.version).toMatchObject({ id: 'v1', versionNo: 1 });
+    expect(s.flow?.inputSlots[0]?.label).toBe('Bảng lương (v1)');
+    expect(s.params.ky_luong).toBe('2026-08');
+    expect(s.slots.bang_luong!.files.map((f) => f.file.name)).toEqual(['a.xlsx']);
+    expect(scripts[0]!.validations[1]!.names).toEqual(['a.xlsx']);
+  });
+
+  it('no version for the period → "none" blocks Run; network error → "error", retry recovers', async () => {
+    const calls: string[] = [];
+    const fail = { on: '2026-07-01' };
+    const store = new RunStore(versionedSource(calls, fail), { today: () => '2026-10-26' });
+    await store.open('payroll-timesheet');
+    store.setParam('ky_luong', '2025-03');
+    await until(() => store.getSnapshot().versionCheck === 'none');
+    expect(readiness(store.getSnapshot())).toMatchObject({ canRun: false, versionBlocked: true });
+
+    store.setParam('ky_luong', '2026-07');
+    await until(() => store.getSnapshot().versionCheck === 'error');
+    fail.on = '';
+    store.retryVersion();
+    await until(() => store.getSnapshot().versionCheck === 'ok');
+    expect(store.getSnapshot().version?.id).toBe('v1');
+  });
+
+  it('open() failing on the network → load "error" (not "not found"); open again retries', async () => {
+    let offline = true;
+    const src: FlowSource = {
+      list: () => Promise.resolve([]),
+      get: (code, asOf) =>
+        offline ? Promise.reject(new Error('offline')) : versionedSource([]).get(code, asOf),
+    };
+    const store = new RunStore(src, { today: () => '2026-10-26' });
+    await store.open('payroll-timesheet');
+    expect(store.getSnapshot().load).toBe('error');
+    offline = false;
+    await store.open('payroll-timesheet');
+    expect(store.getSnapshot().load).toBe('ready');
+  });
+
+  it('logs each run once with metadata only (succeeded, failed, hard-cancelled); logger failures are ignored', async () => {
+    const logged: RunLogInsert[] = [];
+    let failLogger = false;
+    const logger: RunLogger = {
+      logRun: (e) => {
+        if (failLogger) return Promise.reject(new Error('insert failed'));
+        logged.push(e);
+        return Promise.resolve();
+      },
+    };
+    const store = new RunStore(versionedSource([]), { logger, today: () => '2026-10-26' });
+    await store.open('payroll-timesheet');
+    store.setParam('ky_luong', '2026-09');
+    await until(() => store.getSnapshot().versionCheck === 'ok');
+    store.addFiles('bang_luong', [new File(['NV00001;Nguyễn Văn A'], 'Luong_Nguyễn Văn A.xlsx')]);
+    store.addFiles('cham_cong', [new File(['b'], 'cc.xlsx')]);
+    for (const v of scripts[0]!.validations) v.d.resolve(okReport(v.slot, 3));
+    await until(() => readiness(store.getSnapshot()).canRun);
+
+    const r1 = store.run();
+    scripts[0]!.runs[0]!.resolve({
+      ok: true,
+      summary: {
+        durationMs: 42,
+        sheets: [{ rowCount: 5 }, { rowCount: 2 }],
+        compare: null,
+      } as never,
+    });
+    await r1;
+    await until(() => logged.length === 1);
+    expect(logged[0]).toMatchObject({
+      flow_version_id: 'v2',
+      params: { ky_luong: '2026-09' },
+      status: 'succeeded',
+      duration_ms: 42,
+      rows_out: 7,
+      error_code: null,
+    });
+    expect(logged[0]!.inputs_meta).toEqual([
+      {
+        slot: 'bang_luong',
+        rows: 3,
+        files: [
+          {
+            sha256: expect.stringMatching(/^[0-9a-f]{64}$/) as string,
+            size: new Blob(['NV00001;Nguyễn Văn A']).size,
+          },
+        ],
+      },
+      {
+        slot: 'cham_cong',
+        rows: 3,
+        files: [{ sha256: expect.stringMatching(/^[0-9a-f]{64}$/) as string, size: 1 }],
+      },
+    ]);
+    expect(JSON.stringify(logged)).not.toMatch(/Nguyễn|NV00001|Luong_/);
+
+    store.resetRun();
+    const r2 = store.run();
+    scripts[0]!.runs[1]!.resolve({
+      ok: false,
+      cancelled: false,
+      error: { messageKey: 'compare.error.x', params: { value: 'NV00001' }, nodeId: 'cmp' },
+    });
+    await r2;
+    await until(() => logged.length === 2);
+    expect(logged[1]).toMatchObject({
+      status: 'failed',
+      error_code: 'compare.error.x',
+      error_node_id: 'cmp',
+    });
+    expect(JSON.stringify(logged[1])).not.toContain('NV00001');
+
+    // Hard cancel: logged as cancelled exactly once, even though the old run promise rejects later.
+    store.resetRun();
+    void store.run();
+    const cancelling = store.cancel();
+    await until(() => scripts.length === 2 && scripts[1]!.validations.length === 2, 3_000);
+    for (const v of scripts[1]!.validations) v.d.resolve(okReport(v.slot, 3));
+    await cancelling;
+    await until(() => logged.length === 3);
+    expect(logged[2]).toMatchObject({ status: 'cancelled', rows_out: null });
+    await new Promise((r) => setTimeout(r, 20));
+    expect(logged).toHaveLength(3);
+
+    // A failing logger never breaks the run.
+    failLogger = true;
+    store.resetRun();
+    const r4 = store.run();
+    scripts[1]!.runs[0]!.resolve({
+      ok: true,
+      summary: { durationMs: 1, sheets: [], compare: null } as never,
+    });
+    await r4;
+    await new Promise((r) => setTimeout(r, 20));
+    expect(store.getSnapshot().run.status).toBe('done');
+  });
+
+  it('bundled flows (no version) are not logged', async () => {
+    const logRun = vi.fn(() => Promise.resolve());
+    const store = new RunStore(source, { logger: { logRun } });
+    await store.open('payroll-timesheet');
+    store.setParam('ky_luong', '2026-09');
+    store.addFiles('bang_luong', [new File(['a'], 'a.xlsx')]);
+    store.addFiles('cham_cong', [new File(['b'], 'b.xlsx')]);
+    for (const v of scripts[0]!.validations) v.d.resolve(okReport(v.slot, 1));
+    await until(() => readiness(store.getSnapshot()).canRun);
+    const r = store.run();
+    scripts[0]!.runs[0]!.resolve({
+      ok: true,
+      summary: { durationMs: 1, sheets: [], compare: null } as never,
+    });
+    await r;
+    await new Promise((res) => setTimeout(res, 20));
+    expect(logRun).not.toHaveBeenCalled();
   });
 });

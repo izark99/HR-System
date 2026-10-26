@@ -1,6 +1,7 @@
-import { expect, test, type Page } from '@playwright/test';
+import { expect, SUPABASE_ORIGIN, test, type Page } from './fixtures';
 import { readFileSync, readdirSync } from 'node:fs';
 import { join, resolve } from 'node:path';
+import { pickMonth } from './helpers';
 
 const FIXTURES = resolve(import.meta.dirname, '../fixtures/payroll-timesheet');
 
@@ -11,12 +12,20 @@ function fixtures(prefix: string): string[] {
     .map((f) => join(FIXTURES, f));
 }
 
-/** Requests leaving localhost. None are allowed: the font is self-hosted too (MEMORY 12:37). */
+/**
+ * Requests leaving localhost other than the (mocked) Supabase project. None are allowed: the font
+ * is self-hosted too (MEMORY 12:37).
+ */
 function trackExternalRequests(page: Page): string[] {
   const external: string[] = [];
   page.on('request', (req) => {
     const url = new URL(req.url());
-    if (url.hostname !== 'localhost' && url.protocol !== 'blob:' && url.protocol !== 'data:') {
+    if (
+      url.hostname !== 'localhost' &&
+      url.origin !== SUPABASE_ORIGIN &&
+      url.protocol !== 'blob:' &&
+      url.protocol !== 'data:'
+    ) {
       external.push(`${req.method()} ${url.origin}`);
     }
   });
@@ -41,7 +50,7 @@ test('acceptance flow: upload 6 fixtures, run, see 63/9/3/3, download the workbo
   const runButton = page.getByRole('button', { name: /^Chạy/ }).last();
   await expect(runButton).toBeDisabled();
 
-  await page.getByLabel(/Kỳ lương/).fill('2026-09');
+  await pickMonth(page, '2026-09');
   await page.getByLabel(/^Chọn file cho Bảng lương/).setInputFiles(fixtures('bang_luong_'));
   await page.getByLabel(/^Chọn file cho Chấm công/).setInputFiles(fixtures('cham_cong_'));
 

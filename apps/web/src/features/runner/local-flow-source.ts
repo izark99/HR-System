@@ -1,9 +1,10 @@
-// Temporary: the acceptance flow is bundled from the fixture until flows are stored in Supabase.
+// Dev/test only (VITE_FLOW_SOURCE=local, never in production builds): the acceptance flow bundled
+// from the fixture. Production reads published versions from Supabase (supabase-flow-source.ts).
 import payrollTimesheetFlow from '../../../../../fixtures/payroll-timesheet/flow.json';
 import type { FlowSource, FlowSummary, LoadedFlow } from './flow-source';
 
 /** Flow metadata is Admin-authored content (not UI text), so it lives with the flow. */
-const BUNDLED: LoadedFlow[] = [
+export const BUNDLED_FLOWS: LoadedFlow[] = [
   {
     summary: {
       code: 'payroll-timesheet',
@@ -20,8 +21,8 @@ const BUNDLED: LoadedFlow[] = [
 ];
 
 export const localFlowSource: FlowSource = {
-  list: () => Promise.resolve(BUNDLED.map((f) => f.summary)),
-  get: (code) => Promise.resolve(BUNDLED.find((f) => f.summary.code === code) ?? null),
+  list: () => Promise.resolve(BUNDLED_FLOWS.map((f) => f.summary)),
+  get: (code) => Promise.resolve(BUNDLED_FLOWS.find((f) => f.summary.code === code) ?? null),
 };
 
 export type { FlowSummary };

@@ -222,6 +222,13 @@ Flow là một **DAG** (đồ thị có hướng, không vòng) gồm các node 
 - `ui` chỉ phục vụ canvas, engine bỏ qua.
 - Khi lưu: validate schema, kiểm tra DAG (không vòng), kiểm tra mọi port bắt buộc đã nối, kiểm tra tham chiếu (`refTable`, `template`, `slot`) tồn tại.
 
+### 8.1 Tương thích schema (schema compatibility)
+
+- Version đã Published là bất biến (§7.2) nên **mọi bản phát hành app sau này phải nạp được mọi version đã publish**.
+- Thay đổi schema flow chỉ được phép theo 2 cách: (a) **bổ sung** (thêm trường tùy chọn có giá trị mặc định), hoặc (b) kèm một **bước tiền xử lý (preprocess migration)** trong `packages/flow-schema/src/migrate.ts` (`migrateFlowDefinition`) chuyển định nghĩa cũ sang dạng mới **trong bộ nhớ** trước khi parse (không sửa bản lưu trong database), và trả về ghi chú (notice) để hiển thị cho Admin.
+- Engine (worker) luôn chạy `migrateFlowDefinition` trước `FlowDefinitionSchema`; màn Import flow của Admin hiển thị các notice.
+- Bước tiền xử lý hiện có: bỏ `.csv` khỏi `inputSlots[].accept` (CSV không còn được nhận, chốt 2026-10-26 13:08); slot chỉ nhận `.csv` chuyển về mặc định `.xlsx, .xls`. Cả hai trường hợp đều có notice.
+
 ---
 
 ## 9. Xử lý dữ liệu: Excel · SQL · Python
@@ -588,6 +595,9 @@ Package manager: pnpm workspace.
 | Q2 | IT/Pháp chế công ty có yêu cầu gì khi dùng cloud nước ngoài cho metadata không? | Hosting |
 | Q3 | Số lượng user dự kiến? | Free tier (Supabase Free: 50k MAU — dư) |
 | Q4 | Có cần Admin "giả lập" (impersonate) quyền User để kiểm tra không? | Phân quyền |
+| Q5 | Phiên đăng nhập lưu ở `sessionStorage` (đóng tab là đăng xuất, mỗi tab đăng nhập riêng — đang làm) hay `localStorage` (giữ đăng nhập giữa các tab)? | Bảo mật / tiện dụng |
+| Q6 | Admin thấy và chạy được mọi flow đã publish mà không cần tự gán (đang làm), hay chỉ flow được gán như User? | Phân quyền |
+| Q7 | Tự đăng xuất sau 8 giờ không hoạt động (§6): Supabase Free không có "inactivity timeout"; làm phía client (đếm thời gian không thao tác) ở bước sau? | Bảo mật |
 
 ---
 

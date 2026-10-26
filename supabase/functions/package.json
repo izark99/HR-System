@@ -1,0 +1,19 @@
+{
+  "name": "@hrflow/supabase-functions",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Supabase Edge Functions (Deno). Node tooling here only typechecks and unit-tests the handlers; Deno resolves the same bare imports through each function's deno.json.",
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "2.118.0",
+    "zod": "4.6.7"
+  },
+  "devDependencies": {
+    "typescript": "~5.9.3",
+    "vitest": "^4.1.12"
+  }
+}

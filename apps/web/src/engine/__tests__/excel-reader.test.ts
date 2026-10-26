@@ -350,6 +350,75 @@ describe('readSlot: multiple files', () => {
     expect(b.report.errorCount).toBe(0);
     expect(b.table.rows.map((r) => r.ma_nv)).toEqual(['NV00002']);
   });
+
+  describe('container detection does not depend on the extension (reviewer MINOR a)', () => {
+    const s = () =>
+      employeeSlot({
+        sheet: { mode: 'byIndex', value: 0 },
+        multiple: { enabled: true, maxFiles: 10 },
+      });
+    const book = (bookType: 'biff8' | 'xlsx', id: string) => {
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet([['Mã NV'], [id]]), 'Data');
+      return new Uint8Array(XLSX.write(wb, { type: 'array', bookType }) as ArrayBuffer);
+    };
+    const utf16 = (text: string, le: boolean) => {
+      const out = new Uint8Array(2 + text.length * 2);
+      out.set(le ? [0xff, 0xfe] : [0xfe, 0xff]);
+      for (let i = 0; i < text.length; i++) {
+        const c = text.charCodeAt(i);
+        out[2 + i * 2] = le ? c & 0xff : c >> 8;
+        out[3 + i * 2] = le ? c >> 8 : c & 0xff;
+      }
+      return out;
+    };
+    const html = (id: string) =>
+      `\r\n<html><body><table><tr><td>Mã NV</td></tr><tr><td>${id}</td></tr></table></body></html>`;
+
+    it('OLE (BIFF8) named .xlsx and OOXML named .xls are read', () => {
+      const r = readSlot(s(), [
+        { name: 'ole.xlsx', data: book('biff8', 'NV00001') },
+        { name: 'zip.xls', data: book('xlsx', 'NV00002') },
+      ]);
+      expect(r.report.errorCount).toBe(0);
+      expect(r.table.rows.map((row) => row.ma_nv)).toEqual(['NV00001', 'NV00002']);
+    });
+
+    it('UTF-16 LE/BE HTML exports (with BOM) are read as .xls and as .xlsx', () => {
+      const r = readSlot(s(), [
+        { name: 'le.xls', data: utf16(html('NV00003'), true) },
+        { name: 'be.xlsx', data: utf16(html('NV00004'), false) },
+        {
+          name: 'bom8.xls',
+          data: new Uint8Array([0xef, 0xbb, 0xbf, ...new TextEncoder().encode(html('NV00005'))]),
+        },
+      ]);
+      expect(r.report.errorCount).toBe(0);
+      expect(r.table.rows.map((row) => row.ma_nv)).toEqual(['NV00003', 'NV00004', 'NV00005']);
+    });
+
+    it('plain text / TSV / CSV content is refused whatever the extension (no CSV, MEMORY 13:08)', () => {
+      const tsv = 'Mã NV\tCông\nNV00001\t1\n';
+      const files = [
+        { name: 'tab.xls', data: new TextEncoder().encode(tsv) },
+        { name: 'tab.xlsx', data: new TextEncoder().encode(tsv) },
+        { name: 'u16.xls', data: utf16(tsv, true) },
+        { name: 'u16be.xlsx', data: utf16('Mã NV,Công\r\nNV00001,1', false) },
+        {
+          name: 'bom.xls',
+          data: new Uint8Array([0xef, 0xbb, 0xbf, ...new TextEncoder().encode(tsv)]),
+        },
+        { name: 'blank16.xls', data: utf16('   \r\n', true) },
+      ];
+      const { report } = readSlot(s(), files);
+      for (const f of files) {
+        expect(
+          report.issues.filter((i) => i.file === f.name).map((i) => i.messageKey),
+          f.name,
+        ).toEqual(['validation.fileUnreadable']);
+      }
+    });
+  });
 });
 
 describe('readSlot: unique uses the compare key normalization (decision 20261026)', () => {

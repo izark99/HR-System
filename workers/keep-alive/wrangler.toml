@@ -1,0 +1,15 @@
+# Cloudflare Worker that keeps the Supabase Free project awake (spec §16, MEMORY Hạ tầng).
+# Deploy: see README.md in this folder.
+name = "hrflow-keep-alive"
+main = "src/index.ts"
+compatibility_date = "2026-10-01"
+workers_dev = false
+
+[triggers]
+# Daily at 01:00 UTC (08:00 Vietnam time).
+crons = ["0 1 * * *"]
+
+[vars]
+SUPABASE_URL = "https://rzakjtgvbyxqsmbpcomw.supabase.co"
+# Publishable key: public by design (same value as the web app's VITE_SUPABASE_ANON_KEY).
+SUPABASE_PUBLISHABLE_KEY = "sb_publishable_LGUaSHynCBDHgwpW0AEe4g_6woV3e4K"

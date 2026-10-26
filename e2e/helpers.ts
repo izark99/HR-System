@@ -189,11 +189,36 @@ export function reportCard(page: Page): Locator {
   return page.getByRole('region', { name: 'Báo cáo kiểm tra file' });
 }
 
+/** Trigger button of the custom month picker for the period param. */
+export function periodButton(page: Page): Locator {
+  return page.getByRole('button', { name: /Kỳ lương/ });
+}
+
+/** Pick `YYYY-MM` with the custom month picker (mouse): open, move to the year, click the month. */
+export async function pickMonth(
+  page: Page,
+  value: string,
+  trigger = periodButton(page),
+): Promise<void> {
+  const [year, month] = value.split('-').map(Number) as [number, number];
+  await trigger.click();
+  const dialog = page.getByRole('dialog');
+  await expect(dialog).toBeVisible();
+  for (let i = 0; i < 30; i++) {
+    const shown = Number(await dialog.locator('[aria-live="polite"]').textContent());
+    if (shown === year) break;
+    await dialog.getByRole('button', { name: shown > year ? 'Năm trước' : 'Năm sau' }).click();
+  }
+  await dialog.getByRole('gridcell', { name: `Tháng ${month} năm ${year}` }).click();
+  await expect(dialog).toHaveCount(0);
+  await expect(trigger).toContainText(`Tháng ${String(month).padStart(2, '0')}/${year}`);
+}
+
 /** Open the acceptance flow and fill the period. */
 export async function openFlow(page: Page, period = '2026-09'): Promise<void> {
   await page.goto(FLOW_URL);
   await expect(page.getByRole('heading', { level: 1 })).toHaveText(/Đối chiếu bảng lương/);
-  if (period) await page.getByLabel(/Kỳ lương/).fill(period);
+  if (period) await pickMonth(page, period);
 }
 
 /** Open the flow, upload the 6 fixtures and wait until Run is enabled. */

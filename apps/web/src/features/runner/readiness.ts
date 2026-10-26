@@ -7,6 +7,8 @@ export interface Readiness {
   validating: boolean;
   missingSlots: string[];
   missingParams: string[];
+  /** The as-of date has no usable version yet (resolving / none / lookup failed). */
+  versionBlocked: boolean;
   canRun: boolean;
 }
 
@@ -42,6 +44,7 @@ export function readiness(state: SessionState): Readiness {
       return p.required && (v === null || v === undefined || String(v).trim() === '');
     })
     .map((p) => p.key);
+  const versionBlocked = state.versionCheck !== 'ok';
   return {
     errors,
     warnings,
@@ -49,8 +52,10 @@ export function readiness(state: SessionState): Readiness {
     validating,
     missingSlots,
     missingParams,
+    versionBlocked,
     canRun:
       state.load === 'ready' &&
+      !versionBlocked &&
       !state.restoring &&
       !state.restoreFailed &&
       !validating &&

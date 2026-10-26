@@ -4,7 +4,7 @@
  * so Hủy lands mid-run. Whether the cancel ends cooperatively or by terminate + restore, the UI
  * must become usable again and a second run must succeed. Fake data only.
  */
-import { expect, test } from '@playwright/test';
+import { expect, test } from './fixtures';
 import {
   employees,
   openFlow,

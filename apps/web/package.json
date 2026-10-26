@@ -8,11 +8,13 @@
     "build": "vite build",
     "preview": "vite preview",
     "typecheck": "tsc -p tsconfig.app.json && tsc -p tsconfig.test.json && tsc -p tsconfig.node.json",
-    "test": "vitest run"
+    "test": "vitest run",
+    "build:e2e": "vite build --mode e2e"
   },
   "dependencies": {
     "@fontsource/be-vietnam-pro": "^5.3.0",
     "@hrflow/flow-schema": "workspace:*",
+    "@supabase/supabase-js": "2.118.0",
     "@tanstack/react-router": "^1.170.46",
     "@tanstack/react-table": "^8.21.3",
     "@tanstack/react-virtual": "^3.14.22",

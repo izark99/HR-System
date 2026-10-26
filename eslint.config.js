@@ -19,6 +19,8 @@ export default tseslint.config(
           './apps/web/tsconfig.test.json',
           './apps/web/tsconfig.node.json',
           './packages/flow-schema/tsconfig.json',
+          './supabase/functions/tsconfig.json',
+          './workers/keep-alive/tsconfig.json',
           './e2e/tsconfig.json',
         ],
         tsconfigRootDir: import.meta.dirname,
@@ -41,6 +43,11 @@ export default tseslint.config(
     ignores: ['apps/web/src/engine/**/*.test.ts', 'apps/web/src/engine/__tests__/**'],
     languageOptions: { globals: globals.worker },
     rules: { 'no-console': 'error' },
+  },
+  {
+    // vi.fn() mocks are asserted as `expect(obj.method)`; that is not an unbound call.
+    files: ['**/*.test.ts', '**/__tests__/**/*.ts'],
+    rules: { '@typescript-eslint/unbound-method': 'off' },
   },
   {
     files: ['**/*.js'],
