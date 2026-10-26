@@ -23,6 +23,15 @@
 20261026 - Khớp khi chênh lệch nằm trong ngưỡng (tolerance) do Admin cấu hình riêng cho từng chỉ tiêu.
 20261026 - Đưa node `control.compare` lên MVP; output 1 file Excel 4 sheet: Tổng hợp / Lệch / Chỉ có trong lương / Chỉ có trong chấm công.
 20261026 - Ô chỉ tiêu (công, OT, phép, không lương) để trống được coi là 0; cột chỉ tiêu vẫn bắt buộc phải tồn tại trong file (thiếu cột → lỗi).
+20261026 - Bỏ qua dòng có cột khóa chứa text cấu hình được (VD "TỔNG CỘNG"), so khớp sau khi chuẩn hóa.
+20261026 - File thiếu cột khóa: chỉ báo 1 lỗi "thiếu cột", không báo thêm lỗi từng dòng.
+20261026 - Số dạng text có thể hiểu theo 2 cách (VD "1,500") → cảnh báo (warning).
+20261026 - Cột kiểu text lấy đúng text đang hiển thị trong Excel (giữ "00123", ngày theo định dạng hiển thị).
+20261026 - Cột kiểu ngày luôn chấp nhận ô ngày thật của Excel, bất kể định dạng text đã cấu hình.
+20261026 - File có header nhưng không có dòng dữ liệu → cảnh báo (warning).
+20261026 - Sheet "Lệch": ô trống hiển thị để trống, nhưng vẫn tính là 0 khi so sánh.
+20261026 - So khớp khóa (Mã NV) không phân biệt hoa thường, bỏ khoảng trắng thừa.
+20261026 - File có 2 cột trùng tên với cột bắt buộc → lỗi.
 20261026 - Dữ liệu test do Claude tự sinh (dữ liệu giả, `fixtures/payroll-timesheet/`), Harold review và chỉnh cấu trúc cho sát thực tế.
 
 ## Dữ liệu & tuân thủ

@@ -319,6 +319,14 @@ Admin khai báo **input slot** cho mỗi flow — mô tả file mà User cần u
   - `presence`: `required` (thiếu cột trong file → lỗi) | `optional`.
   - `required` (giá trị): ô trống → lỗi. Nếu không bắt buộc, ô trống nhận `defaultValue` (VD `0`) hoặc `null`.
   - Cột chỉ tiêu số trong flow nghiệm thu: `presence: required`, ô trống → `0`.
+- Quy tắc đọc file bổ sung (chốt 20261026):
+  - `skipRows.whenKeyContains`: bỏ qua dòng có cột khóa chứa một trong các text cấu hình (VD `"TỔNG CỘNG"`), so khớp sau chuẩn hóa.
+  - Thiếu cột khóa → chỉ 1 lỗi "thiếu cột"; không phát sinh lỗi từng dòng.
+  - Số dạng text mơ hồ (VD `"1,500"`) → warning.
+  - Cột `string` lấy text hiển thị của ô (giữ số 0 đầu, ngày theo format hiển thị).
+  - Cột `date` luôn chấp nhận ô ngày thật của Excel, ngoài các `dateFormats` cấu hình.
+  - File có header nhưng 0 dòng dữ liệu → warning.
+  - Hai cột trùng tên (sau chuẩn hóa) khớp với một cột `presence: required` → error.
 
 - So khớp tên cột: chuẩn hóa (bỏ dấu tiếng Việt, lowercase, bỏ khoảng trắng thừa) rồi so với `aliases`.
 - **Báo cáo validation** trước khi chạy: thiếu cột, sai kiểu, vi phạm rule — kèm số dòng Excel gốc. Mỗi rule có mức `error` (chặn chạy) hoặc `warning` (cho chạy tiếp).
@@ -644,6 +652,8 @@ Flow (DAG):
   - `mismatched`: 1 dòng / NV lệch; mỗi chỉ tiêu có 3 cột `<label> (lương)`, `<label> (chấm công)`, `<label> (chênh lệch)` với chênh lệch = right − left; thêm cột `Chỉ tiêu lệch` (liệt kê).
   - `only_left`, `only_right`: các dòng không tìm thấy khóa ở bảng còn lại.
 - Quy tắc so sánh: `|right − left| > tolerance` ⇒ lệch. Giá trị null được coi là 0 nếu Admin bật `nullAsZero` (mặc định bật), ngược lại null ≠ số bất kỳ ⇒ lệch.
+- So khớp khóa không phân biệt hoa thường, bỏ khoảng trắng thừa (chốt 20261026).
+- Sheet "Lệch": giá trị null hiển thị ô trống, nhưng vẫn tính là 0 khi so sánh nếu `nullAsZero` bật (chốt 20261026).
 - Tính toán bằng decimal, không dùng float.
 
 ### 24.3 User story & Acceptance criteria
