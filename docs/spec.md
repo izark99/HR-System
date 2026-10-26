@@ -741,6 +741,7 @@ Toàn bộ UI dùng **một** design language ("bright executive"), áp dụng n
 | Callout | Nền tint, radius 14–16px, mở đầu bằng nhãn in đậm (`An toàn dữ liệu:`, `Lưu ý:`, `Hợp lệ:`) |
 | Bảng | Trong card; header `#475569` 600; dòng cần chú ý tô nền tint; ô chênh lệch tô coral tint |
 | Node trên canvas | Card radius 16px; vạch màu trên theo nhóm node (blue đầu vào, coral kiểm soát, amber đầu ra); node đang chọn có ring teal |
+| Month/Date picker | Tự làm, không dùng picker mặc định của trình duyệt. Nút trigger giống input, hiển thị "Tháng 10/2026" / `dd/MM/yyyy`; popover card radius 20px; lưới 12 tháng ("Th 1"…"Th 12") hoặc lịch tuần bắt đầu thứ Hai; ô chọn nền `#0F766E` chữ trắng; điều hướng bằng phím mũi tên, PageUp/PageDown đổi năm, Esc đóng (chốt 2026-10-26) |
 | Vùng kéo thả file | Viền đứt 2px `#99E0D2`, nền `#F3FBF8`, radius 16px |
 
 ### 25.4 Giọng văn UI
