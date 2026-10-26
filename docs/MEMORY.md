@@ -13,6 +13,7 @@
 20261026 - Quy mô dữ liệu tùy flow; thiết kế cho tối đa ~1 triệu dòng mỗi lần chạy.
 20261026 - Flow dùng để nghiệm thu MVP: đối chiếu bảng lương – chấm công.
 20261026 - Python (Pyodide) và template Excel để sang Phase 2; MVP chỉ có Excel + SQL, output là preview + xuất Excel nhiều sheet cơ bản.
+20261026 - Thứ tự làm Phase 1: (1) chạy được flow nghiệm thu trên trình duyệt (DAG executor + Web Worker + 3 màn User), (2) Supabase (auth, RLS, lưu flow/version), (3) Flow Designer Admin.
 
 ## Flow nghiệm thu: Đối chiếu bảng lương – chấm công
 
