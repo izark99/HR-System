@@ -350,7 +350,7 @@ Admin khai báo **input slot** cho mỗi flow — mô tả file mà User cần u
   - **Ô đơn** (scalar): `{ "cell": "B2", "value": "=PARAM(\"ky_luong\")" }` hoặc lấy giá trị tổng hợp từ một bảng.
   - **Vùng bảng** (table range): `{ "sheet": "BaoCao", "anchor": "A6", "source": "node_id", "columns": ["ma_nv", "ho_ten", …], "insertRows": true }` → chèn dòng, giữ style của dòng mẫu, tự mở rộng công thức tổng bên dưới.
   - **Named range / Excel Table** có sẵn trong template.
-- Tên file output cấu hình được: `DoiChieu_{ky_luong}_{chi_nhanh}.xlsx`.
+- Tên file output cấu hình được: `DoiChieu_{ky_luong}_{chi_nhanh}.xlsx`. Tham số kiểu tháng được định dạng `YYYY-MM` trong tên file (VD `DoiChieu_2026-09.xlsx`) (chốt 2026-10-26).
 
 ---
 
@@ -699,7 +699,7 @@ Toàn bộ UI dùng **một** design language ("bright executive"), áp dụng n
 
 | Token | Giá trị |
 |-------|---------|
-| Font | `Be Vietnam Pro` (400–800), fallback `Arial, sans-serif`. Một family duy nhất, hỗ trợ đầy đủ tiếng Việt |
+| Font | `Be Vietnam Pro` (400–800), fallback `Arial, sans-serif`. Một family duy nhất, hỗ trợ đầy đủ tiếng Việt. **Self-host** trong app (woff2, subset Latin + Vietnamese), không gọi Google Fonts (chốt 2026-10-26) |
 | Page title | 30px / 700 / letter-spacing −0.8px; viết như một câu kết luận ("Kỳ 09/2026 có 9 nhân viên lệch công cần xử lý") |
 | Section title | 18px / 700 |
 | Body | 14–15px / 400 |
