@@ -27,6 +27,10 @@ function serviceKey(): string {
 
 const url = Deno.env.get('SUPABASE_URL') ?? '';
 const backend = createBackend(url, serviceKey());
-const env = { allowedOrigins: parseAllowedOrigins(Deno.env.get('ALLOWED_ORIGINS')) };
+// Origins are not secret: default to the production app so no dashboard secret is required.
+const DEFAULT_ALLOWED_ORIGINS = 'https://hr-data-flow.pages.dev';
+const env = {
+  allowedOrigins: parseAllowedOrigins(Deno.env.get('ALLOWED_ORIGINS') ?? DEFAULT_ALLOWED_ORIGINS),
+};
 
 Deno.serve((req) => handleRequest(req, env, backend));
