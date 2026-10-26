@@ -85,6 +85,8 @@
 
 ## Xác thực & phân quyền
 
+2026-10-26 18:49 - Tài khoản bị khóa hoặc chưa có profile: hiện chung thông báo "Tài khoản bị khóa hoặc chưa được cấp quyền. Vui lòng liên hệ Admin."
+
 2026-10-26 18:09 - Admin được tự reset mật khẩu, tự khóa, tự đổi role của chính mình (không chặn). Nếu Admin duy nhất tự khóa/hạ quyền, khôi phục bằng SQL trên Supabase dashboard.
 
 2026-10-26 18:09 - Tự đăng xuất sau 8 giờ không thao tác: làm phía trình duyệt ở bước 3.
@@ -102,6 +104,8 @@
 2026-10-26 08:20 - Đăng nhập bằng username + password do Admin cấp; bắt đổi mật khẩu lần đầu; Admin reset mật khẩu; không có 2FA; không public sign-up.
 
 ## Flow & xử lý
+
+2026-10-26 18:49 - Import flow JSON có `.csv` trong `accept`: tự bỏ `.csv` và lưu bản đã làm sạch lên server, báo cho Admin biết đã bỏ.
 
 2026-10-26 13:08 - Định dạng mã (VD Mã NV) không fix cứng trong code: là cấu hình của Admin (rule regex tùy chọn trên từng cột của input slot). Flow nghiệm thu chỉ yêu cầu Mã NV bắt buộc + không trùng, không giới hạn độ dài.
 
