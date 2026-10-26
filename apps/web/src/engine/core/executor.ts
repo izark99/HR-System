@@ -115,6 +115,12 @@ export function planFlow(
       );
     }
     const config: unknown = parsed.data;
+    try {
+      plugin.checkConfig?.(config, flow);
+    } catch (err) {
+      if (!(err instanceof EngineError)) throw err;
+      fail(err.messageKey, { node: node.label ?? node.id, ...err.params }, node.id);
+    }
     inputPorts.set(node.id, plugin.inputPorts?.(config) ?? plugin.inputs);
     planned.set(node.id, { node, plugin, config, inputs: [], outputPorts: plugin.outputs });
   }
@@ -154,6 +160,21 @@ export function planFlow(
   return topoSort([...planned.values()]);
 }
 
+/**
+ * A node that lies on a cycle. Every remaining node still has a remaining predecessor, so walking
+ * predecessors must revisit a node; the first revisited node is on the cycle (nodes merely
+ * downstream of a cycle are never revisited).
+ */
+function nodeOnCycle(indegree: Map<string, Set<string>>, start: string): string {
+  const seen = new Set<string>();
+  let current = start;
+  while (!seen.has(current)) {
+    seen.add(current);
+    current = indegree.get(current)!.values().next().value!;
+  }
+  return current;
+}
+
 /** Kahn's algorithm; ties keep the order of `flow.nodes` so runs are deterministic. */
 function topoSort(nodes: PlannedNode[]): PlannedNode[] {
   const indegree = new Map(nodes.map((n) => [n.node.id, new Set(n.inputs.map((l) => l.from))]));
@@ -161,7 +182,10 @@ function topoSort(nodes: PlannedNode[]): PlannedNode[] {
   const remaining = [...nodes];
   while (remaining.length > 0) {
     const i = remaining.findIndex((n) => indegree.get(n.node.id)!.size === 0);
-    if (i < 0) fail('executor.error.cycle', { node: remaining[0]!.node.id }, remaining[0]!.node.id);
+    if (i < 0) {
+      const node = nodeOnCycle(indegree, remaining[0]!.node.id);
+      fail('executor.error.cycle', { node }, node);
+    }
     const [next] = remaining.splice(i, 1);
     order.push(next!);
     for (const deps of indegree.values()) deps.delete(next!.node.id);
@@ -228,12 +252,9 @@ function attachNode(err: unknown, node: FlowNode): EngineError {
   if (err instanceof EngineError) {
     return err.nodeId ? err : new EngineError(err.messageKey, err.params, node.id);
   }
-  const message = err instanceof Error ? err.message : String(err);
-  return new EngineError(
-    'executor.error.nodeFailed',
-    { node: node.label ?? node.id, message },
-    node.id,
-  );
+  // Raw exception text is deliberately dropped: it may quote cell values, and EngineErrorInfo is
+  // what the UI shows and what a future run log (metadata only, spec §7.1) would record.
+  return new EngineError('executor.error.nodeFailed', { node: node.label ?? node.id }, node.id);
 }
 
 /** Plan and run a flow. Rejects with an `EngineError` (node id attached) on failure or cancel. */

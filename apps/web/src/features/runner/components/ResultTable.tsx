@@ -2,7 +2,7 @@ import { flexRender, getCoreRowModel, useReactTable, type ColumnDef } from '@tan
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { cx } from '../../../components/ui';
+import { Button, Callout, cx } from '../../../components/ui';
 import type {
   CellValue,
   ColumnInfo,
@@ -47,6 +47,8 @@ export function ResultTable({
   const [total, setTotal] = useState<number | null>(null);
   const [pages, setPages] = useState<ReadonlyMap<number, RowPage>>(new Map());
   const requested = useRef(new Set<number>());
+  /** A page request failed; no automatic refetch until the User retries (avoids a request loop). */
+  const [failed, setFailed] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   // eslint-disable-next-line react-hooks/incompatible-library -- TanStack Virtual API
@@ -69,21 +71,27 @@ export function ResultTable({
   }, []);
 
   useEffect(() => {
+    if (failed) return;
     const wanted: number[] = [];
     if (total === null) wanted.push(0);
     else for (let p = firstPage; p <= lastPage; p++) wanted.push(p);
     for (const p of wanted) {
       if (requested.current.has(p)) continue;
       requested.current.add(p);
-      void store
-        .getRows(sheet.id, { offset: p * PAGE_SIZE, limit: PAGE_SIZE, filters })
-        .then((page) => {
+      void store.getRows(sheet.id, { offset: p * PAGE_SIZE, limit: PAGE_SIZE, filters }).then(
+        (page) => {
           if (!mounted.current) return;
           setTotal(page.total);
           setPages((prev) => new Map(prev).set(p, page));
-        });
+        },
+        () => {
+          // Forget the page so a retry asks for it again.
+          requested.current.delete(p);
+          if (mounted.current) setFailed(true);
+        },
+      );
     }
-  }, [store, sheet.id, filters, total, firstPage, lastPage]);
+  }, [store, sheet.id, filters, total, firstPage, lastPage, failed]);
 
   const columns = useMemo<ColumnDef<RowData>[]>(
     () =>
@@ -118,12 +126,24 @@ export function ResultTable({
   });
   const totalWidth = table.getTotalSize();
 
+  const errorState = failed && (
+    <Callout tone="coral" label={t('result.rowsFailedLabel')} role="alert">
+      <span className="flex flex-wrap items-center gap-3">
+        {t('result.rowsFailed')}
+        <Button onClick={() => setFailed(false)}>{t('result.retry')}</Button>
+      </span>
+    </Callout>
+  );
+
+  if (total === null && failed) return <div className="px-5 pb-5">{errorState}</div>;
+
   if (total === 0) {
     return <p className="m-0 px-5 pb-5 text-label text-muted">{t('result.empty')}</p>;
   }
 
   return (
     <div className="flex flex-col gap-2 px-5 pb-5">
+      {errorState}
       <div
         ref={scrollRef}
         role="region"

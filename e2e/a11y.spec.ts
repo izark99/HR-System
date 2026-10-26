@@ -5,7 +5,6 @@
  */
 import { expect, test, type Page } from '@playwright/test';
 import {
-  blockFonts,
   contrastRatio,
   fixtures,
   FLOW_URL,
@@ -14,10 +13,6 @@ import {
   runToResult,
   uploadFixtures,
 } from './helpers';
-
-test.beforeEach(async ({ page }) => {
-  await blockFonts(page);
-});
 
 /** Press Tab until the focused element matches `name` (accessible-ish name), max 60 stops. */
 async function tabTo(page: Page, name: RegExp): Promise<void> {
@@ -147,7 +142,18 @@ test('keyboard only: params, file pickers, run, tabs, filter and download', asyn
   await tabTo(page, /^Lệch \(9\)$/);
   await page.keyboard.press('ArrowRight');
   await expect(page.getByRole('tab', { selected: true })).toHaveText('Chỉ có trong lương (3)');
-  await page.keyboard.press('ArrowLeft');
+  await page.keyboard.press('End');
+  await expect(page.getByRole('tab', { selected: true })).toHaveText('Chỉ có trong chấm công (3)');
+  await expect(page.getByRole('tab', { selected: true })).toBeFocused();
+  await page.keyboard.press('Home');
+  await expect(page.getByRole('tab', { selected: true })).toHaveText('Tổng hợp');
+  // aria-controls only on the selected tab, pointing at the panel that exists.
+  const tabs = page.getByRole('tab');
+  await expect(tabs.and(page.locator('[aria-controls]'))).toHaveCount(1);
+  const controls = await tabs.first().getAttribute('aria-controls');
+  await expect(page.locator(`[id="${controls}"]`)).toHaveAttribute('role', 'tabpanel');
+  await page.keyboard.press('ArrowRight'); // back to "Lệch"
+  await expect(page.getByRole('tab', { selected: true })).toHaveText('Lệch (9)');
   await tabTo(page, /^Chi nhánh/);
   await page.keyboard.press('ArrowDown'); // first branch
   await expect(page.getByLabel('Chi nhánh')).toHaveValue('CN01');
@@ -162,7 +168,7 @@ test('keyboard only: params, file pickers, run, tabs, filter and download', asyn
     page.waitForEvent('download'),
     page.keyboard.press('Enter'),
   ]);
-  expect(download.suggestedFilename()).toBe('DoiChieu_092026.xlsx');
+  expect(download.suggestedFilename()).toBe('DoiChieu_2026-09.xlsx');
 });
 
 test('every control has an accessible name (flow list, wizard with errors, result)', async ({

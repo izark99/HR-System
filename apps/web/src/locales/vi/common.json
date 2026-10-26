@@ -66,7 +66,10 @@
       "validating": "Đang kiểm tra file…",
       "running": "Đang chạy…",
       "cancel": "Hủy",
-      "cancelling": "Đang hủy…"
+      "cancelling": "Đang hủy…",
+      "restoreFailed": "Chạy (cần nạp lại file)",
+      "retryRestore": "Thử lại",
+      "viewResult": "Xem kết quả"
     },
     "progress": {
       "title": "Đang chạy flow",
@@ -80,7 +83,9 @@
     "failed": "Chạy không thành công:",
     "cancelled": "bạn có thể chạy lại khi sẵn sàng.",
     "restoring": "đang nạp lại file sau khi hủy…",
-    "cancelledLabel": "Đã hủy lần chạy:"
+    "cancelledLabel": "Đã hủy lần chạy:",
+    "restoreFailedLabel": "Chưa nạp lại được file:",
+    "restoreFailed": "sau khi hủy, hệ thống không chuẩn bị lại được file của bạn. Bấm Thử lại; nếu vẫn lỗi, tải lại trang."
   },
   "slot": {
     "multiple": "Nhiều file · {{accept}}",
@@ -155,6 +160,9 @@
     "empty": "Không có dòng nào.",
     "noSession": "Chưa có kết quả trong phiên này. Kết quả chỉ nằm trong trình duyệt và sẽ mất khi tải lại trang.",
     "goRun": "Về trang chạy flow",
+    "rowsFailedLabel": "Chưa tải được dữ liệu:",
+    "rowsFailed": "không lấy được các dòng của sheet này.",
+    "retry": "Thử lại",
     "noteLabel": "Lưu ý:",
     "note": "kết quả chỉ nằm trong trình duyệt. Hãy tải file về trước khi đóng tab."
   }

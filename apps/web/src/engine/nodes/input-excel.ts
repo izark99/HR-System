@@ -22,6 +22,11 @@ export const inputExcelPlugin: NodePlugin<InputExcelConfig, Promise<NodeOutputs>
   configSchema: InputExcelConfigSchema,
   inputs: [],
   outputs: [{ name: INPUT_EXCEL_PORT, required: false }],
+  checkConfig(config, flow) {
+    if (!flow.inputSlots.some((s) => s.key === config.slot)) {
+      throw new EngineError('executor.error.nodeUnknownSlot', { slot: config.slot });
+    }
+  },
   inferSchema(config, _inputs, ctx) {
     const slot = findSlot(config, ctx);
     const columns: ColumnDef[] = slot.columns.map((c) => ({

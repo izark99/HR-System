@@ -1,7 +1,7 @@
 {
   "validation": {
     "fileUnreadable": "Không đọc được file {{file}}: định dạng không hợp lệ hoặc file bị hỏng.",
-    "fileTypeNotAccepted": "File {{file}} không đúng định dạng cho phép ({{accept}}).",
+    "fileTypeNotAccepted": "File {{file}}: định dạng không được hỗ trợ (chỉ nhận {{accept}}).",
     "filesTooFew": "Cần ít nhất {{min}} file, mới có {{count}} file.",
     "filesTooMany": "Tối đa {{max}} file, đang có {{count}} file.",
     "slotRequired": "Chưa upload file cho mục \"{{slot}}\".",
@@ -74,9 +74,11 @@
       "paramRequired": "Chưa nhập tham số bắt buộc \"{{param}}\".",
       "paramInvalid": "Giá trị tham số \"{{param}}\" không hợp lệ.",
       "cancelled": "Đã hủy lần chạy.",
-      "nodeFailed": "Node \"{{node}}\" bị lỗi: {{message}}",
+      "nodeFailed": "Node \"{{node}}\" gặp lỗi ngoài dự kiến. Hãy kiểm tra lại file đầu vào; nếu vẫn lỗi, báo cho Admin.",
       "missingInput": "Node \"{{node}}\" thiếu dữ liệu ở cổng \"{{port}}\".",
       "unknownSlot": "Flow không có mục upload \"{{slot}}\".",
+      "nodeUnknownSlot": "Node \"{{node}}\" đọc mục upload \"{{slot}}\" nhưng flow không khai báo mục này.",
+      "engineCrashed": "Bộ xử lý dữ liệu gặp sự cố ngoài dự kiến. Hãy thử chạy lại; nếu vẫn lỗi, báo cho Admin.",
       "noRunContext": "Node chỉ chạy được trong lúc chạy flow.",
       "inputInvalid": "Mục \"{{slot}}\" còn {{count}} lỗi; hãy sửa file rồi upload lại."
     }

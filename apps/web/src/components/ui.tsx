@@ -26,7 +26,9 @@ export function cx(...parts: (string | false | null | undefined)[]): string {
 
 const buttonBase =
   'inline-flex min-h-target items-center justify-center gap-2 rounded-control px-5 text-label ' +
-  'transition-colors disabled:cursor-not-allowed';
+  // Colors animate only for hover/press. A disabled→enabled change must snap: a fade would leave
+  // white text on a pale mid-transition teal (contrast below WCAG AA) for a moment.
+  'transition-none hover:transition-colors active:transition-colors disabled:cursor-not-allowed';
 
 export const buttonClass = {
   // White text only on #0F766E (WCAG AA).

@@ -4,7 +4,6 @@
  */
 import { expect, test, type Page } from '@playwright/test';
 import {
-  blockFonts,
   employees,
   fixtures,
   nv,
@@ -25,10 +24,6 @@ import {
   payrollAoa,
   type UploadPayload,
 } from './helpers';
-
-test.beforeEach(async ({ page }) => {
-  await blockFonts(page);
-});
 
 /** Upload the 3 timesheet fixtures so only the payroll slot decides readiness. */
 async function withTimesheets(page: Page): Promise<void> {
@@ -68,6 +63,8 @@ test('AC-07: duplicate Mã NV across two files names both file + row and blocks 
   await expect(row).toContainText('luong_A.xlsx dòng 9');
   await expect(row).toContainText('luong_B.xlsx dòng 5');
   await expect(row).toContainText('NV00005');
+  // MEMORY 13:08: the duplicate marks BOTH files, while the report counts it once.
+  await expect(payrollList(page).getByTestId('file-status')).toHaveText(['1 lỗi', '1 lỗi']);
   await expect(reportCard(page).getByText('1 lỗi', { exact: true })).toBeVisible();
   await expect(runButton(page)).toHaveText('Chạy (sửa 1 lỗi trước)');
   await expect(runButton(page)).toBeDisabled();
@@ -80,7 +77,7 @@ test('duplicate Mã NV differing only by case/whitespace is still a duplicate (M
   const b = employees(1, 99, 'CN02');
   b[0]![0] = '  nv00002 ';
   await uploadPayroll(page, [payroll('luong_A.xlsx', employees(3, 1)), payroll('luong_B.xlsx', b)]);
-  // regex ^NV\d{5}$ may also flag the lower-case id; the duplicate must be reported regardless.
+  // The acceptance flow has no ID format rule (MEMORY 13:08): only the duplicate is reported.
   await expect(reportCard(page)).toContainText('bị trùng giá trị');
   await expect(reportCard(page)).toContainText('luong_A.xlsx dòng 6');
   await expect(runButton(page)).toBeDisabled();
@@ -140,12 +137,9 @@ test('0-byte .xlsx file: reported as unreadable, Run blocked, UI usable', async 
   await expect(runButton(page)).toBeDisabled();
 });
 
-// KNOWN BUG (minor): SheetJS parses a 0-byte / non-zip ".xlsx" as plain text (a CSV-like
-// "Sheet1"), so the User is told the sheet "Luong" is missing instead of "file cannot be read".
-// Suspected: apps/web/src/engine/io/excel-reader.ts parseWorkbook() (no zip signature check for
-// .xlsx before XLSX.read).
+// Was a known bug (reported as "không tìm thấy sheet"); fixed by the container signature check in
+// apps/web/src/engine/io/excel-reader.ts parseWorkbook().
 test('0-byte .xlsx file: message says the file cannot be read', async ({ page }) => {
-  test.fail(true, 'KNOWN BUG: 0-byte .xlsx reported as "không tìm thấy sheet"');
   await withTimesheets(page);
   await uploadPayroll(page, [
     { name: 'rong.xlsx', mimeType: 'application/octet-stream', buffer: Buffer.alloc(0) },
@@ -169,7 +163,6 @@ test('garbage bytes named .xlsx: error, Run blocked', async ({ page }) => {
 test('garbage bytes named .xlsx: message says the file cannot be read (not "sheet not found")', async ({
   page,
 }) => {
-  test.fail(true, 'KNOWN BUG: garbage .xlsx reported as "không tìm thấy sheet" (see above)');
   await withTimesheets(page);
   const garbage = Buffer.from(Array.from({ length: 4096 }, (_, i) => (i * 7919 + 13) % 256));
   await uploadPayroll(page, [
@@ -194,7 +187,7 @@ test('file type not in accept list (.txt) is rejected', async ({ page }) => {
   await uploadPayroll(page, [
     { name: 'ghi_chu.txt', mimeType: 'text/plain', buffer: Buffer.from('NV00001,Nguyen') },
   ]);
-  await expect(reportRows(page).first()).toContainText('không đúng định dạng cho phép');
+  await expect(reportRows(page).first()).toContainText('định dạng không được hỗ trợ');
   await expect(runButton(page)).toBeDisabled();
 });
 
@@ -328,9 +321,9 @@ test('a slot error does not leak into the other slot status', async ({ page }) =
     timesheet('cc.xlsx', employees(2, 1)),
     timesheet('cc2.xlsx', [[nv(1), 'X', 'CN01', 26, 4, 1, 0]]),
   ]);
-  // The duplicate is attributed to the later file only; the first file keeps its green row count
-  // although the report names it too (UX question for Harold, not asserted as a bug).
-  await expect(timesheetList(page).getByTestId('file-status')).toHaveText(['2 dòng', '1 lỗi']);
+  // MEMORY 13:08: a duplicate across 2 files marks both files (the report counts it once).
+  await expect(timesheetList(page).getByTestId('file-status')).toHaveText(['1 lỗi', '1 lỗi']);
+  await expect(reportCard(page).getByText('1 lỗi', { exact: true })).toBeVisible();
   await expect(reportCard(page)).toContainText('cc.xlsx dòng 2');
   await expect(payrollList(page).getByTestId('file-status')).toHaveText([
     '30 dòng',
@@ -348,13 +341,14 @@ test('legacy .xls (BIFF8) payroll is accepted like .xlsx', async ({ page }) => {
   await expect(payrollList(page).getByTestId('file-status')).toHaveText('4 dòng');
 });
 
-// KNOWN BUG (major): both slots advertise ".csv" ("Nhiều file · .xlsx .xls .csv") but select the
-// sheet by name ("Luong" / "ChamCong"). A CSV has a single sheet named "Sheet1", so every CSV is
-// rejected with "không tìm thấy sheet". Suspected: apps/web/src/engine/io/excel-reader.ts
-// pickSheet() (no CSV special case) + fixtures/payroll-timesheet/flow.json accept list.
-test('timesheet as UTF-8 CSV with the same headers is accepted', async ({ page }) => {
-  test.fail(true, 'KNOWN BUG: CSV always fails sheet-by-name selection');
+// Was a known bug (CSV advertised, then rejected as "không tìm thấy sheet"). MEMORY 13:08: CSV is
+// not accepted; the slot no longer advertises it and a CSV gets a clear "unsupported" error.
+test('CSV is not advertised and a dropped CSV is rejected as an unsupported format', async ({
+  page,
+}) => {
   await openFlow(page);
+  await expect(page.getByText(/\.csv/)).toHaveCount(0);
+  await expect(timesheetInput(page)).toHaveAttribute('accept', '.xlsx,.xls');
   const csv = [TIMESHEET_HEADERS, ...employees(3)].map((r) => r.join(',')).join('\n');
   await timesheetInput(page).setInputFiles([
     {
@@ -363,7 +357,10 @@ test('timesheet as UTF-8 CSV with the same headers is accepted', async ({ page }
       buffer: Buffer.concat([Buffer.from([0xef, 0xbb, 0xbf]), Buffer.from(csv, 'utf8')]),
     },
   ]);
-  await expect(timesheetList(page).getByTestId('file-status')).toHaveText('3 dòng', {
-    timeout: 5_000,
-  });
+  await expect(timesheetList(page).getByTestId('file-status')).toHaveText('1 lỗi');
+  await expect(reportRows(page).first()).toContainText(
+    'File cham_cong.csv: định dạng không được hỗ trợ (chỉ nhận .xlsx, .xls).',
+  );
+  await expect(reportRows(page).first()).not.toContainText('không tìm thấy sheet');
+  await expect(runButton(page)).toBeDisabled();
 });

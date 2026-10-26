@@ -1,8 +1,4 @@
-import {
-  OutputExcelConfigSchema,
-  type FlowParam,
-  type OutputExcelConfig,
-} from '@hrflow/flow-schema';
+import { OutputExcelConfigSchema, type OutputExcelConfig } from '@hrflow/flow-schema';
 import type { NodeOutputs, NodePlugin, PortDef } from '../core/plugin';
 import { EngineError, type ParamValue } from '../core/types';
 import { writeWorkbook } from '../io/excel-writer';
@@ -13,19 +9,13 @@ function ports(config: OutputExcelConfig): PortDef[] {
   return [...new Set(config.sheets.map((s) => s.port))].map((name) => ({ name, required: true }));
 }
 
-/** Param value as it appears in a file name: month "2026-09" → "092026", date → "26092026". */
-function fileNamePart(param: FlowParam | undefined, value: ParamValue | undefined): string {
+/**
+ * Param value as it appears in a file name. Month and date params keep their ISO form ("YYYY-MM",
+ * "YYYY-MM-DD") so file names sort chronologically. Values arrive validated by `checkParams`.
+ */
+function fileNamePart(value: ParamValue | undefined): string {
   if (value === null || value === undefined) return '';
-  const s = String(value);
-  if (param?.type === 'month') {
-    const m = /^(\d{4})-(\d{2})$/.exec(s);
-    if (m) return `${m[2]}${m[1]}`;
-  }
-  if (param?.type === 'date') {
-    const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(s);
-    if (m) return `${m[3]}${m[2]}${m[1]}`;
-  }
-  return s;
+  return String(value);
 }
 
 /**
@@ -35,13 +25,9 @@ function fileNamePart(param: FlowParam | undefined, value: ParamValue | undefine
 export function resolveFileName(
   template: string,
   params: Readonly<Record<string, ParamValue>>,
-  defs: readonly FlowParam[] = [],
 ): string {
   const filled = template.replace(/\{([a-z_][a-z0-9_]*)\}/g, (_, key: string) =>
-    fileNamePart(
-      defs.find((d) => d.key === key),
-      params[key],
-    ),
+    fileNamePart(params[key]),
   );
   // eslint-disable-next-line no-control-regex
   const safe = filled.replace(/[\\/:*?"<>|\u0000-\u001f]/g, '_').trim() || 'output';
@@ -67,7 +53,7 @@ export const outputExcelPlugin: NodePlugin<OutputExcelConfig, Promise<NodeOutput
     });
     const data = await writeWorkbook(sheets);
     ctx.run.emitArtifact({
-      fileName: resolveFileName(config.fileName, ctx.run.params, ctx.flow?.params),
+      fileName: resolveFileName(config.fileName, ctx.run.params),
       mimeType: XLSX_MIME,
       data,
     });

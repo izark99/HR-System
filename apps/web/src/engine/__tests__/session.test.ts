@@ -3,7 +3,7 @@ import { readdirSync, readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { beforeAll, describe, expect, it } from 'vitest';
 import type { RunProgressEvent, RunSummary, UploadFile } from '../protocol';
-import { EngineSession } from '../session';
+import { EngineSession, errorInfo } from '../session';
 
 const FIXTURES = resolve(import.meta.dirname, '../../../../../fixtures/payroll-timesheet');
 const flowJson: unknown = JSON.parse(readFileSync(join(FIXTURES, 'flow.json'), 'utf8'));
@@ -22,8 +22,8 @@ describe('EngineSession (worker logic)', () => {
 
   beforeAll(async () => {
     expect(session.loadFlow(flowJson).ok).toBe(true);
-    const pay = await session.setSlotFiles('bang_luong', uploads('bang_luong_'));
-    const ts = await session.setSlotFiles('cham_cong', uploads('cham_cong_'));
+    const pay = (await session.setSlotFiles('bang_luong', uploads('bang_luong_')))!;
+    const ts = (await session.setSlotFiles('cham_cong', uploads('cham_cong_')))!;
     expect(pay.report.errorCount).toBe(0);
     expect(ts.report.errorCount).toBe(0);
     expect(pay.rowCount).toBe(75);
@@ -54,7 +54,7 @@ describe('EngineSession (worker logic)', () => {
     ]);
     expect(summary.inputs.map((i) => i.rows)).toEqual([75, 75]);
     expect(summary.artifacts).toEqual([
-      expect.objectContaining({ index: 0, fileName: 'DoiChieu_092026.xlsx' }),
+      expect.objectContaining({ index: 0, fileName: 'DoiChieu_2026-09.xlsx' }),
     ]);
     expect(events.filter((e) => e.type === 'node-finished')).toHaveLength(4);
   });
@@ -113,7 +113,7 @@ describe('EngineSession validation', () => {
     const files = uploads('cham_cong_');
     // Same file twice under two names → every Mã NV is duplicated.
     const dup = [...files, { name: 'copy.xlsx', blob: files[0]!.blob }];
-    const v = await session.setSlotFiles('cham_cong', dup);
+    const v = (await session.setSlotFiles('cham_cong', dup))!;
     expect(v.report.errorCount).toBeGreaterThan(0);
     expect(v.report.issues.some((i) => i.messageKey === 'validation.unique')).toBe(true);
 
@@ -138,5 +138,67 @@ describe('EngineSession validation', () => {
     const session = new EngineSession('vi');
     const res = session.loadFlow({ schemaVersion: 1, nodes: [] });
     expect(res.ok).toBe(false);
+  });
+});
+
+describe('EngineSession.setSlotFiles: overlapping calls (version per slot)', () => {
+  /** An upload whose bytes become readable only after `release()`. */
+  function slowUpload(u: UploadFile) {
+    let release!: () => void;
+    const gate = new Promise<void>((r) => (release = r));
+    const blob = { arrayBuffer: () => gate.then(() => u.blob.arrayBuffer()) } as Blob;
+    return { upload: { name: u.name, blob }, release };
+  }
+
+  function loaded() {
+    const session = new EngineSession('vi');
+    expect(session.loadFlow(flowJson).ok).toBe(true);
+    return session;
+  }
+
+  it('an older call finishing after a newer delete commits nothing', async () => {
+    const session = loaded();
+    await session.setSlotFiles('cham_cong', uploads('cham_cong_'), 1);
+    const slow = slowUpload(uploads('bang_luong_')[0]!);
+    const older = session.setSlotFiles('bang_luong', [slow.upload], 1);
+    const newer = await session.setSlotFiles('bang_luong', [], 2);
+    expect(newer?.report.errorCount).toBeGreaterThan(0); // slotRequired
+    slow.release();
+    expect(await older).toBeNull();
+    const outcome = await session.run({ ky_luong: '2026-09' });
+    expect(outcome.ok).toBe(false);
+    if (!outcome.ok) expect(outcome.error.nodeId).toBe('in_luong');
+  });
+
+  it('an older call finishing after a newer file set keeps the newer files', async () => {
+    const session = loaded();
+    await session.setSlotFiles('cham_cong', uploads('cham_cong_'), 1);
+    const [cn01] = uploads('bang_luong_');
+    const slow = slowUpload(cn01!);
+    const older = session.setSlotFiles('bang_luong', [slow.upload], 1);
+    const newer = await session.setSlotFiles('bang_luong', uploads('bang_luong_'), 2);
+    expect(newer?.rowCount).toBe(75);
+    slow.release();
+    expect(await older).toBeNull();
+    const outcome = await session.run({ ky_luong: '2026-09' });
+    expect(outcome.ok && outcome.summary.inputs[0]!.rows).toBe(75);
+  });
+
+  it('a call with a version below the latest is ignored outright', async () => {
+    const session = loaded();
+    await session.setSlotFiles('bang_luong', uploads('bang_luong_'), 5);
+    expect(await session.setSlotFiles('bang_luong', [], 4)).toBeNull();
+    await session.setSlotFiles('cham_cong', uploads('cham_cong_'), 1);
+    expect((await session.run({ ky_luong: '2026-09' })).ok).toBe(true);
+  });
+});
+
+describe('errorInfo', () => {
+  it('maps a non-engine exception to engineCrashed without the raw text', () => {
+    expect(errorInfo(new Error('cell NV00001 broke'))).toEqual({
+      messageKey: 'executor.error.engineCrashed',
+      params: {},
+    });
+    expect(errorInfo('x')).toEqual({ messageKey: 'executor.error.engineCrashed', params: {} });
   });
 });

@@ -36,6 +36,7 @@ import type {
 /** Max distinct values for a carried column to be offered as a filter (e.g. branch). */
 const MAX_FILTER_VALUES = 50;
 const LIST_SEPARATOR = ', ';
+export const ENGINE_CRASHED_KEY = 'executor.error.engineCrashed';
 
 interface SheetState {
   info: SheetInfo;
@@ -51,7 +52,7 @@ function toCell(v: Value | undefined): CellValue {
   return isDecimal(v) ? v.toString() : v;
 }
 
-function errorInfo(err: unknown): EngineErrorInfo {
+export function errorInfo(err: unknown): EngineErrorInfo {
   if (err instanceof EngineError) {
     return {
       messageKey: err.messageKey,
@@ -59,10 +60,9 @@ function errorInfo(err: unknown): EngineErrorInfo {
       ...(err.nodeId ? { nodeId: err.nodeId } : {}),
     };
   }
-  return {
-    messageKey: 'executor.error.nodeFailed',
-    params: { node: '', message: err instanceof Error ? err.message : String(err) },
-  };
+  // Unexpected (non-engine) failure: never forward the raw exception text. It may contain cell
+  // values, and this object is what the UI shows and a future run log would record.
+  return { messageKey: ENGINE_CRASHED_KEY, params: {} };
 }
 
 /**
@@ -74,6 +74,8 @@ export class EngineSession {
   private readonly t: Translate;
   private flow: FlowDefinition | null = null;
   private readonly slotResults = new Map<string, SlotReadResult>();
+  /** Latest `setSlotFiles` version seen per slot. */
+  private readonly slotVersions = new Map<string, number>();
   private sheets: SheetState[] = [];
   private artifacts: RunFlowResult['artifacts'] = [];
   private abort: AbortController | null = null;
@@ -109,6 +111,7 @@ export class EngineSession {
   private reset(): void {
     this.flow = null;
     this.slotResults.clear();
+    this.slotVersions.clear();
     this.clearRun();
   }
 
@@ -117,16 +120,39 @@ export class EngineSession {
     this.artifacts = [];
   }
 
-  /** Replace the files of one slot, then read + validate them (cached for the run). */
-  async setSlotFiles(slotKey: string, files: readonly UploadFile[]): Promise<SlotValidation> {
+  /**
+   * Replace the files of one slot, then read + validate them (cached for the run).
+   *
+   * `version` must grow with every call for the slot (the UI bumps it on each file change).
+   * Calls overlap while file bytes are being read; only the latest version may change the cache,
+   * so an older call finishing late can neither restore stale files nor drop newer ones.
+   * Returns `null` when the call was superseded (nothing committed).
+   */
+  async setSlotFiles(
+    slotKey: string,
+    files: readonly UploadFile[],
+    version?: number,
+  ): Promise<SlotValidation | null> {
     const slot = this.requireFlow().inputSlots.find((s) => s.key === slotKey);
     if (!slot) throw new EngineError('executor.error.unknownSlot', { slot: slotKey });
-    this.clearRun();
-    this.slotResults.delete(slotKey);
+    const latest = this.slotVersions.get(slotKey) ?? 0;
+    if (version !== undefined && version < latest) return null;
+    const mine = version ?? latest + 1;
+    this.slotVersions.set(slotKey, mine);
+    const isLatest = () => this.slotVersions.get(slotKey) === mine;
+
     const sources: SourceFile[] = [];
-    for (const f of files) sources.push({ name: f.name, data: await f.blob.arrayBuffer() });
+    for (const f of files) {
+      const data = await f.blob.arrayBuffer();
+      if (!isLatest()) return null;
+      sources.push({ name: f.name, data });
+    }
+    if (!isLatest()) return null;
+    // Synchronous from here on: no newer call can interleave before the commit.
     const result = readSlot(slot, sources);
+    this.clearRun();
     if (files.length > 0) this.slotResults.set(slotKey, result);
+    else this.slotResults.delete(slotKey);
     return { slotKey, report: result.report, rowCount: result.table.rows.length };
   }
 

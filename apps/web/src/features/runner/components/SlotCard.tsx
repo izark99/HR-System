@@ -44,7 +44,8 @@ export function SlotCard({
     if (state.validating) return { tone: 'neutral', text: t('slot.validating'), ok: false };
     if (state.failed) return { tone: 'coral', text: t('slot.readFailed'), ok: false };
     if (!report) return null;
-    const issues = report.issues.filter((i) => i.file === name);
+    // A duplicate across 2 files is one issue but marks both files.
+    const issues = report.issues.filter((i) => i.file === name || i.relatedFile === name);
     const errors = issues.filter((i) => i.severity === 'error').length;
     const warnings = issues.length - errors;
     if (errors > 0) return { tone: 'coral', text: t('slot.errors', { count: errors }), ok: false };

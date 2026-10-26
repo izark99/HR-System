@@ -159,7 +159,7 @@ describe('acceptance flow: payroll ↔ timesheet', () => {
       out.sheets.map((s) => ({ name: s.name, table: result[s.port]! })),
     );
     const dir = mkdtempSync(join(tmpdir(), 'hrflow-'));
-    const path = join(dir, 'DoiChieu_092026.xlsx');
+    const path = join(dir, 'DoiChieu_2026-09.xlsx');
     writeFileSync(path, bytes);
 
     const wb = new ExcelJS.Workbook();

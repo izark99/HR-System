@@ -1,44 +1,117 @@
 import * as Comlink from 'comlink';
+import type { ParamValues, RunOutcome, RunProgressEvent } from '../../engine/protocol';
 import type { EngineApi } from '../../engine/worker';
+
+/** Rejection of calls still pending on a worker that was terminated (hard cancel). */
+export class EngineRestartedError extends Error {
+  constructor() {
+    super('engine worker restarted');
+    this.name = 'EngineRestartedError';
+  }
+}
+
+/** Minimal Worker surface (lets tests plug in a MessagePort-backed fake). */
+export type WorkerLike = Comlink.Endpoint & { terminate(): void };
+
+function spawnWorker(): WorkerLike {
+  return new Worker(new URL('../../engine/worker.ts', import.meta.url), {
+    type: 'module',
+    name: 'hrflow-engine',
+  });
+}
+
+type Api = Comlink.Remote<EngineApi>;
 
 /**
  * Main-thread handle on the engine worker. The worker module (engine + SheetJS + ExcelJS) is a
  * separate chunk loaded only when the first flow is opened.
+ *
+ * Every call through `api` is tracked: on `restart()`/`dispose()` the ones still pending are
+ * rejected with `EngineRestartedError` (a terminated worker would otherwise leave them pending
+ * forever) and open progress ports are closed.
  */
 export class EngineClient {
-  private worker!: Worker;
-  private remote!: Comlink.Remote<EngineApi>;
+  private worker!: WorkerLike;
+  private remote!: Api;
+  private readonly pending = new Set<(err: Error) => void>();
+  private readonly ports = new Set<MessagePort>();
+  readonly api: Api;
 
-  constructor() {
+  constructor(private readonly createWorker: () => WorkerLike = spawnWorker) {
     this.spawn();
+    this.api = new Proxy({} as Api, {
+      get: (_target, prop) => {
+        // `then` must stay undefined or the handle would look like a promise when returned/awaited.
+        if (typeof prop !== 'string' || prop === 'then') return undefined;
+        return (...args: unknown[]) =>
+          this.track(() =>
+            (Reflect.get(this.remote, prop) as (...a: unknown[]) => unknown)(...args),
+          );
+      },
+    });
   }
 
   private spawn(): void {
-    this.worker = new Worker(new URL('../../engine/worker.ts', import.meta.url), {
-      type: 'module',
-      name: 'hrflow-engine',
-    });
+    this.worker = this.createWorker();
     this.remote = Comlink.wrap<EngineApi>(this.worker);
   }
 
-  get api(): Comlink.Remote<EngineApi> {
-    return this.remote;
+  private track<T>(call: () => T | PromiseLike<T>): Promise<T> {
+    return new Promise<T>((resolve, reject) => {
+      const abandon = (err: Error) => reject(err);
+      this.pending.add(abandon);
+      Promise.resolve()
+        .then(call)
+        .then(
+          (v) => {
+            this.pending.delete(abandon);
+            resolve(v);
+          },
+          (e: unknown) => {
+            this.pending.delete(abandon);
+            reject(e instanceof Error ? e : new Error(String(e)));
+          },
+        );
+    });
+  }
+
+  /** Run the flow; progress events arrive on a dedicated port closed when the run settles. */
+  async run(params: ParamValues, onProgress: (e: RunProgressEvent) => void): Promise<RunOutcome> {
+    const { port1, port2 } = new MessageChannel();
+    this.ports.add(port1);
+    port1.onmessage = (ev: MessageEvent<RunProgressEvent>) => onProgress(ev.data);
+    try {
+      return await this.api.run(params, Comlink.transfer(port2, [port2]));
+    } finally {
+      this.closePort(port1);
+    }
+  }
+
+  private closePort(port: MessagePort): void {
+    port.onmessage = null;
+    port.close();
+    this.ports.delete(port);
+  }
+
+  private shutdown(): void {
+    for (const port of [...this.ports]) this.closePort(port);
+    const abandoned = [...this.pending];
+    this.pending.clear();
+    for (const reject of abandoned) reject(new EngineRestartedError());
+    this.remote[Comlink.releaseProxy]();
+    this.worker.terminate();
   }
 
   /**
-   * Hard stop (spec §13: cancel = terminate the worker). Pending calls on the old worker never
-   * settle; callers must ignore them and re-send flow + files to the fresh worker.
+   * Hard stop (spec §13: cancel = terminate the worker). Pending calls on the old worker are
+   * rejected; callers must re-send flow + files to the fresh worker.
    */
   restart(): void {
-    this.remote[Comlink.releaseProxy]();
-    this.worker.terminate();
+    this.shutdown();
     this.spawn();
   }
 
   dispose(): void {
-    this.remote[Comlink.releaseProxy]();
-    this.worker.terminate();
+    this.shutdown();
   }
 }
-
-export { Comlink };

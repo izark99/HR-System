@@ -30,6 +30,11 @@ export interface ValidationIssue {
   row?: number;
   /** Slot column key. */
   column?: string;
+  /**
+   * The other file involved (duplicate value across 2 files): the issue counts once in the report
+   * but is shown on both files' status (MEMORY 13:08).
+   */
+  relatedFile?: string;
 }
 
 /** A row excluded as non-data (total/signature row). Informational, never blocks a run. */

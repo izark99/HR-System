@@ -10,7 +10,7 @@ import type {
   SlotValidation,
 } from '../../engine/protocol';
 import { saveFile } from '../../lib/download';
-import { Comlink, EngineClient } from './engine-client';
+import { EngineClient } from './engine-client';
 import type { FlowSource, FlowSummary } from './flow-source';
 
 /**
@@ -63,6 +63,8 @@ export interface SessionState {
   run: RunState;
   /** Re-sending files to a fresh worker after a hard cancel. */
   restoring: boolean;
+  /** The fresh worker could not be prepared after a hard cancel; the User must retry. */
+  restoreFailed: boolean;
 }
 
 const IDLE_RUN: RunState = { status: 'idle', nodes: [], error: null, summary: null, params: {} };
@@ -77,7 +79,14 @@ const INITIAL: SessionState = {
   slots: {},
   run: IDLE_RUN,
   restoring: false,
+  restoreFailed: false,
 };
+
+/**
+ * Generic message for unexpected failures (worker crashed / call rejected). The raw exception is
+ * never stored: this state may feed a future run log, which must stay metadata only.
+ */
+const ENGINE_CRASHED: EngineErrorInfo = { messageKey: 'executor.error.engineCrashed', params: {} };
 
 /** Grace period for a cooperative cancel before the worker is terminated. */
 const CANCEL_GRACE_MS = 400;
@@ -188,25 +197,26 @@ export class RunStore {
   private async validateSlot(slotKey: string): Promise<void> {
     const slot = this.state.slots[slotKey];
     if (!slot) return;
+    // The worker gets the same version and commits only the latest one (calls overlap while file
+    // bytes are read), so worker cache and UI agree on which files the slot holds.
     const version = (this.slotVersions.get(slotKey) ?? 0) + 1;
     this.slotVersions.set(slotKey, version);
     const token = this.token;
-    if (slot.files.length === 0) {
-      this.patchSlot(slotKey, { validating: false, validation: null, failed: false });
-      await this.engine().api.setSlotFiles(slotKey, []);
-      return;
-    }
-    this.patchSlot(slotKey, { validating: true, failed: false });
+    const current = () => token === this.token && this.slotVersions.get(slotKey) === version;
+    const uploads = slot.files.map((f) => ({ name: f.file.name, blob: f.file }));
+    this.patchSlot(slotKey, {
+      validating: uploads.length > 0,
+      failed: false,
+      ...(uploads.length === 0 ? { validation: null } : {}),
+    });
     try {
-      const validation = await this.engine().api.setSlotFiles(
-        slotKey,
-        slot.files.map((f) => ({ name: f.file.name, blob: f.file })),
-      );
-      if (token !== this.token || this.slotVersions.get(slotKey) !== version) return;
-      this.patchSlot(slotKey, { validating: false, validation });
+      const validation = await this.engine().api.setSlotFiles(slotKey, uploads, version);
+      if (!current() || uploads.length === 0) return;
+      // null = superseded inside the worker; the newer call will report.
+      if (validation) this.patchSlot(slotKey, { validating: false, validation });
     } catch {
-      if (token !== this.token || this.slotVersions.get(slotKey) !== version) return;
-      this.patchSlot(slotKey, { validating: false, validation: null, failed: true });
+      if (!current()) return;
+      this.patchSlot(slotKey, { validating: false, validation: null, failed: uploads.length > 0 });
     }
   }
 
@@ -248,7 +258,7 @@ export class RunStore {
     };
 
     try {
-      const outcome = await this.engine().api.run(params, Comlink.proxy(onProgress));
+      const outcome = await this.engine().run(params, onProgress);
       if (token !== this.token) return;
       this.set((s) => ({
         ...s,
@@ -263,7 +273,7 @@ export class RunStore {
         run: {
           ...s.run,
           status: 'failed',
-          error: { messageKey: 'executor.error.nodeFailed', params: { node: '', message: '' } },
+          error: ENGINE_CRASHED,
         },
       }));
     }
@@ -274,24 +284,45 @@ export class RunStore {
     if (this.state.run.status !== 'running') return;
     const token = this.token;
     this.set((s) => ({ ...s, run: { ...s.run, status: 'cancelling' } }));
-    void this.engine().api.cancel();
+    // A dead worker may reject; the grace timer below handles it.
+    this.engine()
+      .api.cancel()
+      .catch(() => undefined);
     await new Promise((r) => setTimeout(r, CANCEL_GRACE_MS));
     // Re-read: the run may have settled (as cancelled) during the grace period.
     const status: RunStatus = this.getSnapshot().run.status;
     if (token !== this.token || status !== 'cancelling') return;
 
-    this.token++;
-    this.engine().restart();
-    this.set((s) => ({ ...s, run: { ...s.run, status: 'cancelled' }, restoring: true }));
-    await this.restore();
+    this.set((s) => ({ ...s, run: { ...s.run, status: 'cancelled' } }));
+    await this.restartEngine();
   }
 
-  /** Re-send the flow and files to a fresh worker (after a hard cancel). */
-  private async restore(): Promise<void> {
-    const token = this.token;
-    await this.engine().api.loadFlow(this.definition);
-    await Promise.all(Object.keys(this.state.slots).map((k) => this.validateSlot(k)));
-    if (token === this.token) this.set((s) => ({ ...s, restoring: false }));
+  /** After a failed restore: try again on a fresh worker. */
+  async retryRestore(): Promise<void> {
+    if (!this.state.restoreFailed || this.state.restoring) return;
+    await this.restartEngine();
+  }
+
+  /**
+   * Terminate the worker and re-send the flow and files to a fresh one. Never rejects: a failure
+   * ends in `restoreFailed` (shown with a retry button), and `restoring` is always reset.
+   */
+  private async restartEngine(): Promise<void> {
+    const token = ++this.token;
+    this.engine().restart();
+    this.set((s) => ({ ...s, restoring: true, restoreFailed: false }));
+    let ok = false;
+    try {
+      const loaded = await this.engine().api.loadFlow(this.definition);
+      if (token !== this.token) return;
+      if (!loaded.ok) return;
+      await Promise.all(Object.keys(this.state.slots).map((k) => this.validateSlot(k)));
+      ok = true;
+    } catch {
+      // ok stays false
+    } finally {
+      if (token === this.token) this.set((s) => ({ ...s, restoring: false, restoreFailed: !ok }));
+    }
   }
 
   /** Back to the wizard (files and validation are kept). */

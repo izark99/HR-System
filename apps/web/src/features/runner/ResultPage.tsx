@@ -153,11 +153,22 @@ function SheetTabs({ summary }: { summary: RunSummary }) {
 
   const tabId = (s: SheetInfo) => `tab-${s.id}`;
   const onKey = (e: KeyboardEvent<HTMLDivElement>) => {
+    const n = summary.sheets.length;
     const i = summary.sheets.findIndex((s) => s.id === current.id);
-    const step = e.key === 'ArrowRight' ? 1 : e.key === 'ArrowLeft' ? -1 : 0;
-    if (!step) return;
+    // WAI-ARIA tabs pattern: arrows wrap around, Home/End jump to the first/last tab.
+    const target =
+      e.key === 'ArrowRight'
+        ? (i + 1) % n
+        : e.key === 'ArrowLeft'
+          ? (i - 1 + n) % n
+          : e.key === 'Home'
+            ? 0
+            : e.key === 'End'
+              ? n - 1
+              : -1;
+    if (target < 0) return;
     e.preventDefault();
-    const next = summary.sheets[(i + step + summary.sheets.length) % summary.sheets.length]!;
+    const next = summary.sheets[target]!;
     setSelected(next.id);
     document.getElementById(tabId(next))?.focus();
   };
@@ -180,7 +191,8 @@ function SheetTabs({ summary }: { summary: RunSummary }) {
               type="button"
               role="tab"
               aria-selected={active}
-              aria-controls={`panel-${s.id}`}
+              // Only the selected tab's panel exists in the DOM.
+              aria-controls={active ? `panel-${s.id}` : undefined}
               tabIndex={active ? 0 : -1}
               onClick={() => setSelected(s.id)}
               className={cx(

@@ -1,4 +1,5 @@
 import type { ZodType } from 'zod';
+import type { FlowDefinition } from '@hrflow/flow-schema';
 import type { ColumnDef, EngineContext, Table } from './types';
 
 export interface PortDef {
@@ -26,6 +27,11 @@ export interface NodePlugin<
   outputs: PortDef[];
   /** Ports that depend on the config (e.g. one input port per sheet of `output.excel`). */
   inputPorts?(config: Config): PortDef[];
+  /**
+   * Plan-time checks against the rest of the flow (e.g. the referenced input slot exists). Throw an
+   * `EngineError`; the planner attaches the node id.
+   */
+  checkConfig?(config: Config, flow: FlowDefinition): void;
   inferSchema(
     config: Config,
     inputs: Record<string, ColumnDef[]>,

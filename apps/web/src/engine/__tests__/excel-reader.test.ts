@@ -231,17 +231,17 @@ describe('readSlot: rows', () => {
     expect(table.rows[0]).toMatchObject({ phong_ban: 'QA', ghi_chu: 'x' });
   });
 
-  it('reads UTF-8 CSV as text (no US date reinterpretation)', () => {
-    const csv = csvFile(
-      'a.csv',
-      '﻿Mã NV,Họ và tên,Công,Ngày vào làm\nNV00001,Trần Thị Bình,"25,5",01/09/2026\n',
-    );
+  it('rejects CSV as an unsupported format (MEMORY 13:08: no CSV)', () => {
+    const csv = csvFile('a.csv', '﻿Mã NV,Họ và tên\nNV00001,Trần Thị Bình\n');
     const s = employeeSlot({ sheet: { mode: 'byIndex', value: 0 } });
-    s.columns[2]!.decimalSeparator = ',';
     const { table, report } = readSlot(s, [csv]);
-    expect(report.issues).toEqual([]);
-    expect(table.rows[0]).toMatchObject({ ho_ten: 'Trần Thị Bình', ngay_vao: '2026-09-01' });
-    expect(String(table.rows[0]!.cong)).toBe('25.5');
+    expect(table.rows).toEqual([]);
+    expect(report.issues).toMatchObject([
+      { severity: 'error', messageKey: 'validation.fileTypeNotAccepted', file: 'a.csv' },
+    ]);
+    expect(formatIssue(report.issues[0]!, t)).toBe(
+      'File a.csv: định dạng không được hỗ trợ (chỉ nhận .xlsx, .xls).',
+    );
   });
 });
 
@@ -264,11 +264,20 @@ describe('readSlot: multiple files', () => {
       file: 'cn02.xlsx',
       row: 3,
       column: 'ma_nv',
+      relatedFile: 'cn01.xlsx', // MEMORY 13:08: both files get the error status
       params: { value: 'NV00002', file: 'cn02.xlsx', row: 3, otherFile: 'cn01.xlsx', otherRow: 3 },
     });
+    expect(report.errorCount).toBe(1);
     expect(formatIssue(dup[0]!, t)).toBe(
       'Cột "Mã NV" bị trùng giá trị: "NV00002" ở cn02.xlsx dòng 3 và "NV00002" ở cn01.xlsx dòng 3.',
     );
+  });
+
+  it('a duplicate inside one file has no relatedFile', () => {
+    const a = xlsxFile('cn01.xlsx', { Data: [['Mã NV'], ['NV00001'], ['NV00001']] });
+    const dup = readSlot(employeeSlot(), [a]).report.issues.filter((i) => i.rule === 'unique');
+    expect(dup).toHaveLength(1);
+    expect(dup[0]!.relatedFile).toBeUndefined();
   });
 
   it('enforces file count limits and accepted extensions', () => {
@@ -292,6 +301,54 @@ describe('readSlot: multiple files', () => {
     const { report } = readSlot(employeeSlot(), [junk]);
     expect(report.errorCount).toBe(1);
     expect(report.issues[0]!.rule === 'file' || report.issues[0]!.rule === 'sheet').toBe(true);
+  });
+
+  it('0-byte, text and random bytes named .xlsx/.xls are "unreadable", not "sheet not found"', () => {
+    const random = new Uint8Array(4096).map((_, i) => (i * 7919 + 13) % 256);
+    const files = [
+      { name: 'zero.xlsx', data: new Uint8Array(0) },
+      { name: 'text.xlsx', data: new TextEncoder().encode('Mã NV\nNV00001\n') },
+      { name: 'random.xlsx', data: random },
+      { name: 'zero.xls', data: new Uint8Array(0) },
+      { name: 'text.xls', data: new TextEncoder().encode('Mã NV,Công\nNV00001,1\n') },
+      { name: 'random.xls', data: random },
+      // Valid OLE header, garbage body: SheetJS throws → unreadable.
+      {
+        name: 'brokenole.xls',
+        data: new Uint8Array([0xd0, 0xcf, 0x11, 0xe0, 0xa1, 0xb1, 0x1a, 0xe1, ...random]),
+      },
+    ];
+    const s = employeeSlot({ multiple: { enabled: true, maxFiles: 10 } });
+    const { report } = readSlot(s, files);
+    for (const f of files) {
+      const own = report.issues.filter((i) => i.file === f.name);
+      expect(
+        own.map((i) => i.messageKey),
+        f.name,
+      ).toEqual(['validation.fileUnreadable']);
+    }
+    expect(
+      formatIssue(
+        report.issues.find((i) => i.file === 'zero.xlsx')!,
+        t,
+      ),
+    ).toContain('Không đọc được file zero.xlsx');
+  });
+
+  it('still reads a real .xls (BIFF8) and an HTML table saved as .xls', () => {
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet([['Mã NV'], ['NV00001']]), 'Data');
+    const biff = XLSX.write(wb, { type: 'array', bookType: 'biff8' }) as ArrayBuffer;
+    const html = new TextEncoder().encode(
+      '\n  <html><body><table><tr><td>Mã NV</td></tr><tr><td>NV00002</td></tr></table></body></html>',
+    );
+    const s = employeeSlot({ sheet: { mode: 'byIndex', value: 0 } });
+    const a = readSlot(s, [{ name: 'a.xls', data: biff }]);
+    expect(a.report.errorCount).toBe(0);
+    expect(a.table.rows.map((r) => r.ma_nv)).toEqual(['NV00001']);
+    const b = readSlot(s, [{ name: 'b.xls', data: html }]);
+    expect(b.report.errorCount).toBe(0);
+    expect(b.table.rows.map((r) => r.ma_nv)).toEqual(['NV00002']);
   });
 });
 

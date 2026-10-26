@@ -7,16 +7,30 @@ import type { RunState } from '../run-store';
 export function RunProgress({
   run,
   restoring,
+  restoreFailed,
   onCancel,
+  onRetryRestore,
 }: {
   run: RunState;
   restoring: boolean;
+  restoreFailed: boolean;
   onCancel: () => void;
+  onRetryRestore: () => void;
 }) {
   const { t } = useTranslation();
   const { t: te } = useTranslation('engine');
   const active = run.status === 'running' || run.status === 'cancelling';
 
+  if (restoreFailed) {
+    return (
+      <Callout tone="coral" label={t('run.restoreFailedLabel')} role="alert">
+        <span className="flex flex-wrap items-center gap-3">
+          {t('run.restoreFailed')}
+          <Button onClick={onRetryRestore}>{t('run.actions.retryRestore')}</Button>
+        </span>
+      </Callout>
+    );
+  }
   if (run.status === 'failed' && run.error) {
     return (
       <Callout tone="coral" label={t('run.failed')} role="alert">

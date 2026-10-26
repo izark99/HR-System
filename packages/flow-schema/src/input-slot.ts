@@ -142,12 +142,18 @@ export const SheetSelectorSchema = z.discriminatedUnion('mode', [
 ]);
 export type SheetSelector = z.infer<typeof SheetSelectorSchema>;
 
+export const SUPPORTED_FILE_TYPES = ['.xlsx', '.xls'] as const;
+
 export const InputSlotSchema = z
   .strictObject({
     key: IdentifierSchema,
     label: z.string().min(1),
     required: z.boolean().default(true),
-    accept: z.array(z.string().regex(/^\.[a-z0-9]+$/)).default(['.xlsx', '.xls', '.csv']),
+    /** File types the User may upload. Only Excel workbooks; CSV is not accepted (MEMORY 13:08). */
+    accept: z
+      .array(z.enum(SUPPORTED_FILE_TYPES))
+      .min(1)
+      .default([...SUPPORTED_FILE_TYPES]),
     sheet: SheetSelectorSchema.default({ mode: 'byIndex', value: 0 }),
     /** 1-based Excel row number of the (first) header row. */
     headerRow: z.number().int().min(1).default(1),

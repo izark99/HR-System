@@ -14,6 +14,18 @@ describe('InputSlotSchema', () => {
     expect(slot.extraColumns).toBe('drop');
   });
 
+  it('accepts only Excel workbooks: default .xlsx/.xls, .csv rejected (MEMORY 13:08)', () => {
+    const base = {
+      key: 's',
+      label: 'S',
+      columns: [{ key: 'a', aliases: ['A'], type: 'string' }],
+    };
+    expect(InputSlotSchema.parse(base).accept).toEqual(['.xlsx', '.xls']);
+    expect(InputSlotSchema.safeParse({ ...base, accept: ['.xlsx'] }).success).toBe(true);
+    expect(InputSlotSchema.safeParse({ ...base, accept: ['.xlsx', '.csv'] }).success).toBe(false);
+    expect(InputSlotSchema.safeParse({ ...base, accept: [] }).success).toBe(false);
+  });
+
   it('rejects skipRows on an unknown column and duplicate column keys', () => {
     const r = InputSlotSchema.safeParse({
       key: 's',

@@ -31,6 +31,7 @@ function runLabel(state: SessionState, ready: Readiness, t: TFunction) {
   if (state.run.status === 'running' || state.run.status === 'cancelling') {
     return t('run.actions.running');
   }
+  if (state.restoreFailed) return t('run.actions.restoreFailed');
   if (ready.validating || state.restoring) return t('run.actions.validating');
   if (ready.errors > 0) return t('run.actions.fixErrors', { count: ready.errors });
   if (ready.missingSlots.length > 0) return t('run.actions.needFiles');
@@ -125,7 +126,7 @@ export function RunPage() {
                   key={slot.key}
                   slot={slot}
                   state={slotState}
-                  disabled={busy || state.restoring}
+                  disabled={busy || state.restoring || state.restoreFailed}
                   onAdd={(files) => store.addFiles(slot.key, files)}
                   onRemove={(id) => store.removeFile(slot.key, id)}
                 />
@@ -143,7 +144,9 @@ export function RunPage() {
           <RunProgress
             run={state.run}
             restoring={state.restoring}
+            restoreFailed={state.restoreFailed}
             onCancel={() => void store.cancel()}
+            onRetryRestore={() => void store.retryRestore()}
           />
 
           <div className="flex flex-wrap items-center justify-between gap-4">
@@ -159,6 +162,16 @@ export function RunPage() {
               <Link to="/" className={cx(buttonClass.secondary, 'no-underline hover:text-ink')}>
                 {t('run.actions.back')}
               </Link>
+              {/* The previous run's result is still in memory (MEMORY 13:08). */}
+              {state.run.status === 'done' && state.run.summary && (
+                <Link
+                  to="/run/$flowCode/result"
+                  params={{ flowCode }}
+                  className={cx(buttonClass.secondary, 'no-underline hover:text-ink')}
+                >
+                  {t('run.actions.viewResult')}
+                </Link>
+              )}
               <Button
                 variant="primary"
                 disabled={!ready.canRun || busy}

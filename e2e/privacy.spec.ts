@@ -4,7 +4,6 @@
  */
 import { expect, test, type Page } from '@playwright/test';
 import {
-  blockFonts,
   fixtures,
   recordRequests,
   runToResult,
@@ -12,8 +11,6 @@ import {
   uploadFixtures,
   type RecordedRequest,
 } from './helpers';
-
-const FONT_HOST = /^fonts\.(googleapis|gstatic)\.com$/;
 
 /** Cell values that must never appear in a request: every text cell of the 6 fixtures. */
 const SECRETS = textCellValues([...fixtures('bang_luong_'), ...fixtures('cham_cong_')]);
@@ -66,10 +63,9 @@ async function storageDump(page: Page): Promise<string> {
 }
 
 test.describe('AC-09 data stays in the browser', () => {
-  test('fonts blocked: every request is same-origin GET of a static asset, none carries cell values', async ({
+  test('every request is a same-origin GET of a static asset, none carries cell values', async ({
     page,
   }) => {
-    await blockFonts(page);
     const requests = recordRequests(page);
     await fullSession(page);
 
@@ -81,7 +77,6 @@ test.describe('AC-09 data stays in the browser', () => {
     const offOrigin = requests.filter((r) => {
       const u = new URL(r.url);
       if (u.protocol === 'blob:' || u.protocol === 'data:') return false;
-      if (FONT_HOST.test(u.hostname)) return false; // aborted by the route above
       return u.origin !== origin;
     });
     expect(offOrigin.map((r) => `${r.method} ${r.url}`)).toEqual([]);
@@ -111,36 +106,49 @@ test.describe('AC-09 data stays in the browser', () => {
     });
   });
 
-  test('fonts allowed (production config): only Google Fonts CSS/font GETs leave the origin, with no data', async ({
+  test('Be Vietnam Pro is self-hosted: woff2 from /assets, rendered, no font origin in the CSP', async ({
     page,
   }) => {
     const requests = recordRequests(page);
-    await fullSession(page);
+    const response = await page.goto('/');
+    await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
+    await page.evaluate(() => document.fonts.ready);
+    // Vietnamese text on the page pulls in both subsets (unicode-range).
+    const loaded = await page.evaluate(() => {
+      const weights: string[] = [];
+      document.fonts.forEach((f: FontFace) => {
+        if (f.family.replace(/"/g, '') === 'Be Vietnam Pro' && f.status === 'loaded') {
+          weights.push(f.weight);
+        }
+      });
+      return weights;
+    });
+    expect(loaded.length).toBeGreaterThan(0);
+    expect(
+      await page.evaluate(() => getComputedStyle(document.querySelector('h1')!).fontFamily),
+    ).toMatch(/^"?Be Vietnam Pro"?/);
     const origin = new URL(page.url()).origin;
-    const external = requests.filter((r) => {
-      const u = new URL(r.url);
-      return !['blob:', 'data:'].includes(u.protocol) && u.origin !== origin;
-    });
-    for (const r of external) {
-      expect(new URL(r.url).hostname, r.url).toMatch(FONT_HOST);
-      expect(r.method).toBe('GET');
-      expect(r.body).toBe('');
-      expect(['stylesheet', 'font']).toContain(r.resourceType);
-      // The stylesheet URL is the fixed one from index.html; font URLs come from that CSS.
-      expect(r.fromWorker).toBe(false);
+    const fonts = requests.filter((r) => r.resourceType === 'font');
+    expect(fonts.length).toBeGreaterThan(0);
+    for (const r of fonts) {
+      expect(r.url.startsWith(`${origin}/assets/be-vietnam-pro-`), r.url).toBe(true);
+      expect(r.url).toMatch(/-(latin|vietnamese)-[4-8]00-normal-[\w-]+\.woff2$/);
     }
-    expect(leaks(requests)).toEqual([]);
-    test.info().annotations.push({
-      type: 'external-requests',
-      description:
-        external.map((r) => `${r.resourceType} ${new URL(r.url).host}`).join(', ') || 'none',
-    });
+    expect(
+      requests.filter((r) => !r.url.startsWith(origin) && !/^(blob|data):/.test(r.url)),
+    ).toEqual([]);
+    const csp = response?.headers()['content-security-policy'] ?? '';
+    expect(csp).toContain("font-src 'self';");
+    expect(csp).toContain("style-src 'self' 'unsafe-inline';");
+    expect(csp).not.toMatch(/googleapis|gstatic/);
+    expect(
+      await page.locator('link[href*="fonts.googleapis"], link[href*="gstatic"]').count(),
+    ).toBe(0);
   });
 
   test('CSP connect-src blocks the page and the worker origin from calling other hosts', async ({
     page,
   }) => {
-    await blockFonts(page);
     const response = await page.goto('/');
     const csp = response?.headers()['content-security-policy'] ?? '';
     expect(csp).toContain("connect-src 'self'");

@@ -165,10 +165,6 @@ function hasFrame(req: Request): boolean {
   }
 }
 
-export async function blockFonts(page: Page): Promise<void> {
-  await page.route(/^https:\/\/fonts\.(googleapis|gstatic)\.com\//, (route) => route.abort());
-}
-
 export function runButton(page: Page): Locator {
   return page.getByRole('button', { name: /^(Chạy|Đang)/ }).last();
 }

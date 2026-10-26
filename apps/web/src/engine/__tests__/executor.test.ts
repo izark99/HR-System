@@ -152,6 +152,42 @@ describe('planFlow', () => {
     expect(['a', 'b']).toContain(err.nodeId);
   });
 
+  it('names a node on the cycle even when a downstream node is listed first', () => {
+    // d depends on the cycle a <-> b but is not part of it.
+    const flow = graph(
+      [
+        ['d', 'test.pass'],
+        ['s', 'test.source'],
+        ['a', 'test.two'],
+        ['b', 'test.pass'],
+      ],
+      [
+        { from: 's', to: 'a', toPort: 'a' },
+        { from: 'a', fromPort: 'x', to: 'b' },
+        { from: 'b', to: 'a', toPort: 'b' },
+        { from: 'a', fromPort: 'y', to: 'd' },
+      ],
+    );
+    const err = engineError(() => planFlow(flow, plugins));
+    expect(err.messageKey).toBe('executor.error.cycle');
+    expect(['a', 'b']).toContain(err.nodeId);
+    expect(err.params.node).toBe(err.nodeId);
+  });
+
+  it('rejects input.excel pointing at an undeclared slot, with the node id', () => {
+    const flow: FlowDefinition = {
+      ...acceptance,
+      nodes: acceptance.nodes.map((n) =>
+        n.id === 'in_cc' ? { ...n, config: { ...n.config, slot: 'khong_co' } } : n,
+      ),
+    };
+    const err = engineError(() => planFlow(flow));
+    expect(err.messageKey).toBe('executor.error.nodeUnknownSlot');
+    expect(err.nodeId).toBe('in_cc');
+    expect(err.params).toMatchObject({ slot: 'khong_co' });
+    expect(t(err.messageKey, err.params)).toContain('khong_co');
+  });
+
   it('rejects a self loop', () => {
     const flow = graph([['a', 'test.pass']], [{ from: 'a', to: 'a' }]);
     expect(engineError(() => planFlow(flow, plugins)).messageKey).toBe('executor.error.cycle');
@@ -261,7 +297,7 @@ describe('runFlow', () => {
 
     expect(result.artifacts).toHaveLength(1);
     const artifact = result.artifacts[0]!;
-    expect(artifact).toMatchObject({ nodeId: 'out', fileName: 'DoiChieu_092026.xlsx' });
+    expect(artifact).toMatchObject({ nodeId: 'out', fileName: 'DoiChieu_2026-09.xlsx' });
     const wb = new ExcelJS.Workbook();
     await wb.xlsx.load(artifact.data.slice().buffer);
     expect(wb.worksheets.map((w) => w.name)).toEqual([
@@ -313,6 +349,8 @@ describe('runFlow', () => {
     expect(err).toBeInstanceOf(EngineError);
     expect((err as EngineError).messageKey).toBe('executor.error.nodeFailed');
     expect((err as EngineError).nodeId).toBe('b');
+    // Raw exception text never travels with the error (it may quote cell values).
+    expect(JSON.stringify((err as EngineError).params)).not.toContain('kaboom');
   });
 
   it('cancels between nodes', async () => {
@@ -383,10 +421,32 @@ describe('runFlow', () => {
 
 describe('output.excel file name', () => {
   it('fills params and keeps the name safe', () => {
-    expect(
-      resolveFileName('DoiChieu_{ky_luong}.xlsx', { ky_luong: '2026-09' }, acceptance.params),
-    ).toBe('DoiChieu_092026.xlsx');
+    expect(resolveFileName('DoiChieu_{ky_luong}.xlsx', { ky_luong: '2026-09' })).toBe(
+      'DoiChieu_2026-09.xlsx',
+    );
     expect(resolveFileName('A/{x}:B', { x: 'c?d' })).toBe('A_c_d_B.xlsx');
+    expect(resolveFileName('{missing}', {})).toBe('output.xlsx');
+  });
+
+  it('keeps month params as YYYY-MM and date params as YYYY-MM-DD (sortable names)', () => {
+    expect(resolveFileName('BC_{ky}_{ngay}.xlsx', { ky: '2026-09', ngay: '2026-09-26' })).toBe(
+      'BC_2026-09_2026-09-26.xlsx',
+    );
+    const months = ['2026-10', '2025-12', '2026-09'].map((ky) =>
+      resolveFileName('BC_{ky}', { ky }),
+    );
+    expect([...months].sort()).toEqual(['BC_2025-12.xlsx', 'BC_2026-09.xlsx', 'BC_2026-10.xlsx']);
+    const days = ['2026-10-01', '2026-09-30', '2025-12-31'].map((d) =>
+      resolveFileName('N_{d}', { d }),
+    );
+    expect([...days].sort()).toEqual([
+      'N_2025-12-31.xlsx',
+      'N_2026-09-30.xlsx',
+      'N_2026-10-01.xlsx',
+    ]);
+  });
+
+  it('keeps unknown placeholders empty', () => {
     expect(resolveFileName('{missing}', {})).toBe('output.xlsx');
   });
 

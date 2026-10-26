@@ -48,11 +48,16 @@ function state(p: Partial<SessionState> = {}): SessionState {
     slots: { bang_luong: slot(), cham_cong: slot() },
     run: { status: 'idle', nodes: [], error: null, summary: null, params: {} },
     restoring: false,
+    restoreFailed: false,
     ...p,
   };
 }
 
 describe('readiness (Run button rules, spec §15.1 step 4)', () => {
+  it('a failed restore after a hard cancel blocks running', () => {
+    expect(readiness(state({ restoreFailed: true })).canRun).toBe(false);
+  });
+
   it('all good → canRun', () => {
     expect(readiness(state())).toMatchObject({ canRun: true, errors: 0, warnings: 0 });
   });

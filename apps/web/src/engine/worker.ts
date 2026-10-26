@@ -15,9 +15,19 @@ function transferable(file: FileDownload): FileDownload {
 
 const api = {
   loadFlow: (raw: unknown) => session.loadFlow(raw),
-  setSlotFiles: (slotKey: string, files: UploadFile[]) => session.setSlotFiles(slotKey, files),
-  run: (params: ParamValues, onProgress?: (event: RunProgressEvent) => void) =>
-    session.run(params, onProgress ? (e) => void onProgress(e) : undefined),
+  setSlotFiles: (slotKey: string, files: UploadFile[], version: number) =>
+    session.setSlotFiles(slotKey, files, version),
+  /** Progress goes over a port owned by the caller (closed by both sides when the run ends). */
+  run: async (params: ParamValues, progress?: MessagePort) => {
+    try {
+      return await session.run(
+        params,
+        progress ? (e: RunProgressEvent) => progress.postMessage(e) : undefined,
+      );
+    } finally {
+      progress?.close();
+    }
+  },
   cancel: () => session.cancel(),
   getRows: (sheetId: string, query: RowQuery) => session.getRows(sheetId, query),
   getFilterOptions: (sheetId: string) => session.getFilterOptions(sheetId),

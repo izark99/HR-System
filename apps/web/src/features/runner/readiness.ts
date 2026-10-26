@@ -52,6 +52,7 @@ export function readiness(state: SessionState): Readiness {
     canRun:
       state.load === 'ready' &&
       !state.restoring &&
+      !state.restoreFailed &&
       !validating &&
       errors === 0 &&
       missingSlots.length === 0 &&

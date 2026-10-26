@@ -588,14 +588,18 @@ describe('QA reader: headers, sheets, layout', () => {
     expect(report.skippedRows).toHaveLength(1);
   });
 
-  it('0-byte and garbage files are reported as unreadable or as missing sheet, never crash', () => {
+  it('0-byte and garbage files are reported as unreadable, never crash', () => {
     const zero = { name: 'zero.xlsx', data: new Uint8Array(0) };
     const junk = { name: 'junk.xlsx', data: new TextEncoder().encode('not an excel file') };
     const zip = { name: 'trunc.xlsx', data: new Uint8Array([0x50, 0x4b, 0x03, 0x04, 1, 2, 3]) };
     const { report } = readSlot(acceptanceSlot('bang_luong'), [zero, junk, zip]);
-    expect(report.errorCount).toBeGreaterThanOrEqual(3);
+    expect(report.errorCount).toBe(3);
     for (const f of ['zero.xlsx', 'junk.xlsx', 'trunc.xlsx']) {
-      expect(errors(report).some((i) => i.file === f)).toBe(true);
+      expect(
+        errors(report)
+          .filter((i) => i.file === f)
+          .map((i) => i.messageKey),
+      ).toEqual(['validation.fileUnreadable']);
     }
   });
 
@@ -643,7 +647,7 @@ describe('QA reader: headers, sheets, layout', () => {
     expect(dec(table.rows[0]!.cong)).toBe('26.5');
   });
 
-  it('CSV with UTF-8 BOM and Vietnamese headers', () => {
+  it('CSV is rejected as an unsupported format (MEMORY 13:08), even with a valid header', () => {
     const s = slot({
       columns: [
         { key: 'ma_nv', aliases: ['Mã NV'], type: 'string', required: true },
@@ -651,8 +655,8 @@ describe('QA reader: headers, sheets, layout', () => {
       ],
     });
     const { table, report } = readSlot(s, [csvFile('a.csv', '﻿Mã NV,Công\nNV00001,"26,5"\n')]);
-    expect(report.issues).toEqual([]);
-    expect(dec(table.rows[0]!.cong)).toBe('26.5');
+    expect(table.rows).toEqual([]);
+    expect(keys(report.issues)).toEqual(['validation.fileTypeNotAccepted']);
   });
 });
 
@@ -748,7 +752,9 @@ describe('QA reader: injection-ish cell values stay data', () => {
       ],
       ["'; DROP TABLE run_logs; --", '<script>alert(1)</script>', 'CN', 26, 0, 0, 0],
     ];
+    // The acceptance flow has no ID format rule (MEMORY 13:08); add an Admin-style regex here.
     const s = acceptanceSlot('cham_cong');
+    s.columns[0]!.rules.push({ regex: '^NV\\d{5}$', severity: 'error' });
     const { table, report } = readSlot(s, [timesheetFile('inj.xlsx', rows)]);
     expect(table.rows[0]!.ho_ten).toBe('{{file}} $t(validation.required)');
     expect(table.rows[1]!.ho_ten).toBe('<script>alert(1)</script>');
@@ -805,9 +811,9 @@ describe('QA reader: fixed bugs (were KNOWN BUGS)', () => {
   // limit). Spec §13 / MEMORY: target is ~1M rows per run.
   it('BUG-R2: a single file with 200k rows is read without "Maximum call stack size exceeded"', () => {
     const n = 200_000;
-    const text = 'Mã NV\n' + Array.from({ length: n }, (_, i) => `NV${i}`).join('\n');
+    const aoa = [['Mã NV'], ...Array.from({ length: n }, (_, i) => [`NV${i}`])];
     const s = slot({ columns: [{ key: 'ma_nv', aliases: ['Mã NV'], type: 'string' }] });
-    const { table } = readSlot(s, [csvFile('big.csv', text)]);
+    const { table } = readSlot(s, [workbookFile('big.xlsx', { Sheet1: aoa })]);
     expect(table.rows).toHaveLength(n);
   });
 });

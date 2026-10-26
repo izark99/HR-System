@@ -84,7 +84,7 @@ export function readSlot(slot: InputSlot, files: readonly SourceFile[]): SlotRea
 
   for (const file of files) {
     const ext = extensionOf(file.name);
-    if (!slot.accept.includes(ext)) {
+    if (!(slot.accept as readonly string[]).includes(ext)) {
       issues.push({
         ...issue('error', 'file', 'validation.fileTypeNotAccepted', {
           file: file.name,
@@ -376,9 +376,45 @@ export function readSlotFile(slot: InputSlot, file: SourceFile): FileReadResult 
 
 // ---------------------------------------------------------------------------------------------
 
+const ZIP_SIGNATURE = [0x50, 0x4b, 0x03, 0x04]; // .xlsx (OOXML package)
+const OLE_SIGNATURE = [0xd0, 0xcf, 0x11, 0xe0, 0xa1, 0xb1, 0x1a, 0xe1]; // .xls (BIFF in OLE2)
+
+function startsWith(bytes: Uint8Array, signature: readonly number[]): boolean {
+  return signature.every((b, i) => bytes[i] === b);
+}
+
+/** First non-blank byte (after an optional UTF-8 BOM) is "<": an HTML/XML spreadsheet export. */
+function looksLikeMarkup(bytes: Uint8Array): boolean {
+  let i = startsWith(bytes, [0xef, 0xbb, 0xbf]) ? 3 : 0;
+  const end = Math.min(bytes.length, i + 512);
+  while (
+    i < end &&
+    (bytes[i] === 0x20 || bytes[i] === 0x09 || bytes[i] === 0x0a || bytes[i] === 0x0d)
+  )
+    i++;
+  return bytes[i] === 0x3c;
+}
+
+/**
+ * SheetJS falls back to reading unknown bytes as plain text (one "Sheet1"), which would surface as
+ * a misleading "sheet not found". Check the container format first so empty/corrupt files are
+ * reported as unreadable. `.xls` also covers the HTML/XML "Excel" exports many HR systems produce.
+ */
+function hasExcelSignature(bytes: Uint8Array, ext: string): boolean {
+  if (ext === '.xlsx') return startsWith(bytes, ZIP_SIGNATURE);
+  if (ext === '.xls') {
+    return (
+      startsWith(bytes, OLE_SIGNATURE) || startsWith(bytes, ZIP_SIGNATURE) || looksLikeMarkup(bytes)
+    );
+  }
+  return false;
+}
+
 function parseWorkbook(file: SourceFile): XLSX.WorkBook {
   const bytes = file.data instanceof Uint8Array ? file.data : new Uint8Array(file.data);
-  const common: XLSX.ParsingOptions = {
+  if (!hasExcelSignature(bytes, extensionOf(file.name))) throw new Error('not an Excel file');
+  return XLSX.read(bytes, {
+    type: 'array',
     dense: true,
     cellDates: false, // dates as Excel serials; converted by the column's date rules
     cellFormula: false,
@@ -387,14 +423,7 @@ function parseWorkbook(file: SourceFile): XLSX.WorkBook {
     // Keep each cell's number format (cheap string) so string columns can render the displayed
     // text and date columns can recognise real date cells, without formatting every cell.
     cellNF: true,
-  };
-  if (extensionOf(file.name) === '.csv') {
-    // Decode explicitly as UTF-8 (BOM optional) so Vietnamese text survives; `raw` keeps every
-    // CSV value as text so "01/09/2026" is not reinterpreted with a US locale.
-    const text = new TextDecoder('utf-8').decode(bytes);
-    return XLSX.read(text, { ...common, type: 'string', raw: true });
-  }
-  return XLSX.read(bytes, { ...common, type: 'array' });
+  });
 }
 
 interface CellRead {
@@ -612,6 +641,7 @@ function checkUnique(slot: InputSlot, rows: Row[], refs: RowRef[]): ValidationIs
         file: ref.file,
         row: ref.row,
         column: col.key,
+        ...(seen.ref.file !== ref.file ? { relatedFile: seen.ref.file } : {}),
       });
     });
   }

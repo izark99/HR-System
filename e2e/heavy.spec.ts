@@ -2,8 +2,9 @@
  * Heavy, opt-in E2E (set HEAVY_E2E=1): ~100k rows per side. Cancel (cooperative and
  * terminate-and-restore), UI usable afterwards, a full run, virtualization of a ~100k-row result.
  *
- * Size: HEAVY_ROWS (default 99999). The flow's key rule ^NV\d{5}$ + unique caps a side at
- * 99,999 distinct employees, so larger inputs would only produce validation errors.
+ * Size: HEAVY_ROWS (default 100000) rows per side. The acceptance flow has no ID format rule
+ * (MEMORY 13:08: Mã NV only required + unique), so any size works; ids past NV99999 just get
+ * longer (NV100000…).
  * Files are generated once into the OS temp dir and reused.
  */
 import { expect, test, type Page } from '@playwright/test';
@@ -11,7 +12,6 @@ import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import {
-  blockFonts,
   nv,
   openFlow,
   PAYROLL_HEADERS,
@@ -25,7 +25,7 @@ import {
 } from './helpers';
 
 const HEAVY = !!process.env.HEAVY_E2E;
-const ROWS = Math.min(Number(process.env.HEAVY_ROWS ?? 99_999), 99_999);
+const ROWS = Number(process.env.HEAVY_ROWS ?? 100_000);
 const DIR = join(tmpdir(), `hrflow-heavy-${ROWS}`);
 const PAYROLL = join(DIR, `bang_luong_heavy_${ROWS}.xlsx`);
 const TIMESHEET = join(DIR, `cham_cong_heavy_${ROWS}.xlsx`);
@@ -104,10 +104,6 @@ test.beforeAll(() => {
 
 test.afterAll(() => {
   console.log(`[heavy E2E] rows/side=${ROWS} timings(ms)=${JSON.stringify(timings, null, 1)}`);
-});
-
-test.beforeEach(async ({ page }) => {
-  await blockFonts(page);
 });
 
 test('cancel while the workbook is written (cooperative if the worker yields within 400ms, else terminate + restore); then a full run succeeds', async ({

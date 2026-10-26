@@ -11,27 +11,17 @@ function fixtures(prefix: string): string[] {
     .map((f) => join(FIXTURES, f));
 }
 
-/** Requests leaving localhost. Google Fonts is blocked in tests (offline-safe, and not data). */
+/** Requests leaving localhost. None are allowed: the font is self-hosted too (MEMORY 12:37). */
 function trackExternalRequests(page: Page): string[] {
   const external: string[] = [];
   page.on('request', (req) => {
     const url = new URL(req.url());
-    const fonts = /^fonts\.(googleapis|gstatic)\.com$/.test(url.hostname);
-    if (
-      url.hostname !== 'localhost' &&
-      !fonts &&
-      url.protocol !== 'blob:' &&
-      url.protocol !== 'data:'
-    ) {
+    if (url.hostname !== 'localhost' && url.protocol !== 'blob:' && url.protocol !== 'data:') {
       external.push(`${req.method()} ${url.origin}`);
     }
   });
   return external;
 }
-
-test.beforeEach(async ({ page }) => {
-  await page.route(/^https:\/\/fonts\.(googleapis|gstatic)\.com\//, (route) => route.abort());
-});
 
 test('acceptance flow: upload 6 fixtures, run, see 63/9/3/3, download the workbook', async ({
   page,
@@ -94,7 +84,7 @@ test('acceptance flow: upload 6 fixtures, run, see 63/9/3/3, download the workbo
     page.waitForEvent('download'),
     page.getByRole('button', { name: 'Tải Excel (4 sheet)' }).click(),
   ]);
-  expect(download.suggestedFilename()).toBe('DoiChieu_092026.xlsx');
+  expect(download.suggestedFilename()).toBe('DoiChieu_2026-09.xlsx');
   const path = await download.path();
   const bytes = readFileSync(path);
   expect(bytes.subarray(0, 2).toString('latin1')).toBe('PK'); // .xlsx = zip

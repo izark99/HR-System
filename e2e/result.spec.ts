@@ -3,19 +3,7 @@
  * workbook read back with ExcelJS, and direct navigation / reload of the run routes.
  */
 import { expect, test } from '@playwright/test';
-import {
-  blockFonts,
-  ExcelJS,
-  FLOW_URL,
-  RESULT_URL,
-  runButton,
-  runToResult,
-  uploadFixtures,
-} from './helpers';
-
-test.beforeEach(async ({ page }) => {
-  await blockFonts(page);
-});
+import { ExcelJS, FLOW_URL, RESULT_URL, runButton, runToResult, uploadFixtures } from './helpers';
 
 test.describe('result page', () => {
   test.beforeEach(async ({ page }) => {
@@ -115,7 +103,7 @@ test.describe('result page', () => {
       page.waitForEvent('download'),
       page.getByRole('button', { name: 'Tải Excel (4 sheet)' }).click(),
     ]);
-    expect(download.suggestedFilename()).toBe('DoiChieu_092026.xlsx');
+    expect(download.suggestedFilename()).toBe('DoiChieu_2026-09.xlsx');
     const wb = new ExcelJS.Workbook();
     await wb.xlsx.readFile(await download.path());
     expect(wb.worksheets.map((w) => w.name)).toEqual([
@@ -224,21 +212,19 @@ test.describe('direct navigation and reload', () => {
   });
 });
 
-// KNOWN BUG (minor, UX): after a finished run, leaving the result page via "Danh sách flow" and
-// re-opening the flow shows the wizard with step 4 "Kết quả" marked current, but there is no
-// control to get back to the still-in-memory result (only typing /result in the URL works).
-// Suspected: apps/web/src/features/runner/RunPage.tsx (no "Xem kết quả" action when
-// state.run.status === 'done'; RunProgress returns null for 'done').
+// Was a known bug; fixed per MEMORY 13:08 ("Xem kết quả" while the result is in memory).
 test('after leaving the result page, the wizard offers a way back to the result', async ({
   page,
 }) => {
-  test.fail(true, 'KNOWN BUG: no link back to an in-memory result from the wizard');
-  await blockFonts(page);
   await uploadFixtures(page);
   await runToResult(page);
   await page.getByRole('link', { name: 'Danh sách flow' }).click();
   await page.getByRole('link', { name: /^Chạy flow Đối chiếu/ }).click();
   await expect(page).toHaveURL(new RegExp(`${FLOW_URL}$`));
   await expect(page.locator('[aria-current=step]')).toContainText('Kết quả');
-  await expect(page.getByRole('link', { name: /kết quả/i })).toBeVisible({ timeout: 3_000 });
+  const back = page.getByRole('link', { name: 'Xem kết quả' });
+  await expect(back).toBeVisible({ timeout: 3_000 });
+  await back.click();
+  await expect(page).toHaveURL(new RegExp(`${FLOW_URL}/result$`));
+  await expect(page.getByRole('tablist')).toBeVisible();
 });
