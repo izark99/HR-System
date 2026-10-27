@@ -22,6 +22,7 @@ function fake(profile: Profile | null, signInError: unknown = null) {
       ),
     ),
     signOut: vi.fn(() => Promise.resolve({ error: null })),
+    stopAutoRefresh: vi.fn(() => Promise.resolve()),
     updateUser: vi.fn(() => {
       // The database trigger clears the flag when the password really changes.
       if (current) current = { ...current, must_change_password: false };
@@ -130,6 +131,7 @@ describe('SupabaseAuth', () => {
     const pending = service.signOut('idle');
     // Synchronous part: the stored session is gone before any request.
     expect([...store.keys()]).toEqual(['other']);
+    expect(auth.stopAutoRefresh).toHaveBeenCalledTimes(1);
     await pending;
     // No expires_at and not a JWT: treated as expired, so the refresh token is used first.
     expect(refresh).toHaveBeenCalledWith('r');

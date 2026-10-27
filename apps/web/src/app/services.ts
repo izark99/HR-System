@@ -3,7 +3,7 @@ import type { FlowSource } from '../features/runner/flow-source';
 import type { RunLogger } from '../features/runner/run-log';
 import { SupabaseFlowSource } from '../features/runner/supabase-flow-source';
 import { appConfig } from '../lib/env';
-import { browserSessionStorage, getSupabase } from '../lib/supabase';
+import { browserSessionStorage, clearSessionAfterIdle, getSupabase } from '../lib/supabase';
 import { createHttpRevoker } from '../features/auth/session-revoke';
 
 export interface AppServices {
@@ -28,6 +28,10 @@ export function createServices(): AppServices | null {
     return { auth: new LocalAuth(), source: lazyLocalSource(), logger: null };
   }
   if (appConfig.mode !== 'supabase') return null;
+  clearSessionAfterIdle(
+    typeof window !== 'undefined' ? window.location : null,
+    browserSessionStorage(),
+  );
   const sb = getSupabase();
   const source = new SupabaseFlowSource(sb);
   const revoker = createHttpRevoker(appConfig.supabaseUrl, appConfig.supabaseKey);

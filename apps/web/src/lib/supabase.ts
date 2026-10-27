@@ -38,6 +38,21 @@ export function clearStoredSession(storage: Storage | null): void {
   }
 }
 
+/**
+ * After an idle sign-out the app reloads on `/login?reason=idle`. Should the server request or a
+ * token refresh have raced the clearing, a session could be back in storage: it is dropped before
+ * the Supabase client is created, so the client never restores it.
+ */
+export function clearSessionAfterIdle(
+  location: Pick<Location, 'pathname' | 'search'> | null,
+  storage: Storage | null,
+): boolean {
+  if (!location || location.pathname !== '/login') return false;
+  if (new URLSearchParams(location.search).get('reason') !== 'idle') return false;
+  clearStoredSession(storage);
+  return true;
+}
+
 /** The stored session JSON (null when absent/unreadable), read synchronously. */
 export function readStoredSession(storage: Storage | null): string | null {
   try {

@@ -224,6 +224,12 @@ export class SupabaseAuth extends BaseAuth implements AuthService {
     if (reason === 'idle') {
       // Synchronously: take both tokens, then drop the stored session at once (spec §6.1).
       const tokens = parseStoredTokens(readStoredSession(this.storage));
+      // First stop the refresh ticker: a refresh firing now would write a new session back.
+      try {
+        void this.sb.auth.stopAutoRefresh().catch(() => undefined);
+      } catch {
+        // older/mock clients
+      }
       clearStoredSession(this.storage);
       // Server-side revocation of this session (refreshing an expired access token first, see
       // session-revoke.ts). The state changes only after it: the route guard reloads the page on
