@@ -4,13 +4,25 @@ import {
   type SlotReadResult,
   type SourceFile,
 } from '../io/excel-reader';
+import type { DuckDbLoadProgress, DuckDbProvider } from '../duckdb/base';
+import type { SqlScope } from '../duckdb/scope';
+import { isSqlRel, type SqlRel } from '../duckdb/sql';
 import { nodePlugins } from '../nodes';
-import type { AnyNodePlugin, NodeOutputs, PortDef } from './plugin';
+import {
+  pluginUsesDuckDb,
+  type AnyNodePlugin,
+  type NodeOutputs,
+  type PortData,
+  type PortDef,
+} from './plugin';
 import {
   EngineError,
   type ParamValue,
   type RunArtifact,
   type RunServices,
+  type RunView,
+  type RunWarning,
+  type Table,
   type Translate,
 } from './types';
 
@@ -41,13 +53,15 @@ export type RunProgressEvent =
       type: 'run-started';
       nodes: { id: string; type: string; label: string | undefined }[];
     }
+  /** DuckDB is being loaded (first time: download of the .wasm parts, spec §13.1). */
+  | { type: 'engine-loading'; loadedBytes: number; totalBytes: number }
   | { type: 'node-started'; nodeId: string; index: number; total: number }
   | {
       type: 'node-finished';
       nodeId: string;
       index: number;
       total: number;
-      /** Row count per output port. */
+      /** Row count per output port (ports kept lazily inside DuckDB are not counted). */
       rows: Record<string, number>;
       durationMs: number;
     };
@@ -69,12 +83,27 @@ export interface RunFlowOptions {
   plugins?: Readonly<Record<string, AnyNodePlugin>>;
   signal?: AbortSignal;
   onProgress?: (event: RunProgressEvent) => void;
+  /** Opens DuckDB; called only when the flow has a node that runs in DuckDB (lazy load). */
+  duck?: DuckDbProvider;
+  /**
+   * Free intermediate TS tables as soon as no remaining node needs them (spec §13 memory). Tables
+   * read by output nodes, outputs of `keepOutputs` plugins and `collect` nodes are kept.
+   */
+  releaseIntermediate?: boolean;
+  /** Nodes whose outputs must be returned as TS tables even when they stay in DuckDB. */
+  collect?: readonly string[];
 }
 
 export interface RunFlowResult {
-  /** Output tables per node id and port. */
+  /**
+   * Output tables per node id and port. Outputs that only lived inside DuckDB are absent unless
+   * the node is in `collect`; released intermediates are absent with `releaseIntermediate`.
+   */
   outputs: Record<string, NodeOutputs>;
   artifacts: RunArtifact[];
+  /** View-only tables of `output.preview`, in run order. */
+  views: RunView[];
+  warnings: RunWarning[];
   nodes: NodeRunStats[];
   durationMs: number;
 }
@@ -122,6 +151,9 @@ export function planFlow(
       fail(err.messageKey, { node: node.label ?? node.id, ...err.params }, node.id);
     }
     inputPorts.set(node.id, plugin.inputPorts?.(config) ?? plugin.inputs);
+    if (!plugin.runSql && !plugin.execute) {
+      fail('executor.error.unknownNodeType', { type: node.type }, node.id);
+    }
     planned.set(node.id, { node, plugin, config, inputs: [], outputPorts: plugin.outputs });
   }
 
@@ -250,12 +282,15 @@ function raceAbort<T>(work: Promise<T>, signal: AbortSignal | undefined): Promis
 
 function attachNode(err: unknown, node: FlowNode): EngineError {
   if (err instanceof EngineError) {
-    return err.nodeId ? err : new EngineError(err.messageKey, err.params, node.id);
+    if (err.nodeId) return err;
+    return new EngineError(err.messageKey, { node: node.label ?? node.id, ...err.params }, node.id);
   }
   // Raw exception text is deliberately dropped: it may quote cell values, and EngineErrorInfo is
   // what the UI shows and what a future run log (metadata only, spec §7.1) would record.
   return new EngineError('executor.error.nodeFailed', { node: node.label ?? node.id }, node.id);
 }
+
+const portKey = (nodeId: string, port: string) => `${nodeId}\u0000${port}`;
 
 /** Plan and run a flow. Rejects with an `EngineError` (node id attached) on failure or cancel. */
 export async function runFlow(
@@ -283,64 +318,185 @@ export async function runFlow(
       return cached;
     });
 
-  const outputs: Record<string, NodeOutputs> = {};
+  const byId = new Map(plan.map((p) => [p.node.id, p]));
+  const collect = new Set(options.collect ?? []);
+  /** Consumers of each output port. */
+  const consumers = new Map<string, PlannedNode[]>();
+  for (const p of plan) {
+    for (const link of p.inputs) {
+      const key = portKey(link.from, link.fromPort);
+      const list = consumers.get(key);
+      if (list) list.push(p);
+      else consumers.set(key, [p]);
+    }
+  }
+  const remaining = new Map([...consumers].map(([k, v]) => [k, v.length]));
+  const retained = (nodeId: string, port: string): boolean =>
+    collect.has(nodeId) ||
+    byId.get(nodeId)?.plugin.keepOutputs === true ||
+    (consumers.get(portKey(nodeId, port)) ?? []).some((c) => c.plugin.keepInputs === true);
+
+  const data: Record<string, Record<string, PortData>> = {};
   const artifacts: RunArtifact[] = [];
+  const views: RunView[] = [];
+  const warnings: RunWarning[] = [];
   const stats: NodeRunStats[] = [];
   onProgress?.({
     type: 'run-started',
     nodes: plan.map((p) => ({ id: p.node.id, type: p.node.type, label: p.node.label })),
   });
 
-  for (const [index, step] of plan.entries()) {
-    throwIfAborted(signal);
-    const { node, plugin } = step;
-    onProgress?.({ type: 'node-started', nodeId: node.id, index, total: plan.length });
-    const t0 = now();
+  // DuckDB is opened the first time a node needs it (lazy load, spec §13.1): flows without DuckDB
+  // nodes never download it.
+  let scope = null as SqlScope | null;
+  const openScope = async (): Promise<SqlScope> => {
+    if (scope) return scope;
+    const provider = options.duck;
+    if (!provider) throw new EngineError('duckdb.error.unavailable');
+    const onLoad = (p: DuckDbLoadProgress) =>
+      onProgress?.({
+        type: 'engine-loading',
+        loadedBytes: p.loadedBytes,
+        totalBytes: p.totalBytes,
+      });
+    const db = await raceAbort(provider(onLoad), signal);
+    // Arrow conversion code is loaded with DuckDB, not with the worker.
+    const { SqlScope: Scope } = await import('../duckdb/scope');
+    return (scope ??= new Scope(db));
+  };
+  /** TS tables uploaded to DuckDB / relations fetched to TS, per source port (shared). */
+  const uploaded = new Map<string, SqlRel>();
+  const fetched = new Map<string, Table>();
 
-    const inputs: NodeOutputs = {};
-    for (const link of step.inputs) {
-      const table = outputs[link.from]?.[link.fromPort];
-      if (!table) {
-        fail('executor.error.missingInput', { node: node.id, port: link.port }, node.id);
-      }
-      inputs[link.port] = table;
-    }
-    const run: RunServices = {
-      nodeId: node.id,
-      params,
-      readSlot,
-      signal,
-      emitArtifact: (a) => artifacts.push({ ...a, nodeId: node.id }),
-    };
+  try {
+    for (const [index, step] of plan.entries()) {
+      throwIfAborted(signal);
+      const { node, plugin } = step;
+      onProgress?.({ type: 'node-started', nodeId: node.id, index, total: plan.length });
+      const t0 = now();
 
-    let result: NodeOutputs;
-    try {
-      // Promise.resolve().then(): a synchronous throw inside execute also becomes a rejection.
-      result = await raceAbort(
-        Promise.resolve().then(() =>
-          plugin.execute(step.config, inputs, { t: options.t, flow, run }),
-        ),
+      const run: RunServices = {
+        nodeId: node.id,
+        params,
+        readSlot,
         signal,
-      );
-    } catch (err) {
-      if (isCancelled(err)) throw err;
-      throw attachNode(err, node);
+        emitArtifact: (a) => artifacts.push({ ...a, nodeId: node.id }),
+        emitView: (v) => views.push({ ...v, nodeId: node.id }),
+        warn: (w) => warnings.push({ ...w, nodeId: node.id }),
+      };
+      const base = { t: options.t, flow, run, ...(options.duck ? { duck: options.duck } : {}) };
+
+      let result: Record<string, PortData>;
+      try {
+        const inputs: Record<string, PortData> = {};
+        for (const link of step.inputs) {
+          const value = data[link.from]?.[link.fromPort];
+          if (!value) {
+            fail('executor.error.missingInput', { node: node.id, port: link.port }, node.id);
+          }
+          inputs[link.port] = value;
+        }
+        if (pluginUsesDuckDb(plugin, step.config, inputs)) {
+          const sql = await openScope();
+          const rels: Record<string, SqlRel> = {};
+          for (const link of step.inputs) {
+            const value = inputs[link.port]!;
+            const key = portKey(link.from, link.fromPort);
+            if (isSqlRel(value)) rels[link.port] = value;
+            else {
+              let rel = uploaded.get(key);
+              if (!rel) uploaded.set(key, (rel = sql.upload(value)));
+              rels[link.port] = rel;
+            }
+          }
+          // Promise.resolve().then(): a synchronous throw also becomes a rejection.
+          result = await raceAbort(
+            Promise.resolve().then(() => plugin.runSql!(step.config, rels, { ...base, sql })),
+            signal,
+          );
+        } else {
+          const tables: Record<string, Table> = {};
+          for (const link of step.inputs) {
+            const value = inputs[link.port]!;
+            const key = portKey(link.from, link.fromPort);
+            if (!isSqlRel(value)) tables[link.port] = value;
+            else {
+              let table = fetched.get(key);
+              if (!table) fetched.set(key, (table = scope!.fetch(value)));
+              tables[link.port] = table;
+            }
+          }
+          result = await raceAbort(
+            Promise.resolve().then(
+              () =>
+                plugin.execute!(step.config, tables, base) as NodeOutputs | Promise<NodeOutputs>,
+            ),
+            signal,
+          );
+        }
+        // Pushdown (spec §13.1): a relation stays a lazy CTE for its single consumer; it is
+        // materialized when read by several nodes, by a TS node, or collected. Unused ports are
+        // never evaluated.
+        for (const [port, value] of Object.entries(result)) {
+          if (!isSqlRel(value)) continue;
+          const users = consumers.get(portKey(node.id, port)) ?? [];
+          if (users.length === 0 && !collect.has(node.id)) {
+            delete result[port];
+            continue;
+          }
+          // A TS consumer materializes it when it fetches the table.
+          if (users.length > 1 || collect.has(node.id)) result[port] = scope!.materialize(value);
+        }
+      } catch (err) {
+        if (isCancelled(err)) throw err;
+        throw attachNode(err, node);
+      }
+      throwIfAborted(signal);
+
+      data[node.id] = result;
+      const rows: Record<string, number> = {};
+      for (const [port, value] of Object.entries(result)) {
+        if (!isSqlRel(value)) rows[port] = value.rows.length;
+        else if (value.rowCount !== null) rows[port] = value.rowCount;
+      }
+      const durationMs = now() - t0;
+      stats.push({ nodeId: node.id, type: node.type, rows, durationMs });
+      onProgress?.({
+        type: 'node-finished',
+        nodeId: node.id,
+        index,
+        total: plan.length,
+        rows,
+        durationMs,
+      });
+
+      if (options.releaseIntermediate) {
+        for (const link of step.inputs) {
+          const key = portKey(link.from, link.fromPort);
+          const left = (remaining.get(key) ?? 1) - 1;
+          remaining.set(key, left);
+          if (left > 0 || retained(link.from, link.fromPort)) continue;
+          const ports = data[link.from];
+          if (ports) delete ports[link.fromPort];
+          fetched.delete(key);
+          uploaded.delete(key);
+        }
+      }
     }
-    throwIfAborted(signal);
 
-    outputs[node.id] = result;
-    const rows = Object.fromEntries(Object.entries(result).map(([k, v]) => [k, v.rows.length]));
-    const durationMs = now() - t0;
-    stats.push({ nodeId: node.id, type: node.type, rows, durationMs });
-    onProgress?.({
-      type: 'node-finished',
-      nodeId: node.id,
-      index,
-      total: plan.length,
-      rows,
-      durationMs,
-    });
+    const outputs: Record<string, NodeOutputs> = {};
+    for (const [nodeId, ports] of Object.entries(data)) {
+      const tables: NodeOutputs = {};
+      for (const [port, value] of Object.entries(ports)) {
+        if (!isSqlRel(value)) tables[port] = value;
+        else if (collect.has(nodeId)) {
+          tables[port] = fetched.get(portKey(nodeId, port)) ?? scope!.fetch(value);
+        }
+      }
+      outputs[nodeId] = tables;
+    }
+    return { outputs, artifacts, views, warnings, nodes: stats, durationMs: now() - started };
+  } finally {
+    scope?.dispose();
   }
-
-  return { outputs, artifacts, nodes: stats, durationMs: now() - started };
 }

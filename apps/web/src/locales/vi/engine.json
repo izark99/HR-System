@@ -102,5 +102,91 @@
       "acceptCsvRemoved": "Mục upload \"{{slot}}\": đã bỏ định dạng .csv (hệ thống không còn nhận CSV).",
       "acceptCsvOnlyReplaced": "Mục upload \"{{slot}}\": chỉ nhận .csv nên đã chuyển sang nhận .xlsx, .xls (hệ thống không còn nhận CSV)."
     }
+  },
+  "select": {
+    "error": {
+      "unknownColumn": "Node \"{{node}}\": cột \"{{column}}\" không có ở bước trước.",
+      "duplicateKey": "Node \"{{node}}\": có 2 cột kết quả cùng mã \"{{key}}\".",
+      "reservedKey": "Node \"{{node}}\": mã cột \"{{key}}\" không được bắt đầu bằng \"_\" (dành cho cột hệ thống)."
+    }
+  },
+  "filter": {
+    "error": {
+      "unknownColumn": "Node \"{{node}}\": cột \"{{column}}\" không có ở bước trước.",
+      "opNotForType": "Node \"{{node}}\": phép so sánh này không dùng được cho cột \"{{column}}\" (kiểu {{type}}).",
+      "invalidValue": "Node \"{{node}}\": giá trị lọc của cột \"{{column}}\" không đúng kiểu {{type}}.",
+      "unknownParam": "Node \"{{node}}\": tham số \"{{param}}\" chưa được khai báo trong flow."
+    }
+  },
+  "sort": {
+    "error": {
+      "unknownColumn": "Node \"{{node}}\": cột \"{{column}}\" không có ở bước trước."
+    }
+  },
+  "join": {
+    "error": {
+      "unknownColumn": "Node \"{{node}}\": cột \"{{column}}\" không có ở bảng đầu vào.",
+      "keyTypeMismatch": "Node \"{{node}}\": cột khóa \"{{left}}\" và \"{{right}}\" khác kiểu dữ liệu.",
+      "columnConflict": "Node \"{{node}}\": cột \"{{column}}\" của bảng phải trùng tên với cột đã có, kể cả sau khi thêm hậu tố."
+    },
+    "warning": {
+      "rowsMultiplied": "Node \"{{node}}\": {{count}} khóa khớp với nhiều dòng ở bảng phải, số dòng kết quả bị nhân lên."
+    }
+  },
+  "union": {
+    "error": {
+      "typeMismatch": "Node \"{{node}}\": cột \"{{column}}\" có kiểu khác nhau giữa các đầu vào.",
+      "missingColumn": "Node \"{{node}}\": đầu vào \"{{port}}\" thiếu cột \"{{column}}\".",
+      "duplicateKey": "Node \"{{node}}\": cột nguồn \"{{key}}\" trùng với một cột đã có."
+    }
+  },
+  "groupBy": {
+    "error": {
+      "unknownColumn": "Node \"{{node}}\": cột \"{{column}}\" không có ở bước trước.",
+      "fnNotForType": "Node \"{{node}}\": phép tổng hợp \"{{fn}}\" không dùng được cho cột \"{{column}}\" (kiểu {{type}}).",
+      "duplicateKey": "Node \"{{node}}\": có 2 cột kết quả cùng mã \"{{key}}\"."
+    }
+  },
+  "dedupe": {
+    "error": {
+      "unknownColumn": "Node \"{{node}}\": cột \"{{column}}\" không có ở bước trước."
+    }
+  },
+  "sql": {
+    "error": {
+      "syntax": "Node \"{{node}}\": câu SQL sai cú pháp. {{message}}",
+      "notSelect": "Node \"{{node}}\": chỉ được dùng một câu SELECT (hoặc WITH … SELECT).",
+      "multipleStatements": "Node \"{{node}}\": chỉ được có một câu lệnh SQL.",
+      "forbidden": "Node \"{{node}}\": câu SQL dùng lệnh hoặc hàm không được phép (đọc file, URL, cấu hình, extension).",
+      "unknownParam": "Node \"{{node}}\": tham số \"{{param}}\" chưa được khai báo trong flow.",
+      "invalidColumnName": "Node \"{{node}}\": tên cột kết quả \"{{column}}\" không hợp lệ (chỉ chữ thường không dấu, số, \"_\"; đặt bằng AS).",
+      "duplicateColumn": "Node \"{{node}}\": có 2 cột kết quả cùng tên \"{{column}}\".",
+      "unsupportedType": "Node \"{{node}}\": cột \"{{column}}\" có kiểu {{type}} chưa được hỗ trợ; hãy CAST sang kiểu khác.",
+      "runtime": "Node \"{{node}}\": câu SQL lỗi khi chạy. {{message}}"
+    },
+    "warning": {
+      "doubleColumn": "Cột \"{{column}}\" là số thực (DOUBLE); nên CAST(... AS DECIMAL(38,10)) để tránh sai số làm tròn.",
+      "noOrderBy": "Câu SQL không có ORDER BY ở cấp ngoài cùng nên thứ tự dòng kết quả có thể thay đổi."
+    }
+  },
+  "duckdb": {
+    "loading": "Đang tải bộ xử lý dữ liệu (lần đầu khoảng 34 MB)",
+    "error": {
+      "loadFailed": "Không tải được bộ xử lý dữ liệu. Hãy tải lại trang rồi chạy lại; nếu vẫn lỗi, báo cho Admin.",
+      "unavailable": "Bộ xử lý dữ liệu chưa sẵn sàng trong môi trường này.",
+      "decimalOverflow": "Node \"{{node}}\": giá trị thập phân vượt quá giới hạn DECIMAL(38,10) (tối đa 28 chữ số phần nguyên).",
+      "queryFailed": "Node \"{{node}}\" không xử lý được dữ liệu. Hãy kiểm tra lại file đầu vào; nếu vẫn lỗi, báo cho Admin."
+    }
+  },
+  "preview": {
+    "error": {
+      "unknownColumn": "Node \"{{node}}\": cột \"{{column}}\" không có ở bước trước.",
+      "duplicateTitle": "Node \"{{node}}\": tên tab \"{{title}}\" trùng với một bảng xem trước hoặc sheet khác."
+    }
+  },
+  "inputExcel": {
+    "warning": {
+      "extraColumnsRuntimeOnly": "Mục \"{{slot}}\" giữ cả cột không khai báo: các cột này chỉ dùng được trong node SQL khi chạy, không chọn được ở các node khác."
+    }
   }
 }

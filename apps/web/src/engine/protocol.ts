@@ -58,8 +58,20 @@ export interface SheetInfo {
   id: string;
   name: string;
   role: SheetRole;
+  /** `excel`: a sheet of the downloadable file; `preview`: view-only tab (`output.preview`). */
+  kind: 'excel' | 'preview';
+  /** Rows kept (for a preview: at most its `maxRows`). */
   rowCount: number;
+  /** Preview only: rows of the input before truncation (> rowCount when truncated). */
+  totalRows?: number;
   columns: ColumnInfo[];
+}
+
+/** Warning raised while running (counts only, never cell values). */
+export interface RunWarningInfo {
+  nodeId: string;
+  messageKey: string;
+  params: Record<string, unknown>;
 }
 
 export interface CompareKpis {
@@ -82,7 +94,9 @@ export interface RunSummary {
   durationMs: number;
   nodes: NodeRunStats[];
   inputs: { slotKey: string; label: string; rows: number }[];
+  /** Result tabs in flow node order: sheets of `output.excel` and `output.preview` tabs. */
   sheets: SheetInfo[];
+  warnings: RunWarningInfo[];
   compare: CompareKpis | null;
   artifacts: ArtifactInfo[];
 }
@@ -101,6 +115,10 @@ export interface RowQuery {
   offset: number;
   limit: number;
   filters?: RowFilter[];
+  /** Sort by a column (strings in Vietnamese order); blanks last. Applied in the worker. */
+  sort?: { column: string; direction: 'asc' | 'desc' };
+  /** Case-insensitive text search over the displayed columns. Applied in the worker. */
+  search?: string;
 }
 
 export interface RowPage {

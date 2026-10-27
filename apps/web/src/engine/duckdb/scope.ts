@@ -1,6 +1,7 @@
 import type { DataType } from '@hrflow/flow-schema';
 import {
   Bool,
+  Decimal as ArrowDecimal,
   Float64,
   makeData,
   makeVector,
@@ -89,7 +90,7 @@ export function utf8Vector(values: readonly (string | null)[]): Vector {
   const data = new Uint8Array(total);
   for (let i = 0; i < n; i++) {
     const bytes = encoded[i];
-    if (bytes) data.set(bytes, offsets[i]!);
+    if (bytes) data.set(bytes, offsets[i]);
   }
   const { bitmap, nulls } = validity(n, (i) => encoded[i] !== null);
   return makeVector(
@@ -100,6 +101,35 @@ export function utf8Vector(values: readonly (string | null)[]): Vector {
       nullBitmap: bitmap,
       valueOffsets: offsets,
       data,
+    }),
+  );
+}
+
+/**
+ * Decimals cross as Arrow Decimal128(38, 10): the scaled integer value × 10^10 (two's complement,
+ * little endian). Lossless and much faster for DuckDB than parsing decimal strings.
+ */
+export function decimal128Vector(values: readonly (string | null)[]): Vector {
+  const n = values.length;
+  const data = new BigUint64Array(n * 2);
+  for (let i = 0; i < n; i++) {
+    const text = values[i];
+    if (text === null || text === undefined) continue;
+    const dot = text.indexOf('.');
+    const int = dot < 0 ? text : text.slice(0, dot);
+    const frac = dot < 0 ? '' : text.slice(dot + 1);
+    const scaled = BigInt.asUintN(128, BigInt(`${int}${frac.padEnd(10, '0')}`));
+    data[2 * i] = BigInt.asUintN(64, scaled);
+    data[2 * i + 1] = scaled >> 64n;
+  }
+  const { bitmap, nulls } = validity(n, (i) => values[i] !== null);
+  return makeVector(
+    makeData({
+      type: new ArrowDecimal(10, 38, 128),
+      length: n,
+      nullCount: nulls,
+      nullBitmap: bitmap,
+      data: new Uint32Array(data.buffer),
     }),
   );
 }
@@ -131,7 +161,7 @@ function buildVector(rows: readonly Row[], from: number, to: number, col: Column
   for (let i = 0; i < n; i++) {
     values[i] = toSqlText(rows[from + i]![col.key] ?? null, col.type, col.key);
   }
-  return utf8Vector(values);
+  return col.type === 'decimal' ? decimal128Vector(values) : utf8Vector(values);
 }
 
 /** DuckDB → engine type of a *canonical* relation column, read back as text where lossless. */

@@ -1,5 +1,6 @@
 import type { DataType, FlowDefinition } from '@hrflow/flow-schema';
 import type { SlotReadResult } from '../io/excel-reader';
+import type { DuckDbProvider } from '../duckdb/base';
 import type { Decimal } from './decimal';
 
 /**
@@ -39,6 +40,8 @@ export interface EngineContext {
   flow?: FlowDefinition;
   /** Run-scoped services; only present while the executor runs a node. */
   run?: RunServices;
+  /** Opens DuckDB on demand (design-time `code.sql` schema via DESCRIBE). */
+  duck?: DuckDbProvider;
 }
 
 /** Runtime parameter value as entered by the User (e.g. month "2026-09"). */
@@ -52,12 +55,33 @@ export interface RunArtifact {
   data: Uint8Array;
 }
 
+/** Warning raised while running (e.g. `join.warning.rowsMultiplied`); counts only, no values. */
+export interface RunWarning {
+  nodeId: string;
+  messageKey: string;
+  params: Record<string, unknown>;
+}
+
+/**
+ * A view-only result of `output.preview` (spec §12.1.10): kept in the worker's memory, never a
+ * file, never sent anywhere.
+ */
+export interface RunView {
+  nodeId: string;
+  title: string;
+  table: Table;
+  /** Rows of the input before `maxRows` was applied. */
+  totalRows: number;
+}
+
 export interface RunServices {
   nodeId: string;
   params: Readonly<Record<string, ParamValue>>;
   /** Read + validate the files of an input slot (the caller may serve a cached result). */
   readSlot(slotKey: string): SlotReadResult | Promise<SlotReadResult>;
   emitArtifact(artifact: Omit<RunArtifact, 'nodeId'>): void;
+  emitView(view: Omit<RunView, 'nodeId'>): void;
+  warn(warning: Omit<RunWarning, 'nodeId'>): void;
   signal: AbortSignal | undefined;
 }
 

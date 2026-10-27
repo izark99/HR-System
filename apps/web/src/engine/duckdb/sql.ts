@@ -125,6 +125,9 @@ export function decimalOverflow(column: string | undefined): EngineError {
 
 /** Decimal → canonical DECIMAL(38,10) text: rounded half-up to 10 places, plain notation. */
 export function decimalToSql(v: Decimal, column?: string): string {
+  // Fast path (no rounding needed): big.js keeps digits `c` and exponent `e`.
+  const places = v.c.length - v.e - 1;
+  if (places <= SCALE && v.e < MAX_INTEGER_DIGITS) return v.toFixed();
   const rounded = v.round(SCALE, Big.roundHalfUp);
   const intDigits = rounded.abs().round(0, Big.roundDown).toFixed().replace(/^0$/, '').length;
   if (intDigits > MAX_INTEGER_DIGITS) throw decimalOverflow(column);

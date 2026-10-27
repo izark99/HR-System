@@ -1,5 +1,5 @@
 import { InputExcelConfigSchema, type InputExcelConfig } from '@hrflow/flow-schema';
-import type { NodeOutputs, NodePlugin } from '../core/plugin';
+import type { NodeOutputs, TsNodePlugin } from '../core/plugin';
 import { EngineError, type ColumnDef, type EngineContext } from '../core/types';
 import { SOURCE_FILE_COLUMN } from '../io/excel-reader';
 
@@ -17,7 +17,7 @@ function findSlot(config: InputExcelConfig, ctx: EngineContext) {
  * slot config, validated and unioned. Reading itself is delegated to `ctx.run.readSlot` so the
  * caller can reuse the result of the validation step instead of parsing the files twice.
  */
-export const inputExcelPlugin: NodePlugin<InputExcelConfig, Promise<NodeOutputs>> = {
+export const inputExcelPlugin: TsNodePlugin<InputExcelConfig, Promise<NodeOutputs>> = {
   type: 'input.excel',
   configSchema: InputExcelConfigSchema,
   inputs: [],
@@ -36,6 +36,14 @@ export const inputExcelPlugin: NodePlugin<InputExcelConfig, Promise<NodeOutputs>
     }));
     if (slot.multiple.enabled) columns.push({ key: SOURCE_FILE_COLUMN, type: 'string' });
     return { [INPUT_EXCEL_PORT]: columns };
+  },
+  // Extra columns of `extraColumns: 'keep'` are unknown at design time: only code.sql can use
+  // them, at run time (spec §12.1.9).
+  warnings(config, _inputs, ctx) {
+    const slot = findSlot(config, ctx);
+    return slot.extraColumns === 'keep'
+      ? [{ messageKey: 'inputExcel.warning.extraColumnsRuntimeOnly', params: { slot: slot.label } }]
+      : [];
   },
   async execute(config, _inputs, ctx) {
     const slot = findSlot(config, ctx);

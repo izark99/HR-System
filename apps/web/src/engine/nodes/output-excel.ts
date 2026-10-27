@@ -1,5 +1,5 @@
 import { OutputExcelConfigSchema, type OutputExcelConfig } from '@hrflow/flow-schema';
-import type { NodeOutputs, NodePlugin, PortDef } from '../core/plugin';
+import type { NodeOutputs, PortDef, TsNodePlugin } from '../core/plugin';
 import { EngineError, type ParamValue } from '../core/types';
 import { writeWorkbook } from '../io/excel-writer';
 
@@ -35,12 +35,14 @@ export function resolveFileName(
 }
 
 /** `output.excel` (spec §11): one sheet per configured input port, emitted as a file artifact. */
-export const outputExcelPlugin: NodePlugin<OutputExcelConfig, Promise<NodeOutputs>> = {
+export const outputExcelPlugin: TsNodePlugin<OutputExcelConfig, Promise<NodeOutputs>> = {
   type: 'output.excel',
   configSchema: OutputExcelConfigSchema,
   inputs: [],
   outputs: [],
   inputPorts: ports,
+  // The Result screen pages through the sheets after the run.
+  keepInputs: true,
   inferSchema() {
     return {};
   },
