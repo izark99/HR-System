@@ -162,7 +162,8 @@
       "invalidColumnName": "Node \"{{node}}\": tên cột kết quả \"{{column}}\" không hợp lệ (chỉ chữ thường không dấu, số, \"_\"; đặt bằng AS).",
       "duplicateColumn": "Node \"{{node}}\": có 2 cột kết quả cùng tên \"{{column}}\".",
       "unsupportedType": "Node \"{{node}}\": cột \"{{column}}\" có kiểu {{type}} chưa được hỗ trợ; hãy CAST sang kiểu khác.",
-      "runtime": "Node \"{{node}}\": câu SQL lỗi khi chạy. {{message}}"
+      "runtime": "Node \"{{node}}\": câu SQL lỗi khi chạy. {{message}}",
+      "notFinite": "Node \"{{node}}\": cột \"{{column}}\" có giá trị không phải số hữu hạn (NaN hoặc vô cực, VD do chia cho 0); hãy xử lý trường hợp này trong câu SQL (VD NULLIF(mẫu số, 0))."
     },
     "warning": {
       "doubleColumn": "Cột \"{{column}}\" là số thực (DOUBLE); nên CAST(... AS DECIMAL(38,10)) để tránh sai số làm tròn.",

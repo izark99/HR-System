@@ -102,9 +102,9 @@ function describe(
 }
 
 /**
- * A value that does not fit DECIMAL(38,10) (spec §9.4) → `duckdb.error.decimalOverflow` with the
- * column (found by re-checking the decimal columns one by one; error path only). Anything else
- * stays an `sql.error.*`.
+ * A DOUBLE result that is NaN/Infinity → `sql.error.notFinite`; a value that does not fit
+ * DECIMAL(38,10) (spec §9.4) → `duckdb.error.decimalOverflow` with the column (found by
+ * re-checking the columns one by one; error path only). Anything else stays an `sql.error.*`.
  */
 function castError(
   err: unknown,
@@ -115,6 +115,20 @@ function castError(
 ): EngineError {
   const mapped = sqlError(err);
   const message = err instanceof Error ? err.message : '';
+  // NaN / Infinity of a DOUBLE column cannot become a decimal: not an overflow.
+  for (const c of cols) {
+    if (!c.double) continue;
+    try {
+      const bad = db.scalar(
+        `SELECT count(*) FROM (\n${sql}\n) AS q WHERE NOT isfinite(${q(c.def.key)})`,
+        values,
+      );
+      if (Number(bad ?? 0) > 0)
+        return new EngineError('sql.error.notFinite', { column: c.def.key });
+    } catch {
+      // Fall through to the other checks.
+    }
+  }
   if (!/DECIMAL\(38,\s?10\)|Overflow|Out of Range/i.test(message)) return mapped;
   for (const c of cols) {
     if (c.def.type !== 'decimal') continue;
@@ -234,6 +248,12 @@ export const codeSqlPlugin: NodePlugin<CodeSqlConfig, never, Promise<OutputSchem
           values,
         );
       } catch (err) {
+        // The views evaluate lazy input chains: an error raised there belongs to the node that
+        // produced the chain (materializing it re-raises the error attributed to that node).
+        for (const i of config.inputs) {
+          const rel = inputs[i.port]!;
+          if (!rel.materialized) ctx.sql.drop(ctx.sql.materialize(rel).name);
+        }
         throw castError(err, db, cols, guarded.sql, values);
       }
       ctx.sql.track(name, 'TABLE');
