@@ -220,6 +220,73 @@ describe('code.sql guard: statements that must be refused (AC-B3-20, AC-B3-06)',
   });
 });
 
+describe('code.sql guard: Unicode whitespace and quoted paths', () => {
+  const SPACES = ['\u00A0', '\u2003', '\u3000', '\u2009', '\u202F', '\uFEFF', '\u205F'];
+
+  it('Unicode whitespace between a function name and ( is refused (syntax)', async () => {
+    for (const sp of SPACES) {
+      for (const sql of [
+        `SELECT * FROM read_csv${sp}('/etc/passwd')`,
+        `SELECT * FROM glob${sp}('*')`,
+        `SELECT * FROM query${sp}('SELECT 1 AS a')`,
+        `SELECT getenv${sp}('HOME') AS a`,
+      ]) {
+        expect(await key(sql), JSON.stringify(sql)).toBe('sql.error.syntax');
+      }
+    }
+  });
+
+  it('Unicode whitespace anywhere outside strings/comments is refused', async () => {
+    expect(await key('SELECT\u00A01 AS a')).toBe('sql.error.syntax');
+    expect(await key('SELECT 1 AS a FROM\u3000luong')).toBe('sql.error.syntax');
+    expect(await key("SELECT 'x'\u2003AS a")).toBe('sql.error.syntax');
+    expect(await key('SELECT 1 AS a /* c */\u00A0')).toBe('sql.error.syntax');
+    const err = (await run('SELECT\u00A01 AS a').catch((e: unknown) => e)) as {
+      params?: Record<string, unknown>;
+    };
+    expect(err.params?.message).toBe('U+00A0');
+  });
+
+  it('Unicode whitespace inside strings, quoted identifiers and comments is fine', async () => {
+    const r = await run(
+      'SELECT \'a\u00A0b\' AS a /* \u2003 */ -- \u00A0\n, $$ \u00A0 $$ AS b FROM luong AS "l\u3000x" LIMIT 1',
+    );
+    expect(rowsOf(r.out.out)).toEqual([['a\u00A0b', ' \u00A0 ']]);
+    expect(await key("SELECT E'it\\'s\u00A0' AS a")).toBe('ok');
+  });
+
+  it('non-ASCII text before a token does not shift the checks (UTF-8 offsets)', async () => {
+    expect(await key("SELECT 'Đặng Văn Ánh' AS a, 1 AS b FROM 'a.csv'")).toBe(
+      'sql.error.forbidden',
+    );
+    expect(await key("SELECT 'Đặng' AS a FROM luong WHERE ma_nv = $p", { p: 'x' })).toBe('ok');
+    expect(await key("SELECT '😀😀😀' AS a, read_csv('x') AS b")).toBe('sql.error.forbidden');
+    const r = await run("SELECT 'Đặng' AS a, $p AS b", { p: 'P' });
+    expect(rowsOf(r.out.out)).toEqual([['Đặng', 'P']]);
+  });
+
+  it('a name followed by comments/newlines then ( is a call', async () => {
+    expect(await key("SELECT * FROM read_csv /* x */\n -- y\n ('a.csv')")).toMatch(/forbidden/);
+    expect(await key('SELECT * FROM "read_csv" /**/ (\'a.csv\')')).toMatch(/forbidden/);
+  });
+
+  it('a quoted name that looks like a path or URL in table position is refused', async () => {
+    for (const sql of [
+      'SELECT * FROM "a.csv"',
+      'SELECT * FROM "/tmp/x"',
+      'SELECT * FROM "https://x/a.parquet"',
+      'SELECT * FROM luong, "a.csv"',
+      'SELECT * FROM luong JOIN "s3:bucket" ON true',
+      'SELECT * FROM luong /* c */ JOIN "a.json" ON true',
+    ]) {
+      expect(await key(sql), sql).toBe('sql.error.forbidden');
+    }
+    // A quoted name elsewhere (column alias, column reference) stays fine.
+    expect(await key('SELECT ma_nv FROM luong AS "l.x"')).toBe('ok');
+    expect(await key('SELECT "ma_nv" FROM "luong"')).toBe('ok');
+  });
+});
+
 describe('code.sql parameters: binding forms and injection (AC-B3-21)', () => {
   const INJECTIONS = [
     "x' OR 1=1 --",
@@ -395,6 +462,19 @@ describe('code.sql result types (spec §9.4)', () => {
     ]) {
       expect(await key(sql), sql).toBe('sql.error.invalidColumnName');
     }
+  });
+
+  it('NaN / Infinity from a DOUBLE expression is sql.error.notFinite with the column', async () => {
+    for (const sql of [
+      "SELECT 'nan'::DOUBLE AS a",
+      "SELECT 1 AS b, 'inf'::DOUBLE AS a",
+      "SELECT -'infinity'::DOUBLE AS a",
+      'SELECT CAST(cong AS DOUBLE) / 0 AS a FROM luong',
+    ]) {
+      const e = await run(sql).catch((x: unknown) => x);
+      expect(e, sql).toMatchObject({ messageKey: 'sql.error.notFinite', params: { column: 'a' } });
+    }
+    expect(await key('SELECT 1e300::DOUBLE * 1e300 AS a')).toBe('sql.error.notFinite');
   });
 
   describe('fixed (was KNOWN BUG)', () => {
