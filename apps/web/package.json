@@ -12,12 +12,14 @@
     "build:e2e": "vite build --mode e2e"
   },
   "dependencies": {
+    "@duckdb/duckdb-wasm": "1.32.0",
     "@fontsource/be-vietnam-pro": "^5.3.0",
     "@hrflow/flow-schema": "workspace:*",
     "@supabase/supabase-js": "2.118.0",
     "@tanstack/react-router": "^1.170.46",
     "@tanstack/react-table": "^8.21.3",
     "@tanstack/react-virtual": "^3.14.22",
+    "apache-arrow": "17.0.0",
     "big.js": "^7.0.1",
     "comlink": "^4.4.2",
     "exceljs": "^4.4.0",

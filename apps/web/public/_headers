@@ -3,15 +3,18 @@
 # connect-src: ONLY the app itself + the Supabase project rzakjtgvbyxqsmbpcomw (same domain as
 # VITE_SUPABASE_URL; update both if the project ever changes). wss:// is for Supabase Realtime.
 # This is what prevents any code (incl. admin SQL/Python) from sending data elsewhere.
+#   blob: is a LOCAL object URL, not a domain: the engine worker hands the reassembled,
+#   checksum-verified DuckDB .wasm to DuckDB through URL.createObjectURL, and DuckDB loads it with
+#   fetch() (spec §13.1, decision 2026-10-27 07:31).
 #
 # script-src 'wasm-unsafe-eval': required to instantiate WebAssembly (DuckDB-WASM, Pyodide).
 #   WASM binaries are self-hosted; no third-party script origins are allowed.
-# worker-src 'self' blob: engine Web Workers (DuckDB creates workers from blob: URLs).
+# worker-src 'self' blob: engine Web Worker (DuckDB runs inside it, spec §13.1) and editor workers.
 # style-src 'unsafe-inline': Monaco/ECharts/React Flow inject <style> elements at runtime.
 #   Inline *scripts* stay blocked.
 # font-src 'self': Be Vietnam Pro is self-hosted (bundled woff2); no third-party font origin.
 /*
-  Content-Security-Policy: default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; worker-src 'self' blob:; connect-src 'self' https://rzakjtgvbyxqsmbpcomw.supabase.co wss://rzakjtgvbyxqsmbpcomw.supabase.co; img-src 'self' data: blob:; style-src 'self' 'unsafe-inline'; font-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'
+  Content-Security-Policy: default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; worker-src 'self' blob:; connect-src 'self' https://rzakjtgvbyxqsmbpcomw.supabase.co wss://rzakjtgvbyxqsmbpcomw.supabase.co blob:; img-src 'self' data: blob:; style-src 'self' 'unsafe-inline'; font-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'
   X-Content-Type-Options: nosniff
   X-Frame-Options: DENY
   Referrer-Policy: no-referrer
