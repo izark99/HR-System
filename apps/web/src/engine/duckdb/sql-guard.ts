@@ -48,6 +48,25 @@ const DML_KEYWORDS = new Set([
   'MERGE',
 ]);
 const SELECT_STARTS = new Set(['SELECT', 'WITH', 'FROM', 'VALUES']);
+/** Clause keywords that end (or start) a FROM list. */
+const CLAUSES = new Set([
+  'SELECT',
+  'FROM',
+  'JOIN',
+  'WHERE',
+  'GROUP',
+  'HAVING',
+  'QUALIFY',
+  'WINDOW',
+  'ORDER',
+  'LIMIT',
+  'OFFSET',
+  'UNION',
+  'EXCEPT',
+  'INTERSECT',
+  'ON',
+  'USING',
+]);
 const FORBIDDEN_FUNCTIONS = new Set(['glob', 'query', 'query_table', 'getenv']);
 const FORBIDDEN_FUNCTION_PREFIXES = ['read_', 'parquet_', 'iceberg_', 'delta_', 'sniff_'];
 
@@ -80,9 +99,11 @@ function tokens(db: DuckDb, sql: string): Token[] {
     const end = raw.offsets[i + 1] ?? sql.length;
     const slice = sql.slice(start, end);
     const type = raw.types[i] ?? TOKEN.operator;
+    // The slice runs to the next token, so it may end with whitespace or a comment glued to the
+    // token ("query/**/(", "$p--c"): only identifier characters belong to a name.
     let text: string;
     if (type === TOKEN.identifier || type === TOKEN.keyword) {
-      text = /^"(?:[^"]|"")*"/.exec(slice)?.[0] ?? /^[^\s(),;.:]+/u.exec(slice)?.[0] ?? slice;
+      text = /^"(?:[^"]|"")*"/.exec(slice)?.[0] ?? /^[\p{L}\p{N}_$]+/u.exec(slice)?.[0] ?? slice;
     } else if (type === TOKEN.operator) {
       text = /^\$\d+/.exec(slice)?.[0] ?? slice.split(/\s|--|\/\*/)[0] ?? slice;
     } else {
@@ -149,8 +170,20 @@ export function guardSql(db: DuckDb, sql: string, paramKeys: ReadonlySet<string>
   const replacements: { start: number; end: number; key: string }[] = [];
   let depth = 0;
   let hasOrderBy = false;
+  /** Last clause keyword per parenthesis depth (to know when we are in a FROM list). */
+  const clause: (string | undefined)[] = [undefined];
   stmt.forEach((t, i) => {
     const next = stmt[i + 1];
+    const prev = stmt[i - 1];
+    // A string where a table is expected is a file/URL replacement scan (`FROM 'a.csv'`,
+    // `FROM x, 'a.csv'`, `JOIN 'a.parquet'`).
+    if (t.type === TOKEN.string && prev) {
+      const afterFrom =
+        prev.type === TOKEN.keyword && ['FROM', 'JOIN'].includes(prev.text.toUpperCase());
+      const inFromList =
+        prev.type === TOKEN.operator && prev.text === ',' && clause[depth] === 'FROM';
+      if (afterFrom || inFromList) fail('sql.error.forbidden', {});
+    }
     if (t.type === TOKEN.identifier || t.type === TOKEN.keyword) {
       const name = word(t).toLowerCase();
       if (next?.type === TOKEN.operator && next.text.startsWith('(')) {
@@ -163,16 +196,14 @@ export function guardSql(db: DuckDb, sql: string, paramKeys: ReadonlySet<string>
       }
       if (t.type === TOKEN.keyword) {
         const k = t.text.toUpperCase();
-        if ((k === 'FROM' || k === 'JOIN') && next?.type === TOKEN.string) {
-          fail('sql.error.forbidden', {});
-        }
+        if (CLAUSES.has(k)) clause[depth] = k === 'JOIN' ? 'FROM' : k;
         if (k === 'ORDER' && depth === 0) hasOrderBy = true;
       }
     }
     if (t.type === TOKEN.operator) {
       for (const ch of t.text) {
-        if (ch === '(') depth++;
-        else if (ch === ')') depth--;
+        if (ch === '(') clause[++depth] = undefined;
+        else if (ch === ')') depth = Math.max(0, depth - 1);
       }
       if (t.text === '?' || /^\$\d+$/.test(t.text))
         fail('sql.error.unknownParam', { param: t.text });
@@ -187,7 +218,9 @@ export function guardSql(db: DuckDb, sql: string, paramKeys: ReadonlySet<string>
   const params: string[] = [];
   for (const r of replacements) if (!params.includes(r.key)) params.push(r.key);
   for (const r of [...replacements].reverse()) {
-    text = `${text.slice(0, r.start)}$${params.indexOf(r.key) + 1}${text.slice(r.end)}`;
+    // Typed as VARCHAR everywhere (spec §9.2), so DESCRIBE at design time (values NULL) and the
+    // run (real values) infer the same result types.
+    text = `${text.slice(0, r.start)}CAST($${params.indexOf(r.key) + 1} AS VARCHAR)${text.slice(r.end)}`;
   }
   return { sql: text, params, hasOrderBy };
 }

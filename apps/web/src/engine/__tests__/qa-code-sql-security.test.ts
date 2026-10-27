@@ -199,13 +199,23 @@ describe('code.sql guard: statements that must be refused (AC-B3-20, AC-B3-06)',
     expect(values).toHaveLength(6000);
   });
 
-  describe('KNOWN BUG', () => {
-    // The guard reads the word under the cursor with a regex over the token's slice; a comment
-    // glued to the name ("query/**/(") makes the exact-name blocklist miss it (prefix lists such
-    // as "read_" still hit by accident).
-    it.fails('query/**/(...) and query_table/**/(...) are refused like query(...)', async () => {
+  describe('fixed (was KNOWN BUG)', () => {
+    // A comment glued to a name ("query/**/(") used to make the exact-name blocklist miss it.
+    it('query/**/(...) and query_table/**/(...) are refused like query(...)', async () => {
       expect(await key("SELECT * FROM query/**/('SELECT 1 AS a')")).toMatch(/forbidden/);
       expect(await key("SELECT * FROM query_table/**/('luong')")).toMatch(/forbidden/);
+      expect(await key("SELECT * FROM glob--x\n('*')")).toMatch(/forbidden/);
+      expect(await key('SELECT * FROM "query" (\'SELECT 1 AS a\')')).toMatch(/forbidden/);
+    });
+
+    it('a string in table position after a comma or JOIN is refused (file scan)', async () => {
+      expect(await key("SELECT * FROM luong, 'a.csv'")).toMatch(/forbidden/);
+      expect(await key("SELECT * FROM luong l JOIN 'a.parquet' p ON true")).toMatch(/forbidden/);
+      expect(await key("SELECT * FROM luong AS l, /* c */ 'https://x/a.csv'")).toMatch(/forbidden/);
+      // Strings elsewhere (select list, IN lists, function args) stay fine.
+      expect(await key("SELECT ma_nv, 'a.csv' AS f FROM luong WHERE ma_nv IN ('NV001', 'x')")).toBe(
+        'ok',
+      );
     });
   });
 });
@@ -299,9 +309,9 @@ describe('code.sql parameters: binding forms and injection (AC-B3-21)', () => {
     }
   });
 
-  describe('KNOWN BUG', () => {
+  describe('fixed (was KNOWN BUG)', () => {
     // `$p` immediately followed by a comment is read as a param named "p/*c*/".
-    it.fails('a param directly followed by a comment is still the param', async () => {
+    it('a param directly followed by a comment is still the param', async () => {
       expect(await key('SELECT ma_nv FROM luong WHERE ma_nv=$p--c', { p: 'NV001' })).toBe('ok');
       expect(await key('SELECT $p/*c*/ AS a', { p: 'NV001' })).toBe('ok');
     });
@@ -341,10 +351,10 @@ describe('code.sql design-time schema (DESCRIBE) vs run (AC-B3-19)', () => {
     }
   });
 
-  describe('KNOWN BUG', () => {
+  describe('fixed (was KNOWN BUG)', () => {
     // Design time binds every param as an untyped NULL, DuckDB then types `$p || 'x'` as
     // INTEGER; at run time the bound VARCHAR makes it VARCHAR.
-    it.fails('a param used in an expression keeps its VARCHAR type at design time', async () => {
+    it('a param used in an expression keeps its VARCHAR type at design time', async () => {
       const sql = "SELECT $p || 'x' AS a";
       const designed = await design(sql);
       const ran = await run(sql, { p: 'v' });
@@ -387,16 +397,13 @@ describe('code.sql result types (spec §9.4)', () => {
     }
   });
 
-  describe('KNOWN BUG', () => {
+  describe('fixed (was KNOWN BUG)', () => {
     // Spec §9.4: beyond DECIMAL(38,10) → duckdb.error.decimalOverflow with node and column.
-    it.fails(
-      'a value that does not fit DECIMAL(38,10) is duckdb.error.decimalOverflow',
-      async () => {
-        expect(await key('SELECT 99999999999999999999999999999::HUGEINT AS a')).toBe(
-          'duckdb.error.decimalOverflow',
-        );
-      },
-    );
+    it('a value that does not fit DECIMAL(38,10) is duckdb.error.decimalOverflow', async () => {
+      expect(await key('SELECT 99999999999999999999999999999::HUGEINT AS a')).toBe(
+        'duckdb.error.decimalOverflow',
+      );
+    });
   });
 });
 

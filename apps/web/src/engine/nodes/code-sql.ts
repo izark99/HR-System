@@ -101,6 +101,32 @@ function describe(
   return out;
 }
 
+/**
+ * A value that does not fit DECIMAL(38,10) (spec §9.4) → `duckdb.error.decimalOverflow` with the
+ * column (found by re-checking the decimal columns one by one; error path only). Anything else
+ * stays an `sql.error.*`.
+ */
+function castError(
+  err: unknown,
+  db: DuckDb,
+  cols: ResultColumn[],
+  sql: string,
+  values: SqlParam[],
+): EngineError {
+  const mapped = sqlError(err);
+  const message = err instanceof Error ? err.message : '';
+  if (!/DECIMAL\(38,\s?10\)|Overflow|Out of Range/i.test(message)) return mapped;
+  for (const c of cols) {
+    if (c.def.type !== 'decimal') continue;
+    try {
+      db.query(`SELECT count(${c.cast}) FROM (\n${sql}\n) AS q`, values);
+    } catch {
+      return new EngineError('duckdb.error.decimalOverflow', { column: c.def.key });
+    }
+  }
+  return mapped;
+}
+
 /** Views named after the ports, dropped by the returned function. */
 function createViews(db: DuckDb, bodies: [port: string, body: string][]): () => void {
   const created: string[] = [];
@@ -208,7 +234,7 @@ export const codeSqlPlugin: NodePlugin<CodeSqlConfig, never, Promise<OutputSchem
           values,
         );
       } catch (err) {
-        throw sqlError(err);
+        throw castError(err, db, cols, guarded.sql, values);
       }
       ctx.sql.track(name, 'TABLE');
       const count = Number(db.scalar(`SELECT count(*) FROM ${qName(name)}`) ?? 0);
