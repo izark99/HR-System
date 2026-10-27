@@ -56,6 +56,8 @@ export interface Cte {
   name: string;
   sql: string;
   params: readonly SqlParam[];
+  /** Node that produced this step (set by the executor), to blame the right node on errors. */
+  owner?: { id: string; label: string };
 }
 
 /**
@@ -69,6 +71,8 @@ export class SqlRel {
     readonly ctes: readonly Cte[] = [],
     /** Known once materialized. */
     readonly rowCount: number | null = null,
+    /** Materialized tables this relation reads (itself when materialized). */
+    readonly bases: readonly string[] = ctes.length === 0 ? [name] : [],
   ) {}
 
   get materialized(): boolean {

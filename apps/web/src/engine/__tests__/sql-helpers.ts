@@ -3,7 +3,7 @@ import { z } from 'zod';
 import { isDecimal } from '../core/decimal';
 import { runFlow, type RunFlowOptions, type RunFlowResult } from '../core/executor';
 import { createEngineTranslator } from '../core/i18n';
-import type { TsNodePlugin } from '../core/plugin';
+import type { AnyNodePlugin, TsNodePlugin } from '../core/plugin';
 import type { Table, Value } from '../core/types';
 import { nodePlugins } from '../nodes';
 import { nodeDuckDb } from './duckdb-node';
@@ -61,9 +61,13 @@ export async function runWith(
   sources: Record<string, Table>,
   nodes: NodeSpec[],
   edges: FlowDefinitionInput['edges'],
-  options: Partial<RunFlowOptions> & { paramDefs?: FlowDefinitionInput['params'] } = {},
+  options: Partial<RunFlowOptions> & {
+    paramDefs?: FlowDefinitionInput['params'];
+    /** Extra test-only plugins next to the registry and `test.table`. */
+    extraPlugins?: Record<string, AnyNodePlugin>;
+  } = {},
 ): Promise<RunFlowResult> {
-  const { paramDefs, ...rest } = options;
+  const { paramDefs, extraPlugins, ...rest } = options;
   const flow = FlowDefinitionSchema.parse({
     schemaVersion: 1,
     params: paramDefs ?? [],
@@ -76,7 +80,7 @@ export async function runWith(
   return runFlow(flow, {
     t,
     duck: nodeDuckDb,
-    plugins: { ...nodePlugins, 'test.table': sourcePlugin(sources) },
+    plugins: { ...nodePlugins, 'test.table': sourcePlugin(sources), ...extraPlugins },
     collect: nodes.map((n) => n.id),
     ...rest,
   });

@@ -190,13 +190,14 @@ function parseInteger(s: string): number | Decimal {
  * names are `hr$<n>`, which no port or column key can be.
  */
 export class SqlScope {
-  private counter = 0;
+  private static counter = 0;
   private readonly objects: { name: string; kind: 'TABLE' | 'VIEW' }[] = [];
 
   constructor(readonly db: DuckDb) {}
 
+  /** Unique per worker (not per run), so a leftover of a failed run can never collide. */
   nextName(): string {
-    return `hr$${++this.counter}`;
+    return `hr$${++SqlScope.counter}`;
   }
 
   /** Track a view created by a node (e.g. code.sql port views) so it is dropped with the scope. */
@@ -204,8 +205,16 @@ export class SqlScope {
     this.objects.push({ name, kind });
   }
 
-  dropView(name: string): void {
-    this.db.exec(`DROP VIEW IF EXISTS ${name}`);
+  /** Drop a table of this scope early (no relation reads it any more). */
+  drop(name: string): void {
+    const i = this.objects.findIndex((o) => o.name === name && o.kind === 'TABLE');
+    if (i < 0) return;
+    this.objects.splice(i, 1);
+    try {
+      this.db.exec(`DROP TABLE IF EXISTS ${qName(name)}`);
+    } catch {
+      // Best effort; dispose() would not do better.
+    }
   }
 
   /** Run a statement, turning DuckDB errors into engine errors (no raw text, may hold data). */
@@ -221,6 +230,9 @@ export class SqlScope {
   upload(table: Table): SqlRel {
     const name = this.nextName();
     const raw = `${name}_raw`;
+    // Registered first: a failure half-way (bad value, out of memory) leaves nothing behind.
+    this.track(name, 'TABLE');
+    this.track(raw, 'TABLE');
     const cols = table.columns;
     const casts = cols.map((c) => `CAST(${q(c.key)} AS ${DUCK_TYPE[c.type]}) AS ${q(c.key)}`);
     if (table.rows.length === 0) {
@@ -244,9 +256,8 @@ export class SqlScope {
       this.run(
         `CREATE TABLE ${qName(name)} AS SELECT ${[...casts, `CAST(${ORD} AS BIGINT) AS ${ORD}`].join(', ')} FROM ${qName(raw)}`,
       );
-      this.run(`DROP TABLE ${qName(raw)}`);
     }
-    this.track(name, 'TABLE');
+    this.drop(raw);
     return new SqlRel(table.columns, name, [], table.rows.length);
   }
 
@@ -259,7 +270,8 @@ export class SqlScope {
   ): SqlRel {
     const name = this.nextName();
     const cte: Cte = { name, sql, params };
-    return new SqlRel(columns, name, [...mergeCtes(inputs), cte]);
+    const bases = [...new Set(inputs.flatMap((r) => r.bases))];
+    return new SqlRel(columns, name, [...mergeCtes(inputs), cte], null, bases);
   }
 
   /** `WITH … SELECT * FROM rel` (or just the table) with its params. */
@@ -274,18 +286,63 @@ export class SqlScope {
     const name = this.nextName();
     const w = withClause(rel.ctes);
     const cols = rel.columns.map((c) => q(c.key));
-    this.run(
-      `CREATE TABLE ${qName(name)} AS ${w.sql}SELECT ${[...cols, `row_number() OVER (ORDER BY ${ORD}) AS ${ORD}`].join(', ')} FROM ${qName(rel.name)}`,
-      w.params,
-    );
     this.track(name, 'TABLE');
+    try {
+      this.run(
+        `CREATE TABLE ${qName(name)} AS ${w.sql}SELECT ${[...cols, `row_number() OVER (ORDER BY ${ORD}) AS ${ORD}`].join(', ')} FROM ${qName(rel.name)}`,
+        w.params,
+      );
+    } catch (err) {
+      this.drop(name);
+      throw this.blame(rel.ctes, err);
+    }
     const count = Number(this.db.scalar(`SELECT count(*) FROM ${qName(name)}`) ?? 0);
     return new SqlRel(rel.columns, name, [], count);
+  }
+
+  /**
+   * A lazy chain failed: find the first CTE that fails on its own and attach its node, so the
+   * error names the node that caused it rather than the one that read the result (engine.md).
+   * Error path only.
+   */
+  private blame(ctes: readonly Cte[], err: unknown): unknown {
+    if (!(err instanceof EngineError) || err.nodeId) return err;
+    for (let i = 0; i < ctes.length; i++) {
+      const owner = ctes[i]!.owner;
+      if (!owner) continue;
+      const w = withClause(ctes.slice(0, i + 1));
+      // Evaluated into a throw-away table: a count(*) would let DuckDB skip the computed columns.
+      const probe = this.nextName();
+      try {
+        this.db.exec(
+          `CREATE TABLE ${qName(probe)} AS ${w.sql}SELECT * FROM ${qName(ctes[i]!.name)}`,
+          w.params,
+        );
+      } catch {
+        return new EngineError(err.messageKey, { node: owner.label, ...err.params }, owner.id);
+      } finally {
+        try {
+          this.db.exec(`DROP TABLE IF EXISTS ${qName(probe)}`);
+        } catch {
+          // ignore
+        }
+      }
+    }
+    return err;
   }
 
   /** Materialize (if needed) and read the relation back into a TS table (spec §9.4). */
   fetch(input: SqlRel): Table {
     const rel = this.materialize(input);
+    try {
+      return this.read(rel);
+    } finally {
+      // A table made only for this read is not needed afterwards.
+      if (rel !== input) this.drop(rel.name);
+    }
+  }
+
+  private read(rel: SqlRel): Table {
     const total = rel.rowCount ?? 0;
     const columns = rel.columns.map((c) => ({ ...c }));
     const rows: Row[] = new Array<Row>(total);

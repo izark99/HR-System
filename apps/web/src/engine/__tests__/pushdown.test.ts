@@ -1,5 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import { Big } from '../core/decimal';
+import { z } from 'zod';
+import type { TsNodePlugin } from '../core/plugin';
 import type { DuckDbProvider } from '../duckdb/db';
 import { nodeDuckDb } from './duckdb-node';
 import { rowsOf, runWith, table } from './sql-helpers';
@@ -151,6 +153,78 @@ describe('lazy DuckDB loading (AC-B3-05)', () => {
     await expect(
       runWith({ src: data }, chain, chainEdges, { duck: undefined as unknown as DuckDbProvider }),
     ).rejects.toMatchObject({ messageKey: 'duckdb.error.unavailable', nodeId: 'sel' });
+  });
+});
+
+describe('errors and clean-up of lazy chains', () => {
+  it('an error raised while a consumer evaluates a lazy chain names the producing node', async () => {
+    const big = table(
+      [['x', 'decimal']],
+      [[new Big('9999999999999999999999999999')], [new Big('9999999999999999999999999999')]],
+    );
+    await expect(
+      runWith(
+        { src: big },
+        [
+          { id: 'sel', type: 'transform.select', config: { columns: [{ from: 'x' }] } },
+          {
+            id: 'g',
+            type: 'transform.groupBy',
+            label: 'Tổng',
+            config: { aggregations: [{ key: 's', fn: 'sum', column: 'x' }] },
+          },
+          { id: 's', type: 'transform.sort', config: { by: [{ column: 's' }] } },
+          { id: 'p', type: 'output.preview', config: { title: 'Xem' } },
+        ],
+        [
+          { from: 'src', to: 'sel' },
+          { from: 'sel', to: 'g' },
+          { from: 'g', to: 's' },
+          { from: 's', to: 'p' },
+        ],
+        { collect: [] },
+      ),
+    ).rejects.toMatchObject({
+      messageKey: 'duckdb.error.decimalOverflow',
+      nodeId: 'g',
+      params: { node: 'Tổng' },
+    });
+  });
+
+  it('with releaseIntermediate, DuckDB tables are dropped once nothing reads them', async () => {
+    const db = await nodeDuckDb();
+    const count = () =>
+      Number(db.scalar(`SELECT count(*) FROM duckdb_tables() WHERE table_name LIKE 'hr$%'`));
+    let during = -1;
+    const probe: TsNodePlugin<Record<string, never>> = {
+      type: 'test.probe',
+      configSchema: z.strictObject({}),
+      inputs: [],
+      outputs: [],
+      inferSchema: () => ({}),
+      execute: () => {
+        during = count();
+        return {};
+      },
+    };
+    await runWith(
+      { src: data },
+      [
+        chain[0]!,
+        chain[1]!,
+        { id: 'p', type: 'output.preview', config: { title: 'Xem' } },
+        { id: 'probe', type: 'test.probe' },
+      ],
+      [
+        { from: 'src', to: 'sel' },
+        { from: 'sel', to: 'f' },
+        { from: 'f', to: 'p' },
+      ],
+      { releaseIntermediate: true, collect: [], extraPlugins: { 'test.probe': probe } },
+    );
+    // The upload, the chain and the table materialized for the preview are all gone.
+    expect(during).toBe(0);
+    expect(count()).toBe(0);
   });
 });
 

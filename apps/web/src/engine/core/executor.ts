@@ -367,6 +367,22 @@ export async function runFlow(
   /** TS tables uploaded to DuckDB / relations fetched to TS, per source port (shared). */
   const uploaded = new Map<string, SqlRel>();
   const fetched = new Map<string, Table>();
+  /**
+   * How many live port values read each DuckDB table; with `releaseIntermediate` a table is
+   * dropped as soon as nothing reads it (mid-run), the rest when the run ends.
+   */
+  const readers = new Map<string, number>();
+  const hold = (value: PortData, delta: 1 | -1) => {
+    if (!isSqlRel(value)) return;
+    for (const base of value.bases) {
+      const n = (readers.get(base) ?? 0) + delta;
+      readers.set(base, n);
+      if (n <= 0 && delta < 0 && options.releaseIntermediate) {
+        readers.delete(base);
+        scope?.drop(base);
+      }
+    }
+  };
 
   try {
     for (const [index, step] of plan.entries()) {
@@ -405,7 +421,10 @@ export async function runFlow(
             if (isSqlRel(value)) rels[link.port] = value;
             else {
               let rel = uploaded.get(key);
-              if (!rel) uploaded.set(key, (rel = sql.upload(value)));
+              if (!rel) {
+                uploaded.set(key, (rel = sql.upload(value)));
+                hold(rel, 1);
+              }
               rels[link.port] = rel;
             }
           }
@@ -414,6 +433,12 @@ export async function runFlow(
             Promise.resolve().then(() => plugin.runSql!(step.config, rels, { ...base, sql })),
             signal,
           );
+          // Steps of the lazy chain remember their node, so a failure later (when a consumer
+          // materializes the chain) still names the node that caused it.
+          const owner = { id: node.id, label: node.label ?? node.id };
+          for (const value of Object.values(result)) {
+            if (isSqlRel(value)) for (const cte of value.ctes) cte.owner ??= owner;
+          }
         } else {
           const tables: Record<string, Table> = {};
           for (const link of step.inputs) {
@@ -454,6 +479,7 @@ export async function runFlow(
       throwIfAborted(signal);
 
       data[node.id] = result;
+      for (const value of Object.values(result)) hold(value, 1);
       const rows: Record<string, number> = {};
       for (const [port, value] of Object.entries(result)) {
         if (!isSqlRel(value)) rows[port] = value.rows.length;
@@ -477,9 +503,17 @@ export async function runFlow(
           remaining.set(key, left);
           if (left > 0 || retained(link.from, link.fromPort)) continue;
           const ports = data[link.from];
-          if (ports) delete ports[link.fromPort];
+          const value = ports?.[link.fromPort];
+          if (ports && value) {
+            delete ports[link.fromPort];
+            hold(value, -1);
+          }
           fetched.delete(key);
-          uploaded.delete(key);
+          const up = uploaded.get(key);
+          if (up) {
+            uploaded.delete(key);
+            hold(up, -1);
+          }
         }
       }
     }

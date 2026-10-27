@@ -52,7 +52,8 @@ interface SheetState {
 
 function toCell(v: Value | undefined): CellValue {
   if (v === undefined || v === null) return null;
-  return isDecimal(v) ? v.toString() : v;
+  // Plain digits (big.js toString switches to exponent notation for tiny/huge values).
+  return isDecimal(v) ? v.toFixed() : v;
 }
 
 export function errorInfo(err: unknown): EngineErrorInfo {

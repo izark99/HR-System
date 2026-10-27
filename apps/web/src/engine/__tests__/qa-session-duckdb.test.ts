@@ -201,13 +201,13 @@ describe('error paths leave DuckDB clean and never forward raw text', () => {
     dropLeftovers(real);
   });
 
-  describe('KNOWN BUG', () => {
+  describe('fixed (was KNOWN BUG)', () => {
     // SqlScope.upload registers its tables only after success. When the CREATE TABLE ... AS
     // SELECT CAST(...) over the Arrow staging table fails (here: an invalid date string; in
     // production e.g. a WASM out-of-memory at 1M rows), `hr$N_raw` stays in DuckDB with a full
     // copy of the data, and every later run in the same worker dies on "table already exists"
     // (names restart at hr$1 for each run) until the page is reloaded.
-    it.fails('a failed upload leaves nothing behind and the next run still works', async () => {
+    it('a failed upload leaves nothing behind and the next run still works', async () => {
       const real = await nodeDuckDb();
       try {
         const broken = table([['d', 'date']], [['2026-02-30']]);
@@ -259,18 +259,15 @@ describe('decimal cells shown in the UI', () => {
     expect(page.rows[0]![2]).toBe('1234.5');
   });
 
-  describe('KNOWN BUG', () => {
+  describe('fixed (was KNOWN BUG)', () => {
     // session.toCell uses big.js toString(), which switches to exponent notation below 1e-6 and
     // from 1e21; lib/format.formatDecimalString does not parse that, so the UI shows "1e-9".
-    it.fails(
-      'tiny and huge decimals are sent as plain digit strings, never "1e-9" / "5.0000000000000000000005e+21"',
-      async () => {
-        const session = await ready(nodeDuckDb, tinyFlow());
-        const s = okSummary(await session.run(params));
-        const row = session.getRows(s.sheets[0]!.id, { offset: 0, limit: 1 }).rows[0]!;
-        expect(row[0]).toBe('0.000000001');
-        expect(row[1]).toBe('5000000000000000000000.5');
-      },
-    );
+    it('tiny and huge decimals are sent as plain digit strings, never "1e-9" / "5.0000000000000000000005e+21"', async () => {
+      const session = await ready(nodeDuckDb, tinyFlow());
+      const s = okSummary(await session.run(params));
+      const row = session.getRows(s.sheets[0]!.id, { offset: 0, limit: 1 }).rows[0]!;
+      expect(row[0]).toBe('0.000000001');
+      expect(row[1]).toBe('5000000000000000000000.5');
+    });
   });
 });
