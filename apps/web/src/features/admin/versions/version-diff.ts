@@ -69,12 +69,17 @@ const asArray = (v: unknown): unknown[] => (Array.isArray(v) ? v : []);
 
 const str = (v: unknown): string | undefined => (typeof v === 'string' ? v : undefined);
 
-/** JSON with object keys sorted at every level (stable comparison and display). */
+/** JSON with object keys sorted at every level and LF line endings (stable comparison). */
 export function stableStringify(value: unknown): string {
   return JSON.stringify(sortKeys(value));
 }
 
+/**
+ * Canonical form used for both comparison and display: object keys sorted, and line endings in
+ * strings normalized to LF (a CRLF-only difference, e.g. SQL pasted from Windows, is not a change).
+ */
 function sortKeys(value: unknown): unknown {
+  if (typeof value === 'string') return value.replace(/\r\n?/g, '\n');
   if (Array.isArray(value)) return value.map(sortKeys);
   if (isRecord(value)) {
     const out: Rec = {};
@@ -101,9 +106,10 @@ export function jsonLines(value: unknown): string[] {
 
 function write(value: unknown, depth: number, prefix: string, suffix: string, out: string[]) {
   const pad = '  '.repeat(depth);
-  if (typeof value === 'string' && /\r?\n/.test(value)) {
+  // Strings are LF-normalized by sortKeys().
+  if (typeof value === 'string' && value.includes('\n')) {
     out.push(`${pad}${prefix}"""`);
-    for (const line of value.split(/\r?\n/)) out.push(`${pad}  ${line}`);
+    for (const line of value.split('\n')) out.push(`${pad}  ${line}`);
     out.push(`${pad}"""${suffix}`);
     return;
   }
@@ -138,47 +144,53 @@ const LCS_LIMIT = 4_000_000;
 
 /** Line diff (LCS) aligned into side-by-side rows; replaced blocks are paired row by row. */
 export function sideBySide(before: string[], after: string[]): SideBySideRow[] {
-  const n = before.length;
-  const m = after.length;
   type Op = { op: 'same' | 'del' | 'ins'; text: string };
   const ops: Op[] = [];
+  // Common prefix / suffix first: a local edit in a very long text stays local even when the
+  // middle part is too large for the LCS table.
+  let start = 0;
+  while (start < before.length && start < after.length && before[start] === after[start]) start++;
+  let endA = before.length;
+  let endB = after.length;
+  while (endA > start && endB > start && before[endA - 1] === after[endB - 1]) {
+    endA--;
+    endB--;
+  }
+  for (let i = 0; i < start; i++) ops.push({ op: 'same', text: before[i]! });
+  const a = before.slice(start, endA);
+  const b = after.slice(start, endB);
+  const n = a.length;
+  const m = b.length;
   if (n * m > LCS_LIMIT) {
-    for (let i = 0; i < Math.max(n, m); i++) {
-      const a = before[i];
-      const b = after[i];
-      if (a !== undefined && a === b) ops.push({ op: 'same', text: a });
-      else {
-        if (a !== undefined) ops.push({ op: 'del', text: a });
-        if (b !== undefined) ops.push({ op: 'ins', text: b });
-      }
-    }
+    // Still too large: whole middle block replaced (rare: thousands of scattered changes).
+    for (const text of a) ops.push({ op: 'del', text });
+    for (const text of b) ops.push({ op: 'ins', text });
   } else {
-    // lcs[i][j] = LCS length of before[i:] and after[j:]
+    // lcs[i][j] = LCS length of a[i:] and b[j:]
     const lcs: Uint32Array[] = Array.from({ length: n + 1 }, () => new Uint32Array(m + 1));
     for (let i = n - 1; i >= 0; i--) {
       for (let j = m - 1; j >= 0; j--) {
         lcs[i]![j] =
-          before[i] === after[j]
-            ? lcs[i + 1]![j + 1]! + 1
-            : Math.max(lcs[i + 1]![j]!, lcs[i]![j + 1]!);
+          a[i] === b[j] ? lcs[i + 1]![j + 1]! + 1 : Math.max(lcs[i + 1]![j]!, lcs[i]![j + 1]!);
       }
     }
     let i = 0;
     let j = 0;
     while (i < n || j < m) {
-      if (i < n && j < m && before[i] === after[j]) {
-        ops.push({ op: 'same', text: before[i]! });
+      if (i < n && j < m && a[i] === b[j]) {
+        ops.push({ op: 'same', text: a[i]! });
         i++;
         j++;
       } else if (j < m && (i === n || lcs[i]![j + 1]! >= lcs[i + 1]![j]!)) {
-        ops.push({ op: 'ins', text: after[j]! });
+        ops.push({ op: 'ins', text: b[j]! });
         j++;
       } else {
-        ops.push({ op: 'del', text: before[i]! });
+        ops.push({ op: 'del', text: a[i]! });
         i++;
       }
     }
   }
+  for (let i = endA; i < before.length; i++) ops.push({ op: 'same', text: before[i]! });
 
   const rows: SideBySideRow[] = [];
   let k = 0;

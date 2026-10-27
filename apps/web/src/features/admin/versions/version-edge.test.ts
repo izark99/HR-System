@@ -256,32 +256,30 @@ describe('diff: multi-line strings and side-by-side', () => {
   });
 });
 
-describe('KNOWN BUG (remove it.fails once fixed)', () => {
+describe('fixed bugs (were KNOWN BUGS)', () => {
   const sql = (s: string) => ({ nodes: [node('q', { sql: s })] });
 
-  // version-diff.ts: same() compares the raw strings, jsonLines() splits on \r?\n, so a CRLF-only
-  // difference is a "changed" node whose side-by-side view has no marked row.
-  it.fails('SQL that only differs in CRLF vs LF is not reported as a change', () => {
+  // CRLF and LF are normalized the same way for comparison and display: no change.
+  it('SQL that only differs in CRLF vs LF is not reported as a change', () => {
     const d = diffDefinitions(sql('select 1\nfrom t'), sql('select 1\r\nfrom t'));
-    // Either "no change" or a change with marked rows; never a "changed" item with nothing marked.
-    for (const n of d.nodes) {
-      expect(n.rows!.some((r) => r.left?.change !== 'same' || r.right?.change !== 'same')).toBe(
-        true,
-      );
-    }
+    expect(d.nodes).toEqual([]);
+    expect(d.identical).toBe(true);
+    // A real change next to a CRLF still marks only the changed line.
+    const e = diffDefinitions(sql('select 1\r\nfrom t'), sql('select 2\nfrom t'));
+    const marked = e.nodes[0]!.rows!.filter(
+      (r) => r.left?.change !== 'same' || r.right?.change !== 'same',
+    );
+    expect(marked).toHaveLength(1);
   });
 
-  // version-diff.ts: LCS_LIMIT (4M cells, ~2,000 x 2,000 lines) falls back to row-by-row compare,
-  // so inserting one line at the top marks every following line as changed.
-  it.fails(
-    'a line inserted at the top of a very large SQL (>2,000 lines) still marks only that line',
-    () => {
-      const lines = Array.from({ length: 2600 }, (_, i) => `select ${i}`);
-      const rows = sideBySide(lines, ['select new', ...lines]);
-      const marked = rows.filter((r) => r.left?.change !== 'same' || r.right?.change !== 'same');
-      expect(marked.length).toBe(1);
-    },
-  );
+  // Common prefix/suffix are matched before the LCS limit applies.
+  it('a line inserted at the top of a very large SQL (>2,000 lines) still marks only that line', () => {
+    const lines = Array.from({ length: 2600 }, (_, i) => `select ${i}`);
+    const rows = sideBySide(lines, ['select new', ...lines]);
+    const marked = rows.filter((r) => r.left?.change !== 'same' || r.right?.change !== 'same');
+    expect(marked.length).toBe(1);
+    expect(rows).toHaveLength(2601);
+  });
 });
 
 describe('ranges: gaps', () => {
