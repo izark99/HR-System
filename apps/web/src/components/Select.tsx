@@ -205,9 +205,10 @@ export function Select({
       case 'ArrowUp':
         return move(active - 1);
       case 'Home':
-        return move(0);
       case 'End':
-        return move(last);
+        // In the search box Home/End move the text cursor (APG combobox with an editable input).
+        if (e.currentTarget === searchRef.current) return;
+        return move(e.key === 'Home' ? 0 : last);
       case 'PageDown':
         return move(active + 10);
       case 'PageUp':
@@ -288,10 +289,8 @@ export function Select({
             <input
               ref={searchRef}
               type="search"
-              role="combobox"
               aria-label={t('select.search')}
               aria-controls={listId}
-              aria-expanded
               aria-autocomplete="list"
               aria-activedescendant={
                 active >= 0 && shownFlat[active] ? optionId(active) : undefined
@@ -306,6 +305,12 @@ export function Select({
               className="h-10.5 rounded-control border border-line-input bg-card px-3 text-label"
             />
           )}
+          {/* Outside the listbox: a listbox may only contain options and groups. */}
+          {shownFlat.length === 0 && (
+            <p role="status" className="m-0 px-3 py-2.5 text-small text-muted">
+              {t('select.noResults')}
+            </p>
+          )}
           <div
             ref={listRef}
             id={listId}
@@ -314,11 +319,6 @@ export function Select({
             tabIndex={-1}
             className="flex max-h-72 flex-col gap-0.5 overflow-y-auto"
           >
-            {shownFlat.length === 0 && (
-              <p role="status" className="m-0 px-3 py-2.5 text-small text-muted">
-                {t('select.noResults')}
-              </p>
-            )}
             {shown.map((section, s) => {
               const headerId = `${listId}-g${s}`;
               const items = section.options.map((o) => {
