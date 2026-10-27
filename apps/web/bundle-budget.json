@@ -1,0 +1,6 @@
+{
+  "baselineCommit": "d079f6b",
+  "measuredWith": "node scripts/check-bundle-size.mjs --measure (zlib gzip level 9)",
+  "entryGzipBytes": 200370,
+  "maxGrowth": 0.1
+}
