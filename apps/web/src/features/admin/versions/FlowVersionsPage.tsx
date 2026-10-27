@@ -2,6 +2,7 @@ import { Link, useParams } from '@tanstack/react-router';
 import { useCallback, useEffect, useId, useMemo, useState, type FormEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import { DatePicker } from '../../../components/DatePicker';
+import { Select } from '../../../components/Select';
 import {
   ArrowLeftIcon,
   Button,
@@ -560,39 +561,33 @@ function ComparePickers({
   const { t } = useTranslation();
   const fromId = useId();
   const toId = useId();
-  const option = (v: AdminVersionDetail) => (
-    <option key={v.id} value={v.id}>
-      v{v.versionNo} - {t(`admin.flows.status.${v.status}`)}
-    </option>
-  );
-  const select = 'h-10.5 rounded-control border border-line-input bg-card px-3 text-label';
+  const options = versions.map((v) => ({
+    value: v.id,
+    label: `v${v.versionNo} - ${t(`admin.flows.status.${v.status}`)}`,
+  }));
   return (
     <div className="flex flex-wrap gap-4">
       <div className="flex flex-col gap-1.5">
         <label htmlFor={fromId} className={labelClass}>
           {t('admin.versions.diff.from')}
         </label>
-        <select
+        <Select
           id={fromId}
-          className={select}
+          options={options}
           value={value.from}
-          onChange={(e) => onChange({ ...value, from: e.target.value })}
-        >
-          {versions.map(option)}
-        </select>
+          onChange={(from) => onChange({ ...value, from })}
+        />
       </div>
       <div className="flex flex-col gap-1.5">
         <label htmlFor={toId} className={labelClass}>
           {t('admin.versions.diff.to')}
         </label>
-        <select
+        <Select
           id={toId}
-          className={select}
+          options={options}
           value={value.to}
-          onChange={(e) => onChange({ ...value, to: e.target.value })}
-        >
-          {versions.map(option)}
-        </select>
+          onChange={(to) => onChange({ ...value, to })}
+        />
       </div>
     </div>
   );

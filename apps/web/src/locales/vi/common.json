@@ -641,5 +641,11 @@
     "unsavedLabel": "Lưu ý:",
     "unsaved": "Flow đang thiết kế còn thay đổi chưa lưu. Nếu bị đăng xuất, các thay đổi này sẽ mất.",
     "continue": "Tiếp tục làm việc"
+  },
+  "select": {
+    "placeholder": "Chọn…",
+    "none": "(Không chọn)",
+    "search": "Tìm trong danh sách",
+    "noResults": "Không có mục phù hợp."
   }
 }

@@ -1,6 +1,7 @@
 import { Link, useNavigate, useParams } from '@tanstack/react-router';
 import { useEffect, useMemo, useState, type KeyboardEvent } from 'react';
 import { useTranslation } from 'react-i18next';
+import { Select } from '../../components/Select';
 import {
   Button,
   buttonClass,
@@ -85,19 +86,16 @@ function Filters({
             <label htmlFor={id} className="text-small font-semibold text-body">
               {o.title}
             </label>
-            <select
+            <Select
               id={id}
               value={values[o.column] ?? ''}
-              onChange={(e) => onChange(o.column, e.target.value)}
-              className="h-target min-w-40 rounded-control border border-line-input bg-card px-3 text-label"
-            >
-              <option value="">{t('result.filterAll')}</option>
-              {o.values.map((v) => (
-                <option key={v} value={v}>
-                  {v}
-                </option>
-              ))}
-            </select>
+              onChange={(v) => onChange(o.column, v)}
+              options={[
+                { value: '', label: t('result.filterAll') },
+                ...o.values.map((v) => ({ value: v, label: v })),
+              ]}
+              className="min-w-40"
+            />
           </div>
         );
       })}

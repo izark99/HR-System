@@ -1,5 +1,6 @@
 import { useId, useRef, useState, type FormEvent, type KeyboardEvent, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
+import { Select } from '../../components/Select';
 import { Button, Callout, Card, Chip, cx, PageHeader } from '../../components/ui';
 import type { Role } from '../../lib/database.types';
 import { signOutAndReload, useAuth, useAuthService } from '../auth/auth-context';
@@ -810,32 +811,25 @@ function AssignmentsCard({ data, onChanged }: { data: PageData; onChanged: () =>
         <label htmlFor="assign-target" className={labelClass}>
           {t('admin.assign.target')}
         </label>
-        <select
+        <Select
           id="assign-target"
           value={target}
-          onChange={(e) => {
-            setTarget(e.target.value);
+          onChange={(v) => {
+            setTarget(v);
             setStatus('');
           }}
-          className={cx(inputClass, 'max-w-90')}
-        >
-          {data.groups.length > 0 && (
-            <optgroup label={t('admin.assign.groups')}>
-              {data.groups.map((g) => (
-                <option key={g.id} value={`g:${g.id}`}>
-                  {g.name}
-                </option>
-              ))}
-            </optgroup>
-          )}
-          <optgroup label={t('admin.assign.users')}>
-            {data.users.map((u) => (
-              <option key={u.id} value={`u:${u.id}`}>
-                {u.username}
-              </option>
-            ))}
-          </optgroup>
-        </select>
+          groups={[
+            {
+              label: t('admin.assign.groups'),
+              options: data.groups.map((g) => ({ value: `g:${g.id}`, label: g.name })),
+            },
+            {
+              label: t('admin.assign.users'),
+              options: data.users.map((u) => ({ value: `u:${u.id}`, label: u.username })),
+            },
+          ]}
+          className="w-full max-w-90"
+        />
       </div>
       {flows.length === 0 && <p className="m-0 text-muted">{t('admin.assign.noFlows')}</p>}
       {target && (

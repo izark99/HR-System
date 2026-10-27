@@ -12,6 +12,7 @@ import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import {
+  chooseOption,
   nv,
   openFlow,
   PAYROLL_HEADERS,
@@ -218,7 +219,7 @@ test('virtualized result: only a window of rows in the DOM; scrolling reaches th
   expect(await region.locator('tbody tr').count()).toBeLessThan(100);
 
   // Filter by branch on a big sheet.
-  await page.getByLabel('Chi nhánh').selectOption('CN03');
+  await chooseOption(page.getByLabel('Chi nhánh'), 'CN03');
   let cn03 = 0;
   for (let i = 1; i <= ROWS; i++) if (i % 5 === 2) cn03++;
   await expect(page.getByText(`${cn03.toLocaleString('vi-VN')} dòng`, { exact: true })).toBeVisible(

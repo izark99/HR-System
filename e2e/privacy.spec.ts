@@ -4,6 +4,7 @@
  */
 import { expect, SUPABASE_ORIGIN, test, type Page } from './fixtures';
 import {
+  chooseOption,
   fixtures,
   recordRequests,
   runToResult,
@@ -37,7 +38,7 @@ async function fullSession(page: Page): Promise<void> {
   // Exercise row paging + filters + both downloads (validation report is only shown on issues).
   await page.getByRole('tab', { name: /Chỉ có trong lương/ }).click();
   await page.getByRole('tab', { name: /Lệch/ }).click();
-  await page.getByLabel('Chi nhánh').selectOption('CN02');
+  await chooseOption(page.getByLabel('Chi nhánh'), 'CN02');
   const [download] = await Promise.all([
     page.waitForEvent('download'),
     page.getByRole('button', { name: /^Tải Excel/ }).click(),

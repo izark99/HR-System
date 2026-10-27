@@ -5,7 +5,7 @@
  */
 import { ADMIN, expect, SUPABASE_ORIGIN, test, USER, type Page } from './fixtures';
 import { FIXED_TEMP_PASSWORD, RESET_TEMP_PASSWORD } from './supabase-mock';
-import { persistedState, recordRequests } from './helpers';
+import { chooseOption, persistedState, recordRequests } from './helpers';
 
 test.use({ signedInAs: ADMIN });
 
@@ -645,7 +645,7 @@ test.describe('assign flows', () => {
     supabase,
   }) => {
     await openUsers(page);
-    await page.getByLabel('Gán cho').selectOption({ label: USER.username });
+    await chooseOption(page.getByLabel('Gán cho'), USER.username);
     await expect(assignCard(page)).toContainText(`Gán flow cho tài khoản "${USER.username}"`);
     await expect(flowBox(page)).not.toBeChecked(); // group assignment is not shown as direct
     await flowBox(page).click();
@@ -655,7 +655,7 @@ test.describe('assign flows', () => {
       user_id: USER.id,
     });
     // Switching target clears the status line.
-    await page.getByLabel('Gán cho').selectOption({ label: 'C&B' });
+    await chooseOption(page.getByLabel('Gán cho'), 'C&B');
     await expect(page.getByRole('status').filter({ hasText: 'Đã gán flow' })).toHaveCount(0);
   });
 

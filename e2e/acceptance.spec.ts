@@ -1,7 +1,7 @@
 import { expect, SUPABASE_ORIGIN, test, type Page } from './fixtures';
 import { readFileSync, readdirSync } from 'node:fs';
 import { join, resolve } from 'node:path';
-import { pickMonth } from './helpers';
+import { chooseOption, pickMonth } from './helpers';
 
 const FIXTURES = resolve(import.meta.dirname, '../fixtures/payroll-timesheet');
 
@@ -80,9 +80,9 @@ test('acceptance flow: upload 6 fixtures, run, see 63/9/3/3, download the workbo
   await expect(table.getByRole('row')).toHaveCount(1 + 9);
   await expect(table.getByRole('cell', { name: 'NV00001', exact: true })).toBeVisible();
 
-  await page.getByLabel('Chi nhánh').selectOption('CN01');
+  await chooseOption(page.getByLabel('Chi nhánh'), 'CN01');
   await expect(page.getByRole('region', { name: 'Lệch' }).getByRole('row')).toHaveCount(1 + 3);
-  await page.getByLabel('Chi nhánh').selectOption('');
+  await chooseOption(page.getByLabel('Chi nhánh'), 'Tất cả');
 
   await page.getByRole('tab', { name: 'Chỉ có trong lương (3)' }).click();
   await expect(

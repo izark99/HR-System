@@ -33,7 +33,23 @@ export default tseslint.config(
   {
     files: ['apps/web/src/**/*.tsx'],
     plugins: { 'react-hooks': reactHooks },
-    rules: reactHooks.configs.recommended.rules,
+    rules: {
+      ...reactHooks.configs.recommended.rules,
+      // MEMORY 2026-10-27 17:50: no browser dropdowns; use components/Select.tsx.
+      'no-restricted-syntax': [
+        'error',
+        {
+          selector: 'JSXOpeningElement[name.name=/^(select|option|optgroup|datalist)$/]',
+          message:
+            'Native <select>/<option>/<optgroup>/<datalist> are not allowed: use the Select component (components/Select.tsx, spec §25.3).',
+        },
+        {
+          selector:
+            "JSXOpeningElement[name.name='input'] JSXAttribute[name.name='type'][value.value=/^(date|month|week|time|datetime-local)$/]",
+          message: 'Native date/month pickers are not allowed: use DatePicker / MonthPicker.',
+        },
+      ],
+    },
     languageOptions: { globals: globals.browser },
   },
   {

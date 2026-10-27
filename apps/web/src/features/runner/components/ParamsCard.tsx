@@ -3,6 +3,7 @@ import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { DatePicker } from '../../../components/DatePicker';
 import { MonthPicker } from '../../../components/MonthPicker';
+import { Select } from '../../../components/Select';
 import { Card } from '../../../components/ui';
 import type { ParamValues } from '../../../engine/protocol';
 
@@ -64,21 +65,17 @@ export function ParamsCard({
                 onChange={(v) => onChange(p.key, v)}
               />
             ) : p.type === 'select' && options ? (
-              <select
+              <Select
                 id={id}
                 value={value}
                 required={p.required}
                 disabled={disabled}
-                onChange={(e) => onChange(p.key, e.target.value)}
-                className="h-target min-w-48 rounded-control border border-line-input bg-card px-3.5 text-label"
-              >
-                <option value="" />
-                {options.map((o) => (
-                  <option key={o.value} value={o.value}>
-                    {o.label}
-                  </option>
-                ))}
-              </select>
+                onChange={(v) => onChange(p.key, v)}
+                options={[
+                  { value: '', label: t('select.none') },
+                  ...options.map((o) => ({ value: o.value, label: o.label })),
+                ]}
+              />
             ) : (
               <input
                 id={id}

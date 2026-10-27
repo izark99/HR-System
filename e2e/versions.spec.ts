@@ -4,7 +4,7 @@
  * mocked (e2e/supabase-mock.ts); fake flow configurations only.
  */
 import { ADMIN, expect, test, USER, type Page } from './fixtures';
-import { pickDate } from './helpers';
+import { chooseOption, pickDate } from './helpers';
 import { baseFlowDefinition, flowWithCongTolerance, type SupabaseMock } from './supabase-mock';
 
 test.use({ signedInAs: ADMIN });
@@ -314,8 +314,11 @@ test.describe('Version & validity screen', () => {
     setup(supabase);
     await page.goto(URL);
     const diff = page.getByRole('region', { name: 'So sánh phiên bản' });
-    await expect(diff.getByLabel('Phiên bản cũ')).toHaveValue(supabase.versions[0]!.id);
-    await expect(diff.getByLabel('Phiên bản mới')).toHaveValue(DRAFT_ID);
+    await expect(diff.getByLabel('Phiên bản cũ')).toHaveAttribute(
+      'data-value',
+      supabase.versions[0]!.id,
+    );
+    await expect(diff.getByLabel('Phiên bản mới')).toHaveAttribute('data-value', DRAFT_ID);
     await expect(diff.getByRole('heading', { name: 'Node (1)' })).toBeVisible();
     await expect(diff).toContainText('cmp');
     await expect(diff).toContainText('đổi cấu hình');
@@ -327,7 +330,7 @@ test.describe('Version & validity screen', () => {
     await expect(diff.getByRole('heading', { name: /Kết nối|Input slot|Tham số/ })).toHaveCount(0);
 
     // Swap to the same version: nothing to compare.
-    await diff.getByLabel('Phiên bản cũ').selectOption(DRAFT_ID);
+    await chooseOption(diff.getByLabel('Phiên bản cũ'), 'v2 - Draft');
     await expect(diff).toContainText('Chọn hai phiên bản khác nhau.');
   });
 

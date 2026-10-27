@@ -4,6 +4,8 @@
  */
 import { expect, test } from './fixtures';
 import {
+  chooseOption,
+  optionTexts,
   ExcelJS,
   FLOW_URL,
   periodButton,
@@ -68,8 +70,8 @@ test.describe('result page', () => {
     const region = () => page.getByRole('region', { name: 'Lệch' });
     const branch = page.getByLabel('Chi nhánh');
     const metric = page.getByLabel('Chỉ tiêu lệch');
-    await expect(branch.locator('option')).toHaveText(['Tất cả', 'CN01', 'CN02', 'CN03']);
-    await expect(metric.locator('option')).toHaveText([
+    expect(await optionTexts(branch)).toEqual(['Tất cả', 'CN01', 'CN02', 'CN03']);
+    expect(await optionTexts(metric)).toEqual([
       'Tất cả',
       'Công',
       'OT (giờ)',
@@ -77,31 +79,31 @@ test.describe('result page', () => {
       'Không lương',
     ]);
 
-    await metric.selectOption('Công');
+    await chooseOption(metric, 'Công');
     await expect(region().getByRole('row')).toHaveCount(1 + 6);
     await expect(page.getByText('6 dòng', { exact: true })).toBeVisible();
-    await metric.selectOption('OT (giờ)');
+    await chooseOption(metric, 'OT (giờ)');
     await expect(region().getByRole('row')).toHaveCount(1 + 3);
-    await metric.selectOption('Phép');
+    await chooseOption(metric, 'Phép');
     await expect(region().getByRole('row')).toHaveCount(1 + 3);
-    await metric.selectOption('Không lương');
+    await chooseOption(metric, 'Không lương');
     await expect(page.getByText('Không có dòng nào.')).toBeVisible();
 
-    await metric.selectOption('Công');
-    await branch.selectOption('CN01');
+    await chooseOption(metric, 'Công');
+    await chooseOption(branch, 'CN01');
     await expect(region().getByRole('row')).toHaveCount(1 + 2); // NV00001, NV00007
     await expect(region().getByRole('cell', { name: 'NV00001', exact: true })).toBeVisible();
     await expect(region().getByRole('cell', { name: 'NV00007', exact: true })).toBeVisible();
 
-    await branch.selectOption('');
-    await metric.selectOption('');
+    await chooseOption(branch, 'Tất cả');
+    await chooseOption(metric, 'Tất cả');
     await expect(region().getByRole('row')).toHaveCount(1 + 9);
 
     // Filters are per tab: switching away and back resets them.
-    await branch.selectOption('CN02');
+    await chooseOption(branch, 'CN02');
     await page.getByRole('tab', { name: 'Tổng hợp' }).click();
     await page.getByRole('tab', { name: 'Lệch (9)' }).click();
-    await expect(page.getByLabel('Chi nhánh')).toHaveValue('');
+    await expect(page.getByLabel('Chi nhánh')).toHaveAttribute('data-value', '');
   });
 
   test('AC-06: downloaded workbook has the 4 sheets, expected rows, bold frozen header, auto-filter', async ({

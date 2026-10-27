@@ -319,3 +319,32 @@ export async function persistedState(page: Page): Promise<string> {
   });
   return `${page.url()}\n${dump}`;
 }
+
+/**
+ * Pick an option of the custom Select (components/Select.tsx) with the mouse: open the trigger
+ * (found by its label), click the option by its visible text. Native `selectOption` no longer
+ * applies (no `<select>` in the app, MEMORY 2026-10-27 17:50).
+ */
+export async function chooseOption(field: Locator, label: string): Promise<void> {
+  // The open listbox carries the field's name too: keep the combobox only.
+  const trigger = field.and(field.page().getByRole('combobox'));
+  await trigger.click();
+  const listId = await trigger.getAttribute('aria-controls');
+  const list = trigger.page().locator(`[id="${listId}"]`);
+  await list.getByRole('option', { name: label, exact: true }).click();
+  await expect(trigger).toHaveAttribute('aria-expanded', 'false');
+}
+
+/** Option texts of a custom Select (opens and closes it again). */
+export async function optionTexts(field: Locator): Promise<string[]> {
+  const trigger = field.and(field.page().getByRole('combobox'));
+  await trigger.click();
+  const listId = await trigger.getAttribute('aria-controls');
+  const texts = await trigger
+    .page()
+    .locator(`[id="${listId}"]`)
+    .getByRole('option')
+    .allTextContents();
+  await trigger.press('Escape');
+  return texts.map((t) => t.trim());
+}

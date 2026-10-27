@@ -179,8 +179,10 @@ test('keyboard only: params, file pickers, run, tabs, filter and download', asyn
   await page.keyboard.press('ArrowRight'); // back to "Lệch"
   await expect(page.getByRole('tab', { selected: true })).toHaveText('Lệch (9)');
   await tabTo(page, /^Chi nhánh/);
+  await page.keyboard.press('ArrowDown'); // opens the list on "Tất cả"
   await page.keyboard.press('ArrowDown'); // first branch
-  await expect(page.getByLabel('Chi nhánh')).toHaveValue('CN01');
+  await page.keyboard.press('Enter');
+  await expect(page.getByLabel('Chi nhánh')).toHaveAttribute('data-value', 'CN01');
   await expect(page.getByRole('region', { name: 'Lệch' }).getByRole('row')).toHaveCount(1 + 3);
 
   // The scrollable result table is focusable (keyboard scrolling).
