@@ -211,6 +211,18 @@ select pg_temp.expect_error(
   $$select public.admin_publish_flow_version('rls-x', 'x', '', '', '', '{"schemaVersion":1}', '2026-01-01', null, '', false)$$,
   '42501', 'nv01 cannot publish flows');
 select pg_temp.expect_error(
+  $$select * from public.admin_create_flow('rls-x', 'x', '', '', '', '{"schemaVersion":1}')$$,
+  '42501', 'nv01 cannot create flows');
+select pg_temp.expect_error(
+  $$select public.admin_save_flow_draft('00000000-0000-4000-8000-0000000003f1', '{"schemaVersion":1}', now())$$,
+  '42501', 'nv01 cannot save drafts');
+select pg_temp.expect_error(
+  $$select * from public.admin_create_draft_from_version('00000000-0000-4000-8000-0000000001f1')$$,
+  '42501', 'nv01 cannot create drafts from a version');
+select pg_temp.expect_error(
+  $$select * from public.admin_publish_flow_draft('00000000-0000-4000-8000-0000000003f1', '2027-01-01', null, 'x', false, now())$$,
+  '42501', 'nv01 cannot publish drafts');
+select pg_temp.expect_error(
   $$select public.admin_revoke_user_sessions('00000000-0000-4000-8000-000000000002')$$,
   '42501', 'nv01 cannot call admin_revoke_user_sessions');
 select pg_temp.expect_error(
@@ -453,8 +465,171 @@ select pg_temp.expect(
     where f.code = 'rls-import' and v.version_no = 1) = '2026-06-01',
   'second import closes the open version at the new effective_from');
 select pg_temp.expect_error(
-  $$select public.admin_publish_flow_version('rls-import', 'x', '', '', '', '{"schemaVersion":1}', '2026-03-01', null, '', false)$$,
+  $$select public.admin_publish_flow_version('rls-import', 'x', '', '', '', '{"schemaVersion":1}', '2026-03-01', null, 'chồng', false)$$,
   '23P01', 'import overlapping an existing published range is rejected');
+select pg_temp.expect_error(
+  $$select public.admin_publish_flow_version('rls-import-2', 'x', '', '', '', '{"schemaVersion":1}', '2026-03-01', null, '', false)$$,
+  '22023', 'import requires a change note');
+select pg_temp.expect_error(
+  $$select public.admin_publish_flow_version('rls-import-2', 'x', '', '', '', '{"schemaVersion":1}', '2026-03-01', null, E' \t ', false)$$,
+  '22023', 'import rejects a whitespace-only change note');
+select pg_temp.expect(
+  not exists (select 1 from public.flows where code = 'rls-import-2'),
+  'a rejected import writes nothing');
+
+-- Designer / Version screen RPCs (spec §14.5, AC-B3-61..70).
+select pg_temp.expect(
+  (select version_no = 1 and updated_at is not null from public.admin_create_flow(
+     'rls-designer', 'Flow Designer', 'mô tả', 'Nhóm', 'hướng dẫn', '{"schemaVersion":1,"nodes":[]}')),
+  'admin_create_flow creates the flow with draft v1');
+select pg_temp.expect(
+  (select status = 'draft' and effective_from is null
+     from public.flow_versions v join public.flows f on f.id = v.flow_id
+    where f.code = 'rls-designer'),
+  'the new flow has exactly one draft');
+select pg_temp.expect_error(
+  $$select * from public.admin_create_flow('rls-designer', 'x', '', '', '', '{"schemaVersion":1}')$$,
+  '23505', 'admin_create_flow rejects a taken code');
+select pg_temp.expect_error(
+  $$select * from public.admin_create_flow('rls-designer-2', 'x', '', '', '', '{"nodes":[]}')$$,
+  '22023', 'admin_create_flow rejects a definition without schemaVersion');
+select pg_temp.expect(
+  not exists (select 1 from public.flows where code = 'rls-designer-2'),
+  'a rejected admin_create_flow writes nothing');
+
+do $$
+declare
+  v_flow uuid := (select id from public.flows where code = 'rls-designer');
+  v_draft uuid := (select id from public.flow_versions where flow_id = v_flow);
+  v_seen timestamptz := (select updated_at from public.flow_versions where id = v_draft);
+  v_saved timestamptz;
+  v_v2 uuid;
+  v_v3 uuid;
+begin
+  -- Save with the updated_at that was read.
+  v_saved := public.admin_save_flow_draft(
+    v_draft, '{"schemaVersion":1,"nodes":[{"id":"a"}]}', v_seen);
+  perform pg_temp.expect(
+    v_saved is not null
+    and (select definition -> 'nodes' -> 0 ->> 'id' from public.flow_versions where id = v_draft) = 'a',
+    'admin_save_flow_draft saves with the expected updated_at');
+  -- A stale updated_at (another tab saved in between) is refused and changes nothing.
+  perform pg_temp.expect_error(format(
+    $f$select public.admin_save_flow_draft(%L, '{"schemaVersion":1,"nodes":[]}', '2000-01-01')$f$,
+    v_draft), 'HF002', 'admin_save_flow_draft refuses a stale updated_at (draft_conflict)');
+  perform pg_temp.expect(
+    (select definition -> 'nodes' -> 0 ->> 'id' from public.flow_versions where id = v_draft) = 'a',
+    'a refused save leaves the draft unchanged');
+  perform pg_temp.expect_error(format(
+    $f$select public.admin_save_flow_draft(%L, '{"schemaVersion":1}', now())$f$,
+    '00000000-0000-4000-8000-0000000002f1'), 'HF001', 'admin_save_flow_draft refuses a published version');
+  perform pg_temp.expect_error(
+    $f$select public.admin_save_flow_draft('00000000-0000-4000-8000-00000000dead', '{"schemaVersion":1}', now())$f$,
+    'P0002', 'admin_save_flow_draft: unknown version');
+
+  -- Publish checks: note required (also whitespace only), date required, stale updated_at.
+  perform pg_temp.expect_error(format(
+    $f$select * from public.admin_publish_flow_draft(%L, '2026-01-01', null, '', false, %L)$f$,
+    v_draft, v_saved), '22023', 'admin_publish_flow_draft requires a change note');
+  perform pg_temp.expect_error(format(
+    $f$select * from public.admin_publish_flow_draft(%L, '2026-01-01', null, '   ', false, %L)$f$,
+    v_draft, v_saved), '22023', 'admin_publish_flow_draft rejects a whitespace-only note');
+  perform pg_temp.expect_error(format(
+    $f$select * from public.admin_publish_flow_draft(%L, null, null, 'x', false, %L)$f$,
+    v_draft, v_saved), '22023', 'admin_publish_flow_draft requires effective_from');
+  perform pg_temp.expect_error(format(
+    $f$select * from public.admin_publish_flow_draft(%L, '2026-01-01', null, 'x', false, '2000-01-01')$f$,
+    v_draft), 'HF002', 'admin_publish_flow_draft refuses a stale updated_at');
+  perform pg_temp.expect_error(format(
+    $f$select * from public.admin_publish_flow_draft(%L, '2026-01-01', '2026-01-01', 'x', false, %L)$f$,
+    v_draft, v_saved), '23514', 'admin_publish_flow_draft: effective_to must be after effective_from');
+
+  -- v1: published from 2026-01-01, open-ended.
+  perform pg_temp.expect(
+    (select version_no from public.admin_publish_flow_draft(
+       v_draft, '2026-01-01', null, '  Bản đầu  ', false, v_saved)) = 1,
+    'admin_publish_flow_draft publishes v1');
+  perform pg_temp.expect(
+    (select status = 'published' and change_note = 'Bản đầu' and published_at is not null
+       and published_by = '00000000-0000-4000-8000-00000000000a'
+       from public.flow_versions where id = v_draft),
+    'publish stores the trimmed note and stamps published_by/at');
+  perform pg_temp.expect_error(format(
+    $f$select * from public.admin_publish_flow_draft(%L, '2026-02-01', null, 'x', false, now())$f$,
+    v_draft), 'HF001', 'a published version cannot be published again');
+
+  -- v2 draft cloned from v1 (AC-B3-67): same definition.
+  select version_id into v_v2 from public.admin_create_draft_from_version(v_draft);
+  perform pg_temp.expect(
+    (select status = 'draft' and version_no = 2
+       and definition = (select definition from public.flow_versions where id = v_draft)
+       from public.flow_versions where id = v_v2),
+    'admin_create_draft_from_version copies the definition into draft v2');
+  perform pg_temp.expect_error(format(
+    $f$select * from public.admin_create_draft_from_version(%L)$f$, v_draft),
+    '23505', 'a second draft is refused (AC-B3-68)');
+  perform pg_temp.expect_error(
+    $f$select * from public.admin_create_draft_from_version('00000000-0000-4000-8000-00000000dead')$f$,
+    'P0002', 'admin_create_draft_from_version: unknown version');
+
+  -- Without closing v1, v2 from 2026-10-01 overlaps: refused, nothing written (AC-B3-64).
+  perform pg_temp.expect_error(format(
+    $f$select * from public.admin_publish_flow_draft(%L, '2026-10-01', null, 'v2', false, %L)$f$,
+    v_v2, (select updated_at from public.flow_versions where id = v_v2)),
+    '23P01', 'publishing over an open version without closing it is refused');
+  perform pg_temp.expect(
+    (select effective_to is null from public.flow_versions where id = v_draft)
+    and (select status = 'draft' from public.flow_versions where id = v_v2),
+    'a refused publish changes neither version');
+
+  -- With close_previous: v1 ends at 2026-10-01 and v2 starts there, atomically (AC-B3-63).
+  perform public.admin_publish_flow_draft(
+    v_v2, '2026-10-01', null, 'v2', true,
+    (select updated_at from public.flow_versions where id = v_v2));
+  perform pg_temp.expect(
+    (select effective_from = '2026-01-01' and effective_to = '2026-10-01'
+       from public.flow_versions where id = v_draft)
+    and (select status = 'published' and effective_from = '2026-10-01'
+           from public.flow_versions where id = v_v2),
+    'publish with close_previous closes v1 at the new effective_from');
+  perform pg_temp.expect(
+    (select version_no from public.resolve_flow_version('rls-designer', '2026-09-15')) = 1
+    and (select version_no from public.resolve_flow_version('rls-designer', '2026-10-01')) = 2,
+    'period 09/2026 resolves to v1, 10/2026 to v2');
+
+  -- Rollback: draft v3 from v1, published later; v1 unchanged.
+  select version_id into v_v3 from public.admin_create_draft_from_version(v_draft);
+  update public.flow_versions set effective_to = '2027-01-01' where id = v_v2;
+  perform public.admin_publish_flow_draft(
+    v_v3, '2027-01-01', null, 'rollback v1', false,
+    (select updated_at from public.flow_versions where id = v_v3));
+  perform pg_temp.expect(
+    (select definition from public.flow_versions where id = v_v3)
+      = (select definition from public.flow_versions where id = v_draft)
+    and (select effective_to = '2026-10-01' and change_note = 'Bản đầu'
+           from public.flow_versions where id = v_draft),
+    'rollback publishes v1 content as v3 and leaves v1 as it was');
+
+  -- Retire: no longer resolved for its period (AC-B3-66).
+  update public.flow_versions set status = 'retired' where id = v_v2;
+  perform pg_temp.expect(
+    (select not applies from public.resolve_flow_version('rls-designer', '2026-11-15')),
+    'a retired version is not chosen for its period');
+  perform pg_temp.expect_error(format(
+    $f$update public.flow_versions set status = 'published' where id = %L$f$, v_v2),
+    'HF001', 'a retired version cannot be published again');
+  perform pg_temp.expect_error(format(
+    $f$delete from public.flow_versions where id = %L$f$, v_v3),
+    'HF001', 'a published version cannot be deleted (AC-B3-69)');
+
+  -- Every version action is audited (AC-B3-70).
+  perform pg_temp.expect(
+    (select count(*) from public.audit_logs
+      where entity = 'flow_versions'
+        and entity_id in (v_draft::text, v_v2::text, v_v3::text)) >= 7,
+    'version actions are recorded in audit_logs');
+end
+$$;
 
 select pg_temp.expect(
   (select count(*) from public.audit_logs where entity = 'flows') > 0
