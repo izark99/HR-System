@@ -177,6 +177,8 @@
 
 ## Kỹ thuật & tổ chức
 
+2026-10-27 07:36 - Ngân sách bundle: entry chunk (gzip) không tăng quá 10% so với cuối bước 2 (commit `d079f6b`); build tự kiểm tra và báo lỗi khi vượt.
+
 2026-10-27 07:31 - Editor code trong Designer dùng Monaco (theo spec §5), chỉ tải trong chunk Designer, worker và font self-host.
 
 2026-10-26 13:48 - Không dùng date/month picker mặc định của trình duyệt; dùng picker tự làm theo design system (tiếng Việt, "Tháng 10/2026", lưới 12 tháng, chọn bằng bàn phím được).

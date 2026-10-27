@@ -818,7 +818,7 @@ Chỉ Admin; chỉ desktop (≥ 1280px). Route riêng, lazy-load (React Flow, EL
 | Trình duyệt | Chrome, Edge (2 phiên bản mới nhất), desktop |
 | Hiệu năng | 100k dòng × 30 cột, flow 15 node: < 10 giây (không có node Python) trên laptop 8GB RAM |
 | UI | Tải trang đầu < 3 giây (chưa tính WASM engine); UI không bị treo khi engine chạy |
-| Kích thước bundle | Entry chunk và chunk của User không chứa React Flow, ELK, Monaco, DuckDB; Monaco + React Flow + ELK chỉ trong chunk Designer. Ngân sách đề xuất: entry chunk (gzip) không tăng quá 10% so với cuối bước 2; script build báo lỗi khi vượt |
+| Kích thước bundle | Entry chunk và chunk của User không chứa React Flow, ELK, Monaco, DuckDB; Monaco + React Flow + ELK chỉ trong chunk Designer. Ngân sách (chốt 2026-10-27): entry chunk (gzip) không tăng quá 10% so với cuối bước 2 (đo tại commit `d079f6b`, lưu mốc trong repo); script build tự kiểm tra và báo lỗi khi vượt |
 | Khả dụng | Phụ thuộc SLA free tier; app vẫn mở được khi Supabase lỗi nhưng không đăng nhập được |
 | Accessibility | WCAG 2.1 AA cho phần User |
 | i18n | `vi` mặc định; mọi text UI qua i18next; định dạng số/ngày theo locale (`1.234.567,89` cho vi) |
