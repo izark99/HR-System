@@ -19,7 +19,7 @@ import { describe, expect, it } from 'vitest';
 import { Big } from '../core/decimal';
 import type { ColumnDef, Row, Table } from '../core/types';
 import { float64Vector, SqlScope } from '../duckdb/scope';
-import { DUCK_TYPE, ORD, q, qName } from '../duckdb/sql';
+import { DUCK_TYPE, ORD, ORD_NAME, q, qName } from '../duckdb/sql';
 import { nodeDuckDb } from './duckdb-node';
 
 const ENABLED = process.env.HRFLOW_PERF === '1';
@@ -171,7 +171,7 @@ describe.skipIf(!ENABLED)('QA ingestion variant (allocation-free builders)', () 
           }
           const ord = new Array<number>(to - from);
           for (let i = 0; i < ord.length; i++) ord[i] = from + i + 1;
-          vectors[ORD] = float64Vector(ord);
+          vectors[ORD_NAME] = float64Vector(ord);
           db.insertArrow(tableToIPC(new ArrowTable(vectors), 'stream'), `${name}_raw`, from === 0);
         }
         const casts = tbl.columns.map(

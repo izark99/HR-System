@@ -1,4 +1,3 @@
-import type { DataType } from '@hrflow/flow-schema';
 import {
   Bool,
   Decimal as ArrowDecimal,
@@ -17,6 +16,7 @@ import type { DuckDb } from './db';
 import {
   decimalOverflow,
   decimalToSql,
+  SCALE,
   DUCK_TYPE,
   mergeCtes,
   ORD,
@@ -30,15 +30,6 @@ import {
 
 /** Rows per Arrow batch when moving data between TS and DuckDB (bounds the peak copy). */
 const CHUNK_ROWS = 50_000;
-
-function toSqlText(v: Value, type: DataType, column: string): string | null {
-  if (v === null || v === undefined) return null;
-  if (type === 'decimal') {
-    const d = isDecimal(v) ? v : decimalFrom(typeof v === 'boolean' ? String(v) : v);
-    return decimalToSql(d, column);
-  }
-  return isDecimal(v) ? v.toFixed() : String(v);
-}
 
 /*
  * Arrow vectors are assembled from typed arrays with `makeData`: apache-arrow's Builders (used by
@@ -135,6 +126,104 @@ export function decimal128Vector(values: readonly (string | null)[]): Vector {
   );
 }
 
+/**
+ * UTF-8 column straight from the rows: one growing buffer + `encodeInto`, no per-cell
+ * temporaries (garbage collection dominated large uploads).
+ */
+function utf8Column(rows: readonly Row[], from: number, n: number, key: string): Vector {
+  const offsets = new Int32Array(n + 1);
+  const valid = new Uint8Array((n + 7) >> 3);
+  let buf = new Uint8Array(Math.max(1024, n * 16));
+  let pos = 0;
+  let nulls = 0;
+  for (let i = 0; i < n; i++) {
+    const v = rows[from + i]![key];
+    if (v === null || v === undefined) nulls++;
+    else {
+      valid[i >> 3]! |= 1 << (i & 7);
+      const text = isDecimal(v) ? v.toFixed() : String(v);
+      if (pos + text.length * 3 > buf.length) {
+        const bigger = new Uint8Array(Math.max(pos + text.length * 3, buf.length * 2));
+        bigger.set(buf.subarray(0, pos));
+        buf = bigger;
+      }
+      pos += encoder.encodeInto(text, buf.subarray(pos)).written;
+    }
+    offsets[i + 1] = pos;
+  }
+  return makeVector(
+    makeData({
+      type: new Utf8(),
+      length: n,
+      nullCount: nulls,
+      nullBitmap: valid,
+      valueOffsets: offsets,
+      data: buf.subarray(0, pos),
+    }),
+  );
+}
+
+const TWO_32 = 4294967296;
+
+/**
+ * Decimal128(38,10) column straight from big.js digits. Values with at most 15 significant digits
+ * once scaled by 10^10 (the usual money/day values) are computed exactly in doubles; others go
+ * through the canonical text (rounding half-up, overflow check) and BigInt.
+ */
+function decimalColumn(rows: readonly Row[], from: number, n: number, key: string): Vector {
+  const words = new Uint32Array(n * 4);
+  const valid = new Uint8Array((n + 7) >> 3);
+  let nulls = 0;
+  for (let i = 0; i < n; i++) {
+    const raw = rows[from + i]![key];
+    if (raw === null || raw === undefined) {
+      nulls++;
+      continue;
+    }
+    valid[i >> 3]! |= 1 << (i & 7);
+    const v = isDecimal(raw) ? raw : decimalFrom(typeof raw === 'boolean' ? String(raw) : raw);
+    const c = v.c;
+    const places = Math.max(0, c.length - v.e - 1);
+    const scaledDigits = Math.max(c.length, v.e + 1) + (SCALE - places);
+    if (places <= SCALE && scaledDigits <= 15) {
+      let x = 0;
+      for (let d = 0; d < c.length; d++) x = x * 10 + c[d]!;
+      x *= 10 ** (v.e - (c.length - 1) + SCALE);
+      const lo = x % TWO_32;
+      const hi = Math.floor(x / TWO_32);
+      if (v.s < 0 && x !== 0) {
+        // Two's complement of (hi:lo) over 128 bits.
+        const nlo = (~lo >>> 0) + 1;
+        words[4 * i] = nlo >>> 0;
+        words[4 * i + 1] = ((~hi >>> 0) + (nlo > 0xffffffff ? 1 : 0)) >>> 0;
+        words[4 * i + 2] = 0xffffffff;
+        words[4 * i + 3] = 0xffffffff;
+      } else {
+        words[4 * i] = lo;
+        words[4 * i + 1] = hi;
+      }
+      continue;
+    }
+    const text = decimalToSql(v, key);
+    const dot = text.indexOf('.');
+    const int = dot < 0 ? text : text.slice(0, dot);
+    const frac = dot < 0 ? '' : text.slice(dot + 1);
+    const scaled = BigInt.asUintN(128, BigInt(`${int}${frac.padEnd(SCALE, '0')}`));
+    for (let w = 0; w < 4; w++) {
+      words[4 * i + w] = Number((scaled >> BigInt(32 * w)) & 0xffffffffn);
+    }
+  }
+  return makeVector(
+    makeData({
+      type: new ArrowDecimal(10, 38, 128),
+      length: n,
+      nullCount: nulls,
+      nullBitmap: valid,
+      data: words,
+    }),
+  );
+}
+
 function buildVector(rows: readonly Row[], from: number, to: number, col: ColumnDef): Vector {
   const n = to - from;
   if (col.type === 'integer') {
@@ -158,11 +247,8 @@ function buildVector(rows: readonly Row[], from: number, to: number, col: Column
     }
     return boolVector(values);
   }
-  const values = new Array<string | null>(n);
-  for (let i = 0; i < n; i++) {
-    values[i] = toSqlText(rows[from + i]![col.key] ?? null, col.type, col.key);
-  }
-  return col.type === 'decimal' ? decimal128Vector(values) : utf8Vector(values);
+  if (col.type === 'decimal') return decimalColumn(rows, from, n, col.key);
+  return utf8Column(rows, from, n, col.key);
 }
 
 /** DuckDB → engine type of a *canonical* relation column, read back as text where lossless. */

@@ -25,6 +25,10 @@ const MACROS = [
   // NFC → collapse whitespace → trim → lowercase, like normalizeKeyPart. DuckDB's lower() uses
   // simple case mapping; the only unconditional multi-character lowercase mapping of JavaScript is
   // U+0130 (İ → i + U+0307), so it is replaced first. NULL → '' as in TS.
+  // Known, accepted differences from normalizeKeyPart (pinned by tests, none occur in
+  // Vietnamese/Latin business data or in Excel text): Greek final sigma (JS lowercases a
+  // word-final Σ to ς), an embedded NUL (RE2 stops there), and the few Unicode 16 letters newer
+  // than DuckDB's tables (U+1C89, U+A7CB, U+A7CC, U+A7DA, U+A7DC, U+10D50–U+10D65).
   `CREATE MACRO ${NORM_KEY_MACRO}(x) AS coalesce(lower(trim(regexp_replace(replace(nfc_normalize(x), 'İ', 'i' || chr(775)), '${JS_WHITESPACE_RE2}', ' ', 'g'))), '')`,
   `CREATE MACRO ${BLANK_MACRO}(x) AS (x IS NULL OR trim(regexp_replace(x, '${JS_WHITESPACE_RE2}', ' ', 'g')) = '')`,
 ];

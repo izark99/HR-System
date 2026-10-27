@@ -406,7 +406,8 @@ export async function runFlow(
       try {
         const inputs: Record<string, PortData> = {};
         for (const link of step.inputs) {
-          const value = data[link.from]?.[link.fromPort];
+          const value =
+            data[link.from]?.[link.fromPort] ?? uploaded.get(portKey(link.from, link.fromPort));
           if (!value) {
             fail('executor.error.missingInput', { node: node.id, port: link.port }, node.id);
           }
@@ -424,6 +425,18 @@ export async function runFlow(
               if (!rel) {
                 uploaded.set(key, (rel = sql.upload(value)));
                 hold(rel, 1);
+                // Only DuckDB nodes read this port: the TS rows are not needed any more.
+                const users = consumers.get(key) ?? [];
+                if (
+                  options.releaseIntermediate &&
+                  !retained(link.from, link.fromPort) &&
+                  users.every(
+                    (u) => u.plugin.runSql !== undefined && u.plugin.execute === undefined,
+                  )
+                ) {
+                  const ports = data[link.from];
+                  if (ports) delete ports[link.fromPort];
+                }
               }
               rels[link.port] = rel;
             }

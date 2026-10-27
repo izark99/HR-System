@@ -128,7 +128,7 @@ export class SqlBuilder {
 
 /** DECIMAL(38,10): at most 28 integer digits (spec §9.4). */
 const MAX_INTEGER_DIGITS = 28;
-const SCALE = 10;
+export const SCALE = 10;
 
 /** Thrown for a decimal that does not fit DECIMAL(38,10); the executor attaches the node. */
 export function decimalOverflow(column: string | undefined): EngineError {
