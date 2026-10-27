@@ -3,11 +3,12 @@ import type { ProfileRow } from '../../lib/database.types';
 import {
   browserSessionStorage,
   clearStoredSession,
-  readStoredAccessToken,
+  readStoredSession,
   type Supabase,
 } from '../../lib/supabase';
 import { authErrorKey, usernameToEmail, type AuthErrorKey } from './credentials';
 import type { AuthState, SessionUser, SignedOutReason } from './guard';
+import { parseStoredTokens, revokeSession, type SessionRevoker } from './session-revoke';
 
 /** Auth for the UI: an observable state plus the three actions the screens need. */
 export interface AuthService {
@@ -107,6 +108,14 @@ export class SupabaseAuth extends BaseAuth implements AuthService {
     private readonly sb: AuthClient,
     /** Where supabase-js keeps the session (sessionStorage in the app). */
     private readonly storage: Storage | null = browserSessionStorage(),
+    /** Idle sign-out revocation; default: logout only (no refresh), via supabase-js. */
+    private readonly revoker: SessionRevoker = {
+      refresh: () => Promise.resolve(null),
+      logout: async (token) => {
+        const { error } = await sb.auth.admin.signOut(token, 'local');
+        return !error ? 'ok' : error.status === 401 ? 'unauthorized' : 'failed';
+      },
+    },
   ) {
     super();
     sb.auth.onAuthStateChange((event, session) => {
@@ -213,12 +222,13 @@ export class SupabaseAuth extends BaseAuth implements AuthService {
     const why: SignedOutReason = reason ?? 'signedOut';
     this.nextReason = why;
     if (reason === 'idle') {
-      // Synchronously: take the token, then drop the stored session at once (spec §6.1).
-      const token = readStoredAccessToken(this.storage);
+      // Synchronously: take both tokens, then drop the stored session at once (spec §6.1).
+      const tokens = parseStoredTokens(readStoredSession(this.storage));
       clearStoredSession(this.storage);
-      // Server-side revocation of this session's refresh token. The state changes only after it
-      // (the route guard reloads the page on sign-out, which would abort the request).
-      if (token) await this.sb.auth.admin.signOut(token, 'local').catch(() => undefined);
+      // Server-side revocation of this session (refreshing an expired access token first, see
+      // session-revoke.ts). The state changes only after it: the route guard reloads the page on
+      // sign-out, which would abort the request. The caller bounds the wait to 3 s.
+      await revokeSession(tokens, this.revoker);
       // Clears the client's in-memory state (no stored session left: no second request).
       await this.sb.auth.signOut({ scope: 'local' }).catch(() => undefined);
     } else {

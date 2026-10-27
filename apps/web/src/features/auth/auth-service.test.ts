@@ -120,18 +120,20 @@ describe('SupabaseAuth', () => {
       removeItem: (k: string) => void store.delete(k),
     } as unknown as Storage;
     let storedWhenRevoking: string[] = [];
-    const revoke = vi.fn((_jwt: string, _scope: string) => {
+    const logout = vi.fn((_token: string) => {
       storedWhenRevoking = [...store.keys()];
-      return Promise.resolve({ data: null, error: null });
+      return Promise.resolve('ok' as const);
     });
-    (auth as unknown as { admin: { signOut: typeof revoke } }).admin = { signOut: revoke };
-    const service = new SupabaseAuth(client, storage);
+    const refresh = vi.fn((_rt: string) => Promise.resolve('tok-2'));
+    const service = new SupabaseAuth(client, storage, { refresh, logout });
     await service.signIn('hr.nv01', 'x'.repeat(10));
     const pending = service.signOut('idle');
     // Synchronous part: the stored session is gone before any request.
     expect([...store.keys()]).toEqual(['other']);
     await pending;
-    expect(revoke).toHaveBeenCalledWith('tok-1', 'local');
+    // No expires_at and not a JWT: treated as expired, so the refresh token is used first.
+    expect(refresh).toHaveBeenCalledWith('r');
+    expect(logout).toHaveBeenCalledWith('tok-2');
     expect(storedWhenRevoking).toEqual(['other']);
     expect(auth.signOut).toHaveBeenCalledWith({ scope: 'local' });
     expect(service.getSnapshot()).toEqual({ status: 'signedOut', reason: 'idle' });

@@ -138,8 +138,11 @@ function b64url(s: string): string {
   return Buffer.from(s, 'utf8').toString('base64url');
 }
 
+let jwtSerial = 0;
+
 function fakeJwt(user: MockUser): string {
   const now = Math.floor(Date.now() / 1000);
+  jwtSerial++;
   return [
     b64url(JSON.stringify({ alg: 'HS256', typ: 'JWT' })),
     b64url(
@@ -151,6 +154,8 @@ function fakeJwt(user: MockUser): string {
         iat: now,
         exp: now + 24 * 3600,
         session_id: `s-${user.id}`,
+        // Makes every issued token distinct (e.g. before / after a refresh).
+        jti: `t${jwtSerial}`,
       }),
     ),
     'fake-signature',
@@ -232,6 +237,10 @@ export class SupabaseMock {
   runLogFailure: InjectedFailure | null = null;
   /** Next password sign-in fails with this status/code (e.g. 429 over_request_rate_limit). */
   tokenFailure: InjectedFailure | null = null;
+  /** /auth/v1/logout refuses (401) the first token it sees, accepts later (refreshed) ones. */
+  logoutRejectsFirstToken = false;
+  /** Bearer tokens /auth/v1/logout received while `logoutRejectsFirstToken` is set. */
+  logoutTokens: string[] = [];
   /** Delay (ms) before /auth/v1/logout answers (a slow or unreachable server). */
   logoutDelayMs = 0;
   /** Auth server refuses refresh tokens (session revoked / expired). */
@@ -462,6 +471,14 @@ export class SupabaseMock {
         caller.must_change_password = false; // the database trigger does this in production
       }
       return json(200, authUser(caller));
+    }
+    if (path === '/auth/v1/logout' && this.logoutRejectsFirstToken) {
+      const token = /^Bearer (.+)$/.exec(request.headers()['authorization'] ?? '')?.[1] ?? '';
+      this.logoutTokens.push(token);
+      // The token the tab started with counts as expired server-side: 401, nothing revoked.
+      if (this.logoutTokens[0] === token) {
+        return json(401, { code: 'bad_jwt', msg: 'invalid JWT: token is expired' });
+      }
     }
     if (path === '/auth/v1/logout') {
       if (this.logoutDelayMs > 0) {

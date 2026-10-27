@@ -74,6 +74,29 @@ test.describe('auto sign-out', () => {
     await expect(page).toHaveURL(/\/login/);
   });
 
+  test('expired access token (logout 401): refresh once, then revoke with the new token', async ({
+    page,
+    supabase,
+  }) => {
+    supabase.logoutRejectsFirstToken = true;
+    await openHome(page);
+    const before = supabase.calls.length;
+    await page.clock.fastForward('08:00:00');
+    await expect(page).toHaveURL(/\/login\?reason=idle$/);
+    const auth = supabase.calls
+      .slice(before)
+      .filter((c) => c.method === 'POST' && c.path.startsWith('/auth/v1/'))
+      .map((c) => c.path);
+    expect(auth).toEqual([
+      '/auth/v1/logout?scope=local',
+      '/auth/v1/token?grant_type=refresh_token',
+      '/auth/v1/logout?scope=local',
+    ]);
+    expect(supabase.logoutTokens).toHaveLength(2);
+    expect(supabase.logoutTokens[0]).not.toBe(supabase.logoutTokens[1]);
+    expect(await page.evaluate(() => Object.keys(sessionStorage))).toEqual([]);
+  });
+
   test('a server that does not answer the logout delays the login page by about 3 s, not more', async ({
     page,
     supabase,

@@ -38,13 +38,10 @@ export function clearStoredSession(storage: Storage | null): void {
   }
 }
 
-/** Access token of the stored session, read synchronously (null when absent/unreadable). */
-export function readStoredAccessToken(storage: Storage | null): string | null {
+/** The stored session JSON (null when absent/unreadable), read synchronously. */
+export function readStoredSession(storage: Storage | null): string | null {
   try {
-    const raw = storage?.getItem(AUTH_STORAGE_KEY);
-    if (!raw) return null;
-    const token = (JSON.parse(raw) as { access_token?: unknown }).access_token;
-    return typeof token === 'string' && token ? token : null;
+    return storage?.getItem(AUTH_STORAGE_KEY) ?? null;
   } catch {
     return null;
   }

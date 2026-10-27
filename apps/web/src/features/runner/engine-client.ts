@@ -80,7 +80,10 @@ export class EngineClient {
     this.crashed = false;
     this.remote = Comlink.wrap<EngineApi>(worker);
     // Without this a dead worker would leave every pending call (and the engine-busy pause of
-    // the auto sign-out) hanging forever.
+    // the auto sign-out) hanging forever. Accepted trade-off (reviewer MINOR): `error` also fires
+    // for an uncaught error that did NOT kill the worker; we still treat it as a crash (pending
+    // calls fail, the run page restarts the worker). Conservative: a worker in an unknown state
+    // is never reused for the User's data.
     const onDeath = () => {
       if (this.worker !== worker) return; // an old, already replaced worker
       this.crashed = true;
