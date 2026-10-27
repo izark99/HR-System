@@ -1,7 +1,7 @@
 import { CompareConfigSchema, type CompareConfig } from '@hrflow/flow-schema';
 import { Big, decimalFrom, isDecimal, ZERO, type Decimal } from '../core/decimal';
 import { normalizeKeyPart } from '../core/keys';
-import type { NodeOutputs, NodePlugin } from '../core/plugin';
+import type { NodeOutputs, TsNodePlugin } from '../core/plugin';
 import {
   EngineError,
   type ColumnDef,
@@ -286,9 +286,11 @@ export function executeCompare(
   };
 }
 
-export const controlComparePlugin: NodePlugin<CompareConfig, NodeOutputs> = {
+export const controlComparePlugin: TsNodePlugin<CompareConfig, NodeOutputs> = {
   type: 'control.compare',
   configSchema: CompareConfigSchema,
+  // The Result screen reads the compare KPIs from the summary after the run.
+  keepOutputs: true,
   inputs: [
     { name: 'left', required: true },
     { name: 'right', required: true },

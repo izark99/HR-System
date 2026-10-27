@@ -3,6 +3,7 @@ import react from '@vitejs/plugin-react';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { defineConfig } from 'vitest/config';
+import { DUCKDB_DIST, duckDbManifestModule, duckDbWasm } from './build/duckdb-wasm';
 
 /**
  * Headers of the `/*` block in public/_headers (Cloudflare Pages format), so `vite preview` —
@@ -37,13 +38,20 @@ const E2E_ENV = {
 };
 
 export default defineConfig(({ mode }) => ({
-  plugins: [react(), tailwindcss()],
+  plugins: [react(), tailwindcss(), duckDbWasm()],
+  resolve: {
+    alias: {
+      // DuckDB-WASM's synchronous browser bindings, run inside the engine worker (spec §13.1).
+      '@hrflow/duckdb-browser-blocking': resolve(DUCKDB_DIST, 'duckdb-browser-blocking.mjs'),
+    },
+  },
   define: mode === 'e2e' ? E2E_ENV : {},
   build: {
     sourcemap: false,
   },
   worker: {
     format: 'es',
+    plugins: () => [duckDbManifestModule()],
   },
   preview: {
     headers: pagesHeaders(),

@@ -444,7 +444,8 @@ export class RunStore {
     }));
 
     const onProgress = (e: RunProgressEvent) => {
-      if (token !== this.token || e.type === 'run-started') return;
+      // `engine-loading` (DuckDB download) has no node; its UI comes with the Designer rounds.
+      if (token !== this.token || e.type === 'run-started' || e.type === 'engine-loading') return;
       this.set((s) => ({
         ...s,
         run: {

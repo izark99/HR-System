@@ -4,10 +4,15 @@
  * this worker returns. No network access and no logging of cell values.
  */
 import * as Comlink from 'comlink';
+import type { DuckDbProvider } from './duckdb/base';
 import type { FileDownload, ParamValues, RowQuery, RunProgressEvent, UploadFile } from './protocol';
 import { EngineSession } from './session';
 
-const session = new EngineSession('vi');
+/** DuckDB-WASM is a separate chunk, fetched only when a flow has a DuckDB node (spec §13.1). */
+const duck: DuckDbProvider = async (onProgress) =>
+  (await import('./duckdb/browser')).browserDuckDb(onProgress);
+
+const session = new EngineSession('vi', { duck });
 
 function transferable(file: FileDownload): FileDownload {
   return Comlink.transfer(file, [file.data]);

@@ -9,7 +9,8 @@ import { existsSync } from 'node:fs';
 const PREINSTALLED = '/opt/pw-browsers/chromium';
 const executablePath =
   process.env.PW_CHROMIUM_PATH ?? (existsSync(PREINSTALLED) ? PREINSTALLED : undefined);
-const PORT = 4173;
+// E2E_PORT lets two E2E runs (different checkouts) share one machine.
+const PORT = Number(process.env.E2E_PORT ?? 4173);
 
 export default defineConfig({
   testDir: './e2e',

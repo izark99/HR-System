@@ -450,11 +450,20 @@ describe('output.excel file name', () => {
     expect(resolveFileName('{missing}', {})).toBe('output.xlsx');
   });
 
-  it('is registered with input.excel and control.compare', () => {
+  it('registers the step-1 nodes and the step-3 nodes (spec §12)', () => {
     expect(Object.keys(nodePlugins).sort()).toEqual([
+      'code.sql',
       'control.compare',
       'input.excel',
       'output.excel',
+      'output.preview',
+      'transform.dedupe',
+      'transform.filter',
+      'transform.groupBy',
+      'transform.join',
+      'transform.select',
+      'transform.sort',
+      'transform.union',
     ]);
   });
 });

@@ -5,7 +5,9 @@ import {
   type CompareConfig,
   type FlowDefinition,
 } from '@hrflow/flow-schema';
-import { isDecimal } from './core/decimal';
+import { decimalFrom, isDecimal, type Decimal } from './core/decimal';
+import type { DuckDbProvider } from './duckdb/base';
+import { normalizeKeyPart } from './core/keys';
 import { isCancelled, planFlow, runFlow, type RunFlowResult } from './core/executor';
 import { createEngineTranslator } from './core/i18n';
 import { EngineError, type Table, type Translate, type Value } from './core/types';
@@ -14,6 +16,7 @@ import { writeWorkbook } from './io/excel-writer';
 import { formatIssue } from './io/validation';
 import { compareDiffColumns, MISMATCHED_METRICS_COLUMN } from './nodes/control-compare';
 import { XLSX_MIME } from './nodes/output-excel';
+import { VI_COLLATOR } from './nodes/transform-sort';
 import type {
   CellValue,
   CompareKpis,
@@ -22,7 +25,6 @@ import type {
   FilterOption,
   LoadFlowResult,
   ParamValues,
-  RowFilter,
   RowPage,
   RowQuery,
   RunOutcome,
@@ -50,7 +52,8 @@ interface SheetState {
 
 function toCell(v: Value | undefined): CellValue {
   if (v === undefined || v === null) return null;
-  return isDecimal(v) ? v.toString() : v;
+  // Plain digits (big.js toString switches to exponent notation for tiny/huge values).
+  return isDecimal(v) ? v.toFixed() : v;
 }
 
 export function errorInfo(err: unknown): EngineErrorInfo {
@@ -80,9 +83,12 @@ export class EngineSession {
   private sheets: SheetState[] = [];
   private artifacts: RunFlowResult['artifacts'] = [];
   private abort: AbortController | null = null;
+  private readonly duck: DuckDbProvider | undefined;
 
-  constructor(lng: 'vi' | 'en' = 'vi') {
+  /** `duck`: opens DuckDB on demand (only flows with a DuckDB node ever call it). */
+  constructor(lng: 'vi' | 'en' = 'vi', options: { duck?: DuckDbProvider } = {}) {
     this.t = createEngineTranslator(lng);
+    this.duck = options.duck;
   }
 
   loadFlow(raw: unknown): LoadFlowResult {
@@ -174,6 +180,8 @@ export class EngineSession {
         t: this.t,
         params,
         signal: this.abort.signal,
+        releaseIntermediate: true,
+        ...(this.duck ? { duck: this.duck } : {}),
         ...(onProgress ? { onProgress } : {}),
         readSlot: (key) => {
           const slot = flow.inputSlots.find((s) => s.key === key);
@@ -202,6 +210,35 @@ export class EngineSession {
       if (step.node.type === 'control.compare' && !compare) {
         compare = this.compareKpis(step.config as CompareConfig, result.outputs[step.node.id]!);
       }
+    }
+    // Result tabs follow the order of the nodes in the flow (spec §12.1.10).
+    const byId = new Map(plan.map((p) => [p.node.id, p]));
+    for (const node of flow.nodes) {
+      const step = byId.get(node.id)!;
+      if (step.node.type === 'output.preview') {
+        const view = result.views.find((v) => v.nodeId === node.id);
+        if (!view) continue;
+        sheets.push({
+          info: {
+            id: `${node.id}:${sheets.length}`,
+            name: view.title,
+            role: 'table',
+            kind: 'preview',
+            rowCount: view.table.rows.length,
+            totalRows: view.totalRows,
+            columns: view.table.columns.map((c) => ({
+              key: c.key,
+              title: c.title ?? c.key,
+              type: c.type,
+            })),
+          },
+          table: view.table,
+          diffColumns: [],
+          carryColumns: [],
+          filterCache: null,
+        });
+        continue;
+      }
       if (step.node.type !== 'output.excel') continue;
       const cfg = step.config as { sheets: { name: string; port: string }[] };
       for (const sheet of cfg.sheets) {
@@ -225,6 +262,7 @@ export class EngineSession {
             id: `${step.node.id}:${sheets.length}`,
             name: sheet.name,
             role,
+            kind: 'excel',
             rowCount: table.rows.length,
             columns: table.columns.map((c) => ({
               key: c.key,
@@ -250,7 +288,8 @@ export class EngineSession {
         return {
           slotKey,
           label: slot?.label ?? slotKey,
-          rows: Object.values(result.outputs[p.node.id] ?? {})[0]?.rows.length ?? 0,
+          // From the run stats: intermediate tables are released after the run.
+          rows: Object.values(result.nodes.find((n) => n.nodeId === p.node.id)?.rows ?? {})[0] ?? 0,
         };
       });
 
@@ -259,6 +298,7 @@ export class EngineSession {
       nodes: result.nodes,
       inputs,
       sheets: sheets.map((s) => s.info),
+      warnings: result.warnings.map((w) => ({ ...w })),
       compare,
       artifacts: result.artifacts.map((a, index) => ({
         index,
@@ -296,26 +336,35 @@ export class EngineSession {
     return s;
   }
 
-  private filtered(s: SheetState, filters: readonly RowFilter[]): number[] | null {
-    if (filters.length === 0) return null;
-    const key = JSON.stringify(filters);
+  /** Row indexes after filters, search and sort (`null` = all rows in order). Cached. */
+  private filtered(s: SheetState, query: RowQuery): number[] | null {
+    const filters = query.filters ?? [];
+    const needle = normalizeKeyPart(query.search ?? '');
+    const sort = query.sort && s.info.columns.find((c) => c.key === query.sort!.column);
+    if (filters.length === 0 && !needle && !sort) return null;
+    const key = JSON.stringify([filters, needle, sort ? query.sort : null]);
     if (s.filterCache?.key === key) return s.filterCache.indexes;
-    const indexes: number[] = [];
-    s.table.rows.forEach((row, i) => {
+    const rows = s.table.rows;
+    const shown = s.info.columns.map((c) => c.key);
+    let indexes: number[] = [];
+    rows.forEach((row, i) => {
       const ok = filters.every((f) => {
         const cell = toCell(row[f.column]);
         const text = cell === null ? '' : String(cell);
         return f.op === 'eq' ? text === f.value : text.split(LIST_SEPARATOR).includes(f.value);
       });
-      if (ok) indexes.push(i);
+      if (!ok) return;
+      if (needle && !shown.some((k) => normalizeKeyPart(row[k]).includes(needle))) return;
+      indexes.push(i);
     });
+    if (sort) indexes = sortIndexes(indexes, s.table, sort, query.sort!.direction);
     s.filterCache = { key, indexes };
     return indexes;
   }
 
   getRows(sheetId: string, query: RowQuery): RowPage {
     const s = this.sheet(sheetId);
-    const indexes = this.filtered(s, query.filters ?? []);
+    const indexes = this.filtered(s, query);
     const total = indexes ? indexes.length : s.table.rows.length;
     const offset = Math.max(0, Math.min(query.offset, total));
     const end = Math.min(total, offset + Math.max(0, query.limit));
@@ -419,4 +468,35 @@ export class EngineSession {
     const data = await writeWorkbook([{ name: t('report.sheetName'), table: { columns, rows } }]);
     return { fileName: t('report.fileName'), mimeType: XLSX_MIME, data: data.slice().buffer };
   }
+}
+
+/** Stable sort of row indexes by one column; strings in Vietnamese order; blanks last. */
+function sortIndexes(
+  indexes: number[],
+  table: Table,
+  column: { key: string; type: string },
+  direction: 'asc' | 'desc',
+): number[] {
+  const sign = direction === 'desc' ? -1 : 1;
+  const blank = (v: Value | undefined) =>
+    v === null || v === undefined || (typeof v === 'string' && v.trim() === '');
+  const cmpValues = (a: Value, b: Value): number => {
+    if (column.type === 'string') return VI_COLLATOR.compare(String(a), String(b));
+    if (column.type === 'decimal' || column.type === 'integer') {
+      return decimalFrom(a as Decimal | number | string).cmp(
+        decimalFrom(b as Decimal | number | string),
+      );
+    }
+    const x = String(a);
+    const y = String(b);
+    return x < y ? -1 : x > y ? 1 : 0;
+  };
+  return [...indexes].sort((i, j) => {
+    const a = table.rows[i]![column.key];
+    const b = table.rows[j]![column.key];
+    const ba = blank(a);
+    const bb = blank(b);
+    if (ba || bb) return ba === bb ? i - j : ba ? 1 : -1;
+    return sign * cmpValues(a!, b!) || i - j;
+  });
 }
