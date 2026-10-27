@@ -315,6 +315,10 @@
       "signedOut": {
         "label": "Đã đăng xuất:",
         "text": "dữ liệu của phiên trước đã được xóa khỏi trình duyệt."
+      },
+      "idle": {
+        "label": "Đã tự đăng xuất:",
+        "text": "Bạn đã được đăng xuất do không thao tác trong 8 giờ. Vui lòng đăng nhập lại."
       }
     }
   },
@@ -519,5 +523,12 @@
       "label": "Cảnh báo:",
       "audit_failed": "thao tác đã thực hiện nhưng chưa ghi được nhật ký quản trị (audit log)."
     }
+  },
+  "idle": {
+    "title": "Bạn sắp bị đăng xuất",
+    "text": "Bạn đã không thao tác gần 8 giờ. Phiên làm việc sẽ tự kết thúc sau",
+    "unsavedLabel": "Lưu ý:",
+    "unsaved": "Flow đang thiết kế còn thay đổi chưa lưu. Nếu bị đăng xuất, các thay đổi này sẽ mất.",
+    "continue": "Tiếp tục làm việc"
   }
 }

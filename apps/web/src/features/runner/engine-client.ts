@@ -1,6 +1,7 @@
 import * as Comlink from 'comlink';
 import type { ParamValues, RunOutcome, RunProgressEvent } from '../../engine/protocol';
 import type { EngineApi } from '../../engine/worker';
+import { beginEngineWork } from '../auth/idle/activity';
 
 /** Rejection of calls still pending on a worker that was terminated (hard cancel). */
 export class EngineRestartedError extends Error {
@@ -22,13 +23,22 @@ function spawnWorker(): WorkerLike {
 
 type Api = Comlink.Remote<EngineApi>;
 
+/** Every live client, so a forced sign-out can terminate all workers (spec §6.1). */
+const liveClients = new Set<EngineClient>();
+
+/** Terminate every engine worker (files, results and samples in their memory are dropped). */
+export function disposeAllEngines(): void {
+  for (const client of [...liveClients]) client.dispose();
+}
+
 /**
  * Main-thread handle on the engine worker. The worker module (engine + SheetJS + ExcelJS) is a
  * separate chunk loaded only when the first flow is opened.
  *
  * Every call through `api` is tracked: on `restart()`/`dispose()` the ones still pending are
  * rejected with `EngineRestartedError` (a terminated worker would otherwise leave them pending
- * forever) and open progress ports are closed.
+ * forever) and open progress ports are closed. A pending call also counts as engine work for the
+ * auto sign-out (the idle countdown is paused meanwhile).
  */
 export class EngineClient {
   private worker!: WorkerLike;
@@ -39,6 +49,7 @@ export class EngineClient {
 
   constructor(private readonly createWorker: () => WorkerLike = spawnWorker) {
     this.spawn();
+    liveClients.add(this);
     this.api = new Proxy({} as Api, {
       get: (_target, prop) => {
         // `then` must stay undefined or the handle would look like a promise when returned/awaited.
@@ -58,17 +69,23 @@ export class EngineClient {
 
   private track<T>(call: () => T | PromiseLike<T>): Promise<T> {
     return new Promise<T>((resolve, reject) => {
-      const abandon = (err: Error) => reject(err);
+      const endWork = beginEngineWork();
+      const abandon = (err: Error) => {
+        endWork();
+        reject(err);
+      };
       this.pending.add(abandon);
       Promise.resolve()
         .then(call)
         .then(
           (v) => {
             this.pending.delete(abandon);
+            endWork();
             resolve(v);
           },
           (e: unknown) => {
             this.pending.delete(abandon);
+            endWork();
             reject(e instanceof Error ? e : new Error(String(e)));
           },
         );
@@ -112,6 +129,7 @@ export class EngineClient {
   }
 
   dispose(): void {
+    if (!liveClients.delete(this)) return;
     this.shutdown();
   }
 }

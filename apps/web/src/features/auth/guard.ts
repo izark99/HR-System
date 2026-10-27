@@ -19,7 +19,8 @@ export interface SessionUser {
 /** The account cannot use the app (spec §6: one shared "locked or no access" message). */
 type AccountProblem = 'locked' | 'profileMissing' | 'profileError';
 
-export type SignedOutReason = AccountProblem | 'sessionExpired' | 'signedOut';
+/** `idle`: signed out after 8 hours without interaction (spec §6.1). */
+export type SignedOutReason = AccountProblem | 'sessionExpired' | 'signedOut' | 'idle';
 
 export type AuthState =
   | { status: 'loading' }

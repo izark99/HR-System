@@ -5,7 +5,13 @@
 import * as Comlink from 'comlink';
 import { afterEach, describe, expect, it } from 'vitest';
 import type { RunOutcome, RunProgressEvent } from '../../../engine/protocol';
-import { EngineClient, EngineRestartedError, type WorkerLike } from '../engine-client';
+import { isEngineBusy } from '../../auth/idle/activity';
+import {
+  disposeAllEngines,
+  EngineClient,
+  EngineRestartedError,
+  type WorkerLike,
+} from '../engine-client';
 
 interface FakeWorker {
   /** Settle the pending `run` of this worker. */
@@ -109,6 +115,33 @@ describe('EngineClient', () => {
     oldPort.postMessage({ type: 'node-started', nodeId: 'late', index: 0, total: 1 });
     await new Promise((r) => setTimeout(r, 30));
     expect(events).toEqual([]);
+  });
+
+  it('a pending call counts as engine work (idle countdown paused) until it settles or is abandoned', async () => {
+    const c = client();
+    expect(isEngineBusy()).toBe(false);
+    const run = c.run({}, () => undefined);
+    await until(() => workers[0]!.progress !== null);
+    expect(isEngineBusy()).toBe(true);
+    workers[0]!.finishRun({ ok: true, summary: {} as never });
+    await run;
+    expect(isEngineBusy()).toBe(false);
+
+    const stuck = c.api.loadFlow({});
+    expect(isEngineBusy()).toBe(true);
+    c.restart();
+    await expect(stuck).rejects.toBeInstanceOf(EngineRestartedError);
+    expect(isEngineBusy()).toBe(false);
+  });
+
+  it('disposeAllEngines terminates every live worker (forced sign-out)', async () => {
+    const a = client();
+    client();
+    const pending = a.api.loadFlow({});
+    disposeAllEngines();
+    await expect(pending).rejects.toBeInstanceOf(EngineRestartedError);
+    expect(workers.every((w) => w.terminated)).toBe(true);
+    expect(isEngineBusy()).toBe(false);
   });
 
   it('the api handle is not thenable (safe to return from async functions)', async () => {

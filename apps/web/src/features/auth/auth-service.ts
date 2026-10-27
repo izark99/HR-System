@@ -11,7 +11,11 @@ export interface AuthService {
   /** null = signed in; otherwise the i18n key of the problem (`auth.errors.*`). */
   signIn(username: string, password: string): Promise<AuthErrorKey | null>;
   changePassword(password: string): Promise<AuthErrorKey | null>;
-  signOut(): Promise<void>;
+  /**
+   * Sign out. `idle` (auto sign-out after 8 hours, spec §6.1): local only — the session is removed
+   * from sessionStorage without waiting for the server — and the reason is `idle`.
+   */
+  signOut(reason?: 'idle'): Promise<void>;
 }
 
 /** Resolves with the first auth state that is not `loading` (session restored or not). */
@@ -193,13 +197,18 @@ export class SupabaseAuth extends BaseAuth implements AuthService {
     }
   }
 
-  async signOut(): Promise<void> {
-    this.nextReason = 'signedOut';
-    try {
-      await this.sb.auth.signOut();
-    } catch {
+  async signOut(reason?: 'idle'): Promise<void> {
+    const why: SignedOutReason = reason ?? 'signedOut';
+    this.nextReason = why;
+    if (reason === 'idle') {
       await this.sb.auth.signOut({ scope: 'local' }).catch(() => undefined);
+    } else {
+      try {
+        await this.sb.auth.signOut();
+      } catch {
+        await this.sb.auth.signOut({ scope: 'local' }).catch(() => undefined);
+      }
     }
-    this.set({ status: 'signedOut', reason: 'signedOut' });
+    this.set({ status: 'signedOut', reason: why });
   }
 }

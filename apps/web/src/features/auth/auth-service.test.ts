@@ -103,6 +103,15 @@ describe('SupabaseAuth', () => {
     expect(auth.signOut).toHaveBeenCalledWith();
     expect(service.getSnapshot()).toEqual({ status: 'signedOut', reason: 'signedOut' });
   });
+
+  it('signOut("idle") is local only and reports the idle reason (spec §6.1)', async () => {
+    const { client, auth } = fake({ ...PROFILE, must_change_password: false });
+    const service = new SupabaseAuth(client);
+    await service.signIn('hr.nv01', 'x'.repeat(10));
+    await service.signOut('idle');
+    expect(auth.signOut).toHaveBeenCalledWith({ scope: 'local' });
+    expect(service.getSnapshot()).toEqual({ status: 'signedOut', reason: 'idle' });
+  });
 });
 
 describe('waitForAuth', () => {

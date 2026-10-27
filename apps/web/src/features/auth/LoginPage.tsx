@@ -17,6 +17,7 @@ const REASON_TONE: Record<SignedOutReason, Tone> = {
   profileError: 'coral',
   sessionExpired: 'amber',
   signedOut: 'teal',
+  idle: 'amber',
 };
 
 export function LoginPage() {

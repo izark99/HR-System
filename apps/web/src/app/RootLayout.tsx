@@ -3,6 +3,7 @@ import { useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../features/auth/auth-context';
 import { CHANGE_PASSWORD_PATH, LOGIN_PATH, resolveGuard } from '../features/auth/guard';
+import { IdleLogout } from '../features/auth/idle/IdleLogout';
 import { AppShell } from './AppShell';
 
 function Redirect({ href }: { href: string }) {
@@ -49,8 +50,20 @@ export function RootLayout() {
   }
   if (decision.kind === 'redirect') return <Redirect href={decision.href} />;
   if (renderedPath !== null && resolveGuard(renderedPath, auth).kind !== 'allow') return null;
+  // Auto sign-out after 8 hours without interaction, for every signed-in screen (spec §6.1).
+  const idle = auth.status === 'signedIn' ? <IdleLogout key={auth.user.id} /> : null;
   if (location.pathname === LOGIN_PATH || location.pathname === CHANGE_PASSWORD_PATH) {
-    return <Outlet />;
+    return (
+      <>
+        <Outlet />
+        {idle}
+      </>
+    );
   }
-  return <AppShell />;
+  return (
+    <>
+      <AppShell />
+      {idle}
+    </>
+  );
 }
