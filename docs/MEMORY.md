@@ -103,6 +103,8 @@
 
 ## Xác thực & phân quyền
 
+2026-10-27 08:49 - Tự đăng xuất (hết 8 giờ) dùng đăng xuất toàn cục: thu hồi refresh token trên server, các phiên khác của cùng tài khoản cũng bị đăng xuất; mất mạng thì vẫn đăng xuất cục bộ.
+
 2026-10-26 22:52 - Tự đăng xuất sau 8 giờ không thao tác: thao tác = chuột/phím/cuộn/chạm trong tab; khi flow đang chạy không tính là không thao tác; cảnh báo trước 5 phút với nút "Tiếp tục làm việc" (nêu rõ nếu Designer còn thay đổi chưa lưu); hết giờ đăng xuất và về màn đăng nhập kèm thông báo lý do.
 
 2026-10-26 18:49 - Tài khoản bị khóa hoặc chưa có profile: hiện chung thông báo "Tài khoản bị khóa hoặc chưa được cấp quyền. Vui lòng liên hệ Admin."
@@ -166,6 +168,8 @@
 2026-10-26 08:20 - Admin cấu hình flow bằng canvas kéo-thả node (React Flow); flow lưu dạng JSON (DAG).
 
 ## Versioning
+
+2026-10-27 08:49 - Hủy draft rồi tạo draft mới được phép dùng lại số version của draft đã hủy (draft chưa publish nên không có run log trỏ tới).
 
 2026-10-26 22:52 - Diff version làm trong bước 3: liệt kê node thêm/xóa/sửa và cấu hình JSON side-by-side cho node bị sửa.
 

@@ -149,7 +149,7 @@ Kiến trúc giữ tính **portable**: frontend là static build; backend chỉ 
 - **Khi engine đang làm việc không tính là không thao tác**: trong lúc worker đang kiểm tra file, chạy flow, chạy xem trước node (Designer) hoặc xuất file, bộ đếm tạm dừng; khi tác vụ kết thúc (thành công, lỗi hoặc hủy), bộ đếm bắt đầu lại từ thời điểm kết thúc.
 - **Đếm theo đồng hồ thực**: lưu thời điểm thao tác cuối (trong bộ nhớ) và so với `Date.now()`; kiểm tra lại khi tab hiện lại (`visibilitychange`) hoặc máy thức dậy. Nếu đã quá 8 giờ thì đăng xuất ngay, không hiện cảnh báo.
 - **Cảnh báo trước 5 phút** (tại mốc 7 giờ 55 phút): dialog có đồng hồ đếm ngược và nút chính "Tiếp tục làm việc". Khi dialog đang mở, chỉ thao tác bấm nút (hoặc Enter khi nút có focus) mới gia hạn; di chuột không tự đóng dialog. Nếu Designer còn thay đổi chưa lưu, dialog nêu rõ: "Flow đang thiết kế còn thay đổi chưa lưu. Nếu bị đăng xuất, các thay đổi này sẽ mất." (không tự lưu, theo quyết định Designer không tự lưu).
-- **Hết giờ**: gọi đăng xuất cục bộ (xóa session trong `sessionStorage`), kết thúc engine worker để giải phóng dữ liệu trong RAM (file đã upload, kết quả, file mẫu), bỏ qua cảnh báo "thay đổi chưa lưu" của Designer, chuyển về màn đăng nhập kèm thông báo: "Bạn đã được đăng xuất do không thao tác trong 8 giờ. Vui lòng đăng nhập lại."
+- **Hết giờ**: gọi đăng xuất toàn cục (`signOut({ scope: 'global' })`, thu hồi refresh token trên server, mọi phiên khác của tài khoản cũng bị đăng xuất); nếu gọi server lỗi (mất mạng) vẫn đăng xuất cục bộ (xóa session trong `sessionStorage`) (chốt 2026-10-27), kết thúc engine worker để giải phóng dữ liệu trong RAM (file đã upload, kết quả, file mẫu), bỏ qua cảnh báo "thay đổi chưa lưu" của Designer, chuyển về màn đăng nhập kèm thông báo: "Bạn đã được đăng xuất do không thao tác trong 8 giờ. Vui lòng đăng nhập lại."
 - Không ghi thời điểm thao tác vào localStorage/server; không gửi sự kiện thao tác ra ngoài.
 - Admin được tự reset mật khẩu, tự khóa, tự đổi role của mình; Admin thấy và chạy mọi flow đã publish (chốt 2026-10-26).
 
@@ -649,7 +649,7 @@ Draft ──(Publish + chọn effective_from)──► Published ──(hết hi
 - Không cho phép khoảng hiệu lực chồng nhau (constraint DB, §7.2). Cho phép **khoảng trống** nhưng cảnh báo.
 - **Retire**: chuyển version `published` sang `retired` (có xác nhận). Version retired không còn được chọn khi chạy và không tham gia kiểm tra chồng lấn; không thể đưa lại thành published (muốn dùng lại → rollback).
 - **Rollback** = tạo draft từ nội dung của một version cũ rồi publish thành version mới với effective date mới (không sửa lịch sử). Nếu flow đang có draft, phải lưu/publish hoặc hủy draft đó trước.
-- **Hủy draft**: xóa draft (có xác nhận); chỉ draft được xóa (trigger, §7.2).
+- **Hủy draft**: xóa draft (có xác nhận); chỉ draft được xóa (trigger, §7.2) Số version = max(version_no) + 1 nên draft mới sau khi hủy có thể dùng lại số của draft đã hủy; chấp nhận vì draft chưa từng publish nên không có run log trỏ tới (chốt 2026-10-27).
 
 ### 14.2 Quy tắc chọn version khi chạy
 
