@@ -129,6 +129,8 @@
 
 ## Flow & xử lý
 
+2026-10-27 13:06 - `transform.groupBy`: `min`/`max` trên cột chữ so theo mã ký tự (thứ tự nhị phân của DuckDB), không theo bảng chữ cái tiếng Việt; ghi rõ trong spec.
+
 2026-10-27 07:31 - `transform.join`, `transform.dedupe` (`normalizeKeys`) và `transform.filter` (`normalizeText`) mặc định so khớp không phân biệt hoa thường, bỏ khoảng trắng thừa (giống `control.compare`); Admin tắt được.
 
 2026-10-27 07:31 - `transform.sort` sắp chữ theo bảng chữ cái tiếng Việt (`Intl.Collator('vi')`).

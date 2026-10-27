@@ -527,6 +527,7 @@ Mỗi node type được định nghĩa bằng một **plugin** gồm: Zod schem
   }
   ```
 - Kiểu kết quả: `sum(integer)` → `integer` (vượt safe integer → `decimal`); `sum(decimal)` → `decimal`; `avg` → `decimal`, tính chính xác: `SUM` và `COUNT` lấy từ DuckDB, phép chia bằng big.js, làm tròn half-up 10 chữ số thập phân; `min/max` → kiểu của cột (`integer`, `decimal`, `date`, `datetime`, `string`); `count`, `countDistinct`, `countRows` → `integer`.
+- `min/max` trên cột `string` so theo mã ký tự (thứ tự nhị phân của DuckDB), **không** theo bảng chữ cái tiếng Việt như `transform.sort` (VD "Đặng" lớn hơn "Zung") (chốt 2026-10-27 13:06).
 - Ô trống: bị bỏ qua trong mọi hàm (trừ `countRows`). `sum` của toàn ô trống = 0 (giống Excel SUM); `avg/min/max` của toàn ô trống = trống.
 - Cột nhóm so sánh theo giá trị chính xác (không chuẩn hóa); ô trống tạo thành một nhóm riêng. Thứ tự dòng: theo lần xuất hiện đầu tiên của nhóm. `by` rỗng luôn ra đúng 1 dòng, kể cả khi đầu vào 0 dòng.
 - Output schema: các cột `by` (giữ kiểu, title) rồi các cột tổng hợp theo thứ tự cấu hình.
