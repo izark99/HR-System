@@ -151,3 +151,31 @@ describe('EngineClient', () => {
     expect(same).toBe(c.api);
   });
 });
+
+// KNOWN BUG (remove it.fails once fixed): a worker that dies (uncaught error / out of memory)
+// raises `error` on the Worker, but EngineClient only abandons pending calls on restart/dispose.
+// The call never settles, so the engine counts as busy forever and the 8-hour auto sign-out
+// (which pauses while the engine is busy) never happens; the UI also spins forever.
+describe('KNOWN BUG: dead worker', () => {
+  it.fails('a worker `error` event rejects pending calls and releases the idle pause', async () => {
+    let endpoint!: MessagePort;
+    const c = new EngineClient(() => {
+      const w = fakeWorker();
+      endpoint = w as unknown as MessagePort;
+      return w;
+    });
+    clients.push(c);
+    const call = c.api.loadFlow({}).then(
+      () => 'resolved',
+      () => 'rejected',
+    );
+    await until(() => isEngineBusy());
+    endpoint.dispatchEvent(new Event('error'));
+    const outcome = await Promise.race([
+      call,
+      new Promise((r) => setTimeout(() => r('still pending'), 300)),
+    ]);
+    expect(outcome).toBe('rejected');
+    expect(isEngineBusy()).toBe(false);
+  });
+});
