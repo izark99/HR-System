@@ -358,7 +358,9 @@
       "unknown": "có lỗi không xác định. Thử lại sau.",
       "draft_conflict": "bản nháp vừa được lưu ở nơi khác. Đã tải lại danh sách, hãy kiểm tra bản mới nhất.",
       "version_not_found": "không tìm thấy phiên bản (có thể vừa bị thay đổi). Tải lại trang.",
-      "change_note_required": "nhập ghi chú thay đổi."
+      "change_note_required": "nhập ghi chú thay đổi.",
+      "effective_from_required": "chọn ngày bắt đầu hiệu lực.",
+      "expected_updated_at_required": "thiếu mốc kiểm tra xung đột của bản nháp. Tải lại trang rồi thử lại."
     },
     "users": {
       "eyebrow": "Users & Groups",

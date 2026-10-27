@@ -30,6 +30,8 @@ export type AdminErrorKey =
   | 'draft_conflict'
   | 'version_not_found'
   | 'change_note_required'
+  | 'effective_from_required'
+  | 'expected_updated_at_required'
   // Client-side validation (never sent by the server)
   | 'group_name_required'
   // Transport / other
@@ -65,6 +67,14 @@ interface PgErrorLike {
   message?: string;
 }
 
+/** Stable identifiers the RPCs raise with SQLSTATE 22023 (supabase/migrations/2026102708…). */
+const INVALID_ARGUMENT_KEYS = new Map<string, AdminErrorKey>([
+  ['change_note_required', 'change_note_required'],
+  ['effective_from_required', 'effective_from_required'],
+  ['expected_updated_at_required', 'expected_updated_at_required'],
+  ['invalid_definition', 'invalid_definition'],
+]);
+
 /**
  * PostgREST / Postgres error → key (never the raw message). For 22023 the stable identifier the
  * RPCs raise as message (e.g. `change_note_required`) is matched, never displayed.
@@ -85,9 +95,7 @@ export function dbErrorKey(error: PgErrorLike | null | undefined): AdminErrorKey
     case 'HF001':
       return 'immutable';
     case '22023':
-      return error.message === 'change_note_required'
-        ? 'change_note_required'
-        : 'invalid_definition';
+      return INVALID_ARGUMENT_KEYS.get(error.message ?? '') ?? 'invalid_definition';
     case '23514':
     case '22P02':
       return 'check_failed';

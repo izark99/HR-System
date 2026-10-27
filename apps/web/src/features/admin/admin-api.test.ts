@@ -50,8 +50,13 @@ describe('admin API error mapping', () => {
       'change_note_required',
     );
     expect(dbErrorKey({ code: '22023', message: 'effective_from_required' })).toBe(
-      'invalid_definition',
+      'effective_from_required',
     );
+    expect(dbErrorKey({ code: '22023', message: 'expected_updated_at_required' })).toBe(
+      'expected_updated_at_required',
+    );
+    expect(dbErrorKey({ code: '22023', message: 'invalid_definition' })).toBe('invalid_definition');
+    expect(dbErrorKey({ code: '22023', message: 'injected' })).toBe('invalid_definition');
   });
 });
 
