@@ -20,6 +20,7 @@ import {
   DUCK_TYPE,
   mergeCtes,
   ORD,
+  ORD_NAME,
   q,
   qName,
   SqlRel,
@@ -232,7 +233,7 @@ export class SqlScope {
         for (const c of cols) vectors[c.key] = buildVector(table.rows, from, to, c);
         const ord = new Array<number>(to - from);
         for (let i = 0; i < ord.length; i++) ord[i] = from + i + 1;
-        vectors[ORD] = float64Vector(ord);
+        vectors[ORD_NAME] = float64Vector(ord);
         const ipc = tableToIPC(new ArrowTable(vectors), 'stream');
         try {
           this.db.insertArrow(ipc, raw, from === 0);
@@ -293,7 +294,7 @@ export class SqlScope {
     for (let from = 0; from < total; from += CHUNK_ROWS) {
       const to = Math.min(total, from + CHUNK_ROWS);
       const result = this.run(
-        `SELECT ${select || '1 AS __none'} FROM ${qName(rel.name)} WHERE ${ORD} > ${from} AND ${ORD} <= ${to} ORDER BY ${ORD}`,
+        `SELECT ${select || '1 AS "hr$none"'} FROM ${qName(rel.name)} WHERE ${ORD} > ${from} AND ${ORD} <= ${to} ORDER BY ${ORD}`,
       );
       const n = to - from;
       for (let i = 0; i < n; i++) rows[from + i] = {};

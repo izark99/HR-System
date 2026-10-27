@@ -36,7 +36,8 @@ export const transformDedupePlugin: NodePlugin<DedupeConfig> = {
     return { [OUT_PORT]: [...input], [REMOVED_PORT]: [...input] };
   },
   runSql(config, inputs, ctx) {
-    const input = inputs[IN_PORT]!;
+    // `out` and `removed` both read the ranking: evaluate a lazy input chain only once.
+    const input = ctx.sql.materialize(inputs[IN_PORT]!);
     const keys = keyColumns(config, input.columns);
     const allBlank = keys.map((c) => isBlank(q(c.key), c.type)).join(' AND ');
     const parts = keys.map((c) => partition(c, config.normalizeKeys)).join(', ');
@@ -44,7 +45,7 @@ export const transformDedupePlugin: NodePlugin<DedupeConfig> = {
     const ranked = ctx.sql.derive(
       [input],
       input.columns,
-      `SELECT *, (${allBlank}) AS "__all_blank", row_number() OVER (PARTITION BY ${parts} ORDER BY ${ORD} ${dir}) AS "__rn" FROM ${qName(input.name)}`,
+      `SELECT *, (${allBlank}) AS "hr$all_blank", row_number() OVER (PARTITION BY ${parts} ORDER BY ${ORD} ${dir}) AS "hr$rn" FROM ${qName(input.name)}`,
       [],
     );
     const list = [...input.columns.map((c) => q(c.key)), ORD].join(', ');
@@ -53,13 +54,13 @@ export const transformDedupePlugin: NodePlugin<DedupeConfig> = {
       [OUT_PORT]: ctx.sql.derive(
         [ranked],
         input.columns,
-        `SELECT ${list} FROM ${from} WHERE "__all_blank" OR "__rn" = 1`,
+        `SELECT ${list} FROM ${from} WHERE "hr$all_blank" OR "hr$rn" = 1`,
         [],
       ),
       [REMOVED_PORT]: ctx.sql.derive(
         [ranked],
         input.columns,
-        `SELECT ${list} FROM ${from} WHERE NOT "__all_blank" AND "__rn" > 1`,
+        `SELECT ${list} FROM ${from} WHERE NOT "hr$all_blank" AND "hr$rn" > 1`,
         [],
       ),
     };

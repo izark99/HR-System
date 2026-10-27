@@ -99,8 +99,13 @@ export const transformJoinPlugin: NodePlugin<JoinConfig> = {
     return { [OUT_PORT]: plan.columns.map((c) => c.def) };
   },
   runSql(config, inputs, ctx) {
-    const left = inputs.left!;
-    const right = inputs.right!;
+    let left = inputs.left!;
+    let right = inputs.right!;
+    if (config.how !== 'anti') {
+      // The rowsMultiplied check reads both inputs once more: evaluate lazy chains only once.
+      left = ctx.sql.materialize(left);
+      right = ctx.sql.materialize(right);
+    }
     const plan = planJoin(config, left.columns, right.columns);
     const columns = plan.columns.map((c) => c.def);
     const on = condition(plan, config.normalizeKeys);
@@ -142,12 +147,14 @@ function warnMultiplied(
 ): void {
   const n = config.normalizeKeys;
   const rk = plan.keys.map((k, i) => `${keyExpr('r', k.right, n)} AS k${i}`).join(', ');
-  const rNotBlank = plan.keys.map((_, i) => `k${i} IS NOT NULL`).join(' AND ');
+  const ks = plan.keys.map((_, i) => `k${i}`);
+  const rNotBlank = ks.map((k) => `${k} IS NOT NULL`).join(' AND ');
   const match = plan.keys.map((k, i) => `${keyExpr('l', k.left, n)} = d.k${i}`).join(' AND ');
   const w = withClause(mergeCtes([left, right]));
   const sql =
-    `${w.sql}SELECT count(*) FROM (SELECT ${rk} FROM ${qName(right.name)} r ` +
-    `GROUP BY ALL HAVING count(*) > 1 AND ${rNotBlank}) d WHERE EXISTS (SELECT 1 FROM ${qName(left.name)} l WHERE ${match})`;
+    `${w.sql}SELECT count(*) FROM (SELECT ${ks.join(', ')} FROM (SELECT ${rk} FROM ${qName(right.name)} r) ` +
+    `WHERE ${rNotBlank} GROUP BY ${ks.join(', ')} HAVING count(*) > 1) d ` +
+    `WHERE EXISTS (SELECT 1 FROM ${qName(left.name)} l WHERE ${match})`;
   const result = ctx.sql.run(sql, w.params);
   const count = Number(result.getChildAt(0)?.get(0) ?? 0);
   if (count > 0) ctx.run.warn({ messageKey: 'join.warning.rowsMultiplied', params: { count } });

@@ -68,7 +68,7 @@ describe('normalizeKeys: SQL equals normalizeKeyPart (golden, spec §12.1)', () 
           golden.map((g) => [g]),
         ),
       );
-      const out = db.query(`SELECT hrflow_norm_key(k) AS n FROM "${rel.name}" ORDER BY __ord`);
+      const out = db.query(`SELECT hrflow_norm_key(k) AS n FROM "${rel.name}" ORDER BY "hr$ord"`);
       const sql = Array.from({ length: out.numRows }, (_, i) => String(out.getChild('n')?.get(i)));
       expect(sql).toEqual(golden.map((g) => normalizeKeyPart(g)));
     } finally {

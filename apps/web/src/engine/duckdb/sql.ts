@@ -3,17 +3,25 @@ import { Big, type Decimal } from '../core/decimal';
 import { EngineError, type ColumnDef } from '../core/types';
 import { BLANK_MACRO, NORM_KEY_MACRO, type SqlParam } from './base';
 
-/** Hidden row-order column of every relation (spec §12.1 "Thứ tự dòng tất định"). */
-export const ORD = '__ord';
+/**
+ * Hidden row-order column of every relation (spec §12.1 "Thứ tự dòng tất định"). Engine-internal
+ * names contain `$`, which no column key (`IdentifierSchema`) can, so user columns such as
+ * `__ord` never collide with them.
+ */
+export const ORD_NAME = 'hr$ord';
+/** `ORD_NAME` quoted for SQL. */
+export const ORD = `"${ORD_NAME}"`;
 
 const IDENTIFIER = /^[a-z_][a-z0-9_]*$/;
+/** Engine-internal column names (see ORD_NAME). */
+const INTERNAL = /^hr\$[a-z0-9_]+$/;
 
 /**
  * Quote a column key for SQL. Column keys are `IdentifierSchema` keys; anything else is refused
  * (spec §12.1: names enter SQL only after that check, inside double quotes).
  */
 export function q(key: string): string {
-  if (!IDENTIFIER.test(key)) throw new Error('not an identifier');
+  if (!IDENTIFIER.test(key) && !INTERNAL.test(key)) throw new Error('not an identifier');
   return `"${key}"`;
 }
 
@@ -52,7 +60,7 @@ export interface Cte {
 
 /**
  * A relation inside DuckDB: a materialized table (no CTEs) or a chain of CTEs ending at `name`
- * (pushdown, spec §13.1). Its SQL columns are exactly `columns` (by key) plus `__ord`.
+ * (pushdown, spec §13.1). Its SQL columns are exactly `columns` (by key) plus `ORD`.
  */
 export class SqlRel {
   constructor(

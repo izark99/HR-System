@@ -74,12 +74,12 @@ export const transformUnionPlugin: NodePlugin<UnionConfig> = {
       });
       if (source)
         list.push(`CAST(${b.param(source.labels[i] ?? '')} AS VARCHAR) AS ${q(source.key)}`);
-      list.push(`${i} AS "__input"`, ORD);
+      list.push(`${i} AS "hr$input"`, ORD);
       return `SELECT ${list.join(', ')} FROM ${qName(rel.name)}`;
     });
     const keys = columns.map((c) => q(c.key));
     // All rows of in_1, then in_2, … each in its own order.
-    const sql = `SELECT ${[...keys, `row_number() OVER (ORDER BY "__input", ${ORD}) AS ${ORD}`].join(', ')} FROM (${selects.join(' UNION ALL ')})`;
+    const sql = `SELECT ${[...keys, `row_number() OVER (ORDER BY "hr$input", ${ORD}) AS ${ORD}`].join(', ')} FROM (${selects.join(' UNION ALL ')})`;
     const rels = ports.map((p) => inputs[p]!);
     return { [OUT_PORT]: ctx.sql.derive(rels, columns, sql, b.params) };
   },

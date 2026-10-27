@@ -296,7 +296,7 @@ describe('normalizeKeys: SQL = normalizeKeyPart over every BMP code point and th
           columns: [{ key: 'k', type: 'string' }],
           rows: strs.map((k) => ({ k })),
         });
-        const res = db.query(`SELECT hrflow_norm_key(k) AS n FROM "${rel.name}" ORDER BY __ord`);
+        const res = db.query(`SELECT hrflow_norm_key(k) AS n FROM "${rel.name}" ORDER BY "hr$ord"`);
         slice.forEach((c, j) => {
           if (String(res.getChild('n')?.get(j)) !== normalizeKeyPart(strs[j])) bad.push(c);
         });

@@ -68,8 +68,8 @@ function value(col: ColumnDef): string {
   return col.type === 'string' ? `CASE WHEN ${isBlank(x, 'string')} THEN NULL ELSE ${x} END` : x;
 }
 
-const SUM_KEY = (i: number) => `__avg_sum_${i}`;
-const COUNT_KEY = (i: number) => `__avg_count_${i}`;
+const SUM_KEY = (i: number) => `hr$avg_sum_${i}`;
+const COUNT_KEY = (i: number) => `hr$avg_count_${i}`;
 
 /** `transform.groupBy` (spec §12.1.6). DuckDB; `avg` is finished in TS with big.js. */
 export const transformGroupByPlugin: NodePlugin<GroupByConfig> = {
@@ -142,6 +142,8 @@ export const transformGroupByPlugin: NodePlugin<GroupByConfig> = {
       });
     }
     const outRows: Row[] = table.rows;
-    return { [OUT_PORT]: { columns: plan.columns, rows: outRows } };
+    // `fetch` turned an integer SUM beyond 2^53 into decimal: keep its column types.
+    const columns = table.columns.filter((c) => plan.columns.some((p) => p.key === c.key));
+    return { [OUT_PORT]: { columns, rows: outRows } };
   },
 };

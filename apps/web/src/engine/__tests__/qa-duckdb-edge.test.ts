@@ -185,10 +185,10 @@ describe('decimal precision across the TS ↔ DuckDB boundary (AC-B3-07, spec §
     expect(r.out.out!.columns.find((c) => c.key === 's')!.type).toBe('decimal');
   });
 
-  describe('KNOWN BUG', () => {
+  describe('fixed (was KNOWN BUG)', () => {
     // With an avg in the same node the result bypasses SqlScope.fetch's type fix-up and keeps
     // the declared `integer` type although the cell holds a Big beyond the safe range.
-    it.fails('integer SUM beyond 2^53 next to an avg is declared decimal as well', async () => {
+    it('integer SUM beyond 2^53 next to an avg is declared decimal as well', async () => {
       const t = table([['n', 'integer']], [[9007199254740991], [9007199254740991], [2]]);
       const r = await runNode(
         'transform.groupBy',
@@ -555,24 +555,21 @@ describe('transform.join corner cases', () => {
     ]);
   });
 
-  describe('KNOWN BUG', () => {
+  describe('fixed (was KNOWN BUG)', () => {
     // warnMultiplied: `SELECT NULLIF(hrflow_norm_key(r.k), '') AS k0 … GROUP BY ALL HAVING
     // count(*) > 1 AND k0 IS NOT NULL` returns no group when the duplicates only exist after
     // normalization ('A' and 'a ' → 'a'): DuckDB-WASM 1.32 evaluates the HAVING on the raw column.
-    it.fails(
-      'rowsMultiplied also fires when right keys only collide after normalization',
-      async () => {
-        const left = table([['k', 'string']], [['a'], ['b']]);
-        const right = table([['k', 'string']], [['A'], ['a '], ['b']]);
-        const r = await runNode(
-          'transform.join',
-          { how: 'inner', on: [{ left: 'k', right: 'k' }] },
-          { left, right },
-        );
-        expect(r.out.out!.rows).toHaveLength(3); // the rows ARE multiplied...
-        expect(r.warnings.map((w) => w.messageKey)).toEqual(['join.warning.rowsMultiplied']); // ...silently
-      },
-    );
+    it('rowsMultiplied also fires when right keys only collide after normalization', async () => {
+      const left = table([['k', 'string']], [['a'], ['b']]);
+      const right = table([['k', 'string']], [['A'], ['a '], ['b']]);
+      const r = await runNode(
+        'transform.join',
+        { how: 'inner', on: [{ left: 'k', right: 'k' }] },
+        { left, right },
+      );
+      expect(r.out.out!.rows).toHaveLength(3); // the rows ARE multiplied...
+      expect(r.warnings.map((w) => w.messageKey)).toEqual(['join.warning.rowsMultiplied']); // ...silently
+    });
   });
 
   it('SQL-looking keys and column values are just data', async () => {
@@ -1236,12 +1233,12 @@ describe('shared upstream (self-join, diamond) and dedupe invariants', () => {
   });
 });
 
-describe('KNOWN BUG: engine-internal column names are legal column keys', () => {
+describe('fixed (was KNOWN BUG): engine-internal column names do not clash with column keys', () => {
   // `IdentifierSchema` allows `__ord`, `__rn`, `__all_blank`, `__input`, `__avg_sum_<i>`; the nodes
   // use them as hidden columns, so a slot column with such a key silently corrupts results
   // (select returns rows in the order of the user's data, filter/dedupe emit an all-null row…).
   // Expected: rejected at design time, or at least handled.
-  it.fails('a column named __ord does not change row order or add rows', async () => {
+  it('a column named __ord does not change row order or add rows', async () => {
     const t = table(
       [
         ['__ord', 'integer'],
@@ -1274,7 +1271,7 @@ describe('KNOWN BUG: engine-internal column names are legal column keys', () => 
     ]);
   });
 
-  it.fails('a column named __rn or __all_blank does not break dedupe', async () => {
+  it('a column named __rn or __all_blank does not break dedupe', async () => {
     for (const name of ['__rn', '__all_blank']) {
       const t = table(
         [
