@@ -161,13 +161,13 @@ select pg_temp.expect_error(
   '22023', 'schemaVersion must not be negative');
 select pg_temp.expect_error(
   $$select * from public.admin_create_flow('ver-sv4', 'x', '', '', '', '{"schemaVersion":99999999999}')$$,
-  '22003', 'KNOWN BUG: an out-of-range schemaVersion should be 22023 invalid_definition (private.assert_flow_definition), it overflows integer (22003); switch to 22023 once fixed');
-
--- KNOWN BUG (reviewer MINOR): schemaVersion 0 passes assert_flow_definition and is only stopped
--- by the table CHECK (23514); the contract says 22023 invalid_definition. Switch once fixed.
+  '22023', 'an out-of-range schemaVersion is invalid_definition (not an integer overflow)');
 select pg_temp.expect_error(
   $q$select * from public.admin_create_flow('ver-sv0', 'x', '', '', '', '{"schemaVersion":0}')$q$,
-  '23514', 'KNOWN BUG: schemaVersion 0 should be 22023, currently the table CHECK 23514');
+  '22023', 'schemaVersion 0 is invalid_definition (not the table CHECK)');
+select pg_temp.expect_error(
+  $q$select * from public.admin_create_flow('ver-sv01', 'x', '', '', '', '{"schemaVersion":"01"}')$q$,
+  '22023', 'schemaVersion with a leading zero is invalid_definition');
 
 do $$
 declare
@@ -184,10 +184,10 @@ begin
   perform pg_temp.expect_error(format(
     $f$select * from public.admin_publish_flow_draft(%L, '2026-01-01', null, %L, false, %L)$f$,
     v1, E' \t\r\n ', pg_temp.tok(v1)), '22023', 'tab/CR/LF-only note is blank');
-  -- JS String.trim() (the client check) treats NBSP as blank; the DB regex `\s` does not.
-  perform pg_temp.known_bug(format(
+  -- Same as JS String.trim() (the client check): NBSP is blank too.
+  perform pg_temp.expect_error(format(
     $f$select * from public.admin_publish_flow_draft(%L, '2026-01-01', null, %L, false, %L)$f$,
-    v1, chr(160) || chr(160), pg_temp.tok(v1)), '22023', 'NBSP-only note is accepted by admin_publish_flow_draft');
+    v1, chr(160) || chr(160), pg_temp.tok(v1)), '22023', 'NBSP-only note is blank');
   perform pg_temp.expect_error(format(
     $f$select * from public.admin_publish_flow_draft(%L, '2026-01-01', null, %L, false, %L)$f$,
     v1, chr(8195) || chr(12288), pg_temp.tok(v1)), '22023', 'em/ideographic-space-only note is blank');
@@ -348,9 +348,36 @@ end
 $$;
 
 -- Import path: same blank-note rules, nothing written on refusal.
-select pg_temp.known_bug(
+select pg_temp.expect_error(
   format($f$select public.admin_publish_flow_version('ver-imp-nb', 'x', '', '', '', '{"schemaVersion":1}', '2026-01-01', null, %L, false)$f$, chr(160)),
-  '22023', 'import accepts an NBSP-only change note');
+  '22023', 'import refuses an NBSP-only change note');
+select public.admin_publish_flow_version(
+  'ver-imp-trim', 'x', '', '', '', '{"schemaVersion":1}', '2026-01-01', null,
+  chr(160) || 'Ghi chú' || chr(12288), false);
+select pg_temp.expect(
+  (select v.change_note from public.flow_versions v join public.flows f on f.id = v.flow_id
+    where f.code = 'ver-imp-trim') = 'Ghi chú',
+  'the stored note is trimmed of Unicode spaces like JS trim()');
+
+-- A draft written directly (PostgREST insert/update, not admin_save_flow_draft) with an invalid
+-- definition cannot be published: admin_publish_flow_draft re-checks it.
+do $$
+declare
+  v_flow uuid;
+  v_draft uuid;
+begin
+  select flow_id, version_id into v_flow, v_draft
+    from public.admin_create_flow('ver-direct', 'Direct', '', '', '', '{"schemaVersion":1,"nodes":[]}');
+  update public.flow_versions set definition = '{"nodes":[]}' where id = v_draft;
+  perform pg_temp.expect_error(format(
+    $f$select * from public.admin_publish_flow_draft(%L, '2026-01-01', null, 'x', false, %L)$f$,
+    v_draft, (select updated_at from public.flow_versions where id = v_draft)),
+    '22023', 'publishing a draft whose definition has no schemaVersion is invalid_definition');
+  perform pg_temp.expect(
+    (select status = 'draft' from public.flow_versions where id = v_draft),
+    'the refused draft stays a draft');
+end
+$$;
 select pg_temp.expect_error(
   $$select public.admin_publish_flow_version('ver-imp', 'x', '', '', '', '{"schemaVersion":1}', null, null, 'x', false)$$,
   '22023', 'import requires effective_from');

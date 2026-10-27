@@ -28,8 +28,10 @@ immutable
 set search_path = ''
 as $$
 begin
+  -- schemaVersion: a positive integer that fits the column (1 .. 999,999,999); 0 or a huge
+  -- number is invalid_definition here rather than a CHECK / overflow error later.
   if p_definition is null or jsonb_typeof(p_definition) <> 'object'
-     or coalesce(p_definition ->> 'schemaVersion', '') !~ '^[0-9]+$' then
+     or coalesce(p_definition ->> 'schemaVersion', '') !~ '^[1-9][0-9]{0,8}$' then
     raise exception 'invalid_definition' using errcode = '22023';
   end if;
 end;
@@ -43,11 +45,17 @@ immutable
 set search_path = ''
 as $$
 begin
-  -- `\s` (not btrim's default) so tabs and line breaks also count as blank.
-  if p_change_note is null or p_change_note ~ '^\s*$' then
+  -- Blank = only whitespace as JavaScript's String.prototype.trim() sees it (the client check):
+  -- [[:space:]] plus NBSP and the other Unicode space separators, line/paragraph separators, BOM.
+  if p_change_note is null
+     or p_change_note ~ '^[[:space:]\u00a0\u1680\u2000-\u200a\u2028\u2029\u202f\u205f\u3000\ufeff]*$'
+  then
     raise exception 'change_note_required' using errcode = '22023';
   end if;
-  return regexp_replace(p_change_note, '^\s+|\s+$', '', 'g');
+  return regexp_replace(
+    p_change_note,
+    '^[[:space:]\u00a0\u1680\u2000-\u200a\u2028\u2029\u202f\u205f\u3000\ufeff]+|[[:space:]\u00a0\u1680\u2000-\u200a\u2028\u2029\u202f\u205f\u3000\ufeff]+$',
+    '', 'g');
 end;
 $$;
 
@@ -211,6 +219,7 @@ declare
   v_flow uuid;
   v_status text;
   v_updated timestamptz;
+  v_definition jsonb;
 begin
   if not private.is_admin() then
     raise exception 'forbidden' using errcode = '42501';
@@ -223,7 +232,8 @@ begin
     raise exception 'expected_updated_at_required' using errcode = '22023';
   end if;
 
-  select v.flow_id, v.status, v.updated_at into v_flow, v_status, v_updated
+  select v.flow_id, v.status, v.updated_at, v.definition
+    into v_flow, v_status, v_updated, v_definition
     from public.flow_versions v
    where v.id = p_version_id
    for update;
@@ -238,6 +248,8 @@ begin
     raise exception 'draft_conflict' using errcode = 'HF002',
       detail = 'The draft was saved by someone else since it was loaded.';
   end if;
+  -- A draft written directly through PostgREST (not admin_save_flow_draft) is checked too.
+  perform private.assert_flow_definition(v_definition);
 
   if coalesce(p_close_previous, false) then
     update public.flow_versions v
