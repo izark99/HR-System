@@ -587,7 +587,7 @@ Mỗi node type được định nghĩa bằng một **plugin** gồm: Zod schem
 
 Đặc điểm:
 - **Cancel** bất kỳ lúc nào (terminate worker; khởi động lại worker và kiểm tra lại file, chốt 2026-10-26 13:08).
-- **Giới hạn bộ nhớ**: WASM 32-bit ≈ 4GB/tab. Mục tiêu thiết kế: ổn định tới **1 triệu dòng × 50 cột**. Flow cảnh báo khi file vượt ngưỡng do Admin cấu hình (`maxRows` mỗi slot). Việc chuyển bảng sang DuckDB tạo thêm một bản sao dữ liệu; engine giải phóng bảng TS trung gian ngay khi không còn node nào cần.
+- **Giới hạn bộ nhớ**: WASM 32-bit ≈ 4GB/tab. Mục tiêu thiết kế: ổn định tới **1 triệu dòng × 50 cột**. Bảng trong engine lưu dạng cột (columnar, dựa trên Arrow) thay cho mảng object theo dòng, để vừa heap JS của trình duyệt (~3,8 GB) và tránh chi phí GC; bước 3 chỉ hoàn tất khi 1 triệu dòng × 30 cột chạy được không crash (chốt 2026-10-27). Flow cảnh báo khi file vượt ngưỡng do Admin cấu hình (`maxRows` mỗi slot). Việc chuyển bảng sang DuckDB tạo thêm một bản sao dữ liệu; engine giải phóng bảng TS trung gian ngay khi không còn node nào cần.
 - File rất lớn: tối ưu đọc .xlsx theo luồng (streaming) sẽ xem xét sau; hiện không nhận CSV (chốt 2026-10-26).
 
 ### 13.1 DuckDB-WASM runtime (bước 3, chốt 2026-10-26 22:52)
@@ -1092,6 +1092,7 @@ Toàn bộ UI dùng **một** design language ("bright executive"), áp dụng n
 | Bảng | Trong card; header `#475569` 600; dòng cần chú ý tô nền tint; ô chênh lệch tô coral tint |
 | Node trên canvas | Card radius 16px; vạch màu trên theo nhóm node (blue đầu vào, teal `#14B8A6` biến đổi, coral kiểm soát, `#475569` code, amber đầu ra); node đang chọn có ring teal; node lỗi viền coral `#F97362` 2px; sticky note nền amber tint `#FFF8E1` |
 | Month/Date picker | Tự làm, không dùng picker mặc định của trình duyệt. Nút trigger giống input, hiển thị "Tháng 10/2026" / `dd/MM/yyyy`; popover card radius 20px; lưới 12 tháng ("Th 1"…"Th 12") hoặc lịch tuần bắt đầu thứ Hai; ô chọn nền `#0F766E` chữ trắng; điều hướng bằng phím mũi tên, PageUp/PageDown đổi năm, Esc đóng (chốt 2026-10-26) |
+| Select (dropdown) | Tự làm, không dùng `<select>` mặc định của trình duyệt ở mọi màn. Trigger giống input (cao 42–46px, radius 12px, viền `#CBD5E1`, mũi tên bên phải); popover card radius 12–20px + shadow nhẹ; hỗ trợ nhóm (tiêu đề nhóm dạng eyebrow, VD "Tài khoản" / "Nhóm"); mục đang chọn nền teal nhạt + dấu check, hover nền `#F1F5F9`; tìm kiếm khi > 8 mục; bàn phím: mũi tên, Enter, Esc, gõ ký tự để nhảy; ARIA listbox/combobox (chốt 2026-10-27) |
 | Vùng kéo thả file | Viền đứt 2px `#99E0D2`, nền `#F3FBF8`, radius 16px |
 
 ### 25.4 Giọng văn UI
@@ -1137,7 +1138,7 @@ Toàn bộ UI dùng **một** design language ("bright executive"), áp dụng n
 | AC-B3-21 | `code.sql` dùng `$chi_nhanh` với giá trị User nhập `x' OR 1=1 --` → giá trị được bind nguyên văn (lọc ra 0 dòng), không thay đổi câu lệnh. |
 | AC-B3-22 | `code.sql` lỗi runtime (VD `CAST('abc' AS INTEGER)`): UI hiện thông báo DuckDB rút gọn ≤ 500 ký tự gắn đúng node; `run_logs.error_code = 'sql.error.runtime'`, không có text gốc; console không in thông báo này ở bản production. |
 | AC-B3-23 | Kết quả `DOUBLE` từ `code.sql` (VD `x / 3`) được nhận về `decimal` theo 15 chữ số có nghĩa; Designer hiện cảnh báo khuyên `CAST`. |
-| AC-B3-24 | Hiệu năng: flow `input.excel` (100k dòng × 30 cột) → `filter` → `join` → `groupBy` → `output.excel` chạy < 10 giây trên laptop 8 GB (không tính lần tải DuckDB đầu tiên); 1 triệu dòng không làm crash tab. |
+| AC-B3-24 | Hiệu năng: flow `input.excel` (100k dòng × 30 cột) → `filter` → `join` → `groupBy` → `output.excel` chạy < 10 giây trên laptop 8 GB (không tính lần tải DuckDB đầu tiên); 1 triệu dòng × 30 cột (filter → join → groupBy → output.excel) chạy xong, không crash tab, đo trên Chromium thật. |
 | AC-B3-25 | Bấm Hủy khi đang chạy node DuckDB → worker bị terminate, trạng thái "Đã hủy", có thể chạy lại sau khi kiểm tra lại file. |
 | AC-B3-26 | Slot có `extraColumns: 'keep'`: Designer hiện cảnh báo trên node `input.excel` của slot; dropdown cột của node transform không có cột thêm; `code.sql` tham chiếu cột thêm chạy được lúc chạy khi file có cột đó, và báo `sql.error.runtime` gắn đúng node khi file không có. |
 
