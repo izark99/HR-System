@@ -145,6 +145,8 @@ export class RunStore {
   /** Bumped by every open/run/restart; late worker answers with an old token are dropped. */
   private token = 0;
   private readonly slotVersions = new Map<string, number>();
+  /** Bumped by every worker restart (hard cancel, retry); only the latest ends `restoring`. */
+  private restartSeq = 0;
   /** Bumped by every version resolution; late answers are dropped. */
   private versionToken = 0;
   private currentRun: RunRecord | null = null;
@@ -479,7 +481,8 @@ export class RunStore {
   /** A period change made during a run is applied once the run has settled. */
   private resolveDeferred(): void {
     const asOf = this.deferredAsOf;
-    if (asOf === null || this.isBusy() || this.state.restoring) return;
+    // After a failed restore the worker has no flow: wait for retryRestore() to succeed.
+    if (asOf === null || this.isBusy() || this.state.restoring || this.state.restoreFailed) return;
     this.deferredAsOf = null;
     void this.resolveVersion(asOf);
   }
@@ -529,7 +532,6 @@ export class RunStore {
     this.set((s) => ({ ...s, run: { ...s.run, status: 'cancelled' } }));
     this.logRun(token, 'cancelled', null, null);
     await this.restartEngine();
-    this.resolveDeferred();
   }
 
   /** After a failed restore: try again on a fresh worker. */
@@ -544,6 +546,7 @@ export class RunStore {
    */
   private async restartEngine(): Promise<void> {
     const token = ++this.token;
+    const restart = ++this.restartSeq;
     this.engine().restart();
     this.set((s) => ({ ...s, restoring: true, restoreFailed: false }));
     let ok = false;
@@ -559,8 +562,16 @@ export class RunStore {
     } catch {
       // ok stays false
     } finally {
-      if (token === this.token) this.set((s) => ({ ...s, restoring: false, restoreFailed: !ok }));
+      // Always end `restoring` for the latest restart, even when something newer (a version
+      // switch reloading the definition and files) took over meanwhile: that newer load owns
+      // the slots now, so this restore is not reported as failed then.
+      if (restart === this.restartSeq) {
+        const superseded = token !== this.token;
+        this.set((s) => ({ ...s, restoring: false, restoreFailed: !superseded && !ok }));
+      }
     }
+    // A period change made during the run or the restore is applied now (also after a retry).
+    this.resolveDeferred();
   }
 
   /** Back to the wizard (files and validation are kept). */

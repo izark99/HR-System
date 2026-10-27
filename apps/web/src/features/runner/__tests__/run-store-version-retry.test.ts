@@ -220,10 +220,9 @@ describe('RunStore: period change around a run', () => {
   });
 });
 
-// run-store.ts restartEngine(): `restoring` is reset only `if (token === this.token)`, but a version
-// switch caused by a period change during the restore (applyDefinition does ++this.token) makes the
-// restore's token stale, so `restoring` stays true and Run stays disabled until the page reloads.
-describe('KNOWN BUG (remove it.fails once fixed)', () => {
+// Fixed: a version switch caused by a period change during the restore (applyDefinition bumps the
+// token) used to leave `restoring` true, so Run stayed disabled until the page was reloaded.
+describe('fixed bugs (were KNOWN BUGS)', () => {
   let scripts: Script[];
   beforeEach(() => {
     scripts = [];
@@ -244,32 +243,59 @@ describe('KNOWN BUG (remove it.fails once fixed)', () => {
     return store;
   }
 
-  it.fails(
-    'a period change while the fresh worker is being restored ends consistent and runnable',
-    async () => {
-      const store = await readyStore();
-      void store.run();
-      const cancelling = store.cancel();
-      await until(() => engine.instances.length === 2, 3_000);
-      expect(store.getSnapshot().restoring).toBe(true);
-      store.setParam('ky_luong', '2026-03'); // during restore
-      await until(() => scripts[1]!.validations.length >= 2);
-      for (const v of scripts[1]!.validations) v.d.resolve(okReport(v.slot));
-      await cancelling;
-      await until(() => store.getSnapshot().versionCheck === 'ok', 5_000);
-      // Settle any re-validation the version switch started on whichever worker is current.
-      const live = scripts[scripts.length - 1]!;
-      await until(() => {
-        for (const v of live.validations) v.d.resolve(okReport(v.slot));
-        return readiness(store.getSnapshot()).canRun;
-      }, 5_000).catch((e: unknown) => {
-        const x = store.getSnapshot();
-        throw new Error(
-          `${String(e)} :: ${JSON.stringify({ vc: x.versionCheck, v: x.version?.id, restoring: x.restoring, rf: x.restoreFailed, run: x.run.status, canRun: readiness(x) })}`,
-        );
-      });
-      expect(store.getSnapshot().version?.id).toBe('v1');
-      expect(store.getSnapshot().asOf).toBe('2026-03-01');
-    },
-  );
+  it('a period change deferred by a run is applied after a failed restore is retried', async () => {
+    const store = await readyStore();
+    const base = engine.factory!;
+    let n = 0;
+    engine.factory = () => {
+      const api = base() as { loadFlow: (raw: unknown) => Promise<unknown> };
+      // The first fresh worker (after the hard cancel) cannot load the flow.
+      if (n++ === 0) api.loadFlow = () => Promise.reject(new Error('boom'));
+      return api;
+    };
+    void store.run();
+    store.setParam('ky_luong', '2026-03'); // v1 period, deferred: a run is in progress
+    await new Promise((r) => setTimeout(r, 20));
+    expect(store.getSnapshot().version?.id).toBe('v2');
+    await store.cancel();
+    expect(store.getSnapshot().restoreFailed).toBe(true);
+    expect(store.getSnapshot().version?.id).toBe('v2'); // nothing applied on the broken worker
+
+    const retry = store.retryRestore();
+    await until(() => scripts.at(-1)!.validations.length >= 2);
+    for (const v of scripts.at(-1)!.validations) v.d.resolve(okReport(v.slot));
+    await retry;
+    await until(() => {
+      for (const v of scripts.at(-1)!.validations) v.d.resolve(okReport(v.slot));
+      return store.getSnapshot().version?.id === 'v1' && readiness(store.getSnapshot()).canRun;
+    }, 5_000);
+    expect(store.getSnapshot()).toMatchObject({ restoring: false, restoreFailed: false });
+    expect(store.getSnapshot().asOf).toBe('2026-03-01');
+  });
+
+  it('a period change while the fresh worker is being restored ends consistent and runnable', async () => {
+    const store = await readyStore();
+    void store.run();
+    const cancelling = store.cancel();
+    await until(() => engine.instances.length === 2, 3_000);
+    expect(store.getSnapshot().restoring).toBe(true);
+    store.setParam('ky_luong', '2026-03'); // during restore
+    await until(() => scripts[1]!.validations.length >= 2);
+    for (const v of scripts[1]!.validations) v.d.resolve(okReport(v.slot));
+    await cancelling;
+    await until(() => store.getSnapshot().versionCheck === 'ok', 5_000);
+    // Settle any re-validation the version switch started on whichever worker is current.
+    const live = scripts[scripts.length - 1]!;
+    await until(() => {
+      for (const v of live.validations) v.d.resolve(okReport(v.slot));
+      return readiness(store.getSnapshot()).canRun;
+    }, 5_000).catch((e: unknown) => {
+      const x = store.getSnapshot();
+      throw new Error(
+        `${String(e)} :: ${JSON.stringify({ vc: x.versionCheck, v: x.version?.id, restoring: x.restoring, rf: x.restoreFailed, run: x.run.status, canRun: readiness(x) })}`,
+      );
+    });
+    expect(store.getSnapshot().version?.id).toBe('v1');
+    expect(store.getSnapshot().asOf).toBe('2026-03-01');
+  });
 });
