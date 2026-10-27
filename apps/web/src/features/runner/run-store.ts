@@ -125,6 +125,11 @@ interface RunRecord {
   logged: boolean;
 }
 
+/** EngineCrashedError from engine-client (checked by name: tests replace that module). */
+function isEngineCrash(err: unknown): boolean {
+  return err instanceof Error && err.name === 'EngineCrashedError';
+}
+
 /** Grace period for a cooperative cancel before the worker is terminated. */
 const CANCEL_GRACE_MS = 400;
 
@@ -389,9 +394,12 @@ export class RunStore {
       // null = superseded inside the worker; the newer call will report.
       if (validation) this.patchSlot(slotKey, { validating: false, validation });
       return true;
-    } catch {
+    } catch (err) {
       if (!current()) return false;
       this.patchSlot(slotKey, { validating: false, validation: null, failed: uploads.length > 0 });
+      // Worker died while reading: restart once (re-sends flow + files). A crash during that
+      // restore ends in restoreFailed with its retry button instead of looping.
+      if (isEngineCrash(err) && !this.state.restoring) void this.restartEngine();
       return false;
     }
   }
@@ -463,7 +471,7 @@ export class RunStore {
       }));
       if (outcome.ok) this.logRun(token, 'succeeded', outcome.summary, null);
       else this.logRun(token, outcome.cancelled ? 'cancelled' : 'failed', null, outcome.error);
-    } catch {
+    } catch (err) {
       if (token !== this.token) return;
       this.set((s) => ({
         ...s,
@@ -474,6 +482,11 @@ export class RunStore {
         },
       }));
       this.logRun(token, 'failed', null, ENGINE_CRASHED);
+      // The worker died: bring up a fresh one with the flow and files so "Chạy" works again.
+      if (isEngineCrash(err) && !this.state.restoring) {
+        await this.restartEngine();
+        return;
+      }
     }
     this.resolveDeferred();
   }

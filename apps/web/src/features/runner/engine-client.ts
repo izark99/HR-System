@@ -11,6 +11,17 @@ export class EngineRestartedError extends Error {
   }
 }
 
+/**
+ * The worker died (uncaught error, out of memory, unreadable message). Pending calls reject with
+ * this, later calls too until `restart()`; callers show the generic engineCrashed message.
+ */
+export class EngineCrashedError extends Error {
+  constructor() {
+    super('engine worker crashed');
+    this.name = 'EngineCrashedError';
+  }
+}
+
 /** Minimal Worker surface (lets tests plug in a MessagePort-backed fake). */
 export type WorkerLike = Comlink.Endpoint & { terminate(): void };
 
@@ -45,6 +56,7 @@ export class EngineClient {
   private remote!: Api;
   private readonly pending = new Set<(err: Error) => void>();
   private readonly ports = new Set<MessagePort>();
+  private crashed = false;
   readonly api: Api;
 
   constructor(private readonly createWorker: () => WorkerLike = spawnWorker) {
@@ -63,11 +75,30 @@ export class EngineClient {
   }
 
   private spawn(): void {
-    this.worker = this.createWorker();
-    this.remote = Comlink.wrap<EngineApi>(this.worker);
+    const worker = this.createWorker();
+    this.worker = worker;
+    this.crashed = false;
+    this.remote = Comlink.wrap<EngineApi>(worker);
+    // Without this a dead worker would leave every pending call (and the engine-busy pause of
+    // the auto sign-out) hanging forever.
+    const onDeath = () => {
+      if (this.worker !== worker) return; // an old, already replaced worker
+      this.crashed = true;
+      this.abandonPending(new EngineCrashedError());
+    };
+    worker.addEventListener('error', onDeath);
+    worker.addEventListener('messageerror', onDeath);
+  }
+
+  private abandonPending(err: Error): void {
+    for (const port of [...this.ports]) this.closePort(port);
+    const abandoned = [...this.pending];
+    this.pending.clear();
+    for (const reject of abandoned) reject(err);
   }
 
   private track<T>(call: () => T | PromiseLike<T>): Promise<T> {
+    if (this.crashed) return Promise.reject(new EngineCrashedError());
     return new Promise<T>((resolve, reject) => {
       const endWork = beginEngineWork();
       const abandon = (err: Error) => {
@@ -111,10 +142,7 @@ export class EngineClient {
   }
 
   private shutdown(): void {
-    for (const port of [...this.ports]) this.closePort(port);
-    const abandoned = [...this.pending];
-    this.pending.clear();
-    for (const reject of abandoned) reject(new EngineRestartedError());
+    this.abandonPending(new EngineRestartedError());
     this.remote[Comlink.releaseProxy]();
     this.worker.terminate();
   }

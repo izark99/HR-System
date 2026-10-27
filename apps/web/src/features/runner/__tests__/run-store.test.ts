@@ -381,6 +381,39 @@ describe('RunStore with a scripted worker', () => {
     expect(JSON.stringify(store.getSnapshot())).not.toContain('worker died');
   });
 
+  it('worker dies during a run (EngineCrashedError) → failed, then a fresh worker gets the flow and files', async () => {
+    const store = await readyStore();
+    const crash = Object.assign(new Error('engine worker crashed'), { name: 'EngineCrashedError' });
+    scripts[0]!.api.run = () => Promise.reject(crash);
+    const running = store.run();
+    await until(() => engine.instances.length === 2);
+    expect(store.getSnapshot().run).toMatchObject({
+      status: 'failed',
+      error: { messageKey: 'executor.error.engineCrashed', params: {} },
+    });
+    await until(() => scripts[1]!.validations.length === 2);
+    expect(scripts[1]!.loads).toBe(1);
+    for (const v of scripts[1]!.validations) v.d.resolve(okReport(v.slot, 1));
+    await running;
+    expect(store.getSnapshot()).toMatchObject({ restoring: false, restoreFailed: false });
+    expect(readiness(store.getSnapshot()).canRun).toBe(true);
+  });
+
+  it('worker dies while reading a file → slot failed, worker restarted once (no loop)', async () => {
+    const store = await readyStore();
+    const crash = Object.assign(new Error('x'), { name: 'EngineCrashedError' });
+    store.addFiles('bang_luong', [new File(['c'], 'c.xlsx')]);
+    scripts[0]!.validations.at(-1)!.d.reject(crash);
+    await until(() => engine.instances.length === 2);
+    await until(() => scripts[1]!.validations.length === 2);
+    // The restore crashes too: it ends in restoreFailed instead of restarting again.
+    for (const v of scripts[1]!.validations) v.d.reject(crash);
+    await until(() => store.getSnapshot().restoreFailed);
+    await new Promise((r) => setTimeout(r, 20));
+    expect(engine.instances).toHaveLength(2);
+    expect(store.getSnapshot().restoring).toBe(false);
+  });
+
   it('setSlotFiles rejection marks the slot failed and counts as an error', async () => {
     const store = new RunStore(source);
     await store.open('payroll-timesheet');

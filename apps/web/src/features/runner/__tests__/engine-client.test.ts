@@ -9,6 +9,7 @@ import { isEngineBusy } from '../../auth/idle/activity';
 import {
   disposeAllEngines,
   EngineClient,
+  EngineCrashedError,
   EngineRestartedError,
   type WorkerLike,
 } from '../engine-client';
@@ -152,12 +153,11 @@ describe('EngineClient', () => {
   });
 });
 
-// KNOWN BUG (remove it.fails once fixed): a worker that dies (uncaught error / out of memory)
-// raises `error` on the Worker, but EngineClient only abandons pending calls on restart/dispose.
-// The call never settles, so the engine counts as busy forever and the 8-hour auto sign-out
-// (which pauses while the engine is busy) never happens; the UI also spins forever.
-describe('KNOWN BUG: dead worker', () => {
-  it.fails('a worker `error` event rejects pending calls and releases the idle pause', async () => {
+// Fixed (was KNOWN BUG): a worker that dies (uncaught error / out of memory) raises `error` on the
+// Worker; pending calls used to never settle, so the engine counted as busy forever and the
+// 8-hour auto sign-out (paused while the engine is busy) never happened.
+describe('fixed bugs (were KNOWN BUGS): dead worker', () => {
+  it('a worker `error` event rejects pending calls and releases the idle pause', async () => {
     let endpoint!: MessagePort;
     const c = new EngineClient(() => {
       const w = fakeWorker();
@@ -177,5 +177,22 @@ describe('KNOWN BUG: dead worker', () => {
     ]);
     expect(outcome).toBe('rejected');
     expect(isEngineBusy()).toBe(false);
+  });
+
+  it('after a crash later calls fail fast with EngineCrashedError; restart() recovers', async () => {
+    let endpoint!: MessagePort;
+    const c = new EngineClient(() => {
+      const w = fakeWorker();
+      endpoint = w as unknown as MessagePort;
+      return w;
+    });
+    clients.push(c);
+    const pending = c.api.loadFlow({});
+    endpoint.dispatchEvent(new Event('messageerror'));
+    await expect(pending).rejects.toBeInstanceOf(EngineCrashedError);
+    await expect(c.api.cancel()).rejects.toBeInstanceOf(EngineCrashedError);
+    expect(isEngineBusy()).toBe(false);
+    c.restart();
+    await expect(c.api.cancel()).resolves.toBeUndefined();
   });
 });
