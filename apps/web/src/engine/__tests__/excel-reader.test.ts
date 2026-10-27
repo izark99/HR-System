@@ -327,12 +327,8 @@ describe('readSlot: multiple files', () => {
         f.name,
       ).toEqual(['validation.fileUnreadable']);
     }
-    expect(
-      formatIssue(
-        report.issues.find((i) => i.file === 'zero.xlsx')!,
-        t,
-      ),
-    ).toContain('Không đọc được file zero.xlsx');
+    const zeroIssue = report.issues.find((i) => i.file === 'zero.xlsx')!;
+    expect(formatIssue(zeroIssue, t)).toContain('Không đọc được file zero.xlsx');
   });
 
   it('still reads a real .xls (BIFF8) and an HTML table saved as .xls', () => {

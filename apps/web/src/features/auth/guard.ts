@@ -16,16 +16,19 @@ export interface SessionUser {
   mustChangePassword: boolean;
 }
 
-export type SignedOutReason =
-  'locked' | 'profileMissing' | 'profileError' | 'sessionExpired' | 'signedOut';
+/** The account cannot use the app (spec §6: one shared "locked or no access" message). */
+type AccountProblem = 'locked' | 'profileMissing' | 'profileError';
+
+export type SignedOutReason = AccountProblem | 'sessionExpired' | 'signedOut';
 
 export type AuthState =
   | { status: 'loading' }
   | { status: 'signedOut'; reason?: SignedOutReason }
   | { status: 'signedIn'; user: SessionUser };
 
-export type GuardDecision =
-  { kind: 'wait' } | { kind: 'allow' } | { kind: 'redirect'; href: string };
+type GuardRedirect = { kind: 'redirect'; href: string };
+
+export type GuardDecision = { kind: 'wait' } | { kind: 'allow' } | GuardRedirect;
 
 export const LOGIN_PATH = '/login';
 export const CHANGE_PASSWORD_PATH = '/change-password';

@@ -87,8 +87,13 @@ export interface RunSummary {
   artifacts: ArtifactInfo[];
 }
 
-export type RunOutcome =
-  { ok: true; summary: RunSummary } | { ok: false; cancelled: boolean; error: EngineErrorInfo };
+export interface RunFailure {
+  ok: false;
+  cancelled: boolean;
+  error: EngineErrorInfo;
+}
+
+export type RunOutcome = { ok: true; summary: RunSummary } | RunFailure;
 
 export interface RowFilter {
   column: string;
