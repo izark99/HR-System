@@ -295,7 +295,9 @@ export function ResultPage() {
               >
                 <DownloadIcon />
                 {summary.artifacts.length === 1
-                  ? t('result.download', { count: summary.sheets.length })
+                  ? t('result.download', {
+                      count: summary.sheets.filter((s) => s.kind !== 'preview').length,
+                    })
                   : t('result.downloadNamed', { name: a.fileName })}
               </Button>
             ))}

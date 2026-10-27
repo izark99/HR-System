@@ -70,7 +70,10 @@ export async function buildRunLog(input: RunLogInput): Promise<RunLogInsert> {
     })),
   );
   const rowsOut = input.summary
-    ? input.summary.sheets.reduce((n, sheet) => n + sheet.rowCount, 0)
+    ? input.summary.sheets.reduce(
+        (n, sheet) => (sheet.kind === 'preview' ? n : n + sheet.rowCount),
+        0,
+      )
     : null;
   const code = input.error?.messageKey;
   const nodeId = input.error?.nodeId;

@@ -194,3 +194,46 @@ describe('output.preview config checks (AC-B3-29c)', () => {
     });
   });
 });
+
+describe('output.excel fed by a DuckDB node', () => {
+  it('input.excel → filter → output.excel: sheet, rows, file and run-log count are there', async () => {
+    const session = new EngineSession('vi', { duck: nodeDuckDb });
+    const [inLuong] = base.nodes;
+    expect(
+      session.loadFlow({
+        ...base,
+        nodes: [
+          inLuong,
+          {
+            id: 'f',
+            type: 'transform.filter',
+            config: { conditions: [{ column: 'chi_nhanh', op: 'eq', value: 'cn01' }] },
+          },
+          {
+            id: 'out',
+            type: 'output.excel',
+            config: { fileName: 'Loc.xlsx', sheets: [{ name: 'CN01', port: 'in' }] },
+          },
+          { id: 'p', type: 'output.preview', config: { title: 'Xem' } },
+        ],
+        edges: [
+          { from: 'in_luong', to: 'f' },
+          { from: 'f', to: 'out', toPort: 'in' },
+          { from: 'f', to: 'p' },
+        ],
+      }),
+    ).toMatchObject({ ok: true });
+    await session.setSlotFiles('bang_luong', uploads('bang_luong_'));
+    const outcome = await session.run({ ky_luong: '2026-09' });
+    if (!outcome.ok) throw new Error(outcome.error.messageKey);
+    expect(outcome.summary.sheets.map((s) => [s.name, s.kind, s.rowCount])).toEqual([
+      ['CN01', 'excel', 30],
+      ['Xem', 'preview', 30],
+    ]);
+    const page = session.getRows(outcome.summary.sheets[0]!.id, { offset: 0, limit: 5 });
+    expect(page.total).toBe(30);
+    const wb = new ExcelJS.Workbook();
+    await wb.xlsx.load(session.getArtifact(0).data);
+    expect(wb.worksheets.map((w) => [w.name, w.rowCount])).toEqual([['CN01', 31]]);
+  });
+});

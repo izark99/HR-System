@@ -19,6 +19,8 @@ const summary = {
   sheets: [
     { id: 's1', name: 'Tổng hợp', role: 'summary', rowCount: 4, columns: [] },
     { id: 's2', name: 'Lệch', role: 'mismatched', rowCount: 9, columns: [] },
+    // View-only tab (output.preview): not part of the file, not counted in rows_out.
+    { id: 's3', name: 'Xem', role: 'table', kind: 'preview', rowCount: 100, columns: [] },
   ],
 } as unknown as RunSummary;
 

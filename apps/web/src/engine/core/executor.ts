@@ -488,10 +488,15 @@ export async function runFlow(
     for (const [nodeId, ports] of Object.entries(data)) {
       const tables: NodeOutputs = {};
       for (const [port, value] of Object.entries(ports)) {
-        if (!isSqlRel(value)) tables[port] = value;
-        else if (collect.has(nodeId)) {
-          tables[port] = fetched.get(portKey(nodeId, port)) ?? scope!.fetch(value);
+        if (!isSqlRel(value)) {
+          tables[port] = value;
+          continue;
         }
+        // A DuckDB output read by a TS node (e.g. output.excel) is returned as the table that
+        // node read, so the Result screen shows the same data as the file.
+        const read = fetched.get(portKey(nodeId, port));
+        if (read) tables[port] = read;
+        else if (collect.has(nodeId)) tables[port] = scope!.fetch(value);
       }
       outputs[nodeId] = tables;
     }
