@@ -176,6 +176,36 @@ export type Database = {
         };
         Returns: { flow_id: string; version_id: string; version_no: number }[];
       };
+      admin_create_flow: {
+        Args: {
+          p_code: string;
+          p_name: string;
+          p_description: string;
+          p_category: string;
+          p_instructions: string;
+          p_definition: Json;
+        };
+        Returns: { flow_id: string; version_id: string; version_no: number; updated_at: string }[];
+      };
+      admin_save_flow_draft: {
+        Args: { p_version_id: string; p_definition: Json; p_expected_updated_at: string };
+        Returns: string;
+      };
+      admin_create_draft_from_version: {
+        Args: { p_version_id: string };
+        Returns: { version_id: string; version_no: number; updated_at: string }[];
+      };
+      admin_publish_flow_draft: {
+        Args: {
+          p_version_id: string;
+          p_effective_from: string;
+          p_effective_to: string | null;
+          p_change_note: string;
+          p_close_previous: boolean;
+          p_expected_updated_at: string;
+        };
+        Returns: { version_id: string; version_no: number }[];
+      };
     };
     Enums: Record<never, never>;
     CompositeTypes: Record<never, never>;

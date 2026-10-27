@@ -96,8 +96,15 @@ export interface MockVersion {
   effective_from: string;
   effective_to: string | null;
   definition: unknown;
-  published_at: string;
+  /** Drafts: null. */
+  published_at: string | null;
+  change_note?: string;
+  published_by?: string | null;
+  /** Optimistic-lock token (spec §14.5); defaults to a fixed timestamp. */
+  updated_at?: string;
 }
+
+const DEFAULT_UPDATED_AT = '2026-10-26T00:00:00.000001+00:00';
 
 /** Error the mock answers instead of doing the work (one-shot unless `sticky`). */
 export interface InjectedFailure {
@@ -229,6 +236,50 @@ export class SupabaseMock {
   refreshRevoked = false;
   /** false: the token endpoint accepts a locked account, only the profile row says "locked". */
   authEnforcesBan = true;
+
+  /** PATCH/DELETE requests on flow_versions, as received. */
+  versionWrites: { method: string; id: string; body: Record<string, unknown> }[] = [];
+  /** Next flow_versions PATCH/DELETE fails with this. */
+  versionFailure: InjectedFailure | null = null;
+  private updatedCounter = 0;
+
+  private nextUpdatedAt(): string {
+    this.updatedCounter++;
+    return `2026-10-27T03:00:${String(this.updatedCounter).padStart(2, '0')}.123456+00:00`;
+  }
+
+  /** PostgREST row of a version (definition only when selected, like the real API). */
+  private versionRow(v: MockVersion, withDefinition: boolean): Record<string, unknown> {
+    const { definition, ...rest } = v;
+    return {
+      ...rest,
+      effective_from: v.status === 'draft' && !v.effective_from ? null : v.effective_from,
+      change_note: v.change_note ?? '',
+      published_by: v.published_by ?? null,
+      updated_at: v.updated_at ?? DEFAULT_UPDATED_AT,
+      ...(withDefinition ? { definition } : {}),
+    };
+  }
+
+  /** DB constraints on one version: range check and no overlap among published (23P01). */
+  private checkVersion(
+    v: MockVersion,
+    all: MockVersion[] = this.versions,
+  ): ((json: (s: number, d: unknown) => Promise<void>) => Promise<void>) | null {
+    if (v.effective_to !== null && v.effective_from && v.effective_to <= v.effective_from) {
+      return (json) => json(400, { code: '23514', message: 'check' });
+    }
+    if (v.status !== 'published') return null;
+    const clash = all.some(
+      (o) =>
+        o.id !== v.id &&
+        o.flow_id === v.flow_id &&
+        o.status === 'published' &&
+        (v.effective_to === null || o.effective_from < v.effective_to) &&
+        (o.effective_to === null || o.effective_to > v.effective_from),
+    );
+    return clash ? (json) => json(409, { code: '23P01', message: 'overlap' }) : null;
+  }
 
   /** Replace the versions of the acceptance flow. */
   setVersions(
@@ -482,14 +533,136 @@ export class SupabaseMock {
       return route.fulfill({ status: 204, headers: cors });
     }
     if (path === '/rest/v1/flows' && method === 'GET') {
-      return rows([...this.flows].sort((a, b) => a.name.localeCompare(b.name)));
+      const code = eqFilter('code');
+      return rows(
+        [...this.flows]
+          .filter((f) => !code || f.code === code)
+          .sort((a, b) => a.name.localeCompare(b.name)),
+      );
     }
     if (path === '/rest/v1/flow_versions' && method === 'GET') {
+      const flowId = eqFilter('flow_id');
+      const withDefinition = (url.searchParams.get('select') ?? '').includes('definition');
       return rows(
         [...this.versions]
+          .filter((v) => !flowId || v.flow_id === flowId)
           .sort((a, b) => b.version_no - a.version_no)
-          .map(({ definition: _d, ...v }) => v),
+          .map((v) => this.versionRow(v, withDefinition)),
       );
+    }
+    if (path === '/rest/v1/flow_versions' && (method === 'PATCH' || method === 'DELETE')) {
+      if (!adminOnly) return denied();
+      this.versionWrites.push({ method, id: idEq ?? '', body: parsed() });
+      if (this.versionFailure) {
+        const f = this.versionFailure;
+        if (!f.sticky) this.versionFailure = null;
+        return pgError(f);
+      }
+      const status = eqFilter('status');
+      const row = this.versions.find((v) => v.id === idEq && (!status || v.status === status));
+      if (!row) return json(200, []);
+      if (method === 'DELETE') {
+        if (row.status !== 'draft')
+          return json(400, { code: 'HF001', message: 'flow_version_immutable' });
+        this.versions = this.versions.filter((v) => v !== row);
+        return json(200, [{ id: row.id }]);
+      }
+      const patch = parsed() as { status?: string; effective_to?: string | null };
+      if (row.status === 'retired') return json(400, { code: 'HF001', message: 'immutable' });
+      const next = { ...row };
+      if (patch.status === 'retired') next.status = 'retired';
+      if ('effective_to' in patch) next.effective_to = patch.effective_to ?? null;
+      const fail = this.checkVersion(next);
+      if (fail) return fail(json);
+      Object.assign(row, next, { updated_at: this.nextUpdatedAt() });
+      return json(200, [{ id: row.id }]);
+    }
+    if (path === '/rest/v1/rpc/admin_create_draft_from_version') {
+      if (!adminOnly) return denied();
+      const { p_version_id } = parsed() as { p_version_id?: string };
+      const src = this.versions.find((v) => v.id === p_version_id);
+      if (!src) return json(404, { code: 'P0002', message: 'version_not_found' });
+      if (this.versions.some((v) => v.flow_id === src.flow_id && v.status === 'draft')) {
+        return json(409, { code: '23505', message: 'duplicate key' });
+      }
+      const no =
+        Math.max(
+          0,
+          ...this.versions.filter((v) => v.flow_id === src.flow_id).map((v) => v.version_no),
+        ) + 1;
+      const id = `00000000-0000-4000-8000-0000000004${String(this.versions.length).padStart(2, '0')}`;
+      const updated = this.nextUpdatedAt();
+      this.versions.push({
+        id,
+        flow_id: src.flow_id,
+        version_no: no,
+        status: 'draft',
+        effective_from: '',
+        effective_to: null,
+        definition: structuredClone(src.definition),
+        published_at: null,
+        change_note: '',
+        published_by: null,
+        updated_at: updated,
+      });
+      return json(200, [{ version_id: id, version_no: no, updated_at: updated }]);
+    }
+    if (path === '/rest/v1/rpc/admin_publish_flow_draft') {
+      if (!adminOnly) return denied();
+      if (this.publishFailure) {
+        const f = this.publishFailure;
+        if (!f.sticky) this.publishFailure = null;
+        return pgError(f);
+      }
+      const p = parsed() as {
+        p_version_id: string;
+        p_effective_from: string | null;
+        p_effective_to: string | null;
+        p_change_note: string | null;
+        p_close_previous: boolean;
+        p_expected_updated_at: string;
+      };
+      if (!p.p_effective_from)
+        return json(400, { code: '22023', message: 'effective_from_required' });
+      if (!p.p_change_note || !p.p_change_note.trim()) {
+        return json(400, { code: '22023', message: 'change_note_required' });
+      }
+      const draft = this.versions.find((v) => v.id === p.p_version_id);
+      if (!draft) return json(404, { code: 'P0002', message: 'version_not_found' });
+      if (draft.status !== 'draft') return json(400, { code: 'HF001', message: 'immutable' });
+      if ((draft.updated_at ?? DEFAULT_UPDATED_AT) !== p.p_expected_updated_at) {
+        return json(409, { code: 'HF002', message: 'draft_conflict' });
+      }
+      // One transaction: compute everything, then apply (nothing changes on failure).
+      const from = p.p_effective_from;
+      const staged = this.versions.map((v) => ({ ...v }));
+      if (p.p_close_previous) {
+        for (const v of staged) {
+          if (
+            v.flow_id === draft.flow_id &&
+            v.status === 'published' &&
+            v.effective_to === null &&
+            v.effective_from < from
+          ) {
+            v.effective_to = from;
+          }
+        }
+      }
+      const target = staged.find((v) => v.id === draft.id)!;
+      Object.assign(target, {
+        status: 'published',
+        effective_from: from,
+        effective_to: p.p_effective_to,
+        change_note: p.p_change_note.trim(),
+        published_at: '2026-10-27T02:00:00Z',
+        published_by: caller.id,
+      });
+      for (const v of staged) {
+        const fail = this.checkVersion(v, staged);
+        if (fail) return fail(json);
+      }
+      this.versions = staged;
+      return json(200, [{ version_id: draft.id, version_no: draft.version_no }]);
     }
     if (path === '/rest/v1/rpc/admin_publish_flow_version') {
       if (!adminOnly) return denied();
@@ -499,6 +672,9 @@ export class SupabaseMock {
         return pgError(f);
       }
       const p = parsed() as Record<string, string | null>;
+      if (!p.p_change_note || !String(p.p_change_note).trim()) {
+        return json(400, { code: '22023', message: 'change_note_required' });
+      }
       let flow = this.flows.find((f) => f.code === p.p_code);
       if (!flow) {
         flow = {
@@ -539,6 +715,8 @@ export class SupabaseMock {
         effective_to: (p.p_effective_to as string | null) ?? null,
         definition: p.p_definition,
         published_at: '2026-10-26T00:00:00Z',
+        change_note: String(p.p_change_note).trim(),
+        published_by: caller.id,
       });
       return json(200, [{ flow_id: flow.id, version_id: id, version_no: no }]);
     }

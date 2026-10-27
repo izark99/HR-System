@@ -20,6 +20,7 @@ const ADMIN_URLS = [
   '/admin/does-not-exist',
   '/admin/users?tab=groups',
   '/admin/flows#import',
+  '/admin/flows/payroll-timesheet/versions',
 ];
 
 test.describe('signed in as a User', () => {

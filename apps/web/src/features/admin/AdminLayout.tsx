@@ -27,15 +27,18 @@ export function AdminLayout() {
         aria-label={t('admin.nav.label')}
         className="flex max-w-60 flex-[1_1_200px] flex-col gap-1.5 px-3.5 py-5"
       >
-        {ITEMS.map((item) =>
-          item.to ? (
+        {ITEMS.map((item) => {
+          // Sub-pages (e.g. /admin/flows/:code/versions) keep their section highlighted.
+          const active =
+            item.to !== undefined && (path === item.to || path.startsWith(`${item.to}/`));
+          return item.to ? (
             <Link
               key={item.key}
               to={item.to}
-              aria-current={path === item.to ? 'page' : undefined}
+              aria-current={active ? 'page' : undefined}
               className={cx(
                 itemClass,
-                path === item.to
+                active
                   ? 'bg-teal-tint font-bold text-teal-strong'
                   : 'font-medium text-body hover:bg-page hover:text-ink',
               )}
@@ -51,8 +54,8 @@ export function AdminLayout() {
               {t(`admin.nav.${item.key}`)}
               <span className="text-[11px] font-semibold">{t('admin.nav.soon')}</span>
             </span>
-          ),
-        )}
+          );
+        })}
       </nav>
       <main
         id="main"

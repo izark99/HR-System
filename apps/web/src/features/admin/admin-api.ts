@@ -3,7 +3,7 @@ import {
   FunctionsHttpError,
   FunctionsRelayError,
 } from '@supabase/supabase-js';
-import type { Json, Role, VersionStatus } from '../../lib/database.types';
+import type { FlowVersionRow, Json, Role, VersionStatus } from '../../lib/database.types';
 import type { Supabase } from '../../lib/supabase';
 
 /**
@@ -27,6 +27,9 @@ export type AdminErrorKey =
   | 'immutable'
   | 'invalid_definition'
   | 'check_failed'
+  | 'draft_conflict'
+  | 'version_not_found'
+  | 'change_note_required'
   // Client-side validation (never sent by the server)
   | 'group_name_required'
   // Transport / other
@@ -59,11 +62,19 @@ export class AdminApiError extends Error {
 
 interface PgErrorLike {
   code?: string;
+  message?: string;
 }
 
-/** PostgREST / Postgres error → key (never the raw message). */
+/**
+ * PostgREST / Postgres error → key (never the raw message). For 22023 the stable identifier the
+ * RPCs raise as message (e.g. `change_note_required`) is matched, never displayed.
+ */
 export function dbErrorKey(error: PgErrorLike | null | undefined): AdminErrorKey {
   switch (error?.code) {
+    case 'HF002':
+      return 'draft_conflict';
+    case 'P0002':
+      return 'version_not_found';
     case '23505':
       return 'duplicate';
     case '23P01':
@@ -74,7 +85,9 @@ export function dbErrorKey(error: PgErrorLike | null | undefined): AdminErrorKey
     case 'HF001':
       return 'immutable';
     case '22023':
-      return 'invalid_definition';
+      return error.message === 'change_note_required'
+        ? 'change_note_required'
+        : 'invalid_definition';
     case '23514':
     case '22P02':
       return 'check_failed';
@@ -142,6 +155,30 @@ export interface AdminFlow {
   versions: AdminFlowVersion[];
 }
 
+/** A version with everything the Version & validity screen needs (spec §14.4). */
+export interface AdminVersionDetail extends AdminFlowVersion {
+  changeNote: string;
+  /** Username of the publisher (null for drafts or a deleted account). */
+  publishedBy: string | null;
+  /** Optimistic-lock token for drafts: pass back unchanged (keeps microseconds). */
+  updatedAt: string;
+  definition: Json;
+}
+
+export interface FlowVersions {
+  flow: AdminFlow;
+  versions: AdminVersionDetail[];
+}
+
+export interface PublishDraftInput {
+  versionId: string;
+  effectiveFrom: string;
+  effectiveTo: string | null;
+  changeNote: string;
+  closePrevious: boolean;
+  expectedUpdatedAt: string;
+}
+
 export interface Assignment {
   id: string;
   flowId: string;
@@ -163,6 +200,20 @@ export interface PublishFlowInput {
 }
 
 export type AdminClient = Pick<Supabase, 'from' | 'rpc' | 'functions'>;
+
+type FlowVersionDetailRow = Pick<
+  FlowVersionRow,
+  | 'id'
+  | 'version_no'
+  | 'status'
+  | 'effective_from'
+  | 'effective_to'
+  | 'published_at'
+  | 'published_by'
+  | 'change_note'
+  | 'updated_at'
+  | 'definition'
+>;
 
 type FunctionResult<T> = { ok: true; data: T } | { ok: false; error: { code: string } };
 
@@ -272,6 +323,155 @@ export class AdminApi {
       isArchived: f.is_archived,
       versions: byFlow.get(f.id) ?? [],
     }));
+  }
+
+  /** Flow with all its versions, newest first, including definitions (for diff and publish). */
+  async getFlowVersions(code: string): Promise<FlowVersions | null> {
+    const flowRes = await this.sb
+      .from('flows')
+      .select('id, code, name, description, category, instructions, is_archived')
+      .eq('code', code)
+      .maybeSingle();
+    AdminApi.check(flowRes.error);
+    const f = flowRes.data;
+    if (!f) return null;
+    const [versions, profiles] = await Promise.all([
+      this.sb
+        .from('flow_versions')
+        .select(
+          'id, flow_id, version_no, status, effective_from, effective_to, published_at, ' +
+            'published_by, change_note, updated_at, definition',
+        )
+        .eq('flow_id', f.id)
+        .order('version_no', { ascending: false }),
+      this.sb.from('profiles').select('id, username'),
+    ]);
+    AdminApi.check(versions.error);
+    AdminApi.check(profiles.error);
+    const names = new Map((profiles.data ?? []).map((p) => [p.id, p.username]));
+    const rows = (versions.data ?? []) as unknown as FlowVersionDetailRow[];
+    const list: AdminVersionDetail[] = rows.map((v) => ({
+      id: v.id,
+      versionNo: v.version_no,
+      status: v.status,
+      effectiveFrom: v.effective_from,
+      effectiveTo: v.effective_to,
+      publishedAt: v.published_at,
+      publishedBy: v.published_by ? (names.get(v.published_by) ?? null) : null,
+      changeNote: v.change_note,
+      updatedAt: v.updated_at,
+      definition: v.definition,
+    }));
+    return {
+      flow: {
+        id: f.id,
+        code: f.code,
+        name: f.name,
+        description: f.description,
+        category: f.category,
+        instructions: f.instructions,
+        isArchived: f.is_archived,
+        versions: list,
+      },
+      versions: list,
+    };
+  }
+
+  /** New draft with the definition of a version (rollback / continue editing). */
+  async createDraftFromVersion(versionId: string): Promise<{ versionNo: number }> {
+    const { data, error } = await this.sb.rpc('admin_create_draft_from_version', {
+      p_version_id: versionId,
+    });
+    AdminApi.check(error);
+    const row = data?.[0];
+    if (!row) throw new AdminApiError('unknown');
+    return { versionNo: row.version_no };
+  }
+
+  async publishDraft(input: PublishDraftInput): Promise<{ versionNo: number }> {
+    const { data, error } = await this.sb.rpc('admin_publish_flow_draft', {
+      p_version_id: input.versionId,
+      p_effective_from: input.effectiveFrom,
+      p_effective_to: input.effectiveTo,
+      p_change_note: input.changeNote,
+      p_close_previous: input.closePrevious,
+      p_expected_updated_at: input.expectedUpdatedAt,
+    });
+    AdminApi.check(error);
+    const row = data?.[0];
+    if (!row) throw new AdminApiError('unknown');
+    return { versionNo: row.version_no };
+  }
+
+  /** Designer: save a draft unless someone saved it since `expectedUpdatedAt` (HF002). */
+  async saveDraft(versionId: string, definition: Json, expectedUpdatedAt: string): Promise<string> {
+    const { data, error } = await this.sb.rpc('admin_save_flow_draft', {
+      p_version_id: versionId,
+      p_definition: definition,
+      p_expected_updated_at: expectedUpdatedAt,
+    });
+    AdminApi.check(error);
+    if (typeof data !== 'string') throw new AdminApiError('unknown');
+    return data;
+  }
+
+  /** Designer "Tạo flow mới": flow + empty draft v1 in one transaction. */
+  async createFlow(input: {
+    code: string;
+    name: string;
+    description: string;
+    category: string;
+    instructions: string;
+    definition: Json;
+  }): Promise<{ flowId: string; versionId: string; updatedAt: string }> {
+    const { data, error } = await this.sb.rpc('admin_create_flow', {
+      p_code: input.code,
+      p_name: input.name,
+      p_description: input.description,
+      p_category: input.category,
+      p_instructions: input.instructions,
+      p_definition: input.definition,
+    });
+    AdminApi.check(error);
+    const row = data?.[0];
+    if (!row) throw new AdminApiError('unknown');
+    return { flowId: row.flow_id, versionId: row.version_id, updatedAt: row.updated_at };
+  }
+
+  /** Published → retired (the guard trigger refuses anything else). */
+  async retireVersion(versionId: string): Promise<void> {
+    const { data, error } = await this.sb
+      .from('flow_versions')
+      .update({ status: 'retired' })
+      .eq('id', versionId)
+      .eq('status', 'published')
+      .select('id');
+    AdminApi.check(error);
+    if (!data || data.length === 0) throw new AdminApiError('version_not_found');
+  }
+
+  /** Change the (exclusive) end date of a published version; null = open-ended. */
+  async setEffectiveTo(versionId: string, effectiveTo: string | null): Promise<void> {
+    const { data, error } = await this.sb
+      .from('flow_versions')
+      .update({ effective_to: effectiveTo })
+      .eq('id', versionId)
+      .eq('status', 'published')
+      .select('id');
+    AdminApi.check(error);
+    if (!data || data.length === 0) throw new AdminApiError('version_not_found');
+  }
+
+  /** Delete a draft (only drafts can be deleted: trigger + status filter). */
+  async discardDraft(versionId: string): Promise<void> {
+    const { data, error } = await this.sb
+      .from('flow_versions')
+      .delete()
+      .eq('id', versionId)
+      .eq('status', 'draft')
+      .select('id');
+    AdminApi.check(error);
+    if (!data || data.length === 0) throw new AdminApiError('version_not_found');
   }
 
   async listAssignments(): Promise<Assignment[]> {

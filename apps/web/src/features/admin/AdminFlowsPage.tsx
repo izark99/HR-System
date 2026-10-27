@@ -3,8 +3,18 @@ import { migrateFlowDefinition } from '@hrflow/flow-schema/migrate';
 import type { TFunction } from 'i18next';
 import { useRef, useState, type FormEvent } from 'react';
 import { useTranslation } from 'react-i18next';
+import { Link } from '@tanstack/react-router';
 import { DatePicker } from '../../components/DatePicker';
-import { Button, Callout, Card, Chip, cx, PageHeader, type Tone } from '../../components/ui';
+import {
+  Button,
+  buttonClass,
+  Callout,
+  Card,
+  Chip,
+  cx,
+  PageHeader,
+  type Tone,
+} from '../../components/ui';
 import type { Json, VersionStatus } from '../../lib/database.types';
 import { todayIso } from '../runner/as-of';
 import { EngineClient } from '../runner/engine-client';
@@ -23,7 +33,7 @@ const CODE_PATTERN = /^[a-z0-9][a-z0-9-]{1,62}[a-z0-9]$/;
 
 const STATUS_TONE: Record<VersionStatus, Tone> = {
   published: 'teal',
-  draft: 'amber',
+  draft: 'blue',
   retired: 'neutral',
 };
 
@@ -388,6 +398,9 @@ export function AdminFlowsPage() {
                     <th scope="col" className="px-2 py-2.5 font-semibold">
                       {t('admin.flows.versions')}
                     </th>
+                    <th scope="col" className="px-2 py-2.5 font-semibold">
+                      {t('admin.flows.actions')}
+                    </th>
                   </tr>
                 </thead>
                 <tbody>
@@ -405,6 +418,19 @@ export function AdminFlowsPage() {
                       <td className="px-2 py-3">{f.category || '-'}</td>
                       <td className="px-2 py-3">
                         <VersionList versions={f.versions} />
+                      </td>
+                      <td className="px-2 py-3">
+                        <Link
+                          to="/admin/flows/$flowCode/versions"
+                          params={{ flowCode: f.code }}
+                          aria-label={t('admin.flows.manageVersionsFor', { name: f.name })}
+                          className={cx(
+                            buttonClass.secondary,
+                            'min-h-target px-3.5 text-small no-underline',
+                          )}
+                        >
+                          {t('admin.flows.manageVersions')}
+                        </Link>
                       </td>
                     </tr>
                   ))}

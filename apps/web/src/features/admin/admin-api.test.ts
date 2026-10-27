@@ -44,6 +44,14 @@ describe('admin API error mapping', () => {
     expect(dbErrorKey({ code: '23514' })).toBe('check_failed');
     expect(dbErrorKey({ code: '' })).toBe('network');
     expect(dbErrorKey({ code: 'XX000' })).toBe('unknown');
+    expect(dbErrorKey({ code: 'HF002', message: 'draft_conflict' })).toBe('draft_conflict');
+    expect(dbErrorKey({ code: 'P0002' })).toBe('version_not_found');
+    expect(dbErrorKey({ code: '22023', message: 'change_note_required' })).toBe(
+      'change_note_required',
+    );
+    expect(dbErrorKey({ code: '22023', message: 'effective_from_required' })).toBe(
+      'invalid_definition',
+    );
   });
 });
 
@@ -129,5 +137,68 @@ describe('AdminApi', () => {
     expect(invoke).toHaveBeenCalledWith('admin-users', {
       body: { action: 'update', user_id: 'u1', group_ids: [] },
     });
+  });
+});
+
+describe('AdminApi version RPCs', () => {
+  it('publishDraft sends the draft id, range, trimmed-by-caller note and the updated_at token', async () => {
+    const rpc = vi.fn(() =>
+      Promise.resolve({ data: [{ version_id: 'v2', version_no: 2 }], error: null }),
+    );
+    const api = new AdminApi({ rpc, from: vi.fn(), functions: {} } as unknown as AdminClient);
+    await expect(
+      api.publishDraft({
+        versionId: 'v2',
+        effectiveFrom: '2026-10-01',
+        effectiveTo: null,
+        changeNote: 'Đổi ngưỡng OT',
+        closePrevious: true,
+        expectedUpdatedAt: '2026-10-27T01:02:03.123456+00:00',
+      }),
+    ).resolves.toEqual({ versionNo: 2 });
+    expect(rpc).toHaveBeenCalledWith('admin_publish_flow_draft', {
+      p_version_id: 'v2',
+      p_effective_from: '2026-10-01',
+      p_effective_to: null,
+      p_change_note: 'Đổi ngưỡng OT',
+      p_close_previous: true,
+      p_expected_updated_at: '2026-10-27T01:02:03.123456+00:00',
+    });
+  });
+
+  it('a stale draft and an existing draft map to their own keys', async () => {
+    const rpc = vi
+      .fn()
+      .mockResolvedValueOnce({ data: null, error: { code: 'HF002', message: 'draft_conflict' } })
+      .mockResolvedValueOnce({ data: null, error: { code: '23505', message: 'dup' } });
+    const api = new AdminApi({ rpc, from: vi.fn(), functions: {} } as unknown as AdminClient);
+    await expect(api.saveDraft('v1', { schemaVersion: 1 }, 't')).rejects.toMatchObject({
+      key: 'draft_conflict',
+    });
+    await expect(api.createDraftFromVersion('v1')).rejects.toMatchObject({ key: 'duplicate' });
+  });
+
+  it('retire / discard filter by status and report a row that was not there', async () => {
+    const calls: unknown[][] = [];
+    const chain = {
+      update: (...a: unknown[]) => (calls.push(['update', ...a]), chain),
+      delete: () => (calls.push(['delete']), chain),
+      eq: (...a: unknown[]) => (calls.push(['eq', ...a]), chain),
+      select: () => Promise.resolve({ data: [] as unknown[], error: null }),
+    };
+    const api = new AdminApi({
+      from: () => chain,
+      rpc: vi.fn(),
+      functions: {},
+    } as unknown as AdminClient);
+    await expect(api.retireVersion('v1')).rejects.toMatchObject({ key: 'version_not_found' });
+    expect(calls).toEqual([
+      ['update', { status: 'retired' }],
+      ['eq', 'id', 'v1'],
+      ['eq', 'status', 'published'],
+    ]);
+    calls.length = 0;
+    await expect(api.discardDraft('v3')).rejects.toBeInstanceOf(AdminApiError);
+    expect(calls).toEqual([['delete'], ['eq', 'id', 'v3'], ['eq', 'status', 'draft']]);
   });
 });

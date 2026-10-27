@@ -355,7 +355,10 @@
       "invalid_definition": "nội dung flow không hợp lệ.",
       "check_failed": "dữ liệu không thỏa ràng buộc của hệ thống.",
       "network": "không kết nối được máy chủ. Kiểm tra mạng rồi thử lại.",
-      "unknown": "có lỗi không xác định. Thử lại sau."
+      "unknown": "có lỗi không xác định. Thử lại sau.",
+      "draft_conflict": "bản nháp vừa được lưu ở nơi khác. Đã tải lại danh sách, hãy kiểm tra bản mới nhất.",
+      "version_not_found": "không tìm thấy phiên bản (có thể vừa bị thay đổi). Tải lại trang.",
+      "change_note_required": "nhập ghi chú thay đổi."
     },
     "users": {
       "eyebrow": "Users & Groups",
@@ -468,7 +471,10 @@
       },
       "rangeOpen": "từ {{from}}",
       "rangeTo": "từ {{from}} đến trước {{to}}",
-      "note": "Phiên bản đã publish không sửa được; muốn thay đổi thì nhập phiên bản mới. Màn quản lý version và Flow Designer có ở bước sau."
+      "note": "Phiên bản đã publish không sửa được; muốn thay đổi thì nhập phiên bản mới. Màn quản lý version và Flow Designer có ở bước sau.",
+      "manageVersions": "Phiên bản",
+      "manageVersionsFor": "Quản lý phiên bản và hiệu lực của {{name}}",
+      "actions": "Thao tác"
     },
     "import": {
       "button": "Nhập flow JSON",
@@ -522,6 +528,109 @@
     "warnings": {
       "label": "Cảnh báo:",
       "audit_failed": "thao tác đã thực hiện nhưng chưa ghi được nhật ký quản trị (audit log)."
+    },
+    "versions": {
+      "eyebrow": "Phiên bản & hiệu lực",
+      "back": "Về danh sách flow",
+      "titleActive": "{{name}}: đang áp dụng v{{version}}",
+      "titleNone": "{{name}} chưa có phiên bản áp dụng hôm nay",
+      "subtitle": "Publish bản nháp với ngày hiệu lực, đổi ngày kết thúc, retire và so sánh các phiên bản. Phiên bản đã publish không sửa được nội dung.",
+      "notFound": "không tìm thấy flow này.",
+      "listTitle": "Các phiên bản ({{count}})",
+      "caption": "Danh sách phiên bản",
+      "col": {
+        "version": "Phiên bản",
+        "status": "Trạng thái",
+        "range": "Hiệu lực",
+        "note": "Ghi chú thay đổi",
+        "published": "Người publish",
+        "actions": "Thao tác"
+      },
+      "current": "Đang áp dụng",
+      "noRange": "Chưa đặt ngày",
+      "rangeOpen": "từ {{from}}, không thời hạn",
+      "publishedBy": "{{user}}, {{time}}",
+      "actionFor": "{{action}} v{{version}}",
+      "openDesigner": "Mở Designer",
+      "publish": "Publish",
+      "discard": "Hủy draft",
+      "compare": "So sánh",
+      "clone": "Tạo draft từ version này",
+      "editEnd": "Đổi ngày kết thúc",
+      "retire": "Retire",
+      "export": "Xuất JSON",
+      "doneLabel": "Đã xong:",
+      "published": "đã publish v{{version}}.",
+      "retired": "đã retire v{{version}}.",
+      "cloned": "đã tạo bản nháp v{{version}} từ v{{from}}.",
+      "discarded": "đã hủy bản nháp v{{version}}.",
+      "endChanged": "đã đổi ngày kết thúc của v{{version}}.",
+      "hasDraft": "Flow đang có bản nháp v{{version}}. Hãy publish hoặc hủy bản nháp đó trước.",
+      "hasDraftUnknown": "Flow vừa có bản nháp mới (danh sách đã tải lại). Hãy publish hoặc hủy bản nháp đó trước.",
+      "gapLabel": "Lưu ý:",
+      "gap": "Từ {{from}} đến {{to}} không có phiên bản hiệu lực. User chạy kỳ này sẽ bị báo lỗi.",
+      "gapOpen": "Từ {{from}} trở đi không có phiên bản hiệu lực. User chạy kỳ này sẽ bị báo lỗi.",
+      "timeline": {
+        "title": "Dải thời gian hiệu lực",
+        "empty": "Chưa có phiên bản nào được publish."
+      },
+      "publishDialog": {
+        "title": "Publish v{{version}}",
+        "checking": "Đang kiểm tra flow…",
+        "problemsLabel": "Chưa publish được:",
+        "problems": "bản nháp còn lỗi kiểm tra. Sửa trong Designer rồi thử lại.",
+        "from": "Hiệu lực từ ngày",
+        "to": "Hiệu lực đến trước ngày",
+        "toHint": "Để trống = không thời hạn. Chính ngày này không thuộc khoảng hiệu lực.",
+        "note": "Ghi chú thay đổi",
+        "closePrevious": "Đặt v{{version}} hiệu lực đến trước ngày {{date}}",
+        "overlap": "Khoảng hiệu lực bị chồng với v{{version}} ({{range}}). Hãy chọn ngày khác hoặc đặt ngày kết thúc cho v{{version}}.",
+        "submit": "Publish",
+        "submitting": "Đang publish…",
+        "errors": {
+          "fromRequired": "Chọn ngày bắt đầu hiệu lực.",
+          "noteRequired": "Nhập ghi chú thay đổi.",
+          "range": "Ngày kết thúc phải sau ngày bắt đầu."
+        }
+      },
+      "endDialog": {
+        "title": "Đổi ngày kết thúc của v{{version}}",
+        "save": "Lưu ngày kết thúc"
+      },
+      "retireDialog": {
+        "title": "Retire v{{version}}?",
+        "body": "Phiên bản này ({{range}}) sẽ không còn được chọn khi chạy: User chạy kỳ trong khoảng này sẽ nhận lỗi chưa có phiên bản hiệu lực. Không thể đưa lại thành Published; muốn dùng lại thì tạo draft từ phiên bản này."
+      },
+      "discardDialog": {
+        "title": "Hủy bản nháp v{{version}}?",
+        "body": "Bản nháp bị xóa và không khôi phục được. Các phiên bản đã publish không bị ảnh hưởng.",
+        "action": "Hủy bản nháp"
+      },
+      "diff": {
+        "title": "So sánh phiên bản",
+        "from": "Phiên bản cũ",
+        "to": "Phiên bản mới",
+        "needTwo": "Cần ít nhất 2 phiên bản để so sánh.",
+        "sameVersion": "Chọn hai phiên bản khác nhau.",
+        "identicalLabel": "Không khác biệt:",
+        "identical": "Hai phiên bản giống nhau về nội dung xử lý.",
+        "nodes": "Node",
+        "edges": "Kết nối",
+        "params": "Tham số",
+        "inputSlots": "Input slot",
+        "other": "Trường khác",
+        "added": "Thêm",
+        "removed": "Xóa",
+        "changed": "Sửa",
+        "fields": "đổi {{fields}}",
+        "field": {
+          "type": "loại node",
+          "label": "tên",
+          "config": "cấu hình"
+        },
+        "before": "v{{version}} (cũ)",
+        "after": "v{{version}} (mới)"
+      }
     }
   },
   "idle": {

@@ -91,6 +91,15 @@ const adminFlowsRoute = createRoute({
   component: lazyRouteComponent(() => import('../features/admin/AdminFlowsPage'), 'AdminFlowsPage'),
 });
 
+export const flowVersionsRoute = createRoute({
+  getParentRoute: () => adminRoute,
+  path: '/flows/$flowCode/versions',
+  component: lazyRouteComponent(
+    () => import('../features/admin/versions/FlowVersionsPage'),
+    'FlowVersionsPage',
+  ),
+});
+
 export const router = createRouter({
   routeTree: rootRoute.addChildren([
     loginRoute,
@@ -98,7 +107,7 @@ export const router = createRouter({
     flowListRoute,
     runRoute,
     resultRoute,
-    adminRoute.addChildren([adminIndexRoute, adminUsersRoute, adminFlowsRoute]),
+    adminRoute.addChildren([adminIndexRoute, adminUsersRoute, adminFlowsRoute, flowVersionsRoute]),
   ]),
   defaultPreload: false,
   context: { auth: null },
