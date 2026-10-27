@@ -1,7 +1,7 @@
 # HR Data Flow Platform — Đặc tả hệ thống (spec.md)
 
 > Phiên bản: 0.2 (draft) · Ngày: 2026-10-26 · Chủ sở hữu: Harold (HR Analytics)
-> Trạng thái: Chờ review · 0.2: bổ sung phạm vi Bước 3 (Flow Designer, DuckDB-WASM, nhóm transform cơ bản, Version & diff, tự đăng xuất) theo quyết định 2026-10-26 22:52
+> Trạng thái: Chờ review · 0.2: bổ sung phạm vi Bước 3 (Flow Designer, DuckDB-WASM, nhóm transform cơ bản, Version & diff, tự đăng xuất) theo quyết định 2026-10-26 22:52; cập nhật theo quyết định 2026-10-27 07:31 (Q8–Q15)
 
 ---
 
@@ -115,7 +115,7 @@ Kiến trúc giữ tính **portable**: frontend là static build; backend chỉ 
 | Routing / server state | TanStack Router, TanStack Query | |
 | Form & validation | React Hook Form + Zod | Zod cũng là nguồn sinh JSON Schema cho flow |
 | Canvas flow | @xyflow/react (React Flow) + ELK.js auto-layout | |
-| Code editor | Monaco Editor *(chưa chốt, xem §22 Q12)* | Highlight SQL / Python / formula, autocomplete tên cột; chỉ tải trong chunk Designer |
+| Code editor | Monaco Editor (`monaco-editor` đóng gói cùng app, chốt 2026-10-27) | Highlight SQL / Python / formula, autocomplete tên view/cột/tham số. Chỉ lazy-load trong chunk Designer; editor worker same-origin (`worker-src 'self'`); font codicon self-host (`font-src 'self'`); **không dùng CDN loader**: cấu hình `@monaco-editor/loader` (hoặc tương đương) dùng bản `monaco-editor` đã bundle, không bao giờ tải từ jsDelivr hay domain ngoài |
 | Data grid preview | TanStack Table + virtualization | Hiển thị hàng trăm nghìn dòng mượt |
 | Chart | Apache ECharts | |
 | Đọc Excel | SheetJS (bản CE từ cdn.sheetjs.com, vendor tại `vendor/`) | Đọc .xlsx, .xls (CSV không nhận, chốt 2026-10-26) |
@@ -320,7 +320,7 @@ def run(inputs: dict[str, pd.DataFrame], params: dict) -> pd.DataFrame | dict[st
 
 - Chỉ Admin viết code; code nằm trong `flow_versions.definition` (đã publish, bất biến, có audit).
 - Tham số do User nhập **chỉ được bind dưới dạng giá trị** (prepared statement / dict `params`), không bao giờ nối chuỗi vào code.
-- **Content Security Policy** chặt: `connect-src` chỉ cho phép domain app + Supabase project → kể cả code Python/SQL cũng không gửi được dữ liệu ra ngoài.
+- **Content Security Policy** chặt: `connect-src` chỉ cho phép domain app + Supabase project + `blob:` (URL cục bộ dùng nạp DuckDB-WASM, không phải domain ngoài) → kể cả code Python/SQL cũng không gửi được dữ liệu ra ngoài. Chi tiết CSP: §17.
 - Worker không có quyền truy cập DOM, token đăng nhập không được truyền vào worker.
 
 ---
@@ -381,7 +381,7 @@ Admin khai báo **input slot** cho mỗi flow — mô tả file mà User cần u
 
 | Loại node | Mô tả |
 |-----------|-------|
-| `output.preview` | Bảng xem trước trong app (virtualized, sort/filter phía client) |
+| `output.preview` | Bảng xem trước trong app (virtualized, sort/tìm kiếm phía client), không xuất file — bước 3, đặc tả §12.1.10 |
 | `output.chart` | Biểu đồ ECharts (bar, line, pie, stacked, combo) cấu hình bằng form |
 | `output.excel` | Xuất workbook nhiều sheet; format cơ bản: header đậm, freeze pane, auto-filter, độ rộng cột, number format theo kiểu dữ liệu |
 | `output.template` | Đổ dữ liệu vào **template .xlsx** do Admin upload |
@@ -399,7 +399,7 @@ Admin khai báo **input slot** cho mỗi flow — mô tả file mà User cần u
 
 ## 12. Danh mục node (Node catalog)
 
-Cột "Bước": **Đã có** = đã chạy được từ bước 1; **B3** = làm trong bước 3 (chốt 2026-10-26 22:52); **P2**/**P3** = Phase 2/3; **Chưa chốt** = chưa xếp lịch.
+Cột "Bước": **Đã có** = đã chạy được từ bước 1; **B3** = làm trong bước 3 (chốt 2026-10-26 22:52, bổ sung `output.preview` 2026-10-27); **Bước 4** = ngay sau bước 3; **P2**/**P3** = Phase 2/3; **Chưa chốt** = chưa xếp lịch.
 
 | Nhóm | Node | Chức năng | Bước | Thực thi |
 |------|------|-----------|------|----------|
@@ -407,7 +407,7 @@ Cột "Bước": **Đã có** = đã chạy được từ bước 1; **B3** = l�
 | | `input.refTable` | Bảng tham chiếu (tự chọn version theo effective date) | P2 | — |
 | | `input.params` | Bảng 1 dòng chứa tham số runtime | Chưa chốt | — |
 | **Cột** | `transform.select` | Chọn / đổi tên / sắp xếp thứ tự cột | **B3** | DuckDB |
-| | `transform.formula` | Thêm/sửa cột bằng Excel, SQL hoặc Python | Chưa chốt (§22 Q9) | — |
+| | `transform.formula` | Thêm/sửa cột bằng Excel, SQL hoặc Python | Bước 4 (chốt 2026-10-27) | DuckDB (transpile) |
 | | `transform.cast` | Đổi kiểu dữ liệu | P2 | — |
 | | `transform.split` / `transform.merge` | Tách / gộp cột | P2 | — |
 | | `transform.fillDown` | Điền giá trị xuống (dữ liệu có ô merge) | P2 | — |
@@ -427,7 +427,7 @@ Cột "Bước": **Đã có** = đã chạy được từ bước 1; **B3** = l�
 | **Code** | `code.sql` | SQL tùy chỉnh (§9.2) | **B3** | DuckDB |
 | | `code.python` | Python tùy chỉnh (§9.3) | P2 | — |
 | **Output** | `output.excel` | §11 | Đã có | TS |
-| | `output.preview` | §11 | Chưa chốt (§22 Q13) | — |
+| | `output.preview` | §11, §12.1.10 | **B3** | TS |
 | | `output.chart`, `output.template` | §11 | P2 | — |
 | **Tái sử dụng** | `subflow` | Nhúng một flow khác như một node | P3 | — |
 
@@ -444,7 +444,7 @@ Mỗi node type được định nghĩa bằng một **plugin** gồm: Zod schem
 - **Giá trị hằng trong cấu hình** (VD giá trị lọc) và **tham số** luôn được bind dưới dạng giá trị của prepared statement; tên cột chỉ được đưa vào SQL sau khi kiểm tra khớp `IdentifierSchema` và đặt trong dấu nháy kép.
 - **Thứ tự dòng tất định**: mỗi bảng đưa vào DuckDB có cột ẩn `__ord` (thứ tự dòng). Mọi node giữ nguyên thứ tự dòng đầu vào trừ khi quy định khác bên dưới; cột `__ord` không hiển thị cho Admin và không có trong view của `code.sql`.
 - **Ô trống** (blank) = `null`; với cột `string`, chuỗi rỗng sau khi bỏ khoảng trắng cũng là trống.
-- **Chuẩn hóa khóa** `normalizeKeys` (join, dedupe): dùng **đúng** quy tắc của `normalizeKeyPart` (`engine/core/keys.ts`): NFC, gộp mọi khoảng trắng Unicode, trim, lowercase — giống `control.compare` và rule `unique`. Bản SQL của quy tắc này phải cho kết quả trùng khớp với bản TS (golden test có NBSP, tab, chữ hoa có dấu tiếng Việt). Chỉ áp dụng cho cột `string`; cột kiểu khác so sánh theo giá trị. Giá trị mặc định `true` đang chờ Harold xác nhận (§22 Q10).
+- **Chuẩn hóa khóa** `normalizeKeys` (join, dedupe): dùng **đúng** quy tắc của `normalizeKeyPart` (`engine/core/keys.ts`): NFC, gộp mọi khoảng trắng Unicode, trim, lowercase — giống `control.compare` và rule `unique`. Bản SQL của quy tắc này phải cho kết quả trùng khớp với bản TS (golden test có NBSP, tab, chữ hoa có dấu tiếng Việt). Chỉ áp dụng cho cột `string`; cột kiểu khác so sánh theo giá trị. Mặc định bật (`true`), Admin tắt được (chốt 2026-10-27); áp dụng tương tự cho `normalizeText` của `transform.filter`.
 
 #### 12.1.1 `transform.select`
 
@@ -479,7 +479,7 @@ Mỗi node type được định nghĩa bằng một **plugin** gồm: Zod schem
 
 - Port: `in` → `out`.
 - Config: `{ by: [{ column: string, direction: 'asc'|'desc' (mặc định 'asc'), blanks: 'first'|'last' (mặc định 'last') }] }` (tối thiểu 1).
-- Sắp xếp ổn định: dòng bằng nhau giữ thứ tự cũ (`__ord`). Cột `string` so sánh không phân biệt hoa thường. Thứ tự chữ cái tiếng Việt (VD "Đ" sau "D", trước "E") **đề xuất** làm bằng `Intl.Collator('vi')` phía TS cho cột `string` (DuckDB-WASM không có collation tiếng Việt khi không tải extension ICU từ domain ngoài) — chờ Harold chốt (§22 Q11).
+- Sắp xếp ổn định: dòng bằng nhau giữ thứ tự cũ (`__ord`). Cột `string` sắp theo **bảng chữ cái tiếng Việt** bằng `Intl.Collator('vi')` (VD "Đ" sau "D", trước "E"), không phân biệt hoa thường (chốt 2026-10-27). Vì DuckDB-WASM không có collation tiếng Việt khi không tải extension ICU từ domain ngoài, node sort có cột `string` được thực thi phía TS (vật chất hóa bảng); sort chỉ trên cột không phải `string` chạy bằng DuckDB.
 - Output schema: giống đầu vào.
 - Lỗi: `sort.error.unknownColumn`.
 
@@ -491,7 +491,7 @@ Mỗi node type được định nghĩa bằng một **plugin** gồm: Zod schem
   {
     how: 'inner' | 'left' | 'right' | 'full' | 'anti',   // anti = dòng của left không khớp right
     on: [{ left: string, right: string }],               // tối thiểu 1
-    normalizeKeys: boolean,                              // mặc định true (§22 Q10)
+    normalizeKeys: boolean,                              // mặc định true (chốt 2026-10-27)
     rightColumns?: string[],                             // cột lấy từ right; mặc định tất cả cột không phải khóa
     rightSuffix: string                                  // mặc định '_r'; regex ^_[a-z0-9_]+$
   }
@@ -535,7 +535,7 @@ Mỗi node type được định nghĩa bằng một **plugin** gồm: Zod schem
 #### 12.1.7 `transform.dedupe`
 
 - Port: `in` → `out` (dòng giữ lại), `removed` (dòng bị loại, tùy chọn nối).
-- Config: `{ keys: string[] (tối thiểu 1), keep: 'first' | 'last' (mặc định 'first'), normalizeKeys: boolean (mặc định true, §22 Q10) }`.
+- Config: `{ keys: string[] (tối thiểu 1), keep: 'first' | 'last' (mặc định 'first'), normalizeKeys: boolean (mặc định true, chốt 2026-10-27) }`.
 - Hai dòng trùng khi mọi cột khóa bằng nhau (cột `string` so sánh sau chuẩn hóa nếu bật). Dòng có **toàn bộ** cột khóa trống không bị coi là trùng (luôn giữ lại).
 - Output schema: cả hai port giống đầu vào; thứ tự dòng giữ theo đầu vào.
 - Lỗi: `dedupe.error.unknownColumn`.
@@ -550,9 +550,27 @@ Mỗi node type được định nghĩa bằng một **plugin** gồm: Zod schem
 
 #### 12.1.9 Node đã có trong Designer
 
-- `input.excel`: config `{ slot }`; output schema = các cột của slot (`key`, `type`; `title` = `label`, không có thì alias đầu tiên) + `_source_file` (string) khi slot nhận nhiều file. Với `extraColumns: 'keep'`, cột thêm không biết trước nên không có trong schema thiết kế (§22 Q14).
+- `input.excel`: config `{ slot }`; output schema = các cột của slot (`key`, `type`; `title` = `label`, không có thì alias đầu tiên) + `_source_file` (string) khi slot nhận nhiều file. Với `extraColumns: 'keep'`, cột thêm không biết trước nên không có trong schema thiết kế: chúng chỉ dùng được trong `code.sql` lúc chạy (qua view của input port), các node transform khác không chọn được; Designer hiện cảnh báo `inputExcel.warning.extraColumnsRuntimeOnly` trên node `input.excel` của slot đó (chốt 2026-10-27). `DESCRIBE` của `code.sql` lúc thiết kế không thấy các cột này, nên câu SQL tham chiếu tới chúng được kiểm tra lại lúc chạy.
 - `control.compare` (§24.2): giữ thực thi TS; output schema 4 port như hiện có.
 - `output.excel` (§11): mỗi sheet là một input port (`sheets[].port`); không có output port.
+
+#### 12.1.10 `output.preview` (bước 3, chốt 2026-10-27)
+
+- Port: `in` (bắt buộc); không có output port. Muốn xem nhiều bảng → dùng nhiều node `output.preview`.
+- Config:
+  ```ts
+  {
+    title: string,                 // 1..60 ký tự, tên tab trên màn Kết quả; không trùng (không phân biệt hoa thường)
+                                   // với title của output.preview khác và tên sheet của output.excel
+    columns?: string[],            // cột hiển thị theo thứ tự; mặc định toàn bộ cột đầu vào
+    maxRows: number                // số dòng giữ để hiển thị; 1..1.000.000, mặc định 100.000
+  }
+  ```
+- Thực thi (TS): giữ bảng đầu vào (chỉ các cột `columns`) trong **bộ nhớ của engine worker** làm kết quả hiển thị; bảng vượt `maxRows` → chỉ giữ `maxRows` dòng đầu và gắn cờ bị cắt. Không tạo artifact, không tạo file, không bao giờ gửi ra khỏi trình duyệt; `run_logs` chỉ ghi số dòng như các output khác.
+- Màn Kết quả của Run Wizard: mỗi `output.preview` là **một tab** cùng hàng với các tab sheet của `output.excel`, xếp theo thứ tự node trong flow; tab preview có nhãn phụ "Chỉ xem" để phân biệt với sheet có trong file tải về. Bảng virtualized, main thread chỉ lấy từng trang dòng từ worker (như sheet hiện có), có sort theo cột và tìm kiếm phía client. Bị cắt → callout "Đang hiển thị 100.000 / 250.000 dòng đầu." Flow chỉ có `output.preview` (không có `output.excel`) → màn Kết quả không có nút tải file.
+- Kết quả preview nằm trong bộ nhớ cùng kết quả lần chạy (nút "Xem kết quả", MEMORY 13:08); bị giải phóng khi chạy lần mới, đổi flow, đóng tab hoặc tự đăng xuất.
+- Trong Designer, xem trước node này (§13.3) hiển thị 200 dòng đầu như các node khác.
+- Output schema: không có (node cuối). Lỗi: `preview.error.unknownColumn`, `preview.error.duplicateTitle`.
 
 ---
 
@@ -575,12 +593,12 @@ Mỗi node type được định nghĩa bằng một **plugin** gồm: Zod schem
 
 **Lưu trữ và tải**
 
-- DuckDB-WASM được **tự host** trên Cloudflare Pages cùng app; không tải từ CDN/domain ngoài, CSP không thêm domain.
+- DuckDB-WASM được **tự host** trên Cloudflare Pages cùng app; không tải từ CDN/domain ngoài, CSP không thêm domain (chốt 2026-10-27 07:31).
 - Dùng bundle `eh` (đơn luồng, không cần `SharedArrayBuffer`/COOP/COEP). File `.wasm` (~34 MB) vượt giới hạn 25 MiB/file của Cloudflare Pages nên **lúc build** được tách thành các phần `< 25 MiB` (VD `duckdb-eh.wasm.part0`, `.part1`) kèm manifest `duckdb-manifest.json`: `{ version, totalBytes, sha256, parts: [{ file, bytes, sha256 }] }`. Script build kiểm tra mọi file trong `dist/` đều `< 25 MiB`.
 - Engine worker tải các phần (same-origin), kiểm tra SHA-256 từng phần và toàn bộ file sau khi ghép, rồi khởi tạo DuckDB. Sai checksum → xóa cache, tải lại 1 lần; vẫn sai → lỗi `duckdb.error.loadFailed` (không chạy flow).
 - Cache bằng **Cache Storage** (khóa theo `version` + `sha256` của manifest); phiên bản mới tự thay cache cũ. Cache Storage chỉ chứa file WASM, không bao giờ chứa dữ liệu.
 - **Tải lười**: DuckDB chỉ được tải khi flow có ít nhất một node chạy bằng DuckDB (§12) — kể cả khi chạy, xem trước, hoặc Designer cần suy diễn schema `code.sql`. Flow chỉ gồm `input.excel` / `control.compare` / `output.excel` (như flow nghiệm thu) không tải DuckDB. Trong lúc tải hiển thị tiến độ "Đang tải bộ xử lý dữ liệu (lần đầu khoảng 34 MB)".
-- Nếu API khởi tạo của DuckDB-WASM chỉ nhận URL (không nhận bytes đã ghép), cách cấp file đã ghép cho DuckDB cần Harold chốt vì có thể phải chỉnh CSP (§22 Q8).
+- File `.wasm` đã ghép và qua kiểm tra checksum được cấp cho DuckDB bằng **URL `blob:` cục bộ** (`URL.createObjectURL`, tạo trong worker, thu hồi bằng `URL.revokeObjectURL` sau khi khởi tạo xong). Vì DuckDB tải module qua `fetch`, CSP `connect-src` thêm `blob:` — chỉ là URL cục bộ, không thêm domain ngoài (chốt 2026-10-27 07:31). **Phải sửa `apps/web/public/_headers`** cho khớp §17 trong cùng thay đổi.
 
 **Cấu hình an toàn** (đặt ngay sau khi mở kết nối, rồi khóa)
 
@@ -591,7 +609,7 @@ Mỗi node type được định nghĩa bằng một **plugin** gồm: Zod schem
 
 - DuckDB nằm trong engine worker (hoặc worker con do engine worker tạo); dữ liệu không đi qua main thread.
 - Ranh giới TS ↔ DuckDB: bảng TS (`Table`, §9.4) được chuyển sang Arrow (cột `decimal` dạng chuỗi), đăng ký vào DuckDB rồi tạo bảng có kiểu chuẩn (`CAST`) và cột `__ord`. Kết quả cần đưa về TS được đọc qua Arrow và chuyển ngược theo §9.4.
-- **Gộp node SQL liên tiếp** (pushdown): chuỗi node DuckDB liên tiếp được biên dịch thành view/CTE và chỉ vật chất hóa (materialize) khi: node kế tiếp chạy bằng TS (`control.compare`, `output.excel`), output được xem trước, hoặc một output được nhiều node dùng.
+- **Gộp node SQL liên tiếp** (pushdown): chuỗi node DuckDB liên tiếp được biên dịch thành view/CTE và chỉ vật chất hóa (materialize) khi: node kế tiếp chạy bằng TS (`control.compare`, `output.excel`, `output.preview`, `transform.sort` có cột `string`), output được xem trước, hoặc một output được nhiều node dùng.
 - Mỗi node vẫn báo tiến độ riêng (số dòng output); khi gộp, số dòng được đếm khi vật chất hóa.
 - Hủy: terminate worker (DuckDB-WASM không ngắt được câu lệnh đang chạy).
 
@@ -731,7 +749,7 @@ Chỉ Admin; chỉ desktop (≥ 1280px). Route riêng, lazy-load (React Flow, EL
 
 **Form cấu hình**
 
-- Mỗi node có form riêng sinh từ cấu hình §12.1: chọn cột bằng dropdown từ schema suy diễn (§13.2), không gõ tay tên cột; SQL editor có highlight + autocomplete tên view/cột/tham số.
+- Mỗi node có form riêng sinh từ cấu hình §12.1: chọn cột bằng dropdown từ schema suy diễn (§13.2), không gõ tay tên cột; SQL editor (Monaco, §5) có highlight + autocomplete tên view/cột/tham số.
 - **Input slot**: form đầy đủ **mọi trường** của `InputSlotSchema` (`packages/flow-schema/src/input-slot.ts`), Admin không phải sửa JSON (chốt 2026-10-26 22:52): `key`, `label`, `required`, `accept` (.xlsx/.xls), `sheet` (byName / byIndex / firstMatchingHeaders), `headerRow`, `headerRows`, `dataStartRow`, `stopAt.blankRows`, `skipRows` (`whenBlank`, `whenKeyContains`), `unmergeCells`, `extraColumns`, `multiple` (`enabled`, `minFiles`, `maxFiles`), `maxRows`; bảng cột với từng cột: `key`, `label`, `aliases` (nhiều giá trị), `type`, `presence`, `required`, `defaultValue` (theo kiểu), `rules` (`unique`, `regex`, `min`, `max`, mỗi rule có `severity`), `dateFormats`, `decimalSeparator`. Form tuân theo các ràng buộc chéo của schema (VD `defaultValue` chỉ hiện khi `required = false`; `dataStartRow` phải sau dòng header; `minFiles ≤ maxFiles`; key không bắt đầu bằng `_`).
 - **Tham số**: form cho `params`: `key`, `label`, `type`, `required`, `log` (mặc định theo kiểu, giải thích rõ khi nào bị ghi log), `isAsOfDate` (tối đa 1 tham số), `options` (danh sách value/label cho `select`; `fromRefTable` để Phase 2).
 - Đổi `key` của slot/tham số/cột mà node khác đang dùng → cảnh báo và liệt kê node bị ảnh hưởng (không tự đổi theo).
@@ -763,6 +781,7 @@ Chỉ Admin; chỉ desktop (≥ 1280px). Route riêng, lazy-load (React Flow, EL
 | Giới hạn DB 500MB / Storage 1GB | Run log tự xóa sau 12 tháng (cấu hình được); ref table lớn lưu dạng Parquet trong Storage |
 | Pyodide/DuckDB tải chậm lần đầu | DuckDB: Cache Storage trong worker, chỉ tải khi flow cần (§13.1). Pyodide (Phase 2): cơ chế cache tương tự |
 | Giới hạn 25 MiB/file của Cloudflare Pages | File `.wasm` của DuckDB tách thành phần < 25 MiB lúc build, ghép lại trong worker (§13.1) |
+| Monaco làm nặng bundle | Chỉ nằm trong chunk Designer (lazy-load khi Admin mở Designer); không vào entry chunk hay chunk của User; build kiểm tra ngân sách kích thước (§18) |
 
 ---
 
@@ -772,7 +791,21 @@ Chỉ Admin; chỉ desktop (≥ 1280px). Route riêng, lazy-load (React Flow, EL
 - **Bảng tham chiếu** chỉ chứa dữ liệu **không mang tính cá nhân** (danh mục, mapping mã, biểu thuế, hệ số). Khi import, hệ thống cảnh báo nếu phát hiện cột có tên dạng `họ tên`, `CCCD`, `số điện thoại`, `email`, `mã NV`… (heuristic) và yêu cầu Admin xác nhận.
 - **Run log** không chứa nội dung; tên file gốc được hash (SHA-256) thay vì lưu nguyên văn (tên file có thể chứa tên người).
 - Tham chiếu pháp lý: Nghị định 13/2023/NĐ-CP; Luật Bảo vệ dữ liệu cá nhân 2025 (hiệu lực 01/01/2026). Thiết kế local-first giúp hạn chế tối đa việc xử lý/chuyển dữ liệu cá nhân ra nước ngoài. *(Cần bộ phận Pháp chế/IT của công ty xác nhận.)*
-- HTTP security headers (cấu hình qua `_headers` của Cloudflare Pages): CSP chặt (§9.5), `X-Content-Type-Options`, `Referrer-Policy: no-referrer`, `Permissions-Policy`, HSTS.
+- HTTP security headers (cấu hình qua `apps/web/public/_headers` của Cloudflare Pages): CSP chặt (§9.5), `X-Content-Type-Options`, `Referrer-Policy: no-referrer`, `Permissions-Policy`, HSTS.
+- CSP (nguồn sự thật là `_headers`; tài liệu này và `.claude/rules/data-privacy.md` phải khớp):
+
+| Directive | Giá trị | Lý do |
+|-----------|---------|-------|
+| `default-src` | `'self'` | |
+| `script-src` | `'self' 'wasm-unsafe-eval'` | Cho phép biên dịch WebAssembly (DuckDB); **script inline vẫn bị chặn** |
+| `worker-src` | `'self' blob:` | Engine worker, worker của DuckDB, editor worker của Monaco (same-origin) |
+| `connect-src` | `'self'` + `https://<ref>.supabase.co` + `wss://<ref>.supabase.co` + **`blob:`** | `blob:` để DuckDB tải file `.wasm` đã ghép từ URL cục bộ (bước 3, chốt 2026-10-27 07:31); không có domain ngoài |
+| `style-src` | `'self' 'unsafe-inline'` | React Flow, Monaco gán style lúc chạy (chốt 2026-10-27 07:31) |
+| `font-src` | `'self'` | Be Vietnam Pro và font codicon của Monaco đều self-host |
+| `img-src` | `'self' data: blob:` | |
+| `object-src` / `base-uri` / `form-action` / `frame-ancestors` | `'none'` / `'self'` / `'self'` / `'none'` | |
+
+  Bước 3 phải sửa `_headers`: thêm `blob:` vào `connect-src` (hiện chưa có). Mọi thay đổi khác của CSP phải được Harold đồng ý.
 - Không log dữ liệu ra console ở bản production; không dùng dịch vụ analytics/tracking bên thứ ba.
 - Supabase: tắt sign-up, bật RLS cho mọi bảng, chạy Supabase Security Advisor trước mỗi release.
 
@@ -785,6 +818,7 @@ Chỉ Admin; chỉ desktop (≥ 1280px). Route riêng, lazy-load (React Flow, EL
 | Trình duyệt | Chrome, Edge (2 phiên bản mới nhất), desktop |
 | Hiệu năng | 100k dòng × 30 cột, flow 15 node: < 10 giây (không có node Python) trên laptop 8GB RAM |
 | UI | Tải trang đầu < 3 giây (chưa tính WASM engine); UI không bị treo khi engine chạy |
+| Kích thước bundle | Entry chunk và chunk của User không chứa React Flow, ELK, Monaco, DuckDB; Monaco + React Flow + ELK chỉ trong chunk Designer. Ngân sách đề xuất: entry chunk (gzip) không tăng quá 10% so với cuối bước 2; script build báo lỗi khi vượt |
 | Khả dụng | Phụ thuộc SLA free tier; app vẫn mở được khi Supabase lỗi nhưng không đăng nhập được |
 | Accessibility | WCAG 2.1 AA cho phần User |
 | i18n | `vi` mặc định; mọi text UI qua i18next; định dạng số/ngày theo locale (`1.234.567,89` cho vi) |
@@ -807,7 +841,7 @@ HR-System/
 │  │  │  ├─ core/                 # planner, executor, types
 │  │  │  ├─ nodes/                # mỗi node type là 1 plugin
 │  │  │  ├─ duckdb/               # nạp WASM (ghép phần, checksum, cache), chuyển Arrow, biên dịch SQL
-│  │  │  ├─ formula/              # Excel formula parser + transpiler → SQL (chưa chốt lịch)
+│  │  │  ├─ formula/              # Excel formula parser + transpiler → SQL (bước 4)
 │  │  │  ├─ io/                   # excel reader/writer, template filler
 │  │  │  └─ python/               # pyodide worker
 │  │  ├─ lib/                     # supabase client, utils
@@ -846,14 +880,14 @@ Package manager: pnpm workspace.
 
 ### Phase 1 — MVP (mục tiêu: chạy được flow nghiệm thu **đối chiếu bảng lương – chấm công**)
 - Auth (username/password, đổi mật khẩu lần đầu, khóa tài khoản), Users, Groups, gán flow.
-Bước 1–2 đã xong (engine, Run Wizard, Supabase, Admin Users & Groups, import flow JSON, run log, deploy). Bước 3 (chốt 2026-10-26 22:52):
+Bước 1–2 đã xong (engine, Run Wizard, Supabase, Admin Users & Groups, import flow JSON, run log, deploy). Bước 3 (chốt 2026-10-26 22:52, cập nhật 2026-10-27 07:31):
 
-- Flow Designer canvas (§15.3) với các node: `input.excel`, `control.compare`, `output.excel` (đã có) và `transform.select`, `transform.filter`, `transform.sort`, `transform.join`, `transform.union`, `transform.groupBy`, `transform.dedupe`, `code.sql` (mới, chạy bằng DuckDB-WASM, §12.1, §13.1).
+- Flow Designer canvas (§15.3) với các node: `input.excel`, `control.compare`, `output.excel` (đã có) và `transform.select`, `transform.filter`, `transform.sort`, `transform.join`, `transform.union`, `transform.groupBy`, `transform.dedupe`, `code.sql` (mới, chạy bằng DuckDB-WASM, §12.1, §13.1), `output.preview` (mới, §12.1.10).
 - Xem trước từng node bằng file mẫu chỉ trong RAM (§13.3); schema suy diễn từ input slot (§13.2).
 - Màn Version & hiệu lực: Draft/Published/Retired, publish, retire, rollback, **diff version** (§14.3, §14.4).
 - Export flow JSON từ Designer (import đã có từ bước 2).
 - Tự đăng xuất sau 8 giờ không thao tác (§6.1).
-- Xem trước kết quả trong app: màn Kết quả của Run Wizard (đã có) hiển thị các bảng của `output.excel`; node `output.preview` riêng chưa chốt (§22 Q13).
+- Xem trước kết quả trong app: màn Kết quả của Run Wizard hiển thị các sheet của `output.excel` và các bảng của `output.preview` (tab "Chỉ xem").
 
 Toàn bộ Phase 1:
 - Auth (username/password, đổi mật khẩu lần đầu, khóa tài khoản), Users, Groups, gán flow.
@@ -863,7 +897,9 @@ Toàn bộ Phase 1:
 - Run Wizard + run log.
 - Deploy Cloudflare Pages + Supabase + keep-alive.
 
-Không thuộc bước 3: `transform.formula` (hàm Excel → SQL) — chưa xếp lịch (§22 Q9); `input.refTable`, bảng tham chiếu, template — Phase 2.
+**Bước 4** (ngay sau bước 3, chốt 2026-10-27 07:31): `transform.formula` — hàm Excel transpile sang SQL DuckDB (§9.1), dùng DuckDB runtime của bước 3.
+
+Không thuộc Phase 1: `input.refTable`, bảng tham chiếu, template — Phase 2.
 
 ### Phase 2 — Mở rộng xử lý & báo cáo
 - `code.python` + formula Python (Pyodide).
@@ -891,13 +927,14 @@ Không thuộc bước 3: `transform.formula` (hàm Excel → SQL) — chưa x�
 | ~~Q6~~ | Đã chốt 2026-10-26: Admin thấy/chạy mọi flow đã publish | — |
 | ~~Q7~~ | Đã chốt 2026-10-26: tự đăng xuất sau 8 giờ không thao tác, làm phía client ở bước 3; chi tiết chốt 2026-10-26 22:52 (§6.1) | — |
 | ~~—~~ | Đã chốt 2026-10-26 22:52: phạm vi node bước 3, DuckDB-WASM tự host, draft lưu bằng nút Lưu, xem trước bằng file mẫu trong RAM, bảng tham chiếu sang Phase 2, diff version trong bước 3 | — |
-| Q8 | Nếu DuckDB-WASM chỉ khởi tạo được từ URL: cấp file `.wasm` đã ghép bằng cách nào? (A) thêm `blob:` vào `connect-src` — chỉ là URL cục bộ, không thêm domain, nhưng là thay đổi CSP; (B) vá bộ nạp của DuckDB để nhận bytes trực tiếp — không đổi CSP, phải duy trì bản vá khi nâng cấp; (C) Service Worker phục vụ file đã ghép dưới URL same-origin — không đổi CSP, thêm một thành phần phải bảo trì | CSP, §13.1 |
-| Q9 | `transform.formula` (hàm Excel → SQL) xếp vào bước 4 hay Phase 2? | Roadmap §21 |
-| Q10 | `normalizeKeys` của `join`/`dedupe` (và `normalizeText` của `filter`) mặc định bật như `control.compare`? | Kết quả join/dedupe/filter |
-| Q11 | Sắp xếp chữ tiếng Việt trong `transform.sort`: theo bảng chữ cái tiếng Việt (`Intl.Collator('vi')`, chậm hơn) hay theo mã ký tự (nhanh, "Đ" xếp sau "Z")? | Kết quả sort |
-| Q12 | SQL editor trong Designer: Monaco (theo §5, nặng ~3–5 MB, cần worker riêng) hay CodeMirror 6 (MIT, nhẹ hơn nhiều) hay textarea có highlight đơn giản? | Kích thước chunk Designer, bảo trì |
-| Q13 | Có cần node `output.preview` (bảng xem trước trong app, không xuất file) ở bước 3 không, hay màn Kết quả hiện các sheet của `output.excel` là đủ? | Phạm vi node |
-| Q14 | Slot có `extraColumns: 'keep'`: cột thêm không biết trước lúc thiết kế — chỉ cho dùng trong `code.sql` lúc chạy, hay cấm dùng `keep` khi slot nối vào node transform? | Schema inference §13.2 |
+| ~~Q8~~ | Đã chốt 2026-10-27: file `.wasm` đã ghép cấp cho DuckDB qua URL `blob:` cục bộ; CSP `connect-src` thêm `blob:` (§13.1, §17) | — |
+| ~~Q9~~ | Đã chốt 2026-10-27: `transform.formula` làm ở bước 4, ngay sau bước 3 (§21) | — |
+| ~~Q10~~ | Đã chốt 2026-10-27: `normalizeKeys` (join, dedupe) và `normalizeText` (filter) mặc định bật, Admin tắt được (§12.1) | — |
+| ~~Q11~~ | Đã chốt 2026-10-27: `transform.sort` sắp chữ theo bảng chữ cái tiếng Việt (`Intl.Collator('vi')`) (§12.1.3) | — |
+| ~~Q12~~ | Đã chốt 2026-10-27: dùng Monaco, chỉ trong chunk Designer, worker và font self-host, không dùng CDN loader (§5) | — |
+| ~~Q13~~ | Đã chốt 2026-10-27: node `output.preview` có trong bước 3 (§12.1.10) | — |
+| ~~Q14~~ | Đã chốt 2026-10-27: cột thêm của slot `extraColumns: 'keep'` chỉ dùng được trong `code.sql` lúc chạy, Designer cảnh báo (§12.1.9) | — |
+| ~~Q15~~ | Đã chốt 2026-10-27: CSP giữ `style-src 'self' 'unsafe-inline'` (React Flow, Monaco gán style lúc chạy), script inline vẫn bị chặn; quy tắc `data-privacy.md` sửa cho khớp (§17) | — |
 
 ---
 
@@ -1067,7 +1104,7 @@ Toàn bộ UI dùng **một** design language ("bright executive"), áp dụng n
 
 ## 26. Bước 3: Flow Designer, Version, tự đăng xuất — User story & Acceptance criteria
 
-> Phạm vi theo quyết định 2026-10-26 22:52. Các AC gắn với câu hỏi mở (§22 Q8, Q10–Q14) được viết theo phương án đề xuất và cần chỉnh nếu Harold chọn khác. Dữ liệu kiểm thử luôn là dữ liệu giả.
+> Phạm vi theo quyết định 2026-10-26 22:52 và 2026-10-27 07:31 (Q8–Q15 đã chốt, §22). Dữ liệu kiểm thử luôn là dữ liệu giả.
 
 ### 26.1 (a) DuckDB runtime & nhóm transform
 
@@ -1076,23 +1113,24 @@ Toàn bộ UI dùng **một** design language ("bright executive"), áp dụng n
 | # | Given / When / Then |
 |---|---------------------|
 | AC-B3-01 | **Given** bản build production, **when** liệt kê `dist/`, **then** mọi file `< 25 MiB`, có `duckdb-manifest.json` với SHA-256 từng phần và toàn bộ. |
-| AC-B3-02 | **Given** cache trống, **when** chạy flow có node DuckDB, **then** worker tải đủ các phần từ cùng origin, ghép, kiểm tra checksum, khởi tạo DuckDB; không có request tới domain nào khác ngoài app và Supabase. |
+| AC-B3-02 | **Given** cache trống, **when** chạy flow có node DuckDB, **then** worker tải đủ các phần từ cùng origin, ghép, kiểm tra checksum, khởi tạo DuckDB từ URL `blob:` cục bộ (thu hồi sau khi khởi tạo); không có request tới domain nào khác ngoài app và Supabase. |
+| AC-B3-02b | **Given** bản build production, **then** `_headers` có `connect-src` gồm đúng `'self'`, Supabase (`https`, `wss`) và `blob:`; `style-src 'self' 'unsafe-inline'`; `script-src` không có `'unsafe-inline'`; nội dung CSP khớp bảng §17 (test đọc file `_headers`). |
 | AC-B3-03 | **Given** đã tải một lần, **when** tải lại trang và chạy lại, **then** không tải lại các phần `.wasm` (lấy từ Cache Storage). |
 | AC-B3-04 | **Given** một phần `.wasm` bị sai checksum, **when** khởi tạo, **then** xóa cache, tải lại 1 lần; vẫn sai thì báo `duckdb.error.loadFailed` và không chạy flow. |
-| AC-B3-05 | **Given** flow nghiệm thu (chỉ `input.excel`, `control.compare`, `output.excel`), **when** chạy, **then** không tải DuckDB và kết quả vẫn khớp `expected.json`. |
+| AC-B3-05 | **Given** flow nghiệm thu (chỉ `input.excel`, `control.compare`, `output.excel`) hoặc flow chỉ thêm `output.preview`, **when** chạy, **then** không tải DuckDB và kết quả vẫn khớp `expected.json`. |
 | AC-B3-06 | **When** DuckDB khởi tạo, **then** `enable_external_access = false`, không autoload/autoinstall extension, cấu hình bị khóa; `code.sql` gọi `read_csv('https://…')` hoặc `INSTALL httpfs` → lỗi `sql.error.forbidden`, không có request mạng. |
 | AC-B3-07 | **Given** cột `decimal` có giá trị `0.1`, `0.2`, `1234567890123.25`, **when** đi qua `select` → `groupBy sum`, **then** tổng đúng chính xác (`1234567890123.55`), không có sai số float. |
 | AC-B3-08 | **Given** cột `string` "00123" và cột `date` 2026-09-01, **when** đi qua chuỗi node DuckDB và quay về TS, **then** giữ nguyên "00123" và "2026-09-01". |
 | AC-B3-09 | `select`: chọn/đổi tên/sắp lại cột đúng thứ tự cấu hình; chọn cột không tồn tại → `select.error.unknownColumn` trên đúng node; 2 cột output trùng key → `select.error.duplicateKey`. |
 | AC-B3-10 | `filter`: `match = all` với 2 điều kiện cho đúng giao; `any` cho đúng hợp; ô trống chỉ thỏa `isBlank/neq/notIn/notContains`; điều kiện dùng tham số để trống bị bỏ qua; `contains` trên cột `decimal` → `filter.error.opNotForType`; giá trị "abc" cho cột `date` → `filter.error.invalidValue`. |
-| AC-B3-11 | `filter` với `normalizeText = true`: điều kiện `eq "cn01"` giữ dòng "CN01 " và "cn01". |
-| AC-B3-12 | `sort`: nhiều cột, asc/desc, ô trống cuối theo mặc định; dòng bằng nhau giữ thứ tự cũ; (theo Q11-A) "Đặng" xếp sau "Dương" và trước "Em". |
+| AC-B3-11 | `filter` mặc định (`normalizeText` không khai báo → `true`): điều kiện `eq "cn01"` giữ dòng "CN01 " và "cn01"; Admin tắt `normalizeText` → chỉ giữ "cn01". |
+| AC-B3-12 | `sort`: nhiều cột, asc/desc, ô trống cuối theo mặc định; dòng bằng nhau giữ thứ tự cũ; cột `string` theo bảng chữ cái tiếng Việt: "Đặng" xếp sau "Dương" và trước "Em", "an" và "An" coi như bằng nhau (giữ thứ tự cũ). |
 | AC-B3-13 | `join` inner/left/right/full/anti cho đúng số dòng trên bộ fixture nhỏ có khóa chỉ bên trái, chỉ bên phải, trùng nhiều–nhiều; thứ tự dòng theo §12.1.4. |
-| AC-B3-14 | `join` với `normalizeKeys = true`: "NV001" khớp " nv001" và "NV001 " (NBSP); ô khóa trống không khớp với nhau. Kết quả chuẩn hóa SQL trùng `normalizeKeyPart` trên bộ golden test. |
+| AC-B3-14 | `join` mặc định (`normalizeKeys` không khai báo → `true`): "NV001" khớp " nv001" và "NV001 " (NBSP); ô khóa trống không khớp với nhau. Kết quả chuẩn hóa SQL trùng `normalizeKeyPart` trên bộ golden test. Admin tắt `normalizeKeys` → chỉ khớp chính xác. |
 | AC-B3-15 | `join` khóa `string` với khóa `decimal` → `join.error.keyTypeMismatch`; cột right trùng tên → đổi thành `<key>_r`; một khóa trái khớp 3 dòng phải → cảnh báo `join.warning.rowsMultiplied`, không chứa giá trị khóa. |
 | AC-B3-16 | `union` 3 đầu vào: cột theo thứ tự `in_1` rồi cột mới; cột thiếu để trống (`missingColumns = 'null'`) hoặc lỗi `union.error.missingColumn` (`'error'`); `integer` + `decimal` → `decimal`; `string` + `date` → `union.error.typeMismatch`; `sourceColumn` ghi đúng nhãn từng dòng. |
 | AC-B3-17 | `groupBy`: theo `chi_nhanh` cho sum/avg/min/max/count/countDistinct/countRows đúng trên fixture; `sum` toàn ô trống = 0; `avg` = SUM/COUNT làm tròn half-up 10 chữ số; `by` rỗng với 0 dòng đầu vào → 1 dòng (sum 0, count 0); `sum` trên cột `string` → `groupBy.error.fnNotForType`. |
-| AC-B3-18 | `dedupe`: `keep = first/last` đúng; `removed` chứa đúng các dòng bị loại; dòng toàn khóa trống không bị loại; "NV001" và "nv001 " là trùng khi `normalizeKeys = true`. |
+| AC-B3-18 | `dedupe`: `keep = first/last` đúng; `removed` chứa đúng các dòng bị loại; dòng toàn khóa trống không bị loại; "NV001" và "nv001 " là trùng ở cấu hình mặc định, không trùng khi Admin tắt `normalizeKeys`. |
 | AC-B3-19 | `code.sql` 2 input port `luong`, `cham_cong`: `SELECT … FROM luong JOIN cham_cong …` chạy đúng; schema output suy ra bằng `DESCRIBE` khớp kết quả chạy thật. |
 | AC-B3-20 | `code.sql` từ chối: 2 câu lệnh (`sql.error.multipleStatements`), `CREATE TABLE`/`COPY`/`ATTACH`/`PRAGMA`/`SET` (`sql.error.notSelect` hoặc `sql.error.forbidden`), `$khong_co` (`sql.error.unknownParam`), cột kết quả tên "Họ tên" (`sql.error.invalidColumnName`), cột kiểu `LIST` (`sql.error.unsupportedType`). |
 | AC-B3-21 | `code.sql` dùng `$chi_nhanh` với giá trị User nhập `x' OR 1=1 --` → giá trị được bind nguyên văn (lọc ra 0 dòng), không thay đổi câu lệnh. |
@@ -1100,6 +1138,18 @@ Toàn bộ UI dùng **một** design language ("bright executive"), áp dụng n
 | AC-B3-23 | Kết quả `DOUBLE` từ `code.sql` (VD `x / 3`) được nhận về `decimal` theo 15 chữ số có nghĩa; Designer hiện cảnh báo khuyên `CAST`. |
 | AC-B3-24 | Hiệu năng: flow `input.excel` (100k dòng × 30 cột) → `filter` → `join` → `groupBy` → `output.excel` chạy < 10 giây trên laptop 8 GB (không tính lần tải DuckDB đầu tiên); 1 triệu dòng không làm crash tab. |
 | AC-B3-25 | Bấm Hủy khi đang chạy node DuckDB → worker bị terminate, trạng thái "Đã hủy", có thể chạy lại sau khi kiểm tra lại file. |
+| AC-B3-26 | Slot có `extraColumns: 'keep'`: Designer hiện cảnh báo trên node `input.excel` của slot; dropdown cột của node transform không có cột thêm; `code.sql` tham chiếu cột thêm chạy được lúc chạy khi file có cột đó, và báo `sql.error.runtime` gắn đúng node khi file không có. |
+
+**US-B3-06** — Là User, tôi muốn xem các bảng kết quả mà Admin cấu hình để xem ngay trong app, để kiểm tra nhanh mà không cần tải file.
+
+| # | Given / When / Then |
+|---|---------------------|
+| AC-B3-27 | **Given** flow có `output.excel` (2 sheet) và 2 node `output.preview` ("Theo chi nhánh", "Top lệch"), **when** chạy xong, **then** màn Kết quả có 4 tab theo thứ tự node trong flow, 2 tab preview có nhãn "Chỉ xem"; file tải về chỉ có 2 sheet của `output.excel`. |
+| AC-B3-28 | Tab preview chỉ hiện các cột trong `columns` theo đúng thứ tự (không khai báo → mọi cột); sort theo cột và tìm kiếm hoạt động; bảng 100.000 dòng cuộn mượt (virtualized, main thread chỉ nhận từng trang). |
+| AC-B3-29 | Bảng 250.000 dòng với `maxRows = 100.000` → chỉ giữ 100.000 dòng đầu và hiện callout "Đang hiển thị 100.000 / 250.000 dòng đầu."; `run_logs` chỉ có số dòng. |
+| AC-B3-29b | Flow chỉ có `output.preview` → màn Kết quả không có nút tải file; không có artifact nào được tạo; không có request mạng chứa nội dung bảng; không có gì ghi vào localStorage/IndexedDB. |
+| AC-B3-29c | `title` trùng với title của `output.preview` khác hoặc với tên sheet của `output.excel` (không phân biệt hoa thường) → `preview.error.duplicateTitle`; cột trong `columns` không tồn tại → `preview.error.unknownColumn`; cả hai chặn publish. |
+| AC-B3-29d | Chạy lần mới, đổi flow, đóng tab hoặc tự đăng xuất → bảng preview của lần trước bị giải phóng; trước đó nút "Xem kết quả" mở lại được các tab preview. |
 
 ### 26.2 (b) Designer: canvas & form
 
@@ -1125,6 +1175,8 @@ Toàn bộ UI dùng **một** design language ("bright executive"), áp dụng n
 | AC-B3-45 | Sticky note thêm/sửa/xóa, lưu vào `ui.notes`, không ảnh hưởng engine và không xuất hiện trong diff. |
 | AC-B3-46 | Export JSON tải file `.json` của bản hiện tại (kể cả chưa lưu); import lại file này qua màn Import cho ra flow tương đương. |
 | AC-B3-47 | Version published/retired mở trong Designer ở chế độ chỉ xem: không sửa được, có nút "Tạo draft từ version này". |
+| AC-B3-48 | Mở form `code.sql` → Monaco tải từ cùng origin (script, editor worker, font codicon); không có request tới jsDelivr hay domain ngoài nào; không có lỗi CSP trong console; autocomplete gợi ý tên view (port), cột và `$tham_so`. |
+| AC-B3-49 | Bundle: entry chunk và chunk của User không chứa Monaco, React Flow, ELK, DuckDB (kiểm bằng phân tích build); Monaco chỉ được tải khi Admin mở Designer. |
 
 ### 26.3 (c) Xem trước từng node
 

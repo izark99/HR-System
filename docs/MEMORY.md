@@ -9,7 +9,11 @@
 
 ## Phạm vi & sản phẩm
 
-2026-10-26 22:52 - Bước 3 gồm: Flow Designer (React Flow) với node `input.excel`, `control.compare`, `output.excel` + DuckDB-WASM và nhóm transform cơ bản `transform.select`, `transform.filter`, `transform.sort`, `transform.join`, `transform.union`, `transform.groupBy`, `transform.dedupe`, `code.sql`; màn Version & hiệu lực (kèm diff); tự đăng xuất sau 8 giờ. `transform.formula` (hàm Excel → SQL) chưa nằm trong bước 3.
+2026-10-27 07:31 - Bước 3 gồm: Flow Designer (React Flow) với node `input.excel`, `control.compare`, `output.excel`, `output.preview` + DuckDB-WASM và nhóm transform cơ bản `transform.select`, `transform.filter`, `transform.sort`, `transform.join`, `transform.union`, `transform.groupBy`, `transform.dedupe`, `code.sql`; màn Version & hiệu lực (kèm diff); tự đăng xuất sau 8 giờ.
+
+2026-10-27 07:31 - `transform.formula` (hàm Excel → SQL) làm ở bước 4, ngay sau bước 3.
+
+~~2026-10-26 22:52 - Bước 3 gồm: Flow Designer (React Flow) với node `input.excel`, `control.compare`, `output.excel` + DuckDB-WASM và nhóm transform cơ bản `transform.select`, `transform.filter`, `transform.sort`, `transform.join`, `transform.union`, `transform.groupBy`, `transform.dedupe`, `code.sql`; màn Version & hiệu lực (kèm diff); tự đăng xuất sau 8 giờ. `transform.formula` (hàm Excel → SQL) chưa nằm trong bước 3.~~ → thay bởi 2026-10-27 07:31
 
 2026-10-26 22:52 - Bảng tham chiếu (`ref_tables`, `ref_table_versions`), `templates` và node `input.refTable` để sang Phase 2.
 
@@ -67,6 +71,8 @@
 
 ## Dữ liệu & tuân thủ
 
+2026-10-27 07:31 - CSP giữ `style-src 'self' 'unsafe-inline'` (React Flow, Monaco gán style lúc chạy); script inline vẫn bị chặn. Quy tắc `data-privacy.md` sửa cho khớp.
+
 2026-10-26 08:20 - Run log không chứa nội dung dữ liệu; tên file gốc chỉ lưu dạng hash SHA-256.
 
 2026-10-26 08:20 - Admin được lưu bảng tham chiếu lên server nhưng chỉ dữ liệu KHÔNG mang tính cá nhân (danh mục, mapping mã, biểu thuế, hệ số).
@@ -77,7 +83,9 @@
 
 ## Hạ tầng
 
-2026-10-26 22:52 - DuckDB-WASM tự host trên Cloudflare Pages: lúc build tách file `.wasm` (~34 MB, vượt giới hạn 25 MiB/file) thành các phần < 25 MiB; worker tải, kiểm tra checksum, ghép lại rồi khởi tạo; cache bằng Cache Storage. Không thêm domain ngoài, CSP giữ nguyên.
+2026-10-27 07:31 - DuckDB-WASM tự host trên Cloudflare Pages: lúc build tách file `.wasm` (~34 MB, vượt giới hạn 25 MiB/file) thành các phần < 25 MiB; worker tải, kiểm tra checksum, ghép lại, cấp cho DuckDB qua URL `blob:` cục bộ; cache bằng Cache Storage. CSP thêm `blob:` vào `connect-src` (không thêm domain ngoài).
+
+~~2026-10-26 22:52 - DuckDB-WASM tự host trên Cloudflare Pages: lúc build tách file `.wasm` (~34 MB, vượt giới hạn 25 MiB/file) thành các phần < 25 MiB; worker tải, kiểm tra checksum, ghép lại rồi khởi tạo; cache bằng Cache Storage. Không thêm domain ngoài, CSP giữ nguyên.~~ → thay bởi 2026-10-27 07:31
 
 2026-10-26 20:27 - Giữ Supabase không bị pause bằng GitHub Actions chạy theo lịch mỗi ngày (`.github/workflows/keep-alive.yml`, chỉ dùng publishable key); bỏ Cloudflare Cron Worker.
 
@@ -116,6 +124,14 @@
 2026-10-26 08:20 - Đăng nhập bằng username + password do Admin cấp; bắt đổi mật khẩu lần đầu; Admin reset mật khẩu; không có 2FA; không public sign-up.
 
 ## Flow & xử lý
+
+2026-10-27 07:31 - `transform.join`, `transform.dedupe` (`normalizeKeys`) và `transform.filter` (`normalizeText`) mặc định so khớp không phân biệt hoa thường, bỏ khoảng trắng thừa (giống `control.compare`); Admin tắt được.
+
+2026-10-27 07:31 - `transform.sort` sắp chữ theo bảng chữ cái tiếng Việt (`Intl.Collator('vi')`).
+
+2026-10-27 07:31 - Node `output.preview` có trong bước 3: bảng xem trước trong app, không cần xuất file.
+
+2026-10-27 07:31 - Slot có `extraColumns: 'keep'`: cột thêm chỉ dùng được trong `code.sql` lúc chạy; Designer hiện cảnh báo.
 
 2026-10-26 22:52 - Designer: form cấu hình input slot cho toàn bộ trường của schema (Admin không phải sửa JSON).
 
@@ -160,6 +176,8 @@
 2026-10-26 08:20 - Flow có Draft/Published, lưu lịch sử version, rollback; quản lý hiệu lực theo effective date (effective_from / effective_to), không chồng lấn.
 
 ## Kỹ thuật & tổ chức
+
+2026-10-27 07:31 - Editor code trong Designer dùng Monaco (theo spec §5), chỉ tải trong chunk Designer, worker và font self-host.
 
 2026-10-26 13:48 - Không dùng date/month picker mặc định của trình duyệt; dùng picker tự làm theo design system (tiếng Việt, "Tháng 10/2026", lưới 12 tháng, chọn bằng bàn phím được).
 
