@@ -23,7 +23,7 @@ export function App() {
   return (
     <AuthProvider service={services.auth}>
       <RunStoreProvider source={services.source} logger={services.logger}>
-        <RouterProvider router={router} />
+        <RouterProvider router={router} context={{ auth: services.auth }} />
       </RunStoreProvider>
     </AuthProvider>
   );

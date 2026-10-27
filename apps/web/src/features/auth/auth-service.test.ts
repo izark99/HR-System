@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { SupabaseAuth, type AuthClient } from './auth-service';
+import { LocalAuth, SupabaseAuth, waitForAuth, type AuthClient } from './auth-service';
 
 interface Profile {
   id: string;
@@ -102,5 +102,24 @@ describe('SupabaseAuth', () => {
     await service.signOut();
     expect(auth.signOut).toHaveBeenCalledWith();
     expect(service.getSnapshot()).toEqual({ status: 'signedOut', reason: 'signedOut' });
+  });
+});
+
+describe('waitForAuth', () => {
+  it('resolves at once when the state is known, else on the first non-loading state', async () => {
+    await expect(waitForAuth(new LocalAuth())).resolves.toMatchObject({ status: 'signedIn' });
+
+    const { client } = fake(null);
+    const svc = new SupabaseAuth(client);
+    expect(svc.getSnapshot().status).toBe('loading');
+    let settled = false;
+    const p = waitForAuth(svc).then((s) => {
+      settled = true;
+      return s;
+    });
+    await Promise.resolve();
+    expect(settled).toBe(false);
+    await svc.signOut();
+    await expect(p).resolves.toMatchObject({ status: 'signedOut' });
   });
 });

@@ -14,6 +14,20 @@ export interface AuthService {
   signOut(): Promise<void>;
 }
 
+/** Resolves with the first auth state that is not `loading` (session restored or not). */
+export function waitForAuth(service: AuthService): Promise<AuthState> {
+  const now = service.getSnapshot();
+  if (now.status !== 'loading') return Promise.resolve(now);
+  return new Promise((resolve) => {
+    const unsubscribe = service.subscribe(() => {
+      const state = service.getSnapshot();
+      if (state.status === 'loading') return;
+      unsubscribe();
+      resolve(state);
+    });
+  });
+}
+
 abstract class BaseAuth {
   protected state: AuthState = { status: 'loading' };
   private readonly listeners = new Set<() => void>();
