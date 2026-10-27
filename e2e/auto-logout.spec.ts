@@ -97,7 +97,10 @@ test.describe('auto sign-out', () => {
       }).observe(document.body, { childList: true, subtree: true });
     });
     await page.clock.fastForward('09:00:00');
-    await page.evaluate(() => document.dispatchEvent(new Event('visibilitychange')));
+    // The late timer may already have started the sign-out navigation: the page can be gone.
+    await page
+      .evaluate(() => document.dispatchEvent(new Event('visibilitychange')))
+      .catch(() => undefined);
     await expect(page).toHaveURL(/\/login\?reason=idle$/);
     expect(warned).toBe(false);
   });

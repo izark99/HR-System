@@ -5,6 +5,18 @@
 import { ADMIN, expect, test, USER, type Page } from './fixtures';
 import { FLOW_URL, payrollInput, persistedState, recordRequests, textFile } from './helpers';
 
+/**
+ * Let 25 hours pass while the person keeps working (an interaction every 7 hours), so the 8-hour
+ * auto sign-out (spec §6.1) does not end the session first: only the token expiry does.
+ */
+async function workFor25Hours(page: Page) {
+  for (let i = 0; i < 3; i++) {
+    await page.clock.fastForward('07:00:00');
+    await page.mouse.move(10 + i * 20, 10);
+  }
+  await page.clock.fastForward('04:00:00'); // token (24 h) is expired → auto-refresh runs
+}
+
 async function login(page: Page, username: string, password: string) {
   await page.getByLabel('Tên đăng nhập').fill(username);
   await page.getByLabel('Mật khẩu').fill(password);
@@ -24,7 +36,7 @@ test.describe('session expires mid-use', () => {
     await expect(page.getByRole('list', { name: /File đã chọn cho Bảng lương/ })).toBeVisible();
 
     supabase.refreshRevoked = true; // e.g. an Admin locked the account / revoked its sessions
-    await page.clock.fastForward('25:00:00'); // token (24 h) is expired → auto-refresh runs
+    await workFor25Hours(page);
     await page.waitForURL(/\/login\?reason=sessionExpired$/);
 
     await expect(page.getByRole('status')).toContainText('Phiên đã hết hạn');
@@ -49,7 +61,7 @@ test.describe('session expires mid-use', () => {
       await page.goto('/admin/users');
       await expect(page.getByRole('table', { name: 'Danh sách tài khoản' })).toBeVisible();
       supabase.refreshRevoked = true;
-      await page.clock.fastForward('25:00:00');
+      await workFor25Hours(page);
       await page.waitForURL(/\/login\?reason=sessionExpired$/);
       const admin = supabase.adminCalls().length;
       await page.goto('/admin/users');
