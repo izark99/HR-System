@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Button, Callout } from '../../../components/ui';
-import { AUTH_STORAGE_KEY } from '../../../lib/supabase';
+import { browserSessionStorage, clearStoredSession } from '../../../lib/supabase';
 import { disposeAllEngines } from '../../runner/engine-client';
 import { useAuthService } from '../auth-context';
 import {
@@ -11,25 +11,13 @@ import {
   subscribeEngineWork,
   subscribeUnsavedChanges,
 } from './activity';
+import { idleSignOut } from './idle-signout';
 import { IdleTimer } from './idle-timer';
 
 /** Interaction in this tab (spec §6.1). `scroll` does not bubble: listen in the capture phase. */
 const ACTIVITY_EVENTS = ['pointerdown', 'pointermove', 'keydown', 'wheel', 'scroll', 'touchstart'];
 
 export const IDLE_LOGIN_HREF = '/login?reason=idle';
-
-function clearStoredSession(): void {
-  try {
-    for (let i = sessionStorage.length - 1; i >= 0; i--) {
-      const key = sessionStorage.key(i);
-      if (key === AUTH_STORAGE_KEY || key?.startsWith(`${AUTH_STORAGE_KEY}-`)) {
-        sessionStorage.removeItem(key);
-      }
-    }
-  } catch {
-    // storage unavailable: nothing stored either
-  }
-}
 
 function formatCountdown(ms: number): string {
   const total = Math.max(0, Math.ceil(ms / 1000));
@@ -40,8 +28,8 @@ function formatCountdown(ms: number): string {
 
 /**
  * Mounted while signed in: counts inactivity, shows the 5-minute warning, signs out after 8 hours.
- * Sign-out = local session removal, every engine worker terminated, unsaved-changes prompt
- * skipped, then a full page load of the login screen (nothing of the session stays in memory).
+ * Sign-out: see idle-signout.ts (engines terminated, session removed at once, server revocation
+ * awaited at most 3 s, then a full page load of the login screen).
  */
 export function IdleLogout() {
   const { t } = useTranslation();
@@ -53,15 +41,13 @@ export function IdleLogout() {
         setTimer: (fn, ms) => window.setTimeout(fn, ms),
         clearTimer: (h) => window.clearTimeout(h as number),
         onSignOut: () => {
-          releaseUnsavedChangesGuard();
-          disposeAllEngines();
-          void auth
-            .signOut('idle')
-            .catch(() => undefined)
-            .finally(() => {
-              clearStoredSession();
-              window.location.assign(IDLE_LOGIN_HREF);
-            });
+          void idleSignOut({
+            signOut: () => auth.signOut('idle'),
+            disposeEngines: disposeAllEngines,
+            releaseUnsavedGuard: releaseUnsavedChangesGuard,
+            clearSession: () => clearStoredSession(browserSessionStorage()),
+            redirect: () => window.location.assign(IDLE_LOGIN_HREF),
+          });
         },
       }),
   );

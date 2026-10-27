@@ -232,6 +232,8 @@ export class SupabaseMock {
   runLogFailure: InjectedFailure | null = null;
   /** Next password sign-in fails with this status/code (e.g. 429 over_request_rate_limit). */
   tokenFailure: InjectedFailure | null = null;
+  /** Delay (ms) before /auth/v1/logout answers (a slow or unreachable server). */
+  logoutDelayMs = 0;
   /** Auth server refuses refresh tokens (session revoked / expired). */
   refreshRevoked = false;
   /** false: the token endpoint accepts a locked account, only the profile row says "locked". */
@@ -461,7 +463,14 @@ export class SupabaseMock {
       }
       return json(200, authUser(caller));
     }
-    if (path === '/auth/v1/logout') return route.fulfill({ status: 204, headers: cors });
+    if (path === '/auth/v1/logout') {
+      if (this.logoutDelayMs > 0) {
+        await new Promise((r) => setTimeout(r, this.logoutDelayMs));
+        // The page may be gone by then (the app does not wait more than 3 s).
+        return route.fulfill({ status: 204, headers: cors }).catch(() => undefined);
+      }
+      return route.fulfill({ status: 204, headers: cors });
+    }
 
     // ---- PostgREST ----
     const single = (request.headers()['accept'] ?? '').includes('vnd.pgrst.object');

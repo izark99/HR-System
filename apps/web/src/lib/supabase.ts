@@ -23,6 +23,42 @@ export function createSupabase(url: string, key: string, storage?: Storage): Sup
   });
 }
 
+/** Remove the stored session (and supabase-js side keys such as `<key>-code-verifier`). */
+export function clearStoredSession(storage: Storage | null): void {
+  if (!storage) return;
+  try {
+    for (let i = storage.length - 1; i >= 0; i--) {
+      const key = storage.key(i);
+      if (key === AUTH_STORAGE_KEY || key?.startsWith(`${AUTH_STORAGE_KEY}-`)) {
+        storage.removeItem(key);
+      }
+    }
+  } catch {
+    // storage unavailable: nothing stored either
+  }
+}
+
+/** Access token of the stored session, read synchronously (null when absent/unreadable). */
+export function readStoredAccessToken(storage: Storage | null): string | null {
+  try {
+    const raw = storage?.getItem(AUTH_STORAGE_KEY);
+    if (!raw) return null;
+    const token = (JSON.parse(raw) as { access_token?: unknown }).access_token;
+    return typeof token === 'string' && token ? token : null;
+  } catch {
+    return null;
+  }
+}
+
+/** The tab's sessionStorage, or null outside a browser. */
+export function browserSessionStorage(): Storage | null {
+  try {
+    return typeof window !== 'undefined' ? window.sessionStorage : null;
+  } catch {
+    return null;
+  }
+}
+
 let client: Supabase | null = null;
 
 /** The app-wide client; only available when the app runs against Supabase. */

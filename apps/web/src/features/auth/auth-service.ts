@@ -1,6 +1,11 @@
 import type { AuthChangeEvent, Session } from '@supabase/supabase-js';
 import type { ProfileRow } from '../../lib/database.types';
-import type { Supabase } from '../../lib/supabase';
+import {
+  browserSessionStorage,
+  clearStoredSession,
+  readStoredAccessToken,
+  type Supabase,
+} from '../../lib/supabase';
 import { authErrorKey, usernameToEmail, type AuthErrorKey } from './credentials';
 import type { AuthState, SessionUser, SignedOutReason } from './guard';
 
@@ -12,8 +17,11 @@ export interface AuthService {
   signIn(username: string, password: string): Promise<AuthErrorKey | null>;
   changePassword(password: string): Promise<AuthErrorKey | null>;
   /**
-   * Sign out. `idle` (auto sign-out after 8 hours, spec §6.1): local only — the session is removed
-   * from sessionStorage without waiting for the server — and the reason is `idle`.
+   * Sign out. Default: global scope (every session of the account ends).
+   * `idle` (auto sign-out after 8 hours, spec §6.1, MEMORY 2026-10-27 12:30): scope `local` —
+   * still a `POST /logout?scope=local`, so the server revokes THIS session's refresh token; other
+   * tabs/devices are not affected. The session is removed from sessionStorage synchronously, before
+   * the request; the returned promise follows the request (callers do not wait more than 3 s).
    */
   signOut(reason?: 'idle'): Promise<void>;
 }
@@ -95,7 +103,11 @@ export class SupabaseAuth extends BaseAuth implements AuthService {
   /** Set right before an intentional sign-out so the screen does not say "session expired". */
   private nextReason: SignedOutReason | null = null;
 
-  constructor(private readonly sb: AuthClient) {
+  constructor(
+    private readonly sb: AuthClient,
+    /** Where supabase-js keeps the session (sessionStorage in the app). */
+    private readonly storage: Storage | null = browserSessionStorage(),
+  ) {
     super();
     sb.auth.onAuthStateChange((event, session) => {
       // Never await Supabase calls inside this callback (auth lock); defer.
@@ -201,6 +213,13 @@ export class SupabaseAuth extends BaseAuth implements AuthService {
     const why: SignedOutReason = reason ?? 'signedOut';
     this.nextReason = why;
     if (reason === 'idle') {
+      // Synchronously: take the token, then drop the stored session at once (spec §6.1).
+      const token = readStoredAccessToken(this.storage);
+      clearStoredSession(this.storage);
+      // Server-side revocation of this session's refresh token. The state changes only after it
+      // (the route guard reloads the page on sign-out, which would abort the request).
+      if (token) await this.sb.auth.admin.signOut(token, 'local').catch(() => undefined);
+      // Clears the client's in-memory state (no stored session left: no second request).
       await this.sb.auth.signOut({ scope: 'local' }).catch(() => undefined);
     } else {
       try {

@@ -50,7 +50,10 @@ test.describe('auto sign-out', () => {
     await expect(warning(page)).toHaveCount(0);
   });
 
-  test('no click: signed out at 8h, session removed, login screen says why', async ({ page }) => {
+  test('no click: signed out at 8h, session removed, login screen says why', async ({
+    page,
+    supabase,
+  }) => {
     await openHome(page);
     expect(await page.evaluate(() => sessionStorage.getItem('hrflow.auth'))).not.toBeNull();
     await page.clock.fastForward('07:55:00');
@@ -62,9 +65,29 @@ test.describe('auto sign-out', () => {
     );
     await expect(page.getByLabel('Tên đăng nhập')).toBeVisible();
     expect(await page.evaluate(() => Object.keys(sessionStorage))).toEqual([]);
+    // Scope local: this session's refresh token is revoked on the server, nothing global.
+    expect(
+      supabase.calls.filter((c) => c.path.startsWith('/auth/v1/logout')).map((c) => c.path),
+    ).toEqual(['/auth/v1/logout?scope=local']);
     // Going back into the app needs a new sign-in.
     await page.goto('/');
     await expect(page).toHaveURL(/\/login/);
+  });
+
+  test('a server that does not answer the logout delays the login page by about 3 s, not more', async ({
+    page,
+    supabase,
+  }) => {
+    supabase.logoutDelayMs = 20_000;
+    await openHome(page);
+    await page.clock.fastForward('08:00:00');
+    // The session is gone from the tab right away, while the request is still pending.
+    await expect
+      .poll(() => page.evaluate(() => Object.keys(sessionStorage)).catch(() => []))
+      .toEqual([]);
+    const started = Date.now();
+    await expect(page).toHaveURL(/\/login\?reason=idle$/, { timeout: 10_000 });
+    expect(Date.now() - started).toBeLessThan(8_000);
   });
 
   test('activity at 7h restarts the countdown: no warning at 7h55', async ({ page }) => {

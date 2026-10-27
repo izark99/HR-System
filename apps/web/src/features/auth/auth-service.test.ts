@@ -104,11 +104,35 @@ describe('SupabaseAuth', () => {
     expect(service.getSnapshot()).toEqual({ status: 'signedOut', reason: 'signedOut' });
   });
 
-  it('signOut("idle") is local only and reports the idle reason (spec §6.1)', async () => {
+  it('signOut("idle"): session removed from storage first, then scope-local revocation (spec §6.1)', async () => {
     const { client, auth } = fake({ ...PROFILE, must_change_password: false });
-    const service = new SupabaseAuth(client);
+    const store = new Map<string, string>([
+      ['hrflow.auth', JSON.stringify({ access_token: 'tok-1', refresh_token: 'r' })],
+      ['hrflow.auth-code-verifier', 'v'],
+      ['other', 'kept'],
+    ]);
+    const storage = {
+      get length() {
+        return store.size;
+      },
+      key: (i: number) => [...store.keys()][i] ?? null,
+      getItem: (k: string) => store.get(k) ?? null,
+      removeItem: (k: string) => void store.delete(k),
+    } as unknown as Storage;
+    let storedWhenRevoking: string[] = [];
+    const revoke = vi.fn((_jwt: string, _scope: string) => {
+      storedWhenRevoking = [...store.keys()];
+      return Promise.resolve({ data: null, error: null });
+    });
+    (auth as unknown as { admin: { signOut: typeof revoke } }).admin = { signOut: revoke };
+    const service = new SupabaseAuth(client, storage);
     await service.signIn('hr.nv01', 'x'.repeat(10));
-    await service.signOut('idle');
+    const pending = service.signOut('idle');
+    // Synchronous part: the stored session is gone before any request.
+    expect([...store.keys()]).toEqual(['other']);
+    await pending;
+    expect(revoke).toHaveBeenCalledWith('tok-1', 'local');
+    expect(storedWhenRevoking).toEqual(['other']);
     expect(auth.signOut).toHaveBeenCalledWith({ scope: 'local' });
     expect(service.getSnapshot()).toEqual({ status: 'signedOut', reason: 'idle' });
   });
