@@ -473,7 +473,10 @@
       "title": "Nhập flow từ JSON",
       "file": "File: {{name}} (hợp lệ)",
       "noticesLabel": "Đã tự điều chỉnh:",
-      "csvStripped": "Đã bỏ định dạng .csv khỏi {{slot}} (không còn được hỗ trợ).",
+      "migration": {
+        "acceptCsvRemoved": "Đã bỏ định dạng .csv khỏi {{slot}} (không còn được hỗ trợ).",
+        "acceptCsvOnlyReplaced": "{{slot}} chỉ nhận .csv nên đã chuyển sang nhận .xlsx, .xls."
+      },
       "code": "Mã flow (dùng trong đường dẫn)",
       "codeHint": "Chữ thường không dấu, số và gạch ngang. Trùng mã có sẵn = thêm phiên bản mới.",
       "existingLabel": "Flow đã có:",
@@ -501,7 +504,8 @@
       "errors": {
         "codeInvalid": "mã flow chưa hợp lệ (3-64 ký tự: chữ thường không dấu, số, gạch ngang).",
         "nameRequired": "nhập tên flow.",
-        "range": "ngày kết thúc phải sau ngày bắt đầu."
+        "range": "ngày kết thúc phải sau ngày bắt đầu.",
+        "noteRequired": "nhập ghi chú thay đổi."
       }
     },
     "self": {

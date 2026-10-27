@@ -949,6 +949,50 @@ describe('RunStore: version by as-of date and run logging (Supabase source)', ()
     expect(store.getSnapshot().flow?.inputSlots[0]?.label).toBe('Bảng lương (v2)');
   });
 
+  it('period changed during a run, then hard cancel: the version check is retried, not stuck (AC-B3-90)', async () => {
+    const calls: string[] = [];
+    const inner = versionedSource(calls);
+    const gate = deferred<void>();
+    let held = false;
+    const src: FlowSource = {
+      list: inner.list,
+      get: async (code, asOf) => {
+        // Hold the first lookup for 08/2026 until after the hard cancel.
+        if (asOf === '2026-08-01' && !held) {
+          held = true;
+          await gate.promise;
+        }
+        return inner.get(code, asOf);
+      },
+    };
+    const store = new RunStore(src, { today: () => '2026-10-26' });
+    await store.open('payroll-timesheet');
+    store.setParam('ky_luong', '2026-10');
+    store.addFiles('bang_luong', [new File(['a'], 'a.xlsx')]);
+    store.addFiles('cham_cong', [new File(['b'], 'b.xlsx')]);
+    for (const v of scripts[0]!.validations) v.d.resolve(okReport(v.slot, 1));
+    await until(() => readiness(store.getSnapshot()).canRun);
+
+    void store.run();
+    store.setParam('ky_luong', '2026-08');
+    expect(store.getSnapshot().versionCheck).toBe('resolving');
+    const cancelling = store.cancel();
+    await until(() => engine.instances.length === 2, 3_000);
+    await until(() => scripts[1]!.validations.length === 2);
+    for (const v of scripts[1]!.validations) v.d.resolve(okReport(v.slot, 1));
+    await cancelling;
+
+    // The lookup started before the restart answers now: dropped, but retried for 08/2026.
+    gate.resolve();
+    await until(() => scripts[1]!.loads === 2);
+    await until(() => scripts[1]!.validations.length === 4);
+    for (const v of scripts[1]!.validations.slice(2)) v.d.resolve(okReport(v.slot, 1));
+    await until(() => store.getSnapshot().versionCheck === 'ok');
+    expect(store.getSnapshot().version?.id).toBe('v1');
+    expect(calls.filter((c) => c === '2026-08-01')).toHaveLength(2);
+    await until(() => readiness(store.getSnapshot()).canRun);
+  });
+
   it('bundled flows (no version) are not logged', async () => {
     const logRun = vi.fn(() => Promise.resolve());
     const store = new RunStore(source, { logger: { logRun } });

@@ -77,7 +77,10 @@ async function readFlowFile(file: File, t: TFunction): Promise<ReadResult> {
   }
   const migrated = migrateFlowDefinition(raw);
   const definition = migrated.definition as Json;
-  const notices = migrated.notes.map((n) => t('admin.import.csvStripped', { slot: n.label }));
+  // One message per kind of change (AC-B3-91), by the slot's display label.
+  const notices = migrated.notes.map((n) =>
+    t(`admin.import.migration.${n.code}`, { slot: n.label }),
+  );
   const engine = new EngineClient();
   try {
     const result = await engine.api.loadFlow(definition);
@@ -137,7 +140,7 @@ function ImportForm({
   const [changeNote, setChangeNote] = useState('');
   const [closePrevious, setClosePrevious] = useState(true);
   const [error, setError] = useState<
-    AdminErrorKey | 'codeInvalid' | 'nameRequired' | 'range' | null
+    AdminErrorKey | 'codeInvalid' | 'nameRequired' | 'range' | 'noteRequired' | null
   >(null);
   const [busy, setBusy] = useState(false);
   const openVersion = existing?.versions.find((v) => v.status === 'published' && !v.effectiveTo);
@@ -158,6 +161,8 @@ function ImportForm({
     if (!CODE_PATTERN.test(c)) return setError('codeInvalid');
     if (!name.trim()) return setError('nameRequired');
     if (!effectiveFrom || (effectiveTo && effectiveTo <= effectiveFrom)) return setError('range');
+    // The database refuses a blank note too (spec §14.1); check first for a clear message.
+    if (!changeNote.trim()) return setError('noteRequired');
     setBusy(true);
     setError(null);
     try {
@@ -264,11 +269,14 @@ function ImportForm({
           })}
         </label>
       )}
-      {field('import-note', t('admin.import.changeNote'), changeNote, setChangeNote)}
+      {field('import-note', t('admin.import.changeNote'), changeNote, setChangeNote, true)}
       {error && (
         <Callout tone="coral" label={t('admin.errorLabel')} role="alert">
           {t(
-            error === 'codeInvalid' || error === 'nameRequired' || error === 'range'
+            error === 'codeInvalid' ||
+              error === 'nameRequired' ||
+              error === 'range' ||
+              error === 'noteRequired'
               ? `admin.import.errors.${error}`
               : `admin.errors.${error}`,
           )}

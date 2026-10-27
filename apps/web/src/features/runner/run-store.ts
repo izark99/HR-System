@@ -293,7 +293,15 @@ export class RunStore {
     } catch {
       loaded = null;
     }
-    if (vToken !== this.versionToken || token !== this.token) return;
+    if (vToken !== this.versionToken) return;
+    if (token !== this.token) {
+      // Still the latest lookup, but the worker changed meanwhile (run started, hard cancel and
+      // restart): the answer may be stale, so ask again once things settle instead of leaving
+      // the check at "resolving" (HANDOFF §4.1, AC-B3-90).
+      this.deferredAsOf = asOf;
+      this.resolveDeferred();
+      return;
+    }
     const next = loaded?.version;
     if (!loaded || !next) {
       this.set((s) => ({ ...s, versionCheck: 'error' }));
@@ -471,7 +479,7 @@ export class RunStore {
   /** A period change made during a run is applied once the run has settled. */
   private resolveDeferred(): void {
     const asOf = this.deferredAsOf;
-    if (asOf === null || this.isBusy()) return;
+    if (asOf === null || this.isBusy() || this.state.restoring) return;
     this.deferredAsOf = null;
     void this.resolveVersion(asOf);
   }

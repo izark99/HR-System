@@ -13,11 +13,18 @@ const importDialog = (page: Page) => page.getByRole('dialog', { name: 'Nhập fl
 const publishButton = (page: Page) =>
   importDialog(page).getByRole('button', { name: /^(Publish phiên bản|Đang publish)/ });
 
-async function openImport(page: Page, name: string, definition: unknown = baseFlowDefinition()) {
+async function openImport(
+  page: Page,
+  name: string,
+  definition: unknown = baseFlowDefinition(),
+  note = 'Cập nhật thử',
+) {
   await page.goto('/admin/flows');
   await expect(page.getByRole('heading', { level: 1 })).toHaveText('Flow và phiên bản');
   await fileInput(page).setInputFiles(textFile(name, JSON.stringify(definition)));
   await expect(importDialog(page)).toBeVisible();
+  // The change note is mandatory (spec §14.1).
+  await importDialog(page).getByLabel('Ghi chú thay đổi').fill(note);
 }
 
 test.describe('import flow JSON → publish', () => {
@@ -168,6 +175,12 @@ test.describe('import flow JSON → publish', () => {
     await pickDate(page, dialog.locator('#import-to'), '2026-12-01'); // to == from → invalid
     await publishButton(page).click();
     await expect(dialog.getByRole('alert')).toContainText('ngày kết thúc phải sau ngày bắt đầu');
+
+    await pickDate(page, dialog.locator('#import-to'), '2026-12-02');
+    await dialog.getByLabel('Ghi chú thay đổi').fill('   '); // blank after trimming
+    await publishButton(page).click();
+    await expect(dialog.getByRole('alert')).toContainText('nhập ghi chú thay đổi');
+    await dialog.getByLabel('Ghi chú thay đổi').fill('Kiểm tra');
     expect(supabase.bodiesOf('/rest/v1/rpc/admin_publish_flow_version')).toEqual([]);
 
     // Boundary: the day after is accepted and sent as effective_to (exclusive upper bound).
@@ -334,9 +347,11 @@ test.describe('import flow JSON → migration notices (.csv in accept)', () => {
   }) => {
     await openImport(page, 'csv-chi.json', withAccept([['.csv'], ['.xlsx']]));
     const dialog = importDialog(page);
+    // Its own message (AC-B3-91), not the "removed among other formats" one.
     await expect(dialog).toContainText(
-      'Đã bỏ định dạng .csv khỏi Bảng lương (nhiều chi nhánh) (không còn được hỗ trợ).',
+      'Bảng lương (nhiều chi nhánh) chỉ nhận .csv nên đã chuyển sang nhận .xlsx, .xls.',
     );
+    await expect(dialog).not.toContainText('Đã bỏ định dạng .csv');
     await dialog.getByLabel(/^Tên flow/).fill('Flow csv chi');
     await publishButton(page).click();
     await expect(dialog).toHaveCount(0);
