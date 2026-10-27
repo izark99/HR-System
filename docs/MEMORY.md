@@ -103,7 +103,9 @@
 
 ## Xác thực & phân quyền
 
-2026-10-27 08:49 - Tự đăng xuất (hết 8 giờ) dùng đăng xuất toàn cục: thu hồi refresh token trên server, các phiên khác của cùng tài khoản cũng bị đăng xuất; mất mạng thì vẫn đăng xuất cục bộ.
+2026-10-27 12:30 - Tự đăng xuất (hết 8 giờ) dùng đăng xuất cục bộ (`scope: 'local'`): vẫn gọi server thu hồi refresh token của phiên trong tab này, không ảnh hưởng tab/máy khác; xóa session trong `sessionStorage` và chuyển trang ngay, không chờ server quá 3 giây.
+
+~~2026-10-27 08:49 - Tự đăng xuất (hết 8 giờ) dùng đăng xuất toàn cục: thu hồi refresh token trên server, các phiên khác của cùng tài khoản cũng bị đăng xuất; mất mạng thì vẫn đăng xuất cục bộ.~~ → thay bởi 2026-10-27 12:30
 
 2026-10-26 22:52 - Tự đăng xuất sau 8 giờ không thao tác: thao tác = chuột/phím/cuộn/chạm trong tab; khi flow đang chạy không tính là không thao tác; cảnh báo trước 5 phút với nút "Tiếp tục làm việc" (nêu rõ nếu Designer còn thay đổi chưa lưu); hết giờ đăng xuất và về màn đăng nhập kèm thông báo lý do.
 
