@@ -30,7 +30,8 @@ export async function writeWorkbook(sheets: readonly SheetSpec[]): Promise<Uint8
 
   for (const spec of sheets) {
     const name = uniqueSheetName(spec.name, usedNames);
-    const { columns, rows } = spec.table;
+    const { columns } = spec.table;
+    const vectors = columns.map((c) => spec.table.vector(c.key)!);
     const ws = wb.addWorksheet(name, { views: [{ state: 'frozen', ySplit: 1 }] });
 
     ws.columns = columns.map((col) => ({
@@ -39,8 +40,8 @@ export async function writeWorkbook(sheets: readonly SheetSpec[]): Promise<Uint8
       width: estimateWidth(col, spec.table),
       style: numFmtStyle(col),
     }));
-    for (const row of rows) {
-      ws.addRow(columns.map((col) => toCellValue(row[col.key] ?? null, col.type)));
+    for (let i = 0; i < spec.table.rowCount; i++) {
+      ws.addRow(columns.map((col, k) => toCellValue(vectors[k]!.get(i), col.type)));
     }
 
     const header = ws.getRow(1);
@@ -89,9 +90,10 @@ function displayLength(v: Value, type: DataType): number {
 
 function estimateWidth(col: ColumnDef, table: Table): number {
   let max = (col.title ?? col.key).length;
-  const n = Math.min(table.rows.length, WIDTH_SAMPLE);
-  for (let i = 0; i < n; i++) {
-    max = Math.max(max, displayLength(table.rows[i]![col.key] ?? null, col.type));
+  const n = Math.min(table.rowCount, WIDTH_SAMPLE);
+  const vec = table.vector(col.key);
+  for (let i = 0; vec && i < n; i++) {
+    max = Math.max(max, displayLength(vec.get(i), col.type));
   }
   return Math.min(MAX_WIDTH, Math.max(MIN_WIDTH, max + 2));
 }

@@ -2,7 +2,7 @@ import type { InputSlot, SlotColumn } from '@hrflow/flow-schema';
 import * as XLSX from 'xlsx';
 import { Big, decimalFrom, isDecimal } from '../core/decimal';
 import { normalizeKeyPart } from '../core/keys';
-import type { ColumnDef, Row, Table, Value } from '../core/types';
+import { Table, type ColumnDef, type Row, type Value } from '../core/types';
 import { coerceValue, isBlank, type RawValue } from './coerce';
 import { normalizeHeader, slugifyHeader } from './normalize';
 import {
@@ -119,7 +119,7 @@ export function readSlot(slot: InputSlot, files: readonly SourceFile[]): SlotRea
     for (const col of columns) if (!(col.key in row)) row[col.key] = null;
   }
 
-  return { table: { columns, rows }, report: buildReport(issues, skipped, summaries) };
+  return { table: Table.fromRows(columns, rows), report: buildReport(issues, skipped, summaries) };
 }
 
 /** Read and validate a single file (no cross-file checks). */

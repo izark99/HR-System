@@ -7,13 +7,14 @@ import * as XLSX from 'xlsx';
 import { Big } from '../core/decimal';
 import type { ColumnDef, Table, Value } from '../core/types';
 import { uniqueSheetName, writeWorkbook } from '../io/excel-writer';
+import { asTable } from './helpers';
 
 const cols: ColumnDef[] = [
   { key: 'ma_nv', type: 'string', title: 'Mã NV' },
   { key: 'cong', type: 'decimal', title: 'Công' },
   { key: 'ngay', type: 'date', title: 'Ngày' },
 ];
-const table = (rows: Record<string, Value>[], columns = cols): Table => ({ columns, rows });
+const table = (rows: Record<string, Value>[], columns = cols): Table => asTable({ columns, rows });
 
 async function roundTrip(sheets: { name: string; table: Table }[]) {
   const bytes = await writeWorkbook(sheets);
@@ -105,7 +106,7 @@ describe('QA writer: values', () => {
   });
 
   it('a table with no columns still produces a valid workbook', async () => {
-    const { wb } = await roundTrip([{ name: 'Empty', table: { columns: [], rows: [] } }]);
+    const { wb } = await roundTrip([{ name: 'Empty', table: asTable({ columns: [], rows: [] }) }]);
     expect(wb.SheetNames).toEqual(['Empty']);
   });
 });

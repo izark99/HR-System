@@ -10,6 +10,7 @@ import { Big } from '../core/decimal';
 import type { ColumnDef, Row, Table } from '../core/types';
 import { nodeDuckDb } from './duckdb-node';
 import { runWith } from './sql-helpers';
+import { asTable } from './helpers';
 
 const ENABLED = process.env.HRFLOW_PERF === '1';
 const SIZES = (process.env.HRFLOW_PERF_SIZES ?? '100000').split(',').map(Number);
@@ -36,7 +37,7 @@ function payroll(n: number): Table {
       khong_luong: new Big(i % 5 === 0 ? 1 : 0),
     };
   }
-  return { columns, rows };
+  return asTable({ columns, rows });
 }
 
 describe.skipIf(!ENABLED)('QA DuckDB flow perf (7 columns)', () => {

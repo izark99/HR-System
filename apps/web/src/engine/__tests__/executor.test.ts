@@ -17,6 +17,7 @@ import { EngineError, type Table } from '../core/types';
 import type { SourceFile } from '../io/excel-reader';
 import { nodePlugins } from '../nodes';
 import { resolveFileName } from '../nodes/output-excel';
+import { asTable } from './helpers';
 
 const FIXTURES = resolve(import.meta.dirname, '../../../../../fixtures/payroll-timesheet');
 const t = createEngineTranslator('vi');
@@ -33,10 +34,11 @@ function fixtureFiles(prefix: string): SourceFile[] {
 
 // ---- small test plugins -------------------------------------------------------------------
 
-const emptyTable = (n = 0): Table => ({
-  columns: [{ key: 'v', type: 'integer' }],
-  rows: Array.from({ length: n }, (_, i) => ({ v: i })),
-});
+const emptyTable = (n = 0): Table =>
+  asTable({
+    columns: [{ key: 'v', type: 'integer' }],
+    rows: Array.from({ length: n }, (_, i) => ({ v: i })),
+  });
 
 function sourcePlugin(rows = 2): AnyNodePlugin {
   return {

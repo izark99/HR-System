@@ -4,6 +4,7 @@ import { normalizeKeyPart } from '../core/keys';
 import type { ColumnDef, Row, Table, Value } from '../core/types';
 import { rowsOf, runNode, runWith, table } from './sql-helpers';
 import BigJs from 'big.js';
+import { asTable } from './helpers';
 
 /**
  * QA differential tests: every DuckDB transform node is compared with a tiny, obviously-correct
@@ -690,7 +691,7 @@ describe('QA diff: transform.union', () => {
       const a = randomTable(r, Math.floor(r() * 6));
       const bFull = randomTable(r, Math.floor(r() * 6));
       // b: reordered subset where `i` is decimal, `d` missing
-      const b: Table = {
+      const b: Table = asTable({
         columns: [
           { key: 'i', type: 'decimal' },
           { key: 'k', type: 'string' },
@@ -701,8 +702,11 @@ describe('QA diff: transform.union', () => {
           k: row.k ?? null,
           extra: `e${ix}`,
         })),
-      };
-      const c: Table = { columns: [{ key: 'z', type: 'integer' }], rows: [{ z: 1 }, { z: null }] };
+      });
+      const c: Table = asTable({
+        columns: [{ key: 'z', type: 'integer' }],
+        rows: [{ z: 1 }, { z: null }],
+      });
       const res = await runWith(
         { a, b, c },
         [

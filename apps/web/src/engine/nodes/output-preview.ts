@@ -51,12 +51,10 @@ export const outputPreviewPlugin: TsNodePlugin<OutputPreviewConfig> = {
     if (!ctx.run) throw new EngineError('executor.error.noRunContext');
     const input = inputs[IN_PORT]!;
     const columns = shownColumns(config, input.columns);
-    const rows =
-      input.rows.length > config.maxRows ? input.rows.slice(0, config.maxRows) : input.rows;
     ctx.run.emitView({
       title: config.title,
-      table: { columns, rows },
-      totalRows: input.rows.length,
+      table: input.select(columns).head(config.maxRows),
+      totalRows: input.rowCount,
     });
     return {};
   },

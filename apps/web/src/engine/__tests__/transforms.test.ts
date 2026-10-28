@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { Big } from '../core/decimal';
 import type { Table } from '../core/types';
 import { rowsOf, runNode, runWith, table } from './sql-helpers';
+import { asTable } from './helpers';
 
 /** Step-3 transform nodes on DuckDB (spec §12.1, AC-B3-09..18). Fake data only. */
 
@@ -514,7 +515,7 @@ describe('transform.groupBy (AC-B3-17)', () => {
   });
 
   it('by empty with 0 input rows → exactly 1 row (sum 0, count 0)', async () => {
-    const empty: Table = { columns: data.columns, rows: [] };
+    const empty: Table = asTable({ columns: data.columns, rows: [] });
     const r = await runNode(
       'transform.groupBy',
       {
