@@ -185,6 +185,8 @@
 
 ## Kỹ thuật & tổ chức
 
+2026-10-28 07:46 - Do hạn mức gói có hạn: từ sau các vòng đang chạy (R3, R1b), mỗi thời điểm chỉ 1 developer chạy, các vòng code làm tuần tự; ghi trong `.claude/rules/workflow.md`.
+
 2026-10-27 17:50 - Engine chuyển bảng sang dạng cột (columnar, dựa trên Arrow) trong vòng riêng R1b, chạy song song với R3; bước 3 chỉ xong khi 1 triệu dòng × 30 cột chạy được không crash trên Chromium.
 
 2026-10-27 17:50 - Không dùng `<select>` (dropdown) mặc định của trình duyệt ở mọi màn; dùng Select tự làm theo design system (tương tự DatePicker), hỗ trợ nhóm, tìm kiếm, bàn phím.
