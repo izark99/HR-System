@@ -81,27 +81,32 @@ function checkColumns(
   ctx: EngineContext,
 ) {
   const sides = sideLabels(config, ctx);
-  const need = (cols: ColumnDef[], side: string, name: string, numeric: boolean) => {
+  // `path`: the config field, so the Designer can highlight it (spec §12.1).
+  const need = (cols: ColumnDef[], side: string, name: string, numeric: boolean, path: string) => {
     const col = cols.find((c) => c.key === name);
-    if (!col) throw new EngineError('compare.error.missingColumn', { side, column: name });
+    if (!col) throw new EngineError('compare.error.missingColumn', { side, column: name, path });
     if (numeric && !NUMERIC.has(col.type)) {
-      throw new EngineError('compare.error.notNumeric', { side, column: name });
+      throw new EngineError('compare.error.notNumeric', { side, column: name, path });
     }
     return col;
   };
-  for (const k of config.keys) {
-    need(left, sides.left, k, false);
-    need(right, sides.right, k, false);
-  }
-  for (const m of config.metrics) {
-    need(left, sides.left, m.left, true);
-    need(right, sides.right, m.right, true);
-  }
-  for (const c of config.carryColumns) {
+  config.keys.forEach((k, i) => {
+    need(left, sides.left, k, false, `keys.${i}`);
+    need(right, sides.right, k, false, `keys.${i}`);
+  });
+  config.metrics.forEach((m, i) => {
+    need(left, sides.left, m.left, true, `metrics.${i}.left`);
+    need(right, sides.right, m.right, true, `metrics.${i}.right`);
+  });
+  config.carryColumns.forEach((c, i) => {
     if (!left.some((x) => x.key === c) && !right.some((x) => x.key === c)) {
-      throw new EngineError('compare.error.missingColumn', { side: sides.left, column: c });
+      throw new EngineError('compare.error.missingColumn', {
+        side: sides.left,
+        column: c,
+        path: `carryColumns.${i}`,
+      });
     }
-  }
+  });
 }
 
 function outputSchemas(
