@@ -4,6 +4,7 @@ import { Callout } from '../../../components/ui';
 import type { DesignIssue } from '../../../engine/design';
 import type { DesignerDoc, DNode, JsonObject } from '../model';
 import { columnUsages, slotUsages } from '../model';
+import { resized } from './NodeForms';
 import {
   CheckField,
   ColumnListField,
@@ -315,13 +316,13 @@ export function SlotForm({
   issues: readonly DesignIssue[];
   doc: DesignerDoc;
   readOnly: boolean;
-  onChange: (slot: JsonObject, field: string) => void;
+  onChange: (slot: JsonObject, mergeKey: string | undefined) => void;
 }) {
   const { t } = useTranslation('designer');
   const watch = useRenameWatch();
   const at = (path: string) => issuesAt(issues, path);
   const set = (patch: Obj, field: string) =>
-    onChange({ ...slot, ...patch }, `slot${index}:${field}`);
+    onChange({ ...slot, ...patch }, resized(slot, patch) ? undefined : `slot${index}:${field}`);
   const drop = (field: string, ...keys: string[]) =>
     onChange(without(slot, ...keys), `slot${index}:${field}`);
   const sheet = obj(slot.sheet) ?? { mode: 'byIndex', value: 0 };
@@ -613,7 +614,7 @@ export function SlotForm({
                   whenBlank: strs(skip.whenBlank).map((k) => (k === before ? after : k)),
                 };
               }
-              onChange(next, `slot${index}:col${i}`);
+              onChange(next, resized(col, c) ? undefined : `slot${index}:col${i}`);
             }}
             issues={issues}
             ro={ro}

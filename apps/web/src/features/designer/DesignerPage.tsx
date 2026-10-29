@@ -3,13 +3,15 @@ import './designer.css';
 import './i18n';
 import { ReactFlowProvider } from '@xyflow/react';
 import { Link, useNavigate, useParams, useSearch } from '@tanstack/react-router';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Callout } from '../../components/ui';
+import { Button, Callout } from '../../components/ui';
+import { saveFile } from '../../lib/download';
 import { errorKeyOf, type AdminErrorKey, type FlowVersions } from '../admin/admin-api';
 import { useAdminApi } from '../admin/use-admin';
 import { DesignerEditor } from './DesignerEditor';
-import { fromDefinition } from './model';
+import { DesignerErrorBoundary } from './ErrorBoundary';
+import { fromDefinition, type JsonObject } from './model';
 
 /**
  * Flow Designer route (spec §15.3; Admin only, lazy chunk with React Flow). Always edits the
@@ -55,6 +57,18 @@ export function DesignerPage() {
   const initial = useMemo(() => (version ? fromDefinition(version.definition) : null), [version]);
 
   const reload = useCallback(() => setTick((n) => n + 1), []);
+  const latest = useRef<JsonObject | null>(null);
+  const keepLatest = useCallback((d: JsonObject) => {
+    latest.current = d;
+  }, []);
+  const exportLatest = () => {
+    if (!latest.current) return;
+    saveFile({
+      fileName: `${flowCode}_ban-nhap.json`,
+      mimeType: 'application/json',
+      data: new TextEncoder().encode(JSON.stringify(latest.current, null, 2)).buffer,
+    });
+  };
 
   const createDraft = useCallback(async () => {
     if (!version) return;
@@ -84,7 +98,8 @@ export function DesignerPage() {
 
   if (error) {
     return (
-      <div className="p-6">
+      <div className="flex flex-col gap-3 p-6">
+        <h1 className="m-0 text-page-title text-ink">{t('page.title')}</h1>
         <Callout tone="coral" label={tc('admin.errorLabel')} role="alert">
           {tc(`admin.errors.${error}`)}
         </Callout>
@@ -97,6 +112,7 @@ export function DesignerPage() {
   if (data === null || !version || !initial) {
     return (
       <div className="flex flex-col gap-3 p-6">
+        <h1 className="m-0 text-page-title text-ink">{t('page.title')}</h1>
         <Callout tone="coral" label={tc('admin.errorLabel')} role="alert">
           {data === null ? tc('admin.versions.notFound') : t('page.noVersion')}
         </Callout>
@@ -130,16 +146,34 @@ export function DesignerPage() {
           </Callout>
         </div>
       )}
-      <DesignerEditor
-        flowCode={flowCode}
-        flowName={data.flow.name}
-        version={version}
-        initial={initial}
-        readOnly={readOnly}
-        onReload={reload}
-        onCreateDraft={() => void createDraft()}
-        creatingDraft={creating}
-      />
+      <DesignerErrorBoundary
+        fallback={(reset) => (
+          <div className="flex flex-col gap-3 p-6">
+            <h1 className="m-0 text-page-title text-ink">{t('crash.title')}</h1>
+            <Callout tone="coral" label={t('toast.errorLabel')} role="alert">
+              {t('crash.text')}
+            </Callout>
+            <div className="flex flex-wrap gap-3">
+              <Button variant="primary" onClick={exportLatest}>
+                {t('crash.export')}
+              </Button>
+              <Button onClick={reset}>{t('crash.retry')}</Button>
+            </div>
+          </div>
+        )}
+      >
+        <DesignerEditor
+          onDefinition={keepLatest}
+          flowCode={flowCode}
+          flowName={data.flow.name}
+          version={version}
+          initial={initial}
+          readOnly={readOnly}
+          onReload={reload}
+          onCreateDraft={() => void createDraft()}
+          creatingDraft={creating}
+        />
+      </DesignerErrorBoundary>
     </ReactFlowProvider>
   );
 }

@@ -1,7 +1,8 @@
 {
   "page": {
     "noVersion": "Flow này chưa có phiên bản nào.",
-    "openDraft": "Mở bản nháp v{{version}}"
+    "openDraft": "Mở bản nháp v{{version}}",
+    "title": "Flow Designer"
   },
   "toolbar": {
     "label": "Thao tác trên flow",
@@ -491,5 +492,11 @@
       "minValue": "Tối thiểu",
       "maxValue": "Tối đa"
     }
+  },
+  "crash": {
+    "title": "Designer gặp sự cố",
+    "text": "Màn thiết kế gặp lỗi ngoài dự kiến. Thay đổi chưa lưu vẫn còn: hãy xuất JSON để giữ lại, rồi thử mở lại.",
+    "export": "Xuất JSON thay đổi của tôi",
+    "retry": "Thử lại"
   }
 }

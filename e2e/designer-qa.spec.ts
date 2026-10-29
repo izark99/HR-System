@@ -528,7 +528,7 @@ test.describe('unsaved changes and the idle sign-out (AC-B3-85)', () => {
 });
 
 test.describe('keyboard hazards', () => {
-  // KNOWN BUG (suspected): DesignerEditor.tsx onKey treats Delete/Backspace as "delete the
+  // Fixed (was KNOWN BUG): DesignerEditor.tsx onKey treated Delete/Backspace as "delete the
   // selection" unless the target is a text field or inside a listbox/combobox. A focused checkbox,
   // radio or button in the config panel is neither, so Delete/Backspace there removes the node
   // that the panel is editing.
@@ -536,7 +536,6 @@ test.describe('keyboard hazards', () => {
     page,
     supabase,
   }) => {
-    test.fail(true, 'KNOWN BUG: Delete/Backspace on a panel checkbox deletes the selected node');
     withDraft(supabase);
     await open(page);
     await canvasNode(page, 'in_luong').click();
@@ -586,11 +585,7 @@ test.describe('keyboard hazards', () => {
     await expect(savedBadge(page)).toBeVisible();
   });
 
-  test('two quick "Thêm tham số" clicks are two undo steps (KNOWN BUG if merged)', async ({
-    page,
-    supabase,
-  }) => {
-    test.fail(true, 'KNOWN BUG: ParamsForm commits every edit with the fixed merge key "params"');
+  test('two quick "Thêm tham số" clicks are two undo steps', async ({ page, supabase }) => {
     withDraft(supabase);
     await open(page);
     const add = panel(page).getByRole('button', { name: 'Thêm tham số' });

@@ -47,6 +47,7 @@ import {
   type Clip,
   type DesignerDoc,
   type History,
+  type JsonObject,
   type XY,
 } from './model';
 import { DRAG_MIME, Palette } from './Palette';
@@ -64,6 +65,16 @@ interface Selection {
   edges: string[];
 }
 const NONE: Selection = { nodes: [], notes: [], edges: [] };
+
+/** Focus on the canvas (a node, an edge, the pane) or nowhere in particular (body). */
+function onCanvas(target: EventTarget | null): boolean {
+  if (!(target instanceof Element) || target === document.body) return true;
+  if (isEditable(target)) return false;
+  const flow = target.closest('.react-flow');
+  if (!flow) return false;
+  // Inside the canvas: nodes, edges and the pane; not the zoom controls or the minimap.
+  return !target.closest('.react-flow__controls,.react-flow__minimap,button,input,select,textarea');
+}
 
 function isEditable(target: EventTarget | null): boolean {
   if (!(target instanceof HTMLElement)) return false;
@@ -107,6 +118,8 @@ export interface DesignerEditorProps {
   onReload: () => void;
   onCreateDraft: () => void;
   creatingDraft: boolean;
+  /** Latest definition on the canvas (kept by the page for the crash fallback). */
+  onDefinition?: (definition: JsonObject) => void;
 }
 
 export function DesignerEditor(props: DesignerEditorProps) {
@@ -124,6 +137,10 @@ export function DesignerEditor(props: DesignerEditorProps) {
   const [savedJson, setSavedJson] = useState(() => JSON.stringify(toDefinition(props.initial)));
   const [updatedAt, setUpdatedAt] = useState(props.version.updatedAt);
   const dirty = !ro && json !== savedJson;
+  const { onDefinition } = props;
+  useEffect(() => {
+    onDefinition?.(definition);
+  }, [definition, onDefinition]);
   useUnsavedChanges(dirty);
 
   const [selection, setSelection] = useState<Selection>(NONE);
@@ -443,7 +460,9 @@ export function DesignerEditor(props: DesignerEditorProps) {
       } else if (mod && (k === 'y' || (k === 'z' && e.shiftKey))) {
         e.preventDefault();
         keys.current.doRedo();
-      } else if (isEditable(e.target)) {
+      } else if (!onCanvas(e.target)) {
+        // Copy, paste and delete act on the canvas selection only: never while focus is in the
+        // config panel, a form control, a dialog or the toolbar.
         return;
       } else if (mod && k === 'c') {
         keys.current.copy();
@@ -451,12 +470,6 @@ export function DesignerEditor(props: DesignerEditorProps) {
         e.preventDefault();
         keys.current.pasteClip();
       } else if ((k === 'delete' || k === 'backspace') && !mod) {
-        // Not while a dropdown/listbox has focus.
-        if (
-          e.target instanceof HTMLElement &&
-          e.target.closest('[role="listbox"],[role="combobox"]')
-        )
-          return;
         e.preventDefault();
         keys.current.deleteSelection();
       }

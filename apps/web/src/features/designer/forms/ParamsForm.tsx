@@ -1,6 +1,7 @@
 import { useTranslation } from 'react-i18next';
 import type { DesignIssue } from '../../../engine/design';
 import { paramUsages, type DesignerDoc, type JsonObject } from '../model';
+import { resized } from './NodeForms';
 import { CheckField, issuesAt, ListEditor, SelectField, TextField } from './fields';
 import { KeyUsageWarning, useRenameWatch } from './SlotForm';
 
@@ -29,7 +30,7 @@ export function ParamsForm({
   doc: DesignerDoc;
   issues: readonly DesignIssue[];
   readOnly: boolean;
-  onChange: (params: JsonObject[], mergeKey: string) => void;
+  onChange: (params: JsonObject[], mergeKey: string | undefined) => void;
 }) {
   const { t } = useTranslation('designer');
   const watch = useRenameWatch();
@@ -41,7 +42,14 @@ export function ParamsForm({
       <ListEditor
         label={t('params.title')}
         items={params}
-        onChange={(v) => onChange(v, 'params')}
+        onChange={(v) =>
+          onChange(
+            v,
+            v.length !== params.length || v.some((x, i) => params[i] && resized(params[i], x))
+              ? undefined
+              : 'params',
+          )
+        }
         create={() => ({
           key: `tham_so_${params.length + 1}`,
           label: t('params.newLabel', { n: params.length + 1 }),

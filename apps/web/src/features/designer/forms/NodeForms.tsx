@@ -40,6 +40,15 @@ const objs = (v: unknown): Obj[] =>
     ? v.filter((x): x is Obj => typeof x === 'object' && x !== null && !Array.isArray(x))
     : [];
 const bool = (v: unknown, d: boolean) => (typeof v === 'boolean' ? v : d);
+/** Does the patch add/remove entries of a list field? */
+export function resized(before: Obj, patch: Obj): boolean {
+  return Object.entries(patch).some(
+    ([k, v]) =>
+      Array.isArray(v) &&
+      (!Array.isArray(before[k]) || (before[k] as unknown[]).length !== v.length),
+  );
+}
+
 const literalText = (v: unknown): string =>
   typeof v === 'string' || typeof v === 'number' || typeof v === 'boolean' ? String(v) : '';
 const num = (v: unknown): number | undefined => (typeof v === 'number' ? v : undefined);
@@ -47,8 +56,13 @@ const num = (v: unknown): number | undefined => (typeof v === 'number' ? v : und
 function useForm(p: NodeFormProps) {
   const { t } = useTranslation('designer');
   const c = p.node.config;
+  // Adding or removing a list entry is its own undo step; typing in a field merges (spec §15.3).
   const set = (patch: Obj, field: string, renames?: Record<string, string>) =>
-    p.onConfig({ ...c, ...patch }, `${p.node.id}:${field}`, renames);
+    p.onConfig(
+      { ...c, ...patch },
+      resized(c, patch) ? undefined : `${p.node.id}:${field}`,
+      renames,
+    );
   const unset = (key: string) => {
     const next = { ...c };
     delete next[key];

@@ -23,8 +23,8 @@ export interface ConfigPanelProps {
     renames?: Record<string, string>,
   ) => void;
   onNodeLabel: (id: string, label: string) => void;
-  onParams: (params: JsonObject[], mergeKey: string) => void;
-  onSlots: (slots: JsonObject[], mergeKey: string) => void;
+  onParams: (params: JsonObject[], mergeKey: string | undefined) => void;
+  onSlots: (slots: JsonObject[], mergeKey: string | undefined) => void;
   onNote: (id: string, text: string) => void;
   onDeleteSelection: () => void;
   tab: PanelTab;
@@ -89,7 +89,7 @@ function SlotsTab({
   doc: DesignerDoc;
   issues: readonly DesignIssue[];
   readOnly: boolean;
-  onSlots: (slots: JsonObject[], mergeKey: string) => void;
+  onSlots: (slots: JsonObject[], mergeKey: string | undefined) => void;
   index: number;
   setIndex: (i: number) => void;
 }) {
@@ -118,7 +118,7 @@ function SlotsTab({
           ],
         },
       ],
-      'slots:add',
+      undefined,
     );
     setIndex(slots.length);
   };
@@ -174,7 +174,7 @@ function SlotsTab({
               onClick={() => {
                 onSlots(
                   slots.filter((_, i) => i !== current),
-                  'slots:remove',
+                  undefined,
                 );
                 setIndex(Math.max(0, current - 1));
               }}

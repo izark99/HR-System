@@ -264,18 +264,15 @@ describe('key usages', () => {
     };
   };
 
-  describe('KNOWN BUG (remove it.fails once fixed)', () => {
+  describe('fixed (was KNOWN BUG)', () => {
     // model.ts paramUsages: new RegExp(`\\$${key}...`) without escaping the key.
-    it.fails(
-      'paramUsages with regex metacharacters in the key neither throws nor finds anything',
-      () => {
-        const { doc } = sqlDoc();
-        for (const key of ['so_ngay(', '[', 'a+', '\\', '*', '(?<', '$']) {
-          expect(paramUsages(doc, key), key).toEqual([]);
-        }
-      },
-    );
-    it.fails('a "." in the key is literal: key "a.b" does not match $axb', () => {
+    it('paramUsages with regex metacharacters in the key neither throws nor finds anything', () => {
+      const { doc } = sqlDoc();
+      for (const key of ['so_ngay(', '[', 'a+', '\\', '*', '(?<', '$']) {
+        expect(paramUsages(doc, key), key).toEqual([]);
+      }
+    });
+    it('a "." in the key is literal: key "a.b" does not match $axb', () => {
       const { doc, id } = sqlDoc();
       const d = updateNode(doc, id, {
         config: { inputs: [{ port: 'a' }], sql: 'SELECT $axb AS x FROM a' },
@@ -284,13 +281,10 @@ describe('key usages', () => {
     });
     // columnUsages only looks for the key as a whole config value; a column named inside the SQL
     // text of a downstream code.sql node is not listed, so the rename warning (AC-B3-37) misses it.
-    it.fails(
-      'columnUsages lists a downstream code.sql node that names the column in its SQL',
-      () => {
-        const { doc, id } = sqlDoc();
-        expect(columnUsages(doc, 'bang_luong', 'ma_nv').map((n) => n.id)).toContain(id);
-      },
-    );
+    it('columnUsages lists a downstream code.sql node that names the column in its SQL', () => {
+      const { doc, id } = sqlDoc();
+      expect(columnUsages(doc, 'bang_luong', 'ma_nv').map((n) => n.id)).toContain(id);
+    });
   });
 
   it('paramUsages: $ky is not $ky_luong; {key} in a file name; { param } values', () => {

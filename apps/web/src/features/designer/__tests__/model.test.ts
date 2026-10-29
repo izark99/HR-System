@@ -23,6 +23,7 @@ import {
   redo,
   removeElements,
   slotUsages,
+  sqlWords,
   toDefinition,
   undo,
   updateNode,
@@ -232,6 +233,17 @@ describe('key usages (AC-B3-37)', () => {
     });
     expect(paramUsages(withSql, 'ky_luong').map((n) => n.id)).toEqual(['out', sql.id]);
     expect(paramUsages(withSql, 'ky')).toEqual([]);
+  });
+});
+
+describe('sqlWords', () => {
+  it('finds identifiers, quoted names; skips strings, comments, params', () => {
+    const w = sqlWords(
+      `SELECT Ma_NV, "Họ tên", 'cong' AS x -- ot\n/* phep */ FROM t WHERE y = $khong_luong`,
+    );
+    expect(w.has('ma_nv')).toBe(true);
+    expect(w.has('Họ tên')).toBe(true);
+    for (const k of ['cong', 'ot', 'phep', 'khong_luong']) expect(w.has(k), k).toBe(false);
   });
 });
 

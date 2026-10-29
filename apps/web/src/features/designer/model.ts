@@ -421,17 +421,48 @@ export function slotUsages(doc: DesignerDoc, slotKey: string): DNode[] {
   return doc.nodes.filter((n) => n.type === 'input.excel' && n.config.slot === slotKey);
 }
 
-/** Nodes below the slot's input.excel nodes whose config mentions the column key. */
+const IDENTIFIER = /^[a-z_][a-z0-9_]*$/;
+
+/**
+ * Identifier-like words of an SQL text, strings and comments removed (best effort, no tokenizer
+ * on the main thread). Quoted identifiers count as words.
+ */
+export function sqlWords(sql: string): Set<string> {
+  const words = new Set<string>();
+  const stripped = sql.replace(/'(?:[^']|'')*'|\$\$[\s\S]*?\$\$|--[^\n]*|\/\*[\s\S]*?\*\//g, ' ');
+  for (const m of stripped.matchAll(
+    /"((?:[^"]|"")*)"|\$?([A-Za-z_\p{L}][A-Za-z0-9_\p{L}\p{N}$]*)/gu,
+  )) {
+    if (m[1] !== undefined) words.add(m[1].replace(/""/g, '"'));
+    else if (m[2] !== undefined && !m[0].startsWith('$')) words.add(m[2].toLowerCase());
+  }
+  return words;
+}
+
+/**
+ * Nodes below the slot's input.excel nodes whose config mentions the column key, including
+ * code.sql nodes naming it in their SQL.
+ */
 export function columnUsages(doc: DesignerDoc, slotKey: string, columnKey: string): DNode[] {
+  if (!IDENTIFIER.test(columnKey)) return [];
   const below = downstream(
     doc,
     slotUsages(doc, slotKey).map((n) => n.id),
   );
-  return doc.nodes.filter((n) => below.has(n.id) && mentions(n.config, columnKey));
+  return doc.nodes.filter(
+    (n) =>
+      below.has(n.id) &&
+      (mentions(n.config, columnKey) ||
+        (n.type === 'code.sql' &&
+          typeof n.config.sql === 'string' &&
+          sqlWords(n.config.sql).has(columnKey))),
+  );
 }
 
 /** Nodes using a param: `{ param }` values, `$key` in SQL, `{key}` in a file name. */
 export function paramUsages(doc: DesignerDoc, key: string): DNode[] {
+  // Keys are identifiers; anything else (being typed) cannot be used anywhere yet.
+  if (!IDENTIFIER.test(key)) return [];
   const sqlRef = new RegExp(`\\$${key}(?![a-z0-9_])`);
   return doc.nodes.filter((n) => {
     if (JSON.stringify(n.config).includes(`"param":${JSON.stringify(key)}`)) return true;

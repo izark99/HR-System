@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import type { DesignCheckResult } from '../../engine/design';
-import { EngineClient } from '../runner/engine-client';
+import { EngineClient, EngineCrashedError } from '../runner/engine-client';
 
 export const CHECK_DEBOUNCE_MS = 300;
 
@@ -33,21 +33,31 @@ export function useDesignCheck(definition: unknown): {
     const id = ++seq.current;
     setChecking(true);
     const timer = setTimeout(() => {
-      const client = clientRef.current;
-      if (!client) return;
-      client.api.checkDesign(definition).then(
-        (r) => {
-          if (id !== seq.current) return;
-          setResult(r);
-          setFailed(false);
-          setChecking(false);
-        },
-        () => {
-          if (id !== seq.current) return;
-          setFailed(true);
-          setChecking(false);
-        },
-      );
+      const attempt = (retry: boolean) => {
+        const client = clientRef.current;
+        if (!client) return;
+        client.api.checkDesign(definition).then(
+          (r) => {
+            if (id !== seq.current) return;
+            setResult(r);
+            setFailed(false);
+            setChecking(false);
+          },
+          (err: unknown) => {
+            if (id !== seq.current) return;
+            // A crashed check worker (out of memory, bug) is replaced once; the call that
+            // crashed was already released, so the idle countdown is not left paused.
+            if (retry && err instanceof EngineCrashedError) {
+              client.restart();
+              attempt(false);
+              return;
+            }
+            setFailed(true);
+            setChecking(false);
+          },
+        );
+      };
+      attempt(true);
     }, CHECK_DEBOUNCE_MS);
     return () => clearTimeout(timer);
   }, [definition]);
