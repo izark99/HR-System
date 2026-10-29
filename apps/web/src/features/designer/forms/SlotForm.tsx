@@ -602,12 +602,19 @@ export function SlotForm({
           <ColumnEditor
             col={col}
             i={i}
-            set={(c) =>
-              onChange(
-                { ...slot, columns: columns.map((x, k) => (k === i ? c : x)) },
-                `slot${index}:col${i}`,
-              )
-            }
+            set={(c) => {
+              const next: Obj = { ...slot, columns: columns.map((x, k) => (k === i ? c : x)) };
+              // The slot's own key-column list follows a renamed key (nodes do not, spec §15.3).
+              const before = str(col.key);
+              const after = str(c.key);
+              if (skip && before !== after && strs(skip.whenBlank).includes(before)) {
+                next.skipRows = {
+                  ...skip,
+                  whenBlank: strs(skip.whenBlank).map((k) => (k === before ? after : k)),
+                };
+              }
+              onChange(next, `slot${index}:col${i}`);
+            }}
             issues={issues}
             ro={ro}
             doc={doc}
