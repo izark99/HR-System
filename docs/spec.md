@@ -114,7 +114,7 @@ Kiến trúc giữ tính **portable**: frontend là static build; backend chỉ 
 | UI | React 19, Tailwind CSS v4, shadcn/ui | |
 | Routing / server state | TanStack Router, TanStack Query | |
 | Form & validation | React Hook Form + Zod | Zod cũng là nguồn sinh JSON Schema cho flow |
-| Canvas flow | @xyflow/react (React Flow) + ELK.js auto-layout | |
+| Canvas flow | @xyflow/react (React Flow) + auto-layout tự viết (layered, trái → phải; không dùng ELK.js vì giấy phép EPL-2.0) | |
 | Code editor | Monaco Editor (`monaco-editor` đóng gói cùng app, chốt 2026-10-27) | Highlight SQL / Python / formula, autocomplete tên view/cột/tham số. Chỉ lazy-load trong chunk Designer; editor worker same-origin (`worker-src 'self'`); font codicon self-host (`font-src 'self'`); **không dùng CDN loader**: cấu hình `@monaco-editor/loader` (hoặc tương đương) dùng bản `monaco-editor` đã bundle, không bao giờ tải từ jsDelivr hay domain ngoài |
 | Data grid preview | TanStack Table + virtualization | Hiển thị hàng trăm nghìn dòng mượt |
 | Chart | Apache ECharts | |
@@ -681,8 +681,8 @@ Truy cập từ danh sách flow của Admin và từ Designer (wireframe màn 6)
 | Trạng thái | Hành động |
 |------------|-----------|
 | Draft | Mở Designer · Publish · Hủy draft · So sánh |
-| Published | Tạo draft từ version này (rollback/sửa tiếp) · Đổi ngày kết thúc (`effective_to`) · Retire · So sánh · Xuất JSON |
-| Retired | Tạo draft từ version này · So sánh · Xuất JSON |
+| Published | Xem trong Designer (chỉ xem, chốt 2026-10-29) · Tạo draft từ version này (rollback/sửa tiếp) · Đổi ngày kết thúc (`effective_to`) · Retire · So sánh · Xuất JSON |
+| Retired | Xem trong Designer (chỉ xem) · Tạo draft từ version này · So sánh · Xuất JSON |
 
 - **Dialog Publish**: "Hiệu lực từ ngày" (`effective_from`, DatePicker, bắt buộc), "Hiệu lực đến trước ngày" (`effective_to`, tùy chọn, phải sau ngày bắt đầu; cận không bao gồm, cùng cách nhập với dialog Import flow đã có), "Ghi chú thay đổi" (`change_note`, bắt buộc), checkbox "Đặt v{n} hiệu lực đến trước ngày {D}" khi có version mở (§14.1). Trước khi gửi: chạy kiểm tra đầy đủ của engine (`planFlow` + `checkConfig` + `inferSchema`); còn lỗi → không cho publish, liệt kê lỗi theo node. Hiển thị trước cảnh báo khoảng trống nếu publish tạo ra khoảng trống. Lỗi chồng lấn từ DB (SQLSTATE `23P01`) → "Khoảng hiệu lực bị chồng với v{n} ({khoảng}). Hãy chọn ngày khác hoặc đặt ngày kết thúc cho v{n}."
 - **Tạo draft từ version**: nếu flow đã có draft → thông báo "Flow đang có bản nháp v{n}. Hãy publish hoặc hủy bản nháp đó trước." (không ghi đè).
@@ -732,7 +732,7 @@ Truy cập từ danh sách flow của Admin và từ Designer (wireframe màn 6)
 
 ### 15.3 Flow Designer (bước 3)
 
-Chỉ Admin; chỉ desktop (≥ 1280px). Route riêng, lazy-load (React Flow, ELK, code editor không nằm trong chunk của User). Designer luôn chỉnh **draft** của flow; version published/retired chỉ mở ở chế độ chỉ xem (có nút "Tạo draft từ version này").
+Chỉ Admin; chỉ desktop (≥ 1280px). Route riêng, lazy-load (React Flow, code editor không nằm trong chunk của User). Designer luôn chỉnh **draft** của flow; version published/retired chỉ mở ở chế độ chỉ xem (có nút "Tạo draft từ version này").
 
 **Bố cục**
 
@@ -744,6 +744,7 @@ Chỉ Admin; chỉ desktop (≥ 1280px). Route riêng, lazy-load (React Flow, EL
 **Lưu (chốt 2026-10-26 22:52)**
 
 - Không tự lưu. Lưu bằng nút **Lưu** hoặc **Ctrl+S** (Cmd+S trên macOS; chặn hộp "Save page" của trình duyệt). Nút Lưu hiển thị trạng thái "Đã lưu" / "Có thay đổi chưa lưu".
+- Luôn lưu được, kể cả khi draft chưa có node nào hoặc còn lỗi; lỗi chỉ chặn ở bước Publish (chốt 2026-10-29).
 - Draft được lưu kể cả khi flow còn lỗi kiểm tra (lỗi chỉ chặn publish), nhưng JSON phải parse được theo `FlowDefinitionSchema` ở mức cấu trúc.
 - **Cảnh báo rời trang** khi có thay đổi chưa lưu: chuyển route trong app → dialog "Rời trang / Ở lại"; đóng tab/tải lại → `beforeunload` của trình duyệt. Ngoại lệ: tự đăng xuất do không thao tác (§6.1).
 - **Kiểm tra xung đột** theo `updated_at`: khi lưu gửi `updated_at` đã tải; nếu draft đã được lưu bởi phiên khác (`HF002 draft_conflict`) → dialog "Bản nháp vừa được lưu ở nơi khác lúc {giờ}." với lựa chọn: "Tải bản mới nhất" (bỏ thay đổi của mình), "Xuất JSON thay đổi của tôi" (để không mất công) — không có lựa chọn ghi đè.
@@ -765,11 +766,11 @@ Chỉ Admin; chỉ desktop (≥ 1280px). Route riêng, lazy-load (React Flow, EL
 - **Undo/redo** (Ctrl+Z / Ctrl+Shift+Z, Ctrl+Y): mọi thay đổi trên canvas và form, tối thiểu 100 bước, xóa khi tải lại draft.
 - **Copy/paste** node (Ctrl+C / Ctrl+V, nhiều node cùng lúc, giữ dây nối nội bộ giữa các node được chọn; id mới tự sinh; nhân bản cả `ui.positions`). Clipboard chỉ trong app (không chứa dữ liệu nhân sự vì chỉ là cấu hình).
 - Xóa node/dây bằng Delete/Backspace (có undo).
-- **Auto-layout** (ELK.js, trái → phải), có undo.
+- **Auto-layout** (thuật toán layered tự viết, trái → phải, không chồng node), có undo.
 - **Minimap**, zoom, fit view.
 - **Sticky note**: thêm/sửa/xóa ghi chú văn bản trên canvas, lưu trong `ui.notes`.
 - **Export JSON**: tải `definition` hiện tại (kể cả chưa lưu) thành file `.json`; **Import JSON** giữ luồng đã có ở màn Flow của Admin (§8.1).
-- Bàn phím: mọi hành động chính có phím tắt và nút tương ứng; node chọn được bằng Tab.
+- Bàn phím: mọi hành động chính có phím tắt và nút tương ứng; node chọn được bằng Tab. Ngoại lệ ở bước 3: nối cạnh giữa các cổng chỉ làm bằng chuột (React Flow không hỗ trợ bàn phím); cách nối bằng bàn phím (chọn cổng nguồn → chọn cổng đích trong menu) làm ở R4 nếu còn hạn mức (chốt 2026-10-29).
 
 ---
 
@@ -819,7 +820,7 @@ Chỉ Admin; chỉ desktop (≥ 1280px). Route riêng, lazy-load (React Flow, EL
 | Trình duyệt | Chrome, Edge (2 phiên bản mới nhất), desktop |
 | Hiệu năng | 100k dòng × 30 cột, flow 15 node: < 10 giây (không có node Python) trên laptop 8GB RAM |
 | UI | Tải trang đầu < 3 giây (chưa tính WASM engine); UI không bị treo khi engine chạy |
-| Kích thước bundle | Entry chunk và chunk của User không chứa React Flow, ELK, Monaco, DuckDB; Monaco + React Flow + ELK chỉ trong chunk Designer. Ngân sách (chốt 2026-10-27): entry chunk (gzip) không tăng quá 10% so với cuối bước 2 (đo tại commit `d079f6b`, lưu mốc trong repo); script build tự kiểm tra và báo lỗi khi vượt |
+| Kích thước bundle | Entry chunk và chunk của User không chứa React Flow, Monaco, DuckDB; Monaco + React Flow chỉ trong chunk Designer. Ngân sách (chốt 2026-10-27): entry chunk (gzip) không tăng quá 10% so với cuối bước 2 (đo tại commit `d079f6b`, lưu mốc trong repo); script build tự kiểm tra và báo lỗi khi vượt |
 | Khả dụng | Phụ thuộc SLA free tier; app vẫn mở được khi Supabase lỗi nhưng không đăng nhập được |
 | Accessibility | WCAG 2.1 AA cho phần User |
 | i18n | `vi` mặc định; mọi text UI qua i18next; định dạng số/ngày theo locale (`1.234.567,89` cho vi) |
@@ -1178,7 +1179,7 @@ Toàn bộ UI dùng **một** design language ("bright executive"), áp dụng n
 | AC-B3-46 | Export JSON tải file `.json` của bản hiện tại (kể cả chưa lưu); import lại file này qua màn Import cho ra flow tương đương. |
 | AC-B3-47 | Version published/retired mở trong Designer ở chế độ chỉ xem: không sửa được, có nút "Tạo draft từ version này". |
 | AC-B3-48 | Mở form `code.sql` → Monaco tải từ cùng origin (script, editor worker, font codicon); không có request tới jsDelivr hay domain ngoài nào; không có lỗi CSP trong console; autocomplete gợi ý tên view (port), cột và `$tham_so`. |
-| AC-B3-49 | Bundle: entry chunk và chunk của User không chứa Monaco, React Flow, ELK, DuckDB (kiểm bằng phân tích build); Monaco chỉ được tải khi Admin mở Designer. |
+| AC-B3-49 | Bundle: entry chunk và chunk của User không chứa Monaco, React Flow, DuckDB (kiểm bằng phân tích build); Monaco chỉ được tải khi Admin mở Designer. |
 
 ### 26.3 (c) Xem trước từng node
 
