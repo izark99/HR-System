@@ -136,7 +136,7 @@ describe('checkDesign', () => {
 
   it('warnings: extraColumns keep, code.sql without ORDER BY; code.sql columns via DESCRIBE', async () => {
     const f = clone();
-    f.inputSlots[0]!.extraColumns = 'keep';
+    Object.assign(f.inputSlots[0]!, { extraColumns: 'keep' });
     f.nodes.push({
       id: 'q',
       type: 'code.sql',

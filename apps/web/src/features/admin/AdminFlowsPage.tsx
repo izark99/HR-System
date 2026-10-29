@@ -3,7 +3,7 @@ import { migrateFlowDefinition } from '@hrflow/flow-schema/migrate';
 import type { TFunction } from 'i18next';
 import { useRef, useState, type FormEvent } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Link } from '@tanstack/react-router';
+import { Link, useNavigate } from '@tanstack/react-router';
 import { DatePicker } from '../../components/DatePicker';
 import {
   Button,
@@ -299,6 +299,138 @@ function ImportForm({
   );
 }
 
+/** An empty draft: the Designer starts from a blank canvas (spec §15.3, AC-B3-31). */
+const EMPTY_DEFINITION: Json = {
+  schemaVersion: 1,
+  params: [],
+  nodes: [],
+  edges: [],
+  inputSlots: [],
+};
+
+function CreateFlowForm({ onCreated }: { onCreated: (code: string) => void }) {
+  const { t } = useTranslation();
+  const api = useAdminApi();
+  const [code, setCode] = useState('');
+  const [name, setName] = useState('');
+  const [description, setDescription] = useState('');
+  const [category, setCategory] = useState('');
+  const [instructions, setInstructions] = useState('');
+  const [touched, setTouched] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const codeOk = CODE_PATTERN.test(code);
+  const nameOk = name.trim() !== '';
+
+  async function submit(e: FormEvent) {
+    e.preventDefault();
+    setTouched(true);
+    if (!codeOk || !nameOk || busy) return;
+    setBusy(true);
+    setError(null);
+    try {
+      await api.createFlow({
+        code,
+        name: name.trim(),
+        description: description.trim(),
+        category: category.trim(),
+        instructions: instructions.trim(),
+        definition: EMPTY_DEFINITION,
+      });
+      onCreated(code);
+    } catch (err) {
+      const key = errorKeyOf(err);
+      setError(key === 'duplicate' ? t('admin.flows.create.duplicate') : t(`admin.errors.${key}`));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  const field = (
+    id: string,
+    label: string,
+    value: string,
+    set: (v: string) => void,
+    opts: { invalid?: string | false; hint?: string; area?: boolean; mono?: boolean } = {},
+  ) => (
+    <div className="flex flex-col gap-1.5">
+      <label htmlFor={id} className={labelClass}>
+        {label}
+      </label>
+      {opts.area ? (
+        <textarea
+          id={id}
+          rows={3}
+          value={value}
+          onChange={(e) => set(e.target.value)}
+          className="rounded-control border border-line-input bg-card px-3 py-2 text-label"
+        />
+      ) : (
+        <input
+          id={id}
+          type="text"
+          value={value}
+          aria-invalid={opts.invalid ? true : undefined}
+          aria-describedby={opts.hint || opts.invalid ? `${id}-desc` : undefined}
+          onChange={(e) => set(e.target.value)}
+          className={cx(
+            inputClass,
+            opts.mono && 'font-mono',
+            opts.invalid ? 'border-2 border-coral' : '',
+          )}
+        />
+      )}
+      {(opts.hint || opts.invalid) && (
+        <p
+          id={`${id}-desc`}
+          className={cx('m-0 text-small', opts.invalid ? 'text-coral-text' : 'text-muted')}
+        >
+          {opts.invalid || opts.hint}
+        </p>
+      )}
+    </div>
+  );
+
+  return (
+    <form onSubmit={(e) => void submit(e)} noValidate className="flex flex-col gap-3.5">
+      <p className="m-0 text-small text-muted">{t('admin.flows.create.intro')}</p>
+      {field('new-flow-code', t('admin.flows.create.code'), code, (v) => setCode(v.trim()), {
+        mono: true,
+        hint: t('admin.flows.create.codeHint'),
+        invalid: touched && !codeOk && t('admin.flows.create.codeInvalid'),
+      })}
+      {field('new-flow-name', t('admin.flows.create.name'), name, setName, {
+        invalid: touched && !nameOk && t('admin.flows.create.nameRequired'),
+      })}
+      {field('new-flow-category', t('admin.flows.create.category'), category, setCategory)}
+      {field(
+        'new-flow-description',
+        t('admin.flows.create.description'),
+        description,
+        setDescription,
+        {
+          area: true,
+        },
+      )}
+      {field(
+        'new-flow-instructions',
+        t('admin.flows.create.instructions'),
+        instructions,
+        setInstructions,
+        { area: true },
+      )}
+      {error && (
+        <Callout tone="coral" label={t('admin.errorLabel')} role="alert">
+          {error}
+        </Callout>
+      )}
+      <Button type="submit" variant="primary" disabled={busy} className="self-end">
+        {busy ? t('admin.flows.create.creating') : t('admin.flows.create.submit')}
+      </Button>
+    </form>
+  );
+}
+
 export function AdminFlowsPage() {
   const { t } = useTranslation();
   const { data, error, reload } = useAdminQuery(loadFlows);
@@ -307,6 +439,8 @@ export function AdminFlowsPage() {
   const [candidate, setCandidate] = useState<Candidate | null>(null);
   const [readError, setReadError] = useState<Exclude<ReadResult, { ok: true }> | null>(null);
   const [message, setMessage] = useState('');
+  const [creating, setCreating] = useState(false);
+  const navigate = useNavigate();
 
   async function onFile(file: File | undefined) {
     if (!file) return;
@@ -339,6 +473,7 @@ export function AdminFlowsPage() {
               aria-label={t('admin.import.choose')}
               onChange={(e) => void onFile(e.target.files?.[0])}
             />
+            <Button onClick={() => setCreating(true)}>{t('admin.flows.create.button')}</Button>
             <Button variant="primary" disabled={checking} onClick={() => fileRef.current?.click()}>
               {checking ? t('admin.import.checking') : t('admin.import.button')}
             </Button>
@@ -431,6 +566,18 @@ export function AdminFlowsPage() {
                         >
                           {t('admin.flows.manageVersions')}
                         </Link>
+                        <Link
+                          to="/admin/flows/$flowCode/designer"
+                          params={{ flowCode: f.code }}
+                          search={{}}
+                          aria-label={t('admin.flows.openDesignerFor', { name: f.name })}
+                          className={cx(
+                            buttonClass.secondary,
+                            'ml-2 min-h-target px-3.5 text-small no-underline',
+                          )}
+                        >
+                          {t('admin.flows.openDesigner')}
+                        </Link>
                       </td>
                     </tr>
                   ))}
@@ -442,6 +589,24 @@ export function AdminFlowsPage() {
         </Card>
       )}
 
+      <Dialog
+        open={creating}
+        onClose={() => setCreating(false)}
+        title={t('admin.flows.create.title')}
+      >
+        {creating && (
+          <CreateFlowForm
+            onCreated={(code) => {
+              setCreating(false);
+              void navigate({
+                to: '/admin/flows/$flowCode/designer',
+                params: { flowCode: code },
+                search: {},
+              });
+            }}
+          />
+        )}
+      </Dialog>
       <Dialog
         open={candidate !== null}
         onClose={() => setCandidate(null)}

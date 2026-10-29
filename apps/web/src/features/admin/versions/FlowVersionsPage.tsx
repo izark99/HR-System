@@ -6,6 +6,7 @@ import { Select } from '../../../components/Select';
 import {
   ArrowLeftIcon,
   Button,
+  buttonClass,
   Callout,
   Card,
   Chip,
@@ -302,13 +303,15 @@ export function FlowVersionsPage() {
                       <div className="flex flex-wrap gap-2">
                         {v.status === 'draft' && (
                           <>
-                            <Button
-                              className={smallButton}
-                              disabled
+                            <Link
+                              to="/admin/flows/$flowCode/designer"
+                              params={{ flowCode }}
+                              search={{}}
                               aria-label={action(t('admin.versions.openDesigner'), v)}
+                              className={cx(buttonClass.secondary, smallButton, 'no-underline')}
                             >
-                              {t('admin.versions.openDesigner')} ({t('admin.nav.soon')})
-                            </Button>
+                              {t('admin.versions.openDesigner')}
+                            </Link>
                             <Button
                               variant="primary"
                               className={smallButton}
@@ -328,6 +331,17 @@ export function FlowVersionsPage() {
                               {t('admin.versions.discard')}
                             </Button>
                           </>
+                        )}
+                        {v.status !== 'draft' && (
+                          <Link
+                            to="/admin/flows/$flowCode/designer"
+                            params={{ flowCode }}
+                            search={{ version: v.id }}
+                            aria-label={action(t('admin.versions.viewInDesigner'), v)}
+                            className={cx(buttonClass.secondary, smallButton, 'no-underline')}
+                          >
+                            {t('admin.versions.viewInDesigner')}
+                          </Link>
                         )}
                         {v.status !== 'draft' && (
                           <Button

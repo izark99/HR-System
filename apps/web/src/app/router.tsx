@@ -100,6 +100,15 @@ export const flowVersionsRoute = createRoute({
   ),
 });
 
+/** Flow Designer (spec §15.3): React Flow lives only in this chunk (AC-B3-30, AC-B3-49). */
+export const designerRoute = createRoute({
+  getParentRoute: () => adminRoute,
+  path: '/flows/$flowCode/designer',
+  validateSearch: (search: Record<string, unknown>): { version?: string } =>
+    typeof search.version === 'string' && search.version ? { version: search.version } : {},
+  component: lazyRouteComponent(() => import('../features/designer/DesignerPage'), 'DesignerPage'),
+});
+
 export const router = createRouter({
   routeTree: rootRoute.addChildren([
     loginRoute,
@@ -107,7 +116,13 @@ export const router = createRouter({
     flowListRoute,
     runRoute,
     resultRoute,
-    adminRoute.addChildren([adminIndexRoute, adminUsersRoute, adminFlowsRoute, flowVersionsRoute]),
+    adminRoute.addChildren([
+      adminIndexRoute,
+      adminUsersRoute,
+      adminFlowsRoute,
+      flowVersionsRoute,
+      designerRoute,
+    ]),
   ]),
   defaultPreload: false,
   context: { auth: null },
