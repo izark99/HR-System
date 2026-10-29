@@ -2,6 +2,7 @@ import { mkdtempSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { guardSql } from '../duckdb/sql-guard';
 import { nodeDuckDb } from './duckdb-node';
 import { runNode, table } from './sql-helpers';
 
@@ -57,12 +58,34 @@ describe('code.sql guard: format characters before `(`', () => {
     expect(readdirSync(dir)).toEqual(['secret.csv']);
   });
 
-  describe('KNOWN BUG (remove it.fails once fixed)', () => {
-    // sql-guard.ts UNICODE_SPACE lacks U+2060 WORD JOINER. DuckDB's parser ignores it, so
-    // `query<U+2060>(...)` is the dynamic-SQL function `query` and the statement runs.
-    it.fails('U+2060 WORD JOINER between `query` and `(` is not executed', async () => {
+  describe('fixed (was KNOWN BUG)', () => {
+    // U+2060 WORD JOINER: DuckDB's parser ignores it, so `query<U+2060>(...)` was the dynamic-SQL
+    // function `query`. The guard now refuses every non-letter/mark/digit outside strings.
+    it('U+2060 WORD JOINER between `query` and `(` is not executed', async () => {
       const k = await key(`SELECT * FROM query${ch(0x2060)}('SELECT 1 AS a')`);
       expect(notExecuted(k), k).toBe(true);
     });
   });
+
+  it('brute force: no BMP or tag character outside L/M/N passes the guard (call and FROM)', async () => {
+    const db = await nodeDuckDb();
+    const LMN = /^[\p{L}\p{M}\p{N}]$/u;
+    const leaked: string[] = [];
+    const points: number[] = [];
+    for (let cp = 0x80; cp <= 0xffff; cp++) if (cp < 0xd800 || cp > 0xdfff) points.push(cp);
+    for (let cp = 0xe0000; cp <= 0xe007f; cp++) points.push(cp);
+    for (const cp of points) {
+      const c = ch(cp);
+      if (LMN.test(c)) continue; // part of the identifier (`queryé` is not `query`)
+      for (const sql of [`SELECT * FROM query${c}('SELECT 1 AS a')`, `SELECT * FROM${c}'a.csv'`]) {
+        try {
+          guardSql(db, sql, new Set());
+          leaked.push(`${hex(cp)}: ${sql.slice(0, 20)}`);
+        } catch {
+          // refused: expected
+        }
+      }
+    }
+    expect(leaked).toEqual([]);
+  }, 120_000);
 });

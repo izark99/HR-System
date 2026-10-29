@@ -91,12 +91,14 @@ interface Token {
 }
 
 /**
- * Whitespace other than ASCII space/tab/newline/CR/FF/VT. DuckDB's tokenizer keeps it inside an
- * identifier while its parser treats it as whitespace, so `query\u00A0(…)` would not be seen as a
- * call by the checks below: refused outright outside strings, quoted identifiers and comments.
+ * Allowlist outside strings, quoted identifiers and comments: ASCII, letters, combining marks and
+ * digits only. DuckDB's tokenizer keeps other characters (NBSP, U+3000, the invisible U+2060
+ * WORD JOINER, tag characters…) inside an identifier while its parser ignores or skips them, so
+ * `query\u2060(…)` would not be seen as a call by the checks below. Refusing everything else is
+ * robust against characters added to that list in future versions.
  */
-const UNICODE_SPACE =
-  /[\u0085\u00A0\u1680\u180E\u2000-\u200B\u2028\u2029\u202F\u205F\u3000\uFEFF]/u;
+// eslint-disable-next-line no-control-regex -- the ASCII range is allowed as a whole
+const NOT_ALLOWED = /[^\x00-\x7F\p{L}\p{M}\p{N}]/u;
 const COMMENTS = /--[^\n]*|\/\*[\s\S]*?(?:\*\/|$)/g;
 
 /** End (exclusive, within `slice`) of the string literal a string token starts with. */
@@ -168,7 +170,7 @@ function tokens(db: DuckDb, sql: string): Token[] {
       body = 0;
     }
     const code = slice.slice(body).replace(COMMENTS, ' ');
-    const space = UNICODE_SPACE.exec(code);
+    const space = NOT_ALLOWED.exec(code);
     if (space) {
       const point = space[0].codePointAt(0)!.toString(16).toUpperCase().padStart(4, '0');
       fail('sql.error.syntax', { message: `U+${point}` });
