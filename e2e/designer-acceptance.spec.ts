@@ -17,6 +17,24 @@ const EXPECTED = JSON.parse(
 const panel = (page: Page) => page.getByRole('complementary', { name: 'Cấu hình' });
 const items = (set: Locator) => set.locator(':scope > [role="group"]');
 const node = (page: Page, id: string) => page.getByTestId(`rf__node-${id}`);
+
+/** Auto-layout animates the viewport (fit view): wait until the canvas stops moving. */
+async function settle(page: Page) {
+  const viewport = page.locator('.react-flow__viewport');
+  let last = '';
+  await expect
+    .poll(
+      async () => {
+        const now = (await viewport.getAttribute('style')) ?? '';
+        const still = now === last;
+        last = now;
+        return still;
+      },
+      { intervals: [150] },
+    )
+    .toBe(true);
+}
+
 const handle = (page: Page, nodeId: string, port: string) =>
   page.locator(`.react-flow__handle[data-nodeid="${nodeId}"][data-handleid="${port}"]`);
 
@@ -174,6 +192,7 @@ test('AC-B3-33: build the acceptance flow in the Designer, save, reload, publish
       .fill(name);
   }
   await page.getByRole('toolbar').getByRole('button', { name: 'Tự sắp xếp' }).click();
+  await settle(page);
 
   await wire(page, 'input_1', 'table', 'compare_1', 'left');
   await wire(page, 'input_2', 'table', 'compare_1', 'right');
@@ -206,6 +225,7 @@ test('AC-B3-33: build the acceptance flow in the Designer, save, reload, publish
     await wire(page, 'compare_1', port, 'excel_1', `sheet_${i + 1}`);
   }
   await page.getByRole('toolbar').getByRole('button', { name: 'Tự sắp xếp' }).click();
+  await settle(page);
 
   const status = page.getByRole('button', { name: /lỗi · / });
   await expect(status).toContainText('0 lỗi');

@@ -49,6 +49,24 @@ test('smoke: the draft opens on the canvas, checked without errors', async ({ pa
 const panel = (page: Page) => page.getByRole('complementary', { name: 'Cấu hình' });
 const toolbar = (page: Page) => page.getByRole('toolbar', { name: 'Thao tác trên flow' });
 const palette = (page: Page) => page.getByRole('navigation', { name: 'Thêm node' });
+
+/** Auto-layout animates the viewport (fit view): wait until the canvas stops moving. */
+async function settle(page: Page) {
+  const viewport = page.locator('.react-flow__viewport');
+  let last = '';
+  await expect
+    .poll(
+      async () => {
+        const now = (await viewport.getAttribute('style')) ?? '';
+        const still = now === last;
+        last = now;
+        return still;
+      },
+      { intervals: [150] },
+    )
+    .toBe(true);
+}
+
 const handle = (page: Page, nodeId: string, port: string) =>
   page.locator(`.react-flow__handle[data-nodeid="${nodeId}"][data-handleid="${port}"]`);
 const edge = (page: Page, from: string, fromPort: string, to: string, toPort: string) =>
@@ -108,6 +126,7 @@ test('AC-B3-32/42: add, wire, refuse a doubled input port, delete, undo/redo', a
     .getByRole('button', { name: /^Ghép bảng/ })
     .click();
   await toolbar(page).getByRole('button', { name: 'Tự sắp xếp' }).click();
+  await settle(page);
   await handle(page, 'in_luong', 'table').dragTo(handle(page, 'sort_1', 'in'));
   await expect(edge(page, 'in_luong', 'table', 'sort_1', 'in')).toHaveCount(1);
   // A second edge into the same input port.
@@ -115,6 +134,7 @@ test('AC-B3-32/42: add, wire, refuse a doubled input port, delete, undo/redo', a
   await expect(page.getByRole('alert')).toContainText('Cổng vào này đã có dây nối');
   await expect(edge(page, 'in_cc', 'table', 'sort_1', 'in')).toHaveCount(0);
   await toolbar(page).getByRole('button', { name: 'Tự sắp xếp' }).click();
+  await settle(page);
   await handle(page, 'sort_1', 'out').dragTo(handle(page, 'join_1', 'left'));
   await expect(edge(page, 'sort_1', 'out', 'join_1', 'left')).toHaveCount(1);
   await expect(page.locator('.react-flow__edge')).toHaveCount(8);
@@ -149,9 +169,11 @@ test('AC-B3-32: a cycle is refused with a message', async ({ page, supabase }) =
     .getByRole('button', { name: /^Ghép bảng/ })
     .click();
   await toolbar(page).getByRole('button', { name: 'Tự sắp xếp' }).click();
+  await settle(page);
   await handle(page, 'join_1', 'out').dragTo(handle(page, 'sort_1', 'in'));
   await expect(edge(page, 'join_1', 'out', 'sort_1', 'in')).toHaveCount(1);
   await toolbar(page).getByRole('button', { name: 'Tự sắp xếp' }).click();
+  await settle(page);
   await handle(page, 'sort_1', 'out').dragTo(handle(page, 'join_1', 'left'));
   await expect(page.getByRole('alert')).toContainText('vòng lặp');
   await expect(edge(page, 'sort_1', 'out', 'join_1', 'left')).toHaveCount(0);
