@@ -22,7 +22,7 @@ import type {
   SheetRole,
 } from '../../engine/protocol';
 import { formatDecimalString, formatInteger, formatMonth, formatSeconds } from '../../lib/format';
-import { ResultTable } from './components/ResultTable';
+import { ResultTable, type SortState } from './components/ResultTable';
 import { useRunState, useRunStore } from './run-context';
 import { BackToFlows, useOpenFlow } from './RunPage';
 import type { SessionState } from './run-store';
@@ -103,10 +103,23 @@ function Filters({
   );
 }
 
+const SEARCH_DEBOUNCE_MS = 250;
+
 function SheetPanel({ sheet, tabId }: { sheet: SheetInfo; tabId: string }) {
+  const { t } = useTranslation();
   const store = useRunStore();
   const [options, setOptions] = useState<FilterOption[]>([]);
   const [values, setValues] = useState<Record<string, string>>({});
+  const [sort, setSort] = useState<SortState>(null);
+  const [text, setText] = useState('');
+  const [search, setSearch] = useState('');
+  useEffect(() => {
+    const timer = setTimeout(() => setSearch(text), SEARCH_DEBOUNCE_MS);
+    return () => clearTimeout(timer);
+  }, [text]);
+  const searchId = `search-${sheet.id}`;
+  const truncated =
+    sheet.kind === 'preview' && sheet.totalRows !== undefined && sheet.totalRows > sheet.rowCount;
 
   useEffect(() => {
     let alive = true;
@@ -126,17 +139,44 @@ function SheetPanel({ sheet, tabId }: { sheet: SheetInfo; tabId: string }) {
 
   return (
     <div role="tabpanel" id={`panel-${sheet.id}`} aria-labelledby={tabId} className="flex flex-col">
-      <Filters
-        options={options}
-        values={values}
-        onChange={(column, value) => setValues((v) => ({ ...v, [column]: value }))}
-      />
-      {options.length === 0 && <div className="h-4" />}
+      <div className="flex flex-wrap items-end justify-between gap-3 pr-5">
+        <Filters
+          options={options}
+          values={values}
+          onChange={(column, value) => setValues((v) => ({ ...v, [column]: value }))}
+        />
+        <div className={cx('flex flex-col gap-1', options.length === 0 && 'pt-3.5 pl-5')}>
+          <label htmlFor={searchId} className="text-small font-semibold text-body">
+            {t('result.search')}
+          </label>
+          <input
+            id={searchId}
+            type="search"
+            value={text}
+            onChange={(e) => setText(e.target.value)}
+            className="h-target w-60 rounded-control border border-line-input bg-card px-3 text-label"
+          />
+        </div>
+      </div>
+      <div className="h-3" />
+      {truncated && (
+        <div className="px-5 pb-3">
+          <Callout tone="blue" label={t('result.noteLabel')} role="status">
+            {t('result.truncated', {
+              shown: formatInteger(sheet.rowCount),
+              total: formatInteger(sheet.totalRows ?? 0),
+            })}
+          </Callout>
+        </div>
+      )}
       <ResultTable
-        key={`${sheet.id}|${JSON.stringify(filters)}`}
+        key={`${sheet.id}|${JSON.stringify(filters)}|${JSON.stringify(sort)}|${search}`}
         sheet={sheet}
         filters={filters}
         label={sheet.name}
+        sort={sort}
+        search={search}
+        onSort={setSort}
       />
     </div>
   );
@@ -202,7 +242,12 @@ function SheetTabs({ summary }: { summary: RunSummary }) {
             >
               {s.role === 'summary'
                 ? s.name
-                : t('result.tabCount', { name: s.name, count: s.rowCount })}
+                : t('result.tabCount', { name: s.name, count: s.totalRows ?? s.rowCount })}
+              {s.kind === 'preview' && (
+                <span className="ml-2 rounded-full bg-neutral px-2 py-0.5 text-xs font-bold text-muted">
+                  {t('result.viewOnly')}
+                </span>
+              )}
             </button>
           );
         })}
@@ -215,6 +260,7 @@ function SheetTabs({ summary }: { summary: RunSummary }) {
 export function ResultPage() {
   const { flowCode } = useParams({ from: '/run/$flowCode/result' });
   const { t } = useTranslation();
+  const { t: te } = useTranslation('engine');
   const store = useRunStore();
   const state = useRunState();
   const navigate = useNavigate();
@@ -321,6 +367,21 @@ export function ResultPage() {
             tone="amber"
           />
         </dl>
+      )}
+
+      {summary.warnings.length > 0 && (
+        <Callout tone="amber" label={t('result.warningsLabel')} role="status">
+          <span className="flex flex-col gap-1">
+            {summary.warnings.map((w, i) => {
+              const node = state.flow?.nodes.find((n) => n.id === w.nodeId);
+              return (
+                <span key={i}>
+                  {te(w.messageKey, { node: node?.label ?? w.nodeId, ...w.params })}
+                </span>
+              );
+            })}
+          </span>
+        </Callout>
       )}
 
       <SheetTabs summary={summary} />

@@ -33,14 +33,23 @@ function columnWidth(c: ColumnInfo): number {
  * Data stays in the worker; this component asks for row pages around the visible window.
  * Mount with `key` = sheet + filters so a new query starts from a clean state.
  */
+export type SortState = { column: string; direction: 'asc' | 'desc' } | null;
+
 export function ResultTable({
   sheet,
   filters,
   label,
+  sort = null,
+  search = '',
+  onSort,
 }: {
   sheet: SheetInfo;
   filters: RowFilter[];
   label: string;
+  /** Sort and search run in the worker (spec §12.1.10); mount with a new `key` when they change. */
+  sort?: SortState;
+  search?: string;
+  onSort?: (sort: SortState) => void;
 }) {
   const { t } = useTranslation();
   const store = useRunStore();
@@ -78,7 +87,14 @@ export function ResultTable({
     for (const p of wanted) {
       if (requested.current.has(p)) continue;
       requested.current.add(p);
-      void store.getRows(sheet.id, { offset: p * PAGE_SIZE, limit: PAGE_SIZE, filters }).then(
+      const query = {
+        offset: p * PAGE_SIZE,
+        limit: PAGE_SIZE,
+        filters,
+        ...(sort ? { sort } : {}),
+        ...(search.trim() ? { search: search.trim() } : {}),
+      };
+      void store.getRows(sheet.id, query).then(
         (page) => {
           if (!mounted.current) return;
           setTotal(page.total);
@@ -91,7 +107,7 @@ export function ResultTable({
         },
       );
     }
-  }, [store, sheet.id, filters, total, firstPage, lastPage, failed]);
+  }, [store, sheet.id, filters, sort, search, total, firstPage, lastPage, failed]);
 
   const columns = useMemo<ColumnDef<RowData>[]>(
     () =>
@@ -138,7 +154,11 @@ export function ResultTable({
   if (total === null && failed) return <div className="px-5 pb-5">{errorState}</div>;
 
   if (total === 0) {
-    return <p className="m-0 px-5 pb-5 text-label text-muted">{t('result.empty')}</p>;
+    return (
+      <p className="m-0 px-5 pb-5 text-label text-muted">
+        {search.trim() ? t('result.noMatch') : t('result.empty')}
+      </p>
+    );
   }
 
   return (
@@ -162,17 +182,52 @@ export function ResultTable({
               <tr key={hg.id} aria-rowindex={1} className="flex w-full border-b border-line">
                 {hg.headers.map((h, ci) => {
                   const col = sheet.columns[ci]!;
+                  const dir = sort?.column === col.key ? sort.direction : null;
+                  const header = flexRender(h.column.columnDef.header, h.getContext());
                   return (
                     <th
                       key={h.id}
                       scope="col"
+                      aria-sort={
+                        dir === 'asc' ? 'ascending' : dir === 'desc' ? 'descending' : undefined
+                      }
                       style={{ width: h.getSize() }}
                       className={cx(
-                        'flex shrink-0 items-center px-2 py-2.5 font-semibold text-muted',
+                        'flex shrink-0 items-center px-2 py-0 font-semibold text-muted',
                         isNumericType(col.type) ? 'justify-end text-right' : 'text-left',
                       )}
                     >
-                      {flexRender(h.column.columnDef.header, h.getContext())}
+                      {onSort ? (
+                        <button
+                          type="button"
+                          onClick={() =>
+                            onSort(
+                              dir === null
+                                ? { column: col.key, direction: 'asc' }
+                                : dir === 'asc'
+                                  ? { column: col.key, direction: 'desc' }
+                                  : null,
+                            )
+                          }
+                          title={t('result.sortHint')}
+                          className="flex min-h-target items-center gap-1 rounded-control px-1 font-semibold text-muted hover:bg-card"
+                        >
+                          {header}
+                          {dir && (
+                            <svg
+                              viewBox="0 0 12 12"
+                              width="10"
+                              height="10"
+                              aria-hidden
+                              fill="currentColor"
+                            >
+                              <path d={dir === 'asc' ? 'M6 2l4 6H2z' : 'M6 10L2 4h8z'} />
+                            </svg>
+                          )}
+                        </button>
+                      ) : (
+                        header
+                      )}
                     </th>
                   );
                 })}

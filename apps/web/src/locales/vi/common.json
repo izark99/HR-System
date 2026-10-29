@@ -121,7 +121,8 @@
       "errorLabel": "Chưa xác định được phiên bản:",
       "error": "không kết nối được máy chủ.",
       "retry": "Thử lại"
-    }
+    },
+    "engineLoadingLabel": "Đang chuẩn bị:"
   },
   "slot": {
     "multiple": "Nhiều file · {{accept}}",
@@ -200,7 +201,13 @@
     "rowsFailed": "không lấy được các dòng của sheet này.",
     "retry": "Thử lại",
     "noteLabel": "Lưu ý:",
-    "note": "kết quả chỉ nằm trong trình duyệt. Hãy tải file về trước khi đóng tab."
+    "note": "kết quả chỉ nằm trong trình duyệt. Hãy tải file về trước khi đóng tab.",
+    "viewOnly": "Chỉ xem",
+    "truncated": "Đang hiển thị {{shown}} / {{total}} dòng đầu.",
+    "warningsLabel": "Cảnh báo:",
+    "search": "Tìm trong bảng",
+    "sortHint": "Bấm để sắp xếp tăng dần, giảm dần hoặc bỏ sắp xếp",
+    "noMatch": "Không có dòng nào khớp từ khóa tìm kiếm."
   },
   "config": {
     "title": "Ứng dụng chưa được cấu hình",
