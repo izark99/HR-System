@@ -301,6 +301,14 @@ export async function checkDesign(
     const parsed = plugin.configSchema.safeParse(node.config);
     if (!parsed.success) {
       r.ok = false;
+      // Ports are still known (static, or from the raw config), so edges keep bringing the
+      // upstream columns: the form of a node being configured needs them.
+      try {
+        r.inPorts = plugin.inputPorts ? plugin.inputPorts(node.config) : plugin.inputs;
+        if (!Array.isArray(r.inPorts)) r.inPorts = plugin.inputs;
+      } catch {
+        r.inPorts = plugin.inputs.length > 0 ? plugin.inputs : null;
+      }
       const seen = new Set<string>();
       for (const path of zodPaths(parsed.error)) {
         const field = path.join('.');

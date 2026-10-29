@@ -56,6 +56,16 @@ describe('checkDesign', () => {
     expect(r.errorCount).toBe(2);
   });
 
+  it('a node still being configured gets its input columns (forms need them)', async () => {
+    const f = clone();
+    const cmp = f.nodes.find((n) => n.id === 'cmp')!;
+    cmp.config = { keys: [], metrics: [] };
+    const r = await check(f);
+    expect(r.nodes.cmp!.status).toBe('error');
+    expect(r.nodes.cmp!.inputs.left!.map((c) => c.key)).toContain('ma_nv');
+    expect(r.nodes.cmp!.inputs.right!.map((c) => c.key)).toContain('cong');
+  });
+
   it('a node after a failing node is blocked, not reported', async () => {
     const f = clone();
     f.nodes.push({
