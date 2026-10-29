@@ -50,6 +50,7 @@ import {
   type JsonObject,
   type XY,
 } from './model';
+import { DataPanel } from './DataPanel';
 import { DRAG_MIME, Palette } from './Palette';
 import { StatusBar } from './StatusBar';
 import { useDesignCheck } from './use-design-check';
@@ -703,7 +704,11 @@ export function DesignerEditor(props: DesignerEditorProps) {
               </div>
             )}
           </div>
-          <section aria-labelledby="designer-data-title" className="border-t border-line bg-card">
+          <section
+            aria-labelledby="designer-data-title"
+            role="region"
+            className="border-t border-line bg-card"
+          >
             <h2 id="designer-data-title" className="m-0">
               <button
                 type="button"
@@ -714,13 +719,9 @@ export function DesignerEditor(props: DesignerEditorProps) {
                 {t('data.title')}
               </button>
             </h2>
-            {dataOpen && (
-              <div className="px-3.5 pb-3">
-                <Callout tone="blue" label={t('data.soonLabel')}>
-                  {t('data.soon')}
-                </Callout>
-              </div>
-            )}
+            <div hidden={!dataOpen}>
+              <DataPanel doc={doc} definition={definition} node={selectedNode} />
+            </div>
           </section>
           <StatusBar check={check} checking={checking} failed={failed} onJump={jump} />
         </div>

@@ -48,8 +48,30 @@
   },
   "data": {
     "title": "Dữ liệu mẫu và xem trước",
-    "soonLabel": "Sắp có:",
-    "soon": "Chọn file mẫu cho từng mục upload và xem trước kết quả từng node sẽ có trong bản cập nhật tiếp theo. Danh sách cột ở mỗi node đã được suy ra từ cấu hình, không cần file mẫu."
+    "safeLabel": "An toàn dữ liệu:",
+    "safe": "file mẫu chỉ nằm trong bộ nhớ của trình duyệt này, không được tải lên hay lưu lại; đóng Designer là mất. Xem trước không ghi lịch sử chạy.",
+    "noSlots": "Chưa có mục upload nào để chọn file mẫu.",
+    "sampleFor": "File mẫu cho {{slot}}",
+    "checking": "Đang kiểm tra file...",
+    "rows": "{{count}} dòng",
+    "errors": "{{count}} lỗi",
+    "warnings": "{{count}} cảnh báo",
+    "pickNode": "Chọn một node để xem trước",
+    "run": "Xem trước {{node}}",
+    "running": "Đang chạy xem trước...",
+    "ran": "Đã chạy {{count}} node (node đang chọn và các node phía trước).",
+    "noTables": "Node này không có bảng kết quả để xem.",
+    "resultLabel": "Kết quả xem trước",
+    "tab": "{{name}} ({{count}})",
+    "shown": "Hiển thị {{shown}} / {{total}} dòng đầu.",
+    "ports": {
+      "summary": "Tổng hợp",
+      "mismatched": "Lệch",
+      "only_left": "Chỉ có trong A",
+      "only_right": "Chỉ có trong B",
+      "out": "Kết quả (out)",
+      "removed": "Dòng bị loại (removed)"
+    }
   },
   "defaults": {
     "sheetName": "Kết quả",

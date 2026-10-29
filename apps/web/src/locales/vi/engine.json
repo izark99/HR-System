@@ -182,7 +182,10 @@
   "preview": {
     "error": {
       "unknownColumn": "Node \"{{node}}\": cột \"{{column}}\" không có ở bước trước.",
-      "duplicateTitle": "Node \"{{node}}\": tên tab \"{{title}}\" trùng với một bảng xem trước hoặc sheet khác."
+      "duplicateTitle": "Node \"{{node}}\": tên tab \"{{title}}\" trùng với một bảng xem trước hoặc sheet khác.",
+      "flowInvalid": "Flow trên canvas chưa hợp lệ nên chưa xem trước được; hãy sửa các lỗi trong thanh trạng thái.",
+      "noSample": "Chưa có file mẫu cho {{slot}}.",
+      "sampleInvalid": "File mẫu của {{slot}} có lỗi; hãy xem báo cáo kiểm tra file."
     }
   },
   "inputExcel": {
