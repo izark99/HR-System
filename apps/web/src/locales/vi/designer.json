@@ -161,7 +161,9 @@
       "fitView": "Xem toàn bộ flow",
       "interactive": "Bật hoặc tắt chỉnh sửa",
       "handle": "Cổng nối"
-    }
+    },
+    "rowErrors": "{{count}} dòng lỗi",
+    "rowErrorsAria": "Lần xem trước gần nhất: {{count}} dòng tính lỗi, các ô được để trống"
   },
   "status": {
     "checking": "Đang kiểm tra flow...",

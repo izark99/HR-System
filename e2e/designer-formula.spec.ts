@@ -205,4 +205,10 @@ test('AC-B4-44/45: preview with row-error warnings; keyboard list editing; custo
   });
   await expect(panel).toContainText('#DIV/0!');
   await expect(panel).toContainText('các ô này được để trống');
+  // Also on the canvas node: amber border + row-error count with an accessible label.
+  const badge = page.getByTestId('rf__node-formula_1').getByTestId('node-row-errors');
+  await expect(badge).toBeVisible();
+  await expect(badge).toHaveText(/\d+ dòng lỗi/);
+  await expect(badge).toHaveAttribute('aria-label', /dòng tính lỗi/);
+  await expect(page.getByTestId('rf__node-formula_1').locator('.border-amber')).toHaveCount(1);
 });

@@ -30,6 +30,8 @@ export interface FlowCardData extends Record<string, unknown> {
   status: DesignNodeStatus | 'checking';
   errors: DesignIssue[];
   warnings: DesignIssue[];
+  /** Rows that failed in a formula during the last preview (AC-B4-44). */
+  rowErrors?: number;
   readOnly: boolean;
 }
 
@@ -79,6 +81,15 @@ function FlowCardImpl({ data, selected }: NodeProps<FlowCardNode>) {
         </div>
         {(hasError || hasWarning) && <ErrorBadge tone={hasError ? 'coral' : 'amber'} />}
       </div>
+      {(data.rowErrors ?? 0) > 0 && (
+        <p
+          className="m-0 mx-3.5 mt-1 inline-block rounded-control bg-amber-tint px-2 py-0.5 text-small font-semibold text-amber-text"
+          aria-label={t('canvas.rowErrorsAria', { count: data.rowErrors })}
+          data-testid="node-row-errors"
+        >
+          {t('canvas.rowErrors', { count: data.rowErrors })}
+        </p>
+      )}
       <p className="m-0 px-3.5 pt-1 text-small text-muted">
         {data.status === 'checking'
           ? t('canvas.checking')

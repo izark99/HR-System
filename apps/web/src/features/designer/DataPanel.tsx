@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { Button, Callout, Chip, cx } from '../../components/ui';
 import { formatIssue } from '../../engine/io/validation';
 import type { PreviewOutcome } from '../../engine/preview';
+import type { RunWarningInfo } from '../../engine/protocol';
 import type { ParamValues, SlotValidation } from '../../engine/protocol';
 import { formatCell, formatInteger, isNumericType } from '../../lib/format';
 import { ParamsCard } from '../runner/components/ParamsCard';
@@ -41,10 +42,13 @@ export function DataPanel({
   doc,
   definition,
   node,
+  onRunWarnings,
 }: {
   doc: DesignerDoc;
   definition: JsonObject;
   node: DNode | null;
+  /** Run warnings of the last preview (e.g. formula row errors), shown on the canvas nodes too. */
+  onRunWarnings?: (warnings: RunWarningInfo[]) => void;
 }) {
   const { t } = useTranslation('designer');
   const { t: tc } = useTranslation();
@@ -106,8 +110,11 @@ export function DataPanel({
     setRunning(true);
     setTab(0);
     try {
-      setOutcome(await engine().api.previewRun(definition, node.id, params));
+      const result = await engine().api.previewRun(definition, node.id, params);
+      setOutcome(result);
+      onRunWarnings?.(result.ok ? result.warnings : []);
     } catch {
+      onRunWarnings?.([]);
       setOutcome({
         ok: false,
         error: { messageKey: 'executor.error.engineCrashed', params: {} },

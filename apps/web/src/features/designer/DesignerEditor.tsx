@@ -16,6 +16,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, type DragEvent } fro
 import { useTranslation } from 'react-i18next';
 import { Button, Callout, Chip, cx } from '../../components/ui';
 import type { DesignIssue } from '../../engine/design';
+import type { RunWarningInfo } from '../../engine/protocol';
 import type { Json } from '../../lib/database.types';
 import { saveFile } from '../../lib/download';
 import { errorKeyOf, type AdminVersionDetail } from '../admin/admin-api';
@@ -138,6 +139,7 @@ export interface SavedState {
 export function DesignerEditor(props: DesignerEditorProps) {
   const { t } = useTranslation('designer');
   const { t: tc } = useTranslation();
+  const { t: te } = useTranslation('engine');
   const api = useAdminApi();
   const rf = useReactFlow();
   const wrapperRef = useRef<HTMLDivElement>(null);
@@ -181,6 +183,23 @@ export function DesignerEditor(props: DesignerEditorProps) {
 
   // ---- canvas model ---------------------------------------------------------------------------
 
+  // Run warnings of the last preview (formula row errors, AC-B4-44), shown on their nodes.
+  const [previewWarnings, setPreviewWarnings] = useState<RunWarningInfo[]>([]);
+  const previewByNode = useMemo(() => {
+    const m = new Map<string, { texts: { key: string; text: string }[]; rowErrors: number }>();
+    for (const w of previewWarnings) {
+      const e = m.get(w.nodeId) ?? { texts: [], rowErrors: 0 };
+      const node = doc.nodes.find((n) => n.id === w.nodeId);
+      e.texts.push({
+        key: w.messageKey,
+        text: te(w.messageKey, { ...w.params, node: node?.label || w.nodeId }),
+      });
+      if (w.messageKey === 'formula.warning.rowErrors') e.rowErrors += Number(w.params.count ?? 0);
+      m.set(w.nodeId, e);
+    }
+    return m;
+  }, [previewWarnings, doc.nodes, te]);
+
   const issuesByNode = useMemo(() => {
     const m = new Map<string, { errors: DesignIssue[]; warnings: DesignIssue[] }>();
     for (const i of check?.issues ?? []) {
@@ -197,7 +216,23 @@ export function DesignerEditor(props: DesignerEditorProps) {
       const info = check?.nodes[n.id];
       const outputs = outputPortsOf(n.type);
       const firstOut = outputs[0] ? info?.outputs?.[outputs[0].name] : undefined;
-      const problems = issuesByNode.get(n.id) ?? { errors: [], warnings: [] };
+      const designProblems = issuesByNode.get(n.id) ?? { errors: [], warnings: [] };
+      const run = previewByNode.get(n.id);
+      const problems = run
+        ? {
+            errors: designProblems.errors,
+            warnings: [
+              ...designProblems.warnings,
+              ...run.texts.map(({ key, text }): DesignIssue => ({
+                severity: 'warning',
+                messageKey: key,
+                params: {},
+                text,
+                nodeId: n.id,
+              })),
+            ],
+          }
+        : designProblems;
       const label = n.label || n.id;
       const typeLabel = t(`types.node.${typeKey(n.type)}`);
       return {
@@ -220,6 +255,7 @@ export function DesignerEditor(props: DesignerEditorProps) {
           status: !check || (checking && !info) ? 'checking' : (info?.status ?? 'error'),
           errors: problems.errors,
           warnings: problems.warnings,
+          rowErrors: run?.rowErrors ?? 0,
           readOnly: ro,
         },
       };
@@ -233,7 +269,7 @@ export function DesignerEditor(props: DesignerEditorProps) {
       data: { text: n.text, placeholder: t('canvas.notePlaceholder') },
     }));
     return [...notes, ...flowNodes];
-  }, [doc, check, checking, issuesByNode, selection, ro, t]);
+  }, [doc, check, checking, issuesByNode, previewByNode, selection, ro, t]);
 
   // React Flow's own node state (measured sizes, positions while dragging) on top of the document.
   const [rfState, setRfState] = useState<Node[]>([]);
@@ -751,7 +787,12 @@ export function DesignerEditor(props: DesignerEditorProps) {
               </button>
             </h2>
             <div hidden={!dataOpen}>
-              <DataPanel doc={doc} definition={definition} node={selectedNode} />
+              <DataPanel
+                doc={doc}
+                definition={definition}
+                node={selectedNode}
+                onRunWarnings={setPreviewWarnings}
+              />
             </div>
           </section>
           <StatusBar check={check} checking={checking} failed={failed} onJump={jump} />
