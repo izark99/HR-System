@@ -1,0 +1,2723 @@
+[
+ {
+  "id": "c001",
+  "fn": "OP",
+  "formula": "=[a]+1",
+  "inputs": {
+   "a": {
+    "type": "n",
+    "value": null
+   }
+  },
+  "expect": {
+   "type": "number",
+   "value": "1"
+  }
+ },
+ {
+  "id": "c002",
+  "fn": "OP",
+  "formula": "=[a]&\"x\"",
+  "inputs": {
+   "a": {
+    "type": "s",
+    "value": null
+   }
+  },
+  "expect": {
+   "type": "string",
+   "value": "x"
+  }
+ },
+ {
+  "id": "c003",
+  "fn": "OP",
+  "formula": "=[a]=\"\"",
+  "inputs": {
+   "a": {
+    "type": "n",
+    "value": null
+   }
+  },
+  "expect": {
+   "type": "boolean",
+   "value": true
+  }
+ },
+ {
+  "id": "c004",
+  "fn": "OP",
+  "formula": "=[a]=0",
+  "inputs": {
+   "a": {
+    "type": "n",
+    "value": null
+   }
+  },
+  "expect": {
+   "type": "boolean",
+   "value": true
+  }
+ },
+ {
+  "id": "c005",
+  "fn": "OP",
+  "formula": "=[a]",
+  "inputs": {
+   "a": {
+    "type": "n",
+    "value": null
+   }
+  },
+  "expect": {
+   "type": "blank",
+   "value": null
+  },
+  "excel": {
+   "type": "number",
+   "value": "0"
+  },
+  "note": "Engine: tham chiếu cột trần với ô trống → trống (MEMORY 2026-10-30); Excel trả 0."
+ },
+ {
+  "id": "c006",
+  "fn": "OP",
+  "formula": "=0.1+0.2",
+  "inputs": {},
+  "expect": {
+   "type": "number",
+   "value": "0.3"
+  }
+ },
+ {
+  "id": "c007",
+  "fn": "OP",
+  "formula": "=1/3",
+  "inputs": {},
+  "expect": {
+   "type": "number",
+   "value": "0.3333333333"
+  },
+  "excel": {
+   "type": "number",
+   "value": "0.333333333333333"
+  },
+  "note": "Engine: DECIMAL(38,10) làm tròn 10 chữ số; Excel 15 chữ số có nghĩa."
+ },
+ {
+  "id": "c008",
+  "fn": "OP",
+  "formula": "=[a]*1.1",
+  "inputs": {
+   "a": {
+    "type": "n",
+    "value": "1234567890123.25"
+   }
+  },
+  "expect": {
+   "type": "number",
+   "value": "1358024679135.575"
+  },
+  "excel": {
+   "type": "number",
+   "value": "1358024679135.58"
+  },
+  "note": "Engine chính xác tuyệt đối; Excel chỉ giữ 15 chữ số có nghĩa."
+ },
+ {
+  "id": "c009",
+  "fn": "OP",
+  "formula": "=[a]/[b]",
+  "inputs": {
+   "a": {
+    "type": "n",
+    "value": "10"
+   },
+   "b": {
+    "type": "n",
+    "value": "0"
+   }
+  },
+  "expect": {
+   "type": "error",
+   "value": "#DIV/0!"
+  }
+ },
+ {
+  "id": "c010",
+  "fn": "OP",
+  "formula": "=[a]/[b]",
+  "inputs": {
+   "a": {
+    "type": "n",
+    "value": "-7"
+   },
+   "b": {
+    "type": "n",
+    "value": "2"
+   }
+  },
+  "expect": {
+   "type": "number",
+   "value": "-3.5"
+  }
+ },
+ {
+  "id": "c011",
+  "fn": "OP",
+  "formula": "=\"12\"+1",
+  "inputs": {},
+  "expect": {
+   "type": "number",
+   "value": "13"
+  }
+ },
+ {
+  "id": "c012",
+  "fn": "OP",
+  "formula": "=\"abc\"+1",
+  "inputs": {},
+  "expect": {
+   "type": "error",
+   "value": "#VALUE!"
+  }
+ },
+ {
+  "id": "c013",
+  "fn": "OP",
+  "formula": "=TRUE+1",
+  "inputs": {},
+  "expect": {
+   "type": "number",
+   "value": "2"
+  }
+ },
+ {
+  "id": "c014",
+  "fn": "OP",
+  "formula": "=-2^2",
+  "inputs": {},
+  "expect": {
+   "type": "number",
+   "value": "4"
+  }
+ },
+ {
+  "id": "c015",
+  "fn": "OP",
+  "formula": "=2^10",
+  "inputs": {},
+  "expect": {
+   "type": "number",
+   "value": "1024"
+  }
+ },
+ {
+  "id": "c016",
+  "fn": "OP",
+  "formula": "=2^-2",
+  "inputs": {},
+  "expect": {
+   "type": "number",
+   "value": "0.25"
+  }
+ },
+ {
+  "id": "c017",
+  "fn": "OP",
+  "formula": "=10^30*10^30",
+  "inputs": {},
+  "expect": {
+   "type": "error",
+   "value": "#NUM!"
+  },
+  "excel": {
+   "type": "number",
+   "value": "1e60"
+  },
+  "note": "Engine: vượt DECIMAL(38,10) → #NUM!; Excel (double) vẫn tính được."
+ },
+ {
+  "id": "c018",
+  "fn": "OP",
+  "formula": "=50%",
+  "inputs": {},
+  "expect": {
+   "type": "number",
+   "value": "0.5"
+  }
+ },
+ {
+  "id": "c019",
+  "fn": "OP",
+  "formula": "=[a]%",
+  "inputs": {
+   "a": {
+    "type": "n",
+    "value": "-12.5"
+   }
+  },
+  "expect": {
+   "type": "number",
+   "value": "-0.125"
+  }
+ },
+ {
+  "id": "c020",
+  "fn": "OP",
+  "formula": "=\"abc\"=\"ABC\"",
+  "inputs": {},
+  "expect": {
+   "type": "boolean",
+   "value": true
+  }
+ },
+ {
+  "id": "c021",
+  "fn": "OP",
+  "formula": "=\"a\"<\"B\"",
+  "inputs": {},
+  "expect": {
+   "type": "boolean",
+   "value": true
+  }
+ },
+ {
+  "id": "c022",
+  "fn": "OP",
+  "formula": "=1<\"a\"",
+  "inputs": {},
+  "expect": {
+   "type": "boolean",
+   "value": true
+  }
+ },
+ {
+  "id": "c023",
+  "fn": "OP",
+  "formula": "=[a]<>[b]",
+  "inputs": {
+   "a": {
+    "type": "s",
+    "value": "Nguyễn"
+   },
+   "b": {
+    "type": "s",
+    "value": "NGUYỄN"
+   }
+  },
+  "expect": {
+   "type": "boolean",
+   "value": false
+  }
+ },
+ {
+  "id": "c024",
+  "fn": "OP",
+  "formula": "=[a]+30",
+  "inputs": {
+   "a": {
+    "type": "d",
+    "value": "2024-02-15"
+   }
+  },
+  "expect": {
+   "type": "date",
+   "value": "2024-03-16"
+  },
+  "excel": {
+   "type": "number",
+   "value": "45367"
+  },
+  "note": "Excel lưu ngày dạng số serial."
+ },
+ {
+  "id": "c025",
+  "fn": "OP",
+  "formula": "=[a]-[b]",
+  "inputs": {
+   "a": {
+    "type": "d",
+    "value": "2026-03-01"
+   },
+   "b": {
+    "type": "d",
+    "value": "2024-02-28"
+   }
+  },
+  "expect": {
+   "type": "number",
+   "value": "732"
+  }
+ },
+ {
+  "id": "c026",
+  "fn": "OP",
+  "formula": "=\"Mã: \"&[a]",
+  "inputs": {
+   "a": {
+    "type": "n",
+    "value": "1.50"
+   }
+  },
+  "expect": {
+   "type": "string",
+   "value": "Mã: 1.5"
+  }
+ },
+ {
+  "id": "c027",
+  "fn": "OP",
+  "formula": "=[a]&[b]",
+  "inputs": {
+   "a": {
+    "type": "b",
+    "value": true
+   },
+   "b": {
+    "type": "n",
+    "value": "-3"
+   }
+  },
+  "expect": {
+   "type": "string",
+   "value": "TRUE-3"
+  }
+ },
+ {
+  "id": "c028",
+  "fn": "IF",
+  "formula": "=IF([a]>0,\"Dương\",\"Âm\")",
+  "inputs": {
+   "a": {
+    "type": "n",
+    "value": "5"
+   }
+  },
+  "expect": {
+   "type": "string",
+   "value": "Dương"
+  }
+ },
+ {
+  "id": "c029",
+  "fn": "IF",
+  "formula": "=IF([a]>0,\"Dương\",\"Âm\")",
+  "inputs": {
+   "a": {
+    "type": "n",
+    "value": "-3"
+   }
+  },
+  "expect": {
+   "type": "string",
+   "value": "Âm"
+  }
+ },
+ {
+  "id": "c030",
+  "fn": "IF",
+  "formula": "=IF([a]>0,[a]*2,[a]-1)",
+  "inputs": {
+   "a": {
+    "type": "n",
+    "value": null
+   }
+  },
+  "expect": {
+   "type": "number",
+   "value": "-1"
+  }
+ },
+ {
+  "id": "c031",
+  "fn": "IF",
+  "formula": "=IF([a]/[b]>1,1,2)",
+  "inputs": {
+   "a": {
+    "type": "n",
+    "value": "1"
+   },
+   "b": {
+    "type": "n",
+    "value": "0"
+   }
+  },
+  "expect": {
+   "type": "error",
+   "value": "#DIV/0!"
+  }
+ },
+ {
+  "id": "c032",
+  "fn": "IF",
+  "formula": "=IF(TRUE,[a],0)",
+  "inputs": {
+   "a": {
+    "type": "n",
+    "value": null
+   }
+  },
+  "expect": {
+   "type": "blank",
+   "value": null
+  },
+  "excel": {
+   "type": "number",
+   "value": "0"
+  },
+  "note": "Engine: nhánh IF trả về tham chiếu cột trần với ô trống → trống; Excel trả 0."
+ },
+ {
+  "id": "c033",
+  "fn": "IF",
+  "formula": "=IF([a]>0,1/0,5)",
+  "inputs": {
+   "a": {
+    "type": "n",
+    "value": "-1"
+   }
+  },
+  "expect": {
+   "type": "number",
+   "value": "5"
+  }
+ },
+ {
+  "id": "c034",
+  "fn": "IFS",
+  "formula": "=IFS([a]>=8,\"Giỏi\",[a]>=5,\"Khá\",TRUE,\"Yếu\")",
+  "inputs": {
+   "a": {
+    "type": "n",
+    "value": "9"
+   }
+  },
+  "expect": {
+   "type": "string",
+   "value": "Giỏi"
+  }
+ },
+ {
+  "id": "c035",
+  "fn": "IFS",
+  "formula": "=IFS([a]>=8,\"Giỏi\",[a]>=5,\"Khá\",TRUE,\"Yếu\")",
+  "inputs": {
+   "a": {
+    "type": "n",
+    "value": "6.5"
+   }
+  },
+  "expect": {
+   "type": "string",
+   "value": "Khá"
+  }
+ },
+ {
+  "id": "c036",
+  "fn": "IFS",
+  "formula": "=IFS([a]>=8,\"Giỏi\",[a]>=5,\"Khá\",TRUE,\"Yếu\")",
+  "inputs": {
+   "a": {
+    "type": "n",
+    "value": null
+   }
+  },
+  "expect": {
+   "type": "string",
+   "value": "Yếu"
+  }
+ },
+ {
+  "id": "c037",
+  "fn": "IFS",
+  "formula": "=IFS([a]>100,1)",
+  "inputs": {
+   "a": {
+    "type": "n",
+    "value": "1"
+   }
+  },
+  "expect": {
+   "type": "error",
+   "value": "#N/A"
+  }
+ },
+ {
+  "id": "c038",
+  "fn": "AND",
+  "formula": "=AND([a]>0,[b]>0)",
+  "inputs": {
+   "a": {
+    "type": "n",
+    "value": "1"
+   },
+   "b": {
+    "type": "n",
+    "value": "2"
+   }
+  },
+  "expect": {
+   "type": "boolean",
+   "value": true
+  }
+ },
+ {
+  "id": "c039",
+  "fn": "AND",
+  "formula": "=AND([a]>0,[b]>0)",
+  "inputs": {
+   "a": {
+    "type": "n",
+    "value": "1"
+   },
+   "b": {
+    "type": "n",
+    "value": "-2"
+   }
+  },
+  "expect": {
+   "type": "boolean",
+   "value": false
+  }
+ },
+ {
+  "id": "c040",
+  "fn": "AND",
+  "formula": "=AND([a]>0,[b]>0)",
+  "inputs": {
+   "a": {
+    "type": "n",
+    "value": null
+   },
+   "b": {
+    "type": "n",
+    "value": "2"
+   }
+  },
+  "expect": {
+   "type": "boolean",
+   "value": false
+  }
+ },
+ {
+  "id": "c041",
+  "fn": "AND",
+  "formula": "=AND([a],1)",
+  "inputs": {
+   "a": {
+    "type": "n",
+    "value": null
+   }
+  },
+  "expect": {
+   "type": "boolean",
+   "value": true
+  },
+  "confirm": "AND bỏ qua ô trống trong tham chiếu"
+ },
+ {
+  "id": "c042",
+  "fn": "OR",
+  "formula": "=OR([a]>0,[b]>0)",
+  "inputs": {
+   "a": {
+    "type": "n",
+    "value": "-1"
+   },
+   "b": {
+    "type": "n",
+    "value": "2"
+   }
+  },
+  "expect": {
+   "type": "boolean",
+   "value": true
+  }
+ },
+ {
+  "id": "c043",
+  "fn": "OR",
+  "formula": "=OR([a]>0,[b]>0)",
+  "inputs": {
+   "a": {
+    "type": "n",
+    "value": "-1"
+   },
+   "b": {
+    "type": "n",
+    "value": "-2"
+   }
+  },
+  "expect": {
+   "type": "boolean",
+   "value": false
+  }
+ },
+ {
+  "id": "c044",
+  "fn": "OR",
+  "formula": "=OR([a]=\"x\",[b]=1)",
+  "inputs": {
+   "a": {
+    "type": "s",
+    "value": null
+   },
+   "b": {
+    "type": "n",
+    "value": null
+   }
+  },
+  "expect": {
+   "type": "boolean",
+   "value": false
+  }
+ },
+ {
+  "id": "c045",
+  "fn": "OR",
+  "formula": "=OR(1/0,TRUE)",
+  "inputs": {},
+  "expect": {
+   "type": "error",
+   "value": "#DIV/0!"
+  }
+ },
+ {
+  "id": "c046",
+  "fn": "NOT",
+  "formula": "=NOT([a]>5)",
+  "inputs": {
+   "a": {
+    "type": "n",
+    "value": "7"
+   }
+  },
+  "expect": {
+   "type": "boolean",
+   "value": false
+  }
+ },
+ {
+  "id": "c047",
+  "fn": "NOT",
+  "formula": "=NOT([a])",
+  "inputs": {
+   "a": {
+    "type": "n",
+    "value": null
+   }
+  },
+  "expect": {
+   "type": "boolean",
+   "value": true
+  }
+ },
+ {
+  "id": "c048",
+  "fn": "NOT",
+  "formula": "=NOT([a])",
+  "inputs": {
+   "a": {
+    "type": "n",
+    "value": "-2"
+   }
+  },
+  "expect": {
+   "type": "boolean",
+   "value": false
+  }
+ },
+ {
+  "id": "c049",
+  "fn": "NOT",
+  "formula": "=NOT(\"abc\")",
+  "inputs": {},
+  "expect": {
+   "type": "error",
+   "value": "#VALUE!"
+  }
+ },
+ {
+  "id": "c050",
+  "fn": "SWITCH",
+  "formula": "=SWITCH([a],1,\"Một\",2,\"Hai\",\"Khác\")",
+  "inputs": {
+   "a": {
+    "type": "n",
+    "value": "1"
+   }
+  },
+  "expect": {
+   "type": "string",
+   "value": "Một"
+  }
+ },
+ {
+  "id": "c051",
+  "fn": "SWITCH",
+  "formula": "=SWITCH([a],1,\"Một\",2,\"Hai\",\"Khác\")",
+  "inputs": {
+   "a": {
+    "type": "n",
+    "value": "3"
+   }
+  },
+  "expect": {
+   "type": "string",
+   "value": "Khác"
+  }
+ },
+ {
+  "id": "c052",
+  "fn": "SWITCH",
+  "formula": "=SWITCH([a],\"x\",1)",
+  "inputs": {
+   "a": {
+    "type": "s",
+    "value": "y"
+   }
+  },
+  "expect": {
+   "type": "error",
+   "value": "#N/A"
+  }
+ },
+ {
+  "id": "c053",
+  "fn": "SWITCH",
+  "formula": "=SWITCH([a],\"hà nội\",\"HN\",\"SG\")",
+  "inputs": {
+   "a": {
+    "type": "s",
+    "value": "Hà Nội"
+   }
+  },
+  "expect": {
+   "type": "string",
+   "value": "HN"
+  }
+ },
+ {
+  "id": "c054",
+  "fn": "SWITCH",
+  "formula": "=SWITCH([a],0,\"Không\",\"Khác\")",
+  "inputs": {
+   "a": {
+    "type": "n",
+    "value": null
+   }
+  },
+  "expect": {
+   "type": "string",
+   "value": "Không"
+  },
+  "confirm": "SWITCH so ô trống với 0"
+ },
+ {
+  "id": "c055",
+  "fn": "IFERROR",
+  "formula": "=IFERROR([a]/[b],0)",
+  "inputs": {
+   "a": {
+    "type": "n",
+    "value": "1"
+   },
+   "b": {
+    "type": "n",
+    "value": "0"
+   }
+  },
+  "expect": {
+   "type": "number",
+   "value": "0"
+  }
+ },
+ {
+  "id": "c056",
+  "fn": "IFERROR",
+  "formula": "=IFERROR([a]/[b],0)",
+  "inputs": {
+   "a": {
+    "type": "n",
+    "value": "6"
+   },
+   "b": {
+    "type": "n",
+    "value": "3"
+   }
+  },
+  "expect": {
+   "type": "number",
+   "value": "2"
+  }
+ },
+ {
+  "id": "c057",
+  "fn": "IFERROR",
+  "formula": "=IFERROR(VALUE([a]),-1)",
+  "inputs": {
+   "a": {
+    "type": "s",
+    "value": "abc"
+   }
+  },
+  "expect": {
+   "type": "number",
+   "value": "-1"
+  }
+ },
+ {
+  "id": "c058",
+  "fn": "IFERROR",
+  "formula": "=IFERROR(SWITCH([a],\"x\",1),2)",
+  "inputs": {
+   "a": {
+    "type": "s",
+    "value": "y"
+   }
+  },
+  "expect": {
+   "type": "number",
+   "value": "2"
+  }
+ },
+ {
+  "id": "c059",
+  "fn": "ISBLANK",
+  "formula": "=ISBLANK([a])",
+  "inputs": {
+   "a": {
+    "type": "n",
+    "value": null
+   }
+  },
+  "expect": {
+   "type": "boolean",
+   "value": true
+  }
+ },
+ {
+  "id": "c060",
+  "fn": "ISBLANK",
+  "formula": "=ISBLANK([a])",
+  "inputs": {
+   "a": {
+    "type": "n",
+    "value": "0"
+   }
+  },
+  "expect": {
+   "type": "boolean",
+   "value": false
+  }
+ },
+ {
+  "id": "c061",
+  "fn": "ISBLANK",
+  "formula": "=ISBLANK([a])",
+  "inputs": {
+   "a": {
+    "type": "s",
+    "value": "Nguyễn"
+   }
+  },
+  "expect": {
+   "type": "boolean",
+   "value": false
+  }
+ },
+ {
+  "id": "c062",
+  "fn": "ISNUMBER",
+  "formula": "=ISNUMBER([a])",
+  "inputs": {
+   "a": {
+    "type": "n",
+    "value": "5"
+   }
+  },
+  "expect": {
+   "type": "boolean",
+   "value": true
+  }
+ },
+ {
+  "id": "c063",
+  "fn": "ISNUMBER",
+  "formula": "=ISNUMBER([a])",
+  "inputs": {
+   "a": {
+    "type": "s",
+    "value": "5"
+   }
+  },
+  "expect": {
+   "type": "boolean",
+   "value": false
+  }
+ },
+ {
+  "id": "c064",
+  "fn": "ISNUMBER",
+  "formula": "=ISNUMBER([a])",
+  "inputs": {
+   "a": {
+    "type": "n",
+    "value": null
+   }
+  },
+  "expect": {
+   "type": "boolean",
+   "value": false
+  }
+ },
+ {
+  "id": "c065",
+  "fn": "ISNUMBER",
+  "formula": "=ISNUMBER([a])",
+  "inputs": {
+   "a": {
+    "type": "d",
+    "value": "2024-02-29"
+   }
+  },
+  "expect": {
+   "type": "boolean",
+   "value": true
+  }
+ },
+ {
+  "id": "c066",
+  "fn": "ROUND",
+  "formula": "=ROUND(2.675,2)",
+  "inputs": {},
+  "expect": {
+   "type": "number",
+   "value": "2.68"
+  }
+ },
+ {
+  "id": "c067",
+  "fn": "ROUND",
+  "formula": "=ROUND(-2.5,0)",
+  "inputs": {},
+  "expect": {
+   "type": "number",
+   "value": "-3"
+  }
+ },
+ {
+  "id": "c068",
+  "fn": "ROUND",
+  "formula": "=ROUND([a],-2)",
+  "inputs": {
+   "a": {
+    "type": "n",
+    "value": "1234.5678"
+   }
+  },
+  "expect": {
+   "type": "number",
+   "value": "1200"
+  }
+ },
+ {
+  "id": "c069",
+  "fn": "ROUND",
+  "formula": "=ROUND([a],1)",
+  "inputs": {
+   "a": {
+    "type": "n",
+    "value": null
+   }
+  },
+  "expect": {
+   "type": "number",
+   "value": "0"
+  }
+ },
+ {
+  "id": "c070",
+  "fn": "ROUND",
+  "formula": "=ROUND([a],1)",
+  "inputs": {
+   "a": {
+    "type": "s",
+    "value": "abc"
+   }
+  },
+  "expect": {
+   "type": "error",
+   "value": "#VALUE!"
+  }
+ },
+ {
+  "id": "c071",
+  "fn": "ROUND",
+  "formula": "=ROUND(1.2345,2.9)",
+  "inputs": {},
+  "expect": {
+   "type": "number",
+   "value": "1.23"
+  }
+ },
+ {
+  "id": "c072",
+  "fn": "ROUNDUP",
+  "formula": "=ROUNDUP(-1.21,1)",
+  "inputs": {},
+  "expect": {
+   "type": "number",
+   "value": "-1.3"
+  }
+ },
+ {
+  "id": "c073",
+  "fn": "ROUNDUP",
+  "formula": "=ROUNDUP(1.201,2)",
+  "inputs": {},
+  "expect": {
+   "type": "number",
+   "value": "1.21"
+  }
+ },
+ {
+  "id": "c074",
+  "fn": "ROUNDUP",
+  "formula": "=ROUNDUP([a],-1)",
+  "inputs": {
+   "a": {
+    "type": "n",
+    "value": "5"
+   }
+  },
+  "expect": {
+   "type": "number",
+   "value": "10"
+  }
+ },
+ {
+  "id": "c075",
+  "fn": "ROUNDDOWN",
+  "formula": "=ROUNDDOWN(1.29,1)",
+  "inputs": {},
+  "expect": {
+   "type": "number",
+   "value": "1.2"
+  }
+ },
+ {
+  "id": "c076",
+  "fn": "ROUNDDOWN",
+  "formula": "=ROUNDDOWN(-1.29,1)",
+  "inputs": {},
+  "expect": {
+   "type": "number",
+   "value": "-1.2"
+  }
+ },
+ {
+  "id": "c077",
+  "fn": "ROUNDDOWN",
+  "formula": "=ROUNDDOWN([a],-2)",
+  "inputs": {
+   "a": {
+    "type": "n",
+    "value": "999"
+   }
+  },
+  "expect": {
+   "type": "number",
+   "value": "900"
+  }
+ },
+ {
+  "id": "c078",
+  "fn": "INT",
+  "formula": "=INT(-1.5)",
+  "inputs": {},
+  "expect": {
+   "type": "number",
+   "value": "-2"
+  }
+ },
+ {
+  "id": "c079",
+  "fn": "INT",
+  "formula": "=INT([a])",
+  "inputs": {
+   "a": {
+    "type": "n",
+    "value": "2.9"
+   }
+  },
+  "expect": {
+   "type": "number",
+   "value": "2"
+  }
+ },
+ {
+  "id": "c080",
+  "fn": "INT",
+  "formula": "=INT([a])",
+  "inputs": {
+   "a": {
+    "type": "n",
+    "value": null
+   }
+  },
+  "expect": {
+   "type": "number",
+   "value": "0"
+  }
+ },
+ {
+  "id": "c081",
+  "fn": "ABS",
+  "formula": "=ABS([a])",
+  "inputs": {
+   "a": {
+    "type": "n",
+    "value": "-3.5"
+   }
+  },
+  "expect": {
+   "type": "number",
+   "value": "3.5"
+  }
+ },
+ {
+  "id": "c082",
+  "fn": "ABS",
+  "formula": "=ABS([a])",
+  "inputs": {
+   "a": {
+    "type": "n",
+    "value": null
+   }
+  },
+  "expect": {
+   "type": "number",
+   "value": "0"
+  }
+ },
+ {
+  "id": "c083",
+  "fn": "ABS",
+  "formula": "=ABS(\"abc\")",
+  "inputs": {},
+  "expect": {
+   "type": "error",
+   "value": "#VALUE!"
+  }
+ },
+ {
+  "id": "c084",
+  "fn": "MIN",
+  "formula": "=MIN([a],[b],[c])",
+  "inputs": {
+   "a": {
+    "type": "n",
+    "value": "3"
+   },
+   "b": {
+    "type": "n",
+    "value": "-1"
+   },
+   "c": {
+    "type": "n",
+    "value": "2"
+   }
+  },
+  "expect": {
+   "type": "number",
+   "value": "-1"
+  }
+ },
+ {
+  "id": "c085",
+  "fn": "MIN",
+  "formula": "=MIN([a],[b],[c])",
+  "inputs": {
+   "a": {
+    "type": "n",
+    "value": null
+   },
+   "b": {
+    "type": "n",
+    "value": "2"
+   },
+   "c": {
+    "type": "n",
+    "value": "5"
+   }
+  },
+  "expect": {
+   "type": "number",
+   "value": "2"
+  }
+ },
+ {
+  "id": "c086",
+  "fn": "MIN",
+  "formula": "=MIN([a],[b])",
+  "inputs": {
+   "a": {
+    "type": "s",
+    "value": "abc"
+   },
+   "b": {
+    "type": "n",
+    "value": "7"
+   }
+  },
+  "expect": {
+   "type": "number",
+   "value": "7"
+  }
+ },
+ {
+  "id": "c087",
+  "fn": "MIN",
+  "formula": "=MIN([a])",
+  "inputs": {
+   "a": {
+    "type": "n",
+    "value": null
+   }
+  },
+  "expect": {
+   "type": "number",
+   "value": "0"
+  }
+ },
+ {
+  "id": "c088",
+  "fn": "MAX",
+  "formula": "=MAX([a],[b],[c])",
+  "inputs": {
+   "a": {
+    "type": "n",
+    "value": "3"
+   },
+   "b": {
+    "type": "n",
+    "value": "-1"
+   },
+   "c": {
+    "type": "n",
+    "value": "2"
+   }
+  },
+  "expect": {
+   "type": "number",
+   "value": "3"
+  }
+ },
+ {
+  "id": "c089",
+  "fn": "MAX",
+  "formula": "=MAX([a],[b])",
+  "inputs": {
+   "a": {
+    "type": "n",
+    "value": null
+   },
+   "b": {
+    "type": "n",
+    "value": "-5"
+   }
+  },
+  "expect": {
+   "type": "number",
+   "value": "-5"
+  }
+ },
+ {
+  "id": "c090",
+  "fn": "MAX",
+  "formula": "=MAX([a],[b])",
+  "inputs": {
+   "a": {
+    "type": "s",
+    "value": "abc"
+   },
+   "b": {
+    "type": "n",
+    "value": "-7"
+   }
+  },
+  "expect": {
+   "type": "number",
+   "value": "-7"
+  }
+ },
+ {
+  "id": "c091",
+  "fn": "MOD",
+  "formula": "=MOD(-3,2)",
+  "inputs": {},
+  "expect": {
+   "type": "number",
+   "value": "1"
+  }
+ },
+ {
+  "id": "c092",
+  "fn": "MOD",
+  "formula": "=MOD(3,-2)",
+  "inputs": {},
+  "expect": {
+   "type": "number",
+   "value": "-1"
+  }
+ },
+ {
+  "id": "c093",
+  "fn": "MOD",
+  "formula": "=MOD([a],[b])",
+  "inputs": {
+   "a": {
+    "type": "n",
+    "value": "5"
+   },
+   "b": {
+    "type": "n",
+    "value": null
+   }
+  },
+  "expect": {
+   "type": "error",
+   "value": "#DIV/0!"
+  }
+ },
+ {
+  "id": "c094",
+  "fn": "MOD",
+  "formula": "=MOD(5.5,2)",
+  "inputs": {},
+  "expect": {
+   "type": "number",
+   "value": "1.5"
+  }
+ },
+ {
+  "id": "c095",
+  "fn": "SUM",
+  "formula": "=SUM([a],[b])",
+  "inputs": {
+   "a": {
+    "type": "n",
+    "value": null
+   },
+   "b": {
+    "type": "n",
+    "value": "2"
+   }
+  },
+  "expect": {
+   "type": "number",
+   "value": "2"
+  }
+ },
+ {
+  "id": "c096",
+  "fn": "SUM",
+  "formula": "=SUM([a],[b])",
+  "inputs": {
+   "a": {
+    "type": "n",
+    "value": "1.1"
+   },
+   "b": {
+    "type": "n",
+    "value": "2.2"
+   }
+  },
+  "expect": {
+   "type": "number",
+   "value": "3.3"
+  }
+ },
+ {
+  "id": "c097",
+  "fn": "SUM",
+  "formula": "=SUM([a],[b])",
+  "inputs": {
+   "a": {
+    "type": "s",
+    "value": "abc"
+   },
+   "b": {
+    "type": "n",
+    "value": "-5"
+   }
+  },
+  "expect": {
+   "type": "number",
+   "value": "-5"
+  }
+ },
+ {
+  "id": "c098",
+  "fn": "SUM",
+  "formula": "=SUM(\"abc\",1)",
+  "inputs": {},
+  "expect": {
+   "type": "error",
+   "value": "#VALUE!"
+  }
+ },
+ {
+  "id": "c099",
+  "fn": "LEFT",
+  "formula": "=LEFT([a],3)",
+  "inputs": {
+   "a": {
+    "type": "s",
+    "value": "Nguyễn"
+   }
+  },
+  "expect": {
+   "type": "string",
+   "value": "Ngu"
+  }
+ },
+ {
+  "id": "c100",
+  "fn": "LEFT",
+  "formula": "=LEFT([a])",
+  "inputs": {
+   "a": {
+    "type": "s",
+    "value": "abc"
+   }
+  },
+  "expect": {
+   "type": "string",
+   "value": "a"
+  }
+ },
+ {
+  "id": "c101",
+  "fn": "LEFT",
+  "formula": "=LEFT([a],2)",
+  "inputs": {
+   "a": {
+    "type": "s",
+    "value": null
+   }
+  },
+  "expect": {
+   "type": "blank",
+   "value": null
+  },
+  "excel": {
+   "type": "string",
+   "value": ""
+  },
+  "note": "Engine: chuỗi rỗng là ô trống (spec §12.1)."
+ },
+ {
+  "id": "c102",
+  "fn": "LEFT",
+  "formula": "=LEFT([a],-1)",
+  "inputs": {
+   "a": {
+    "type": "s",
+    "value": "abc"
+   }
+  },
+  "expect": {
+   "type": "error",
+   "value": "#VALUE!"
+  }
+ },
+ {
+  "id": "c103",
+  "fn": "LEFT",
+  "formula": "=LEFT([a],2)",
+  "inputs": {
+   "a": {
+    "type": "n",
+    "value": "12345"
+   }
+  },
+  "expect": {
+   "type": "string",
+   "value": "12"
+  }
+ },
+ {
+  "id": "c104",
+  "fn": "RIGHT",
+  "formula": "=RIGHT([a],2)",
+  "inputs": {
+   "a": {
+    "type": "s",
+    "value": "Nguyễn"
+   }
+  },
+  "expect": {
+   "type": "string",
+   "value": "ễn"
+  }
+ },
+ {
+  "id": "c105",
+  "fn": "RIGHT",
+  "formula": "=RIGHT([a],5)",
+  "inputs": {
+   "a": {
+    "type": "s",
+    "value": "abc"
+   }
+  },
+  "expect": {
+   "type": "string",
+   "value": "abc"
+  }
+ },
+ {
+  "id": "c106",
+  "fn": "RIGHT",
+  "formula": "=RIGHT([a],3)",
+  "inputs": {
+   "a": {
+    "type": "s",
+    "value": "00123"
+   }
+  },
+  "expect": {
+   "type": "string",
+   "value": "123"
+  }
+ },
+ {
+  "id": "c107",
+  "fn": "MID",
+  "formula": "=MID([a],2,3)",
+  "inputs": {
+   "a": {
+    "type": "s",
+    "value": "Nguyễn"
+   }
+  },
+  "expect": {
+   "type": "string",
+   "value": "guy"
+  }
+ },
+ {
+  "id": "c108",
+  "fn": "MID",
+  "formula": "=MID([a],5,2)",
+  "inputs": {
+   "a": {
+    "type": "s",
+    "value": "abc"
+   }
+  },
+  "expect": {
+   "type": "blank",
+   "value": null
+  },
+  "excel": {
+   "type": "string",
+   "value": ""
+  },
+  "note": "Engine: chuỗi rỗng là ô trống."
+ },
+ {
+  "id": "c109",
+  "fn": "MID",
+  "formula": "=MID([a],0,1)",
+  "inputs": {
+   "a": {
+    "type": "s",
+    "value": "abc"
+   }
+  },
+  "expect": {
+   "type": "error",
+   "value": "#VALUE!"
+  }
+ },
+ {
+  "id": "c110",
+  "fn": "LEN",
+  "formula": "=LEN([a])",
+  "inputs": {
+   "a": {
+    "type": "s",
+    "value": "Nguyễn"
+   }
+  },
+  "expect": {
+   "type": "number",
+   "value": "6"
+  }
+ },
+ {
+  "id": "c111",
+  "fn": "LEN",
+  "formula": "=LEN([a])",
+  "inputs": {
+   "a": {
+    "type": "s",
+    "value": null
+   }
+  },
+  "expect": {
+   "type": "number",
+   "value": "0"
+  }
+ },
+ {
+  "id": "c112",
+  "fn": "LEN",
+  "formula": "=LEN([a])",
+  "inputs": {
+   "a": {
+    "type": "n",
+    "value": "12.5"
+   }
+  },
+  "expect": {
+   "type": "number",
+   "value": "4"
+  }
+ },
+ {
+  "id": "c113",
+  "fn": "TRIM",
+  "formula": "=TRIM([a])",
+  "inputs": {
+   "a": {
+    "type": "s",
+    "value": "  Trần   Văn  Bình  "
+   }
+  },
+  "expect": {
+   "type": "string",
+   "value": "Trần Văn Bình"
+  }
+ },
+ {
+  "id": "c114",
+  "fn": "TRIM",
+  "formula": "=TRIM([a])",
+  "inputs": {
+   "a": {
+    "type": "s",
+    "value": "abc"
+   }
+  },
+  "expect": {
+   "type": "string",
+   "value": "abc"
+  }
+ },
+ {
+  "id": "c115",
+  "fn": "TRIM",
+  "formula": "=TRIM([a])&\"|\"",
+  "inputs": {
+   "a": {
+    "type": "s",
+    "value": null
+   }
+  },
+  "expect": {
+   "type": "string",
+   "value": "|"
+  }
+ },
+ {
+  "id": "c116",
+  "fn": "UPPER",
+  "formula": "=UPPER([a])",
+  "inputs": {
+   "a": {
+    "type": "s",
+    "value": "nguyễn văn đức"
+   }
+  },
+  "expect": {
+   "type": "string",
+   "value": "NGUYỄN VĂN ĐỨC"
+  }
+ },
+ {
+  "id": "c117",
+  "fn": "UPPER",
+  "formula": "=UPPER([a])",
+  "inputs": {
+   "a": {
+    "type": "n",
+    "value": "1.5"
+   }
+  },
+  "expect": {
+   "type": "string",
+   "value": "1.5"
+  }
+ },
+ {
+  "id": "c118",
+  "fn": "UPPER",
+  "formula": "=UPPER([a])&\"!\"",
+  "inputs": {
+   "a": {
+    "type": "s",
+    "value": null
+   }
+  },
+  "expect": {
+   "type": "string",
+   "value": "!"
+  }
+ },
+ {
+  "id": "c119",
+  "fn": "LOWER",
+  "formula": "=LOWER([a])",
+  "inputs": {
+   "a": {
+    "type": "s",
+    "value": "ĐẠI HỌC"
+   }
+  },
+  "expect": {
+   "type": "string",
+   "value": "đại học"
+  }
+ },
+ {
+  "id": "c120",
+  "fn": "LOWER",
+  "formula": "=LOWER([a])",
+  "inputs": {
+   "a": {
+    "type": "s",
+    "value": "AbC"
+   }
+  },
+  "expect": {
+   "type": "string",
+   "value": "abc"
+  }
+ },
+ {
+  "id": "c121",
+  "fn": "LOWER",
+  "formula": "=LOWER([a])",
+  "inputs": {
+   "a": {
+    "type": "b",
+    "value": true
+   }
+  },
+  "expect": {
+   "type": "string",
+   "value": "true"
+  }
+ },
+ {
+  "id": "c122",
+  "fn": "PROPER",
+  "formula": "=PROPER([a])",
+  "inputs": {
+   "a": {
+    "type": "s",
+    "value": "nguyễn văn a"
+   }
+  },
+  "expect": {
+   "type": "string",
+   "value": "Nguyễn Văn A"
+  }
+ },
+ {
+  "id": "c123",
+  "fn": "PROPER",
+  "formula": "=PROPER([a])",
+  "inputs": {
+   "a": {
+    "type": "s",
+    "value": "o'neil-SMITH"
+   }
+  },
+  "expect": {
+   "type": "string",
+   "value": "O'Neil-Smith"
+  }
+ },
+ {
+  "id": "c124",
+  "fn": "PROPER",
+  "formula": "=PROPER([a])",
+  "inputs": {
+   "a": {
+    "type": "s",
+    "value": "abc123def"
+   }
+  },
+  "expect": {
+   "type": "string",
+   "value": "Abc123Def"
+  }
+ },
+ {
+  "id": "c125",
+  "fn": "CONCAT",
+  "formula": "=CONCAT(\"a\",1,TRUE)",
+  "inputs": {},
+  "expect": {
+   "type": "string",
+   "value": "a1TRUE"
+  }
+ },
+ {
+  "id": "c126",
+  "fn": "CONCAT",
+  "formula": "=CONCAT([a],\"x\")",
+  "inputs": {
+   "a": {
+    "type": "s",
+    "value": null
+   }
+  },
+  "expect": {
+   "type": "string",
+   "value": "x"
+  }
+ },
+ {
+  "id": "c127",
+  "fn": "CONCAT",
+  "formula": "=CONCAT([a],\" \",[b])",
+  "inputs": {
+   "a": {
+    "type": "s",
+    "value": "Nguyễn"
+   },
+   "b": {
+    "type": "s",
+    "value": "An"
+   }
+  },
+  "expect": {
+   "type": "string",
+   "value": "Nguyễn An"
+  }
+ },
+ {
+  "id": "c128",
+  "fn": "TEXTJOIN",
+  "formula": "=TEXTJOIN(\", \",TRUE,\"a\",\"\",\"b\")",
+  "inputs": {},
+  "expect": {
+   "type": "string",
+   "value": "a, b"
+  }
+ },
+ {
+  "id": "c129",
+  "fn": "TEXTJOIN",
+  "formula": "=TEXTJOIN(\", \",FALSE,\"a\",\"\",\"b\")",
+  "inputs": {},
+  "expect": {
+   "type": "string",
+   "value": "a, , b"
+  }
+ },
+ {
+  "id": "c130",
+  "fn": "TEXTJOIN",
+  "formula": "=TEXTJOIN(\"-\",TRUE,[a],[b])",
+  "inputs": {
+   "a": {
+    "type": "s",
+    "value": null
+   },
+   "b": {
+    "type": "s",
+    "value": "x"
+   }
+  },
+  "expect": {
+   "type": "string",
+   "value": "x"
+  }
+ },
+ {
+  "id": "c131",
+  "fn": "SUBSTITUTE",
+  "formula": "=SUBSTITUTE([a],\"-\",\"+\")",
+  "inputs": {
+   "a": {
+    "type": "s",
+    "value": "a-b-c"
+   }
+  },
+  "expect": {
+   "type": "string",
+   "value": "a+b+c"
+  }
+ },
+ {
+  "id": "c132",
+  "fn": "SUBSTITUTE",
+  "formula": "=SUBSTITUTE([a],\"-\",\"+\",2)",
+  "inputs": {
+   "a": {
+    "type": "s",
+    "value": "a-b-c"
+   }
+  },
+  "expect": {
+   "type": "string",
+   "value": "a-b+c"
+  }
+ },
+ {
+  "id": "c133",
+  "fn": "SUBSTITUTE",
+  "formula": "=SUBSTITUTE([a],\"\",\"x\")",
+  "inputs": {
+   "a": {
+    "type": "s",
+    "value": "abc"
+   }
+  },
+  "expect": {
+   "type": "string",
+   "value": "abc"
+  }
+ },
+ {
+  "id": "c134",
+  "fn": "SUBSTITUTE",
+  "formula": "=SUBSTITUTE([a],\"a\",\"\")",
+  "inputs": {
+   "a": {
+    "type": "s",
+    "value": "Aaa"
+   }
+  },
+  "expect": {
+   "type": "string",
+   "value": "A"
+  }
+ },
+ {
+  "id": "c135",
+  "fn": "FIND",
+  "formula": "=FIND(\"a\",\"ABa\")",
+  "inputs": {},
+  "expect": {
+   "type": "number",
+   "value": "3"
+  }
+ },
+ {
+  "id": "c136",
+  "fn": "FIND",
+  "formula": "=FIND(\"z\",[a])",
+  "inputs": {
+   "a": {
+    "type": "s",
+    "value": "abc"
+   }
+  },
+  "expect": {
+   "type": "error",
+   "value": "#VALUE!"
+  }
+ },
+ {
+  "id": "c137",
+  "fn": "FIND",
+  "formula": "=FIND(\"b\",[a],3)",
+  "inputs": {
+   "a": {
+    "type": "s",
+    "value": "abcb"
+   }
+  },
+  "expect": {
+   "type": "number",
+   "value": "4"
+  }
+ },
+ {
+  "id": "c138",
+  "fn": "FIND",
+  "formula": "=FIND(\"ễ\",[a])",
+  "inputs": {
+   "a": {
+    "type": "s",
+    "value": "Nguyễn"
+   }
+  },
+  "expect": {
+   "type": "number",
+   "value": "5"
+  }
+ },
+ {
+  "id": "c139",
+  "fn": "SEARCH",
+  "formula": "=SEARCH(\"b*\",\"aBc\")",
+  "inputs": {},
+  "expect": {
+   "type": "number",
+   "value": "2"
+  }
+ },
+ {
+  "id": "c140",
+  "fn": "SEARCH",
+  "formula": "=SEARCH(\"?c\",[a])",
+  "inputs": {
+   "a": {
+    "type": "s",
+    "value": "abc"
+   }
+  },
+  "expect": {
+   "type": "number",
+   "value": "2"
+  }
+ },
+ {
+  "id": "c141",
+  "fn": "SEARCH",
+  "formula": "=SEARCH(\"~*\",[a])",
+  "inputs": {
+   "a": {
+    "type": "s",
+    "value": "a*b"
+   }
+  },
+  "expect": {
+   "type": "number",
+   "value": "2"
+  }
+ },
+ {
+  "id": "c142",
+  "fn": "SEARCH",
+  "formula": "=SEARCH(\"x\",[a])",
+  "inputs": {
+   "a": {
+    "type": "s",
+    "value": "abc"
+   }
+  },
+  "expect": {
+   "type": "error",
+   "value": "#VALUE!"
+  }
+ },
+ {
+  "id": "c143",
+  "fn": "SEARCH",
+  "formula": "=SEARCH(\"VĂN\",[a])",
+  "inputs": {
+   "a": {
+    "type": "s",
+    "value": "Nguyễn văn A"
+   }
+  },
+  "expect": {
+   "type": "number",
+   "value": "8"
+  }
+ },
+ {
+  "id": "c144",
+  "fn": "VALUE",
+  "formula": "=VALUE(\"1.5\")",
+  "inputs": {},
+  "expect": {
+   "type": "number",
+   "value": "1.5"
+  }
+ },
+ {
+  "id": "c145",
+  "fn": "VALUE",
+  "formula": "=VALUE([a])",
+  "inputs": {
+   "a": {
+    "type": "s",
+    "value": " -12 "
+   }
+  },
+  "expect": {
+   "type": "number",
+   "value": "-12"
+  }
+ },
+ {
+  "id": "c146",
+  "fn": "VALUE",
+  "formula": "=VALUE([a])",
+  "inputs": {
+   "a": {
+    "type": "s",
+    "value": "abc"
+   }
+  },
+  "expect": {
+   "type": "error",
+   "value": "#VALUE!"
+  }
+ },
+ {
+  "id": "c147",
+  "fn": "VALUE",
+  "formula": "=VALUE([a])",
+  "inputs": {
+   "a": {
+    "type": "s",
+    "value": null
+   }
+  },
+  "expect": {
+   "type": "number",
+   "value": "0"
+  }
+ },
+ {
+  "id": "c148",
+  "fn": "DATE",
+  "formula": "=DATE(2026,13,1)",
+  "inputs": {},
+  "expect": {
+   "type": "date",
+   "value": "2027-01-01"
+  },
+  "excel": {
+   "type": "number",
+   "value": "46388"
+  },
+  "note": "Excel lưu ngày dạng số serial."
+ },
+ {
+  "id": "c149",
+  "fn": "DATE",
+  "formula": "=DATE(2024,2,29)",
+  "inputs": {},
+  "expect": {
+   "type": "date",
+   "value": "2024-02-29"
+  },
+  "excel": {
+   "type": "number",
+   "value": "45351"
+  },
+  "note": "Excel lưu ngày dạng số serial."
+ },
+ {
+  "id": "c150",
+  "fn": "DATE",
+  "formula": "=DATE(2026,3,0)",
+  "inputs": {},
+  "expect": {
+   "type": "date",
+   "value": "2026-02-28"
+  },
+  "excel": {
+   "type": "number",
+   "value": "46081"
+  },
+  "note": "Excel lưu ngày dạng số serial."
+ },
+ {
+  "id": "c151",
+  "fn": "DATE",
+  "formula": "=DATE(2026,1,-1)",
+  "inputs": {},
+  "expect": {
+   "type": "date",
+   "value": "2025-12-30"
+  },
+  "excel": {
+   "type": "number",
+   "value": "46021"
+  },
+  "note": "Excel lưu ngày dạng số serial."
+ },
+ {
+  "id": "c152",
+  "fn": "DATE",
+  "formula": "=DATE(10000,1,1)",
+  "inputs": {},
+  "expect": {
+   "type": "error",
+   "value": "#NUM!"
+  }
+ },
+ {
+  "id": "c153",
+  "fn": "YEAR",
+  "formula": "=YEAR([a])",
+  "inputs": {
+   "a": {
+    "type": "d",
+    "value": "2024-02-29"
+   }
+  },
+  "expect": {
+   "type": "number",
+   "value": "2024"
+  }
+ },
+ {
+  "id": "c154",
+  "fn": "YEAR",
+  "formula": "=YEAR([a])",
+  "inputs": {
+   "a": {
+    "type": "d",
+    "value": "2025-12-31"
+   }
+  },
+  "expect": {
+   "type": "number",
+   "value": "2025"
+  }
+ },
+ {
+  "id": "c155",
+  "fn": "YEAR",
+  "formula": "=YEAR([a])",
+  "inputs": {
+   "a": {
+    "type": "n",
+    "value": null
+   }
+  },
+  "expect": {
+   "type": "number",
+   "value": "1900"
+  },
+  "confirm": "YEAR(ô trống)=1900"
+ },
+ {
+  "id": "c156",
+  "fn": "YEAR",
+  "formula": "=YEAR([a])",
+  "inputs": {
+   "a": {
+    "type": "s",
+    "value": "abc"
+   }
+  },
+  "expect": {
+   "type": "error",
+   "value": "#VALUE!"
+  }
+ },
+ {
+  "id": "c157",
+  "fn": "MONTH",
+  "formula": "=MONTH([a])",
+  "inputs": {
+   "a": {
+    "type": "d",
+    "value": "2024-02-29"
+   }
+  },
+  "expect": {
+   "type": "number",
+   "value": "2"
+  }
+ },
+ {
+  "id": "c158",
+  "fn": "MONTH",
+  "formula": "=MONTH([a])",
+  "inputs": {
+   "a": {
+    "type": "d",
+    "value": "2025-12-31"
+   }
+  },
+  "expect": {
+   "type": "number",
+   "value": "12"
+  }
+ },
+ {
+  "id": "c159",
+  "fn": "MONTH",
+  "formula": "=MONTH(-1)",
+  "inputs": {},
+  "expect": {
+   "type": "error",
+   "value": "#NUM!"
+  }
+ },
+ {
+  "id": "c160",
+  "fn": "DAY",
+  "formula": "=DAY([a])",
+  "inputs": {
+   "a": {
+    "type": "d",
+    "value": "2024-02-29"
+   }
+  },
+  "expect": {
+   "type": "number",
+   "value": "29"
+  }
+ },
+ {
+  "id": "c161",
+  "fn": "DAY",
+  "formula": "=DAY([a])",
+  "inputs": {
+   "a": {
+    "type": "d",
+    "value": "2025-12-31"
+   }
+  },
+  "expect": {
+   "type": "number",
+   "value": "31"
+  }
+ },
+ {
+  "id": "c162",
+  "fn": "DAY",
+  "formula": "=DAY([a])",
+  "inputs": {
+   "a": {
+    "type": "n",
+    "value": null
+   }
+  },
+  "expect": {
+   "type": "number",
+   "value": "0"
+  },
+  "confirm": "DAY(ô trống)=0"
+ },
+ {
+  "id": "c163",
+  "fn": "EDATE",
+  "formula": "=EDATE(DATE(2026,1,31),1)",
+  "inputs": {},
+  "expect": {
+   "type": "date",
+   "value": "2026-02-28"
+  },
+  "excel": {
+   "type": "number",
+   "value": "46081"
+  },
+  "note": "Excel lưu ngày dạng số serial."
+ },
+ {
+  "id": "c164",
+  "fn": "EDATE",
+  "formula": "=EDATE([a],12)",
+  "inputs": {
+   "a": {
+    "type": "d",
+    "value": "2024-02-29"
+   }
+  },
+  "expect": {
+   "type": "date",
+   "value": "2025-02-28"
+  },
+  "excel": {
+   "type": "number",
+   "value": "45716"
+  },
+  "note": "Excel lưu ngày dạng số serial."
+ },
+ {
+  "id": "c165",
+  "fn": "EDATE",
+  "formula": "=EDATE([a],-1)",
+  "inputs": {
+   "a": {
+    "type": "d",
+    "value": "2026-03-31"
+   }
+  },
+  "expect": {
+   "type": "date",
+   "value": "2026-02-28"
+  },
+  "excel": {
+   "type": "number",
+   "value": "46081"
+  },
+  "note": "Excel lưu ngày dạng số serial."
+ },
+ {
+  "id": "c166",
+  "fn": "EOMONTH",
+  "formula": "=EOMONTH(DATE(2026,2,10),0)",
+  "inputs": {},
+  "expect": {
+   "type": "date",
+   "value": "2026-02-28"
+  },
+  "excel": {
+   "type": "number",
+   "value": "46081"
+  },
+  "note": "Excel lưu ngày dạng số serial."
+ },
+ {
+  "id": "c167",
+  "fn": "EOMONTH",
+  "formula": "=EOMONTH([a],0)",
+  "inputs": {
+   "a": {
+    "type": "d",
+    "value": "2024-02-01"
+   }
+  },
+  "expect": {
+   "type": "date",
+   "value": "2024-02-29"
+  },
+  "excel": {
+   "type": "number",
+   "value": "45351"
+  },
+  "note": "Excel lưu ngày dạng số serial."
+ },
+ {
+  "id": "c168",
+  "fn": "EOMONTH",
+  "formula": "=EOMONTH([a],-2)",
+  "inputs": {
+   "a": {
+    "type": "d",
+    "value": "2026-01-15"
+   }
+  },
+  "expect": {
+   "type": "date",
+   "value": "2025-11-30"
+  },
+  "excel": {
+   "type": "number",
+   "value": "45991"
+  },
+  "note": "Excel lưu ngày dạng số serial."
+ },
+ {
+  "id": "c169",
+  "fn": "DATEDIF",
+  "formula": "=DATEDIF(DATE(2020,3,15),DATE(2026,3,14),\"Y\")",
+  "inputs": {},
+  "expect": {
+   "type": "number",
+   "value": "5"
+  }
+ },
+ {
+  "id": "c170",
+  "fn": "DATEDIF",
+  "formula": "=DATEDIF([a],[b],\"M\")",
+  "inputs": {
+   "a": {
+    "type": "d",
+    "value": "2026-01-31"
+   },
+   "b": {
+    "type": "d",
+    "value": "2026-02-28"
+   }
+  },
+  "expect": {
+   "type": "number",
+   "value": "0"
+  }
+ },
+ {
+  "id": "c171",
+  "fn": "DATEDIF",
+  "formula": "=DATEDIF([a],[b],\"D\")",
+  "inputs": {
+   "a": {
+    "type": "d",
+    "value": "2024-02-28"
+   },
+   "b": {
+    "type": "d",
+    "value": "2024-03-01"
+   }
+  },
+  "expect": {
+   "type": "number",
+   "value": "2"
+  }
+ },
+ {
+  "id": "c172",
+  "fn": "DATEDIF",
+  "formula": "=DATEDIF([a],[b],\"MD\")",
+  "inputs": {
+   "a": {
+    "type": "d",
+    "value": "2026-01-31"
+   },
+   "b": {
+    "type": "d",
+    "value": "2026-03-01"
+   }
+  },
+  "expect": {
+   "type": "number",
+   "value": "-2"
+  },
+  "confirm": "DATEDIF MD khi ngày đầu lớn hơn ngày cuối tháng (lỗi đã biết của Excel)"
+ },
+ {
+  "id": "c173",
+  "fn": "DATEDIF",
+  "formula": "=DATEDIF([a],[b],\"MD\")",
+  "inputs": {
+   "a": {
+    "type": "d",
+    "value": "2026-01-15"
+   },
+   "b": {
+    "type": "d",
+    "value": "2026-03-10"
+   }
+  },
+  "expect": {
+   "type": "number",
+   "value": "23"
+  },
+  "confirm": "DATEDIF MD"
+ },
+ {
+  "id": "c174",
+  "fn": "DATEDIF",
+  "formula": "=DATEDIF([a],[b],\"YM\")",
+  "inputs": {
+   "a": {
+    "type": "d",
+    "value": "2020-11-15"
+   },
+   "b": {
+    "type": "d",
+    "value": "2026-03-14"
+   }
+  },
+  "expect": {
+   "type": "number",
+   "value": "3"
+  }
+ },
+ {
+  "id": "c175",
+  "fn": "DATEDIF",
+  "formula": "=DATEDIF([a],[b],\"YD\")",
+  "inputs": {
+   "a": {
+    "type": "d",
+    "value": "2023-02-28"
+   },
+   "b": {
+    "type": "d",
+    "value": "2024-03-01"
+   }
+  },
+  "expect": {
+   "type": "number",
+   "value": "2"
+  },
+  "confirm": "DATEDIF YD qua năm nhuận"
+ },
+ {
+  "id": "c176",
+  "fn": "DATEDIF",
+  "formula": "=DATEDIF([a],[b],\"Y\")",
+  "inputs": {
+   "a": {
+    "type": "d",
+    "value": "2026-03-01"
+   },
+   "b": {
+    "type": "d",
+    "value": "2026-01-01"
+   }
+  },
+  "expect": {
+   "type": "error",
+   "value": "#NUM!"
+  }
+ },
+ {
+  "id": "c177",
+  "fn": "WEEKDAY",
+  "formula": "=WEEKDAY(DATE(2026,10,30),2)",
+  "inputs": {},
+  "expect": {
+   "type": "number",
+   "value": "5"
+  }
+ },
+ {
+  "id": "c178",
+  "fn": "WEEKDAY",
+  "formula": "=WEEKDAY([a])",
+  "inputs": {
+   "a": {
+    "type": "d",
+    "value": "2026-11-01"
+   }
+  },
+  "expect": {
+   "type": "number",
+   "value": "1"
+  }
+ },
+ {
+  "id": "c179",
+  "fn": "WEEKDAY",
+  "formula": "=WEEKDAY([a],3)",
+  "inputs": {
+   "a": {
+    "type": "d",
+    "value": "2024-02-29"
+   }
+  },
+  "expect": {
+   "type": "number",
+   "value": "3"
+  }
+ },
+ {
+  "id": "c180",
+  "fn": "WEEKDAY",
+  "formula": "=WEEKDAY([a],9)",
+  "inputs": {
+   "a": {
+    "type": "d",
+    "value": "2024-02-29"
+   }
+  },
+  "expect": {
+   "type": "error",
+   "value": "#NUM!"
+  }
+ }
+]
