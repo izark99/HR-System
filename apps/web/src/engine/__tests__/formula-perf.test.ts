@@ -1,7 +1,8 @@
 /**
  * AC-B4-31 in Node, SKIPPED by default: `transform.formula` over the 30-column perf workbook
  * (perf-flow.ts, fake data). 100k rows × 5 formula columns (target ≤ 2 s for the node) and
- * 1M rows × 10 formula columns (must finish without crashing).
+ * 1M rows × 10 formula columns (must finish without crashing). Only the formula SQL is timed; the
+ * upload of the input table to DuckDB is reported apart (MEMORY 2026-10-30 17:32).
  * HRFLOW_PERF=1 [HRFLOW_PERF_SIZES=100000,1000000] NODE_OPTIONS=--max-old-space-size=3800 \
  *   pnpm --filter @hrflow/web test -- formula-perf
  */
@@ -13,7 +14,12 @@ import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { readSlotAsync } from '../io/excel-reader';
 import { perfFlow, writePerfWorkbook } from './perf-flow';
-import { runWith } from './sql-helpers';
+import { FormulaConfigSchema } from '@hrflow/flow-schema';
+import { createEngineTranslator } from '../core/i18n';
+import { SqlScope } from '../duckdb/scope';
+import type { SqlRel } from '../duckdb/sql';
+import { transformFormulaPlugin } from '../nodes/transform-formula';
+import { nodeDuckDb } from './duckdb-node';
 
 const ENABLED = process.env.HRFLOW_PERF === '1';
 const SIZES = (process.env.HRFLOW_PERF_SIZES ?? '100000').split(',').map(Number);
@@ -48,28 +54,43 @@ describe.skipIf(!ENABLED)('perf: transform.formula (AC-B4-31)', () => {
         key: `ct_${i + 1}`,
         formula,
       }));
-      // Warm-up: DuckDB instance and macros.
-      await runWith(
-        { src: data.table },
-        [{ id: 'w', type: 'transform.select', config: { columns: [{ from: 'ma_nv' }] } }],
-        [{ from: 'src', to: 'w' }],
-      );
-      const r = await runWith(
-        { src: data.table },
-        [
-          { id: 'f', type: 'transform.formula', config: { columns } },
-          { id: 'g', type: 'transform.select', config: { columns: [{ from: 'ct_1' }] } },
-        ],
-        [
-          { from: 'src', to: 'f' },
-          { from: 'f', to: 'g' },
-        ],
-      );
-      const f = r.nodes.find((x) => x.nodeId === 'f')!;
+      // AC-B4-31 counts the formula SQL only (MEMORY 2026-10-30 17:32): upload the input to DuckDB
+      // first (timed apart), then run the node's SQL and materialize its result.
+      const db = await nodeDuckDb();
+      const scope = new SqlScope(db);
+      const t0 = performance.now();
+      const input = scope.upload(data.table);
+      const uploadMs = performance.now() - t0;
+      const warnings: { params: Record<string, unknown> }[] = [];
+      const config = FormulaConfigSchema.parse({ columns });
+      const t1 = performance.now();
+      const out = transformFormulaPlugin.runSql!(
+        config,
+        { in: input },
+        {
+          t: createEngineTranslator('vi'),
+          sql: scope,
+          run: {
+            nodeId: 'f',
+            params: {},
+            readSlot: () => {
+              throw new Error('no slot');
+            },
+            emitArtifact: () => undefined,
+            emitView: () => undefined,
+            warn: (w) => warnings.push(w),
+            signal: undefined,
+          },
+        },
+      ) as Record<string, SqlRel>;
+      const result = scope.materialize(out.out!);
+      const sqlMs = performance.now() - t1;
       process.stderr.write(
-        `[formula-perf] ${n} rows, ${count} formulas: node ${Math.round(f.durationMs)} ms (incl. upload to DuckDB), run ${Math.round(r.durationMs)} ms, warnings ${JSON.stringify(r.warnings.map((w) => [w.params.column, w.params.error, w.params.count]))}\n`,
+        `[formula-perf] ${n} rows, ${count} formulas: formula SQL ${Math.round(sqlMs)} ms (upload to DuckDB ${Math.round(uploadMs)} ms, not counted), warnings ${JSON.stringify(warnings.map((w) => [w.params.column, w.params.error, w.params.count]))}\n`,
       );
-      expect(r.outputs.f!.out!.rowCount).toBe(n);
+      expect(result.rowCount).toBe(n);
+      scope.dispose();
+      if (n === 100_000) expect(sqlMs).toBeLessThan(2000);
     });
   }
 });
