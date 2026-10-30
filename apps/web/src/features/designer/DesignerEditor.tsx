@@ -686,6 +686,7 @@ export function DesignerEditor(props: DesignerEditorProps) {
               nodesDraggable={!ro}
               nodesConnectable={!ro}
               deleteKeyCode={null}
+              panActivationKeyCode={null}
               fitView
               fitViewOptions={{ maxZoom: 1, padding: 0.2 }}
               minZoom={0.2}

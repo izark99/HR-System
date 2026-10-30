@@ -1,12 +1,16 @@
-import type { ReactNode } from 'react';
+import { lazy, Suspense, useMemo, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Callout } from '../../../components/ui';
 import type { DesignIssue, DesignNodeInfo } from '../../../engine/design';
 import type { ColumnInfo } from '../../../engine/protocol';
 import type { DesignerDoc, DNode, JsonObject } from '../model';
+/** Monaco (and its worker) load only when an SQL form opens (spec §5, AC-B3-49). */
+const SqlEditor = lazy(() => import('../sql/SqlEditor'));
+
 import {
   CheckField,
   ColumnField,
+  FieldErrors,
   ColumnListField,
   issuesAt,
   LinesField,
@@ -944,6 +948,22 @@ function CodeSqlForm(p: NodeFormProps) {
   const inputs = objs(c.inputs);
   const sqlId = `${p.node.id}-sql`;
   const sqlIssues = at('sql');
+  const viewKey = inputs
+    .map((x) => str(x.port))
+    .filter(Boolean)
+    .join(',');
+  const { info } = p;
+  const docParams = p.doc.params;
+  const completion = useMemo(
+    () => ({
+      views: viewKey
+        .split(',')
+        .filter(Boolean)
+        .map((name) => ({ name, columns: info?.inputs[name] ?? [] })),
+      params: docParams.map((x) => ({ key: str(x.key), label: str(x.label) })),
+    }),
+    [viewKey, info, docParams],
+  );
   return (
     <Section>
       <ListEditor
@@ -979,23 +999,37 @@ function CodeSqlForm(p: NodeFormProps) {
         )}
       />
       <div className="flex flex-col gap-1.5">
-        <label htmlFor={sqlId} className="text-small font-semibold text-body">
+        <span id={`${sqlId}-label`} className="text-small font-semibold text-body">
           {t('node.sql.sql')}
-        </label>
-        <textarea
-          id={sqlId}
-          rows={10}
-          spellCheck={false}
-          value={str(c.sql)}
-          disabled={ro}
-          aria-invalid={sqlIssues.length > 0 || undefined}
-          onChange={(e) => set({ sql: e.target.value }, 'sql')}
-          className={
-            'w-full rounded-control border bg-card px-3 py-2 font-mono text-small text-ink disabled:bg-neutral ' +
-            (sqlIssues.length > 0 ? 'border-2 border-coral' : 'border-line-input')
+        </span>
+        <Suspense
+          fallback={
+            <textarea
+              id={sqlId}
+              rows={10}
+              spellCheck={false}
+              value={str(c.sql)}
+              disabled={ro}
+              aria-labelledby={`${sqlId}-label`}
+              onChange={(e) => set({ sql: e.target.value }, 'sql')}
+              className="w-full rounded-control border border-line-input bg-card px-3 py-2 font-mono text-small text-ink"
+            />
           }
-        />
-        <p className="m-0 text-small text-muted">{t('node.sql.editorLater')}</p>
+        >
+          <SqlEditor
+            value={str(c.sql)}
+            onChange={(v) => set({ sql: v }, 'sql')}
+            readOnly={ro}
+            label={t('node.sql.sql')}
+            describedBy={`${sqlId}-hint`}
+            invalid={sqlIssues.length > 0}
+            completion={completion}
+          />
+        </Suspense>
+        <p id={`${sqlId}-hint`} className="m-0 text-small text-muted">
+          {t('node.sql.editorHint')}
+        </p>
+        <FieldErrors id={`${sqlId}-errors`} issues={sqlIssues} />
       </div>
     </Section>
   );

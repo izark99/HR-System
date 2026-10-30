@@ -384,7 +384,7 @@
       "port": "Tên view",
       "portHint": "Dùng tên này trong câu SQL (FROM ten_view); cũng là tên cổng vào của node.",
       "sql": "Câu SQL",
-      "editorLater": "Trình soạn SQL có tô màu và gợi ý tên cột sẽ có trong bản cập nhật tiếp theo. Tham số dùng dạng $ma_tham_so."
+      "editorHint": "Gõ để được gợi ý tên view, cột và tham số ($ma_tham_so). Kết quả nên có ORDER BY để thứ tự dòng ổn định."
     }
   },
   "params": {

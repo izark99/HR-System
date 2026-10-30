@@ -43,6 +43,8 @@ export default defineConfig(({ mode }) => ({
     alias: {
       // DuckDB-WASM's synchronous browser bindings, run inside the engine worker (spec §13.1).
       '@hrflow/duckdb-browser-blocking': resolve(DUCKDB_DIST, 'duckdb-browser-blocking.mjs'),
+      // Monaco's export map covers .js only; its CSS files are imported through this alias.
+      '@hrflow/monaco-css': resolve(import.meta.dirname, 'node_modules/monaco-editor/esm/vs'),
     },
   },
   define: mode === 'e2e' ? E2E_ENV : {},
