@@ -24,6 +24,7 @@
     "big.js": "^7.0.1",
     "comlink": "^4.4.2",
     "exceljs": "^4.4.0",
+    "fflate": "0.8.3",
     "i18next": "^25.10.10",
     "monaco-editor": "0.57.0",
     "react": "^19.2.0",

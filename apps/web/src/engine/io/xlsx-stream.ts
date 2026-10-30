@@ -1,6 +1,6 @@
 import * as XLSX from 'xlsx';
 import type { RawValue } from './coerce';
-import { InflateOverflowError, inflateRawBounded } from './inflate';
+import { Inflate } from 'fflate';
 
 /**
  * Streaming .xlsx reader (spec §10, §13 memory): reads only the sheet that is needed, inflates it
@@ -187,17 +187,56 @@ function inflateSync(bytes: Uint8Array, e: ZipEntry, budget: InflateBudget): Uin
   checkDeclared(e);
   if (e.size > budget.remaining) throw new XlsxTooLargeError();
   if (e.size === 0) return new Uint8Array(0);
-  // Bounded decoder: stops as soon as the entry would produce more than declared (a lie).
   spend(budget, e.size);
-  let out: Uint8Array;
-  try {
-    out = inflateRawBounded(data, e.size);
-  } catch (err) {
-    if (err instanceof InflateOverflowError) throw new XlsxTooLargeError();
-    throw err;
+  const out = new Uint8Array(e.size);
+  let at = 0;
+  for (const chunk of inflateIter(data, e.size)) {
+    out.set(chunk, at);
+    at += chunk.length;
   }
+  if (at !== e.size) throw new Error('truncated zip entry');
   if (crc32(out) !== e.crc) throw new Error('bad zip entry checksum');
   return out;
+}
+
+/** Compressed bytes given to the inflater per step: bounds what one step can produce (~16 MiB). */
+const INFLATE_STEP = 16 * 1024;
+
+/** Bytes produced by the inflater since start (tests: the guard stops early). */
+export const inflateStats = { produced: 0 };
+
+/**
+ * Raw DEFLATE inflated step by step (fflate, MIT): chunks are produced as the input is pushed, and
+ * the inflate stops as soon as more than `limit` bytes come out (`XlsxTooLargeError`); the rest of
+ * the stream is never decoded. A corrupt or truncated stream throws a plain `Error` (unreadable).
+ */
+function* inflateIter(data: Uint8Array, limit: number): Generator<Uint8Array> {
+  const pending: Uint8Array[] = [];
+  let produced = 0;
+  let ended = false;
+  let tooLarge = false;
+  const inflater = new Inflate((chunk, final) => {
+    produced += chunk.length;
+    inflateStats.produced += chunk.length;
+    if (produced > limit) {
+      tooLarge = true;
+      throw new XlsxTooLargeError();
+    }
+    if (chunk.length > 0) pending.push(chunk);
+    if (final) ended = true;
+  });
+  for (let i = 0; ; i += INFLATE_STEP) {
+    const last = i + INFLATE_STEP >= data.length;
+    try {
+      inflater.push(data.subarray(i, i + INFLATE_STEP), last);
+    } catch (err) {
+      if (tooLarge) throw new XlsxTooLargeError();
+      throw err instanceof Error ? new Error(`corrupt zip entry: ${err.message}`) : err;
+    }
+    while (pending.length > 0) yield pending.shift()!;
+    if (last) break;
+  }
+  if (!ended) throw new Error('truncated zip entry');
 }
 
 let CRC_TABLE: Int32Array | null = null;
@@ -219,7 +258,7 @@ export function crc32(buf: Uint8Array): number {
   return (c ^ -1) >>> 0;
 }
 
-/** Entry inflated in chunks (native DecompressionStream) when available, else in one piece. */
+/** Entry inflated in chunks (lower peak memory), stopping at the limits. */
 async function* inflateChunks(
   bytes: Uint8Array,
   e: ZipEntry,
@@ -231,33 +270,20 @@ async function* inflateChunks(
     return;
   }
   if (e.method !== 8) throw new Error('unsupported zip method');
-  if (typeof DecompressionStream === 'undefined') {
-    yield inflateSync(bytes, e, budget);
-    return;
-  }
   checkDeclared(e);
   if (e.size > budget.remaining) throw new XlsxTooLargeError();
-  const stream = new Blob([data as Uint8Array<ArrayBuffer>])
-    .stream()
-    .pipeThrough(new DecompressionStream('deflate-raw'));
-  const reader = stream.getReader();
+  if (e.size === 0) return;
   // Never more than declared (a lie), the entry limit, or what is left of the file budget.
   const limit = Math.min(inflateLimit(e), e.size, budget.remaining);
   let produced = 0;
-  for (;;) {
-    const { done, value } = await reader.read();
-    if (done) {
-      spend(budget, produced);
-      return;
-    }
-    produced += value.length;
-    if (produced > limit) {
-      // Stop inflating now: the rest is never produced.
-      void reader.cancel().catch(() => undefined);
-      throw new XlsxTooLargeError();
-    }
-    yield value;
+  for (const chunk of inflateIter(data, limit)) {
+    produced += chunk.length;
+    yield chunk;
+    // Let other tasks of the worker run between chunks.
+    await Promise.resolve();
   }
+  if (produced !== e.size) throw new Error('truncated zip entry');
+  spend(budget, produced);
 }
 
 // ---------------------------------------------------------------------------------------------

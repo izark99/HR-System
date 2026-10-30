@@ -7,6 +7,7 @@ import { crc32, deflateRawSync } from 'node:zlib';
 import * as XLSX from 'xlsx';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { readSlot, readSlotAsync, type SourceFile } from '../io/excel-reader';
+import { inflateStats } from '../io/xlsx-stream';
 import { slot } from './helpers';
 
 const enc = new TextEncoder();
@@ -231,26 +232,9 @@ describe('cumulative inflate budget per file (AC-B4-90, decision 2026-10-30)', (
     };
     expect(f.data.byteLength).toBeLessThan(MiB);
 
-    // Count what the native inflater produces.
-    let produced = 0;
-    const Real = globalThis.DecompressionStream;
-    class Counting {
-      readonly writable: WritableStream<Uint8Array>;
-      readonly readable: ReadableStream<Uint8Array>;
-      constructor(format: CompressionFormat) {
-        const inner = new Real(format);
-        this.writable = inner.writable as WritableStream<Uint8Array>;
-        this.readable = (inner.readable as ReadableStream<Uint8Array>).pipeThrough(
-          new TransformStream<Uint8Array, Uint8Array>({
-            transform(chunk, ctl) {
-              produced += chunk.length;
-              ctl.enqueue(chunk);
-            },
-          }),
-        );
-      }
-    }
-    vi.stubGlobal('DecompressionStream', Counting);
+    // Count what the inflater produces (fflate since R1-fix3: `inflateStats` replaces the
+    // DecompressionStream spy).
+    const before = inflateStats.produced;
     try {
       const strict = slot({
         sheet: { mode: 'firstMatchingHeaders' },
@@ -265,11 +249,12 @@ describe('cumulative inflate budget per file (AC-B4-90, decision 2026-10-30)', (
         ],
       } as never);
       const r = await readSlotAsync(strict, [f]);
+      const produced = inflateStats.produced - before;
       expect(produced).toBeGreaterThan(0);
       expect(produced).toBeLessThanOrEqual(Math.max(64 * MiB, 200 * f.data.byteLength) + MiB);
       expect(keys(r)).toEqual(['validation.fileTooLarge']);
     } finally {
-      vi.unstubAllGlobals();
+      // nothing to restore
     }
   }, 120_000);
 });
