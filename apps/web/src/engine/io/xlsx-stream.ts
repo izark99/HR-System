@@ -27,6 +27,14 @@ export interface Grid {
   isRowBlank(r: number): boolean;
 }
 
+/** A sheet with no cell (stands for a sheet already read and found not to match). */
+export const EMPTY_GRID: Grid = {
+  lastRow: -1,
+  lastCol: -1,
+  cell: () => ({ value: null }),
+  isRowBlank: () => true,
+};
+
 export interface MergeRange {
   s: { r: number; c: number };
   e: { r: number; c: number };
@@ -51,6 +59,7 @@ export function mergeOrigins(merges: readonly MergeRange[]): Map<string, [number
 
 interface ZipEntry {
   method: number;
+  crc: number;
   compressedSize: number;
   size: number;
   localHeader: number;
@@ -83,6 +92,7 @@ function zipDirectory(bytes: Uint8Array): Map<string, ZipEntry> | null {
     if (p + 46 > bytes.length || u32(bytes, p) !== 0x02014b50) return null;
     const flags = u16(bytes, p + 8);
     const method = u16(bytes, p + 10);
+    const crc = u32(bytes, p + 16);
     const compressedSize = u32(bytes, p + 20);
     const size = u32(bytes, p + 24);
     const nameLen = u16(bytes, p + 28);
@@ -96,6 +106,7 @@ function zipDirectory(bytes: Uint8Array): Map<string, ZipEntry> | null {
     const name = latin1.decode(bytes.subarray(p + 46, p + 46 + nameLen));
     out.set(name.replace(/^\/+/, '').toLowerCase(), {
       method,
+      crc,
       compressedSize,
       size,
       localHeader,
@@ -106,15 +117,33 @@ function zipDirectory(bytes: Uint8Array): Map<string, ZipEntry> | null {
 }
 
 /**
- * Zip-bomb guard (HANDOFF §4 #1, AC-B4-90): an entry may inflate to at most `MAX_ENTRY_BYTES`, and
- * beyond `RATIO_FLOOR_BYTES` to at most `MAX_RATIO` × its compressed size. Checked on the declared
- * sizes when the package opens and again on the bytes actually produced, stopping the inflate as
- * soon as a limit is passed (the declared size may lie).
+ * Zip-bomb guard (HANDOFF §4 #1, AC-B4-90, MEMORY 2026-10-30 17:32): an entry may inflate to at
+ * most `MAX_ENTRY_BYTES`, and beyond `RATIO_FLOOR_BYTES` to at most `MAX_RATIO` × its compressed
+ * size; all entries of one file together to at most `fileBudget(file size)` (several entries just
+ * under the per-entry limits cannot add up). Checked on the declared sizes when the package opens
+ * and again on the bytes actually produced, stopping the inflate as soon as a limit is passed; an
+ * entry producing more than its declared size is refused (the declared size lied).
  */
-export const MAX_ENTRY_BYTES = 1024 * 1024 * 1024;
+export const MAX_ENTRY_BYTES = 2 * 1024 * 1024 * 1024;
 export const MAX_RATIO = 200;
 /** Small parts compress very well (repeated XML) and cannot exhaust memory: no ratio check. */
 export const RATIO_FLOOR_BYTES = 16 * 1024 * 1024;
+
+/** Total inflated bytes of one file: min(2 GiB, max(64 MiB, 200 × file size)). */
+export const MAX_FILE_INFLATE_BYTES = 2 * 1024 * 1024 * 1024;
+export const FILE_BUDGET_FLOOR_BYTES = 64 * 1024 * 1024;
+export function fileBudget(fileBytes: number): number {
+  return Math.min(MAX_FILE_INFLATE_BYTES, Math.max(FILE_BUDGET_FLOOR_BYTES, MAX_RATIO * fileBytes));
+}
+
+/** Inflate budget shared by every read of one file (sync, async, re-reads). */
+export interface InflateBudget {
+  remaining: number;
+}
+
+export function newInflateBudget(fileBytes: number): InflateBudget {
+  return { remaining: fileBudget(fileBytes) };
+}
 
 /** The package expands beyond the limits: reported as "File quá lớn để xử lý". */
 export class XlsxTooLargeError extends Error {
@@ -130,7 +159,16 @@ function inflateLimit(e: ZipEntry): number {
 }
 
 function checkDeclared(e: ZipEntry): void {
-  if (e.method !== 0 && e.size > inflateLimit(e)) throw new XlsxTooLargeError();
+  if (e.method === 0) return;
+  if (e.size > inflateLimit(e)) throw new XlsxTooLargeError();
+  // An empty entry deflates to 2 bytes; more data with a declared size 0 is a lie (SheetJS would
+  // read 0 as "unknown" and grow its buffer without bound).
+  if (e.size === 0 && e.compressedSize > 2) throw new XlsxTooLargeError();
+}
+
+function spend(budget: InflateBudget, bytes: number): void {
+  budget.remaining -= bytes;
+  if (budget.remaining < 0) throw new XlsxTooLargeError();
 }
 
 function entryData(bytes: Uint8Array, e: ZipEntry): Uint8Array {
@@ -145,18 +183,47 @@ const CFB = XLSX.CFB as unknown as {
 };
 
 /** Whole entry, inflated synchronously (SheetJS's inflater). */
-function inflateSync(bytes: Uint8Array, e: ZipEntry): Uint8Array {
+function inflateSync(bytes: Uint8Array, e: ZipEntry, budget: InflateBudget): Uint8Array {
   const data = entryData(bytes, e);
   if (e.method === 0) return data;
   if (e.method !== 8) throw new Error('unsupported zip method');
   checkDeclared(e);
-  const out = CFB.utils._inflateRaw(data, e.size);
-  if (out.length > inflateLimit(e)) throw new XlsxTooLargeError();
-  return out instanceof Uint8Array ? out : new Uint8Array(out);
+  if (e.size > budget.remaining) throw new XlsxTooLargeError();
+  if (e.size === 0) return new Uint8Array(0);
+  // SheetJS writes at most the size given (never grows the buffer); the CRC-32 tells a truncated
+  // (lying) or corrupt entry apart.
+  spend(budget, e.size);
+  const raw = CFB.utils._inflateRaw(data, e.size);
+  const out = raw instanceof Uint8Array ? raw : new Uint8Array(raw);
+  if (crc32(out) !== e.crc) throw new Error('bad zip entry checksum');
+  return out;
+}
+
+let CRC_TABLE: Int32Array | null = null;
+
+/** CRC-32 (ZIP) of `buf`. */
+export function crc32(buf: Uint8Array): number {
+  let t = CRC_TABLE;
+  if (!t) {
+    t = new Int32Array(256);
+    for (let n = 0; n < 256; n++) {
+      let c = n;
+      for (let k = 0; k < 8; k++) c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1;
+      t[n] = c;
+    }
+    CRC_TABLE = t;
+  }
+  let c = -1;
+  for (let i = 0; i < buf.length; i++) c = t[(c ^ buf[i]!) & 0xff]! ^ (c >>> 8);
+  return (c ^ -1) >>> 0;
 }
 
 /** Entry inflated in chunks (native DecompressionStream) when available, else in one piece. */
-async function* inflateChunks(bytes: Uint8Array, e: ZipEntry): AsyncGenerator<Uint8Array> {
+async function* inflateChunks(
+  bytes: Uint8Array,
+  e: ZipEntry,
+  budget: InflateBudget,
+): AsyncGenerator<Uint8Array> {
   const data = entryData(bytes, e);
   if (e.method === 0) {
     yield data;
@@ -164,19 +231,24 @@ async function* inflateChunks(bytes: Uint8Array, e: ZipEntry): AsyncGenerator<Ui
   }
   if (e.method !== 8) throw new Error('unsupported zip method');
   if (typeof DecompressionStream === 'undefined') {
-    yield inflateSync(bytes, e);
+    yield inflateSync(bytes, e, budget);
     return;
   }
   checkDeclared(e);
+  if (e.size > budget.remaining) throw new XlsxTooLargeError();
   const stream = new Blob([data as Uint8Array<ArrayBuffer>])
     .stream()
     .pipeThrough(new DecompressionStream('deflate-raw'));
   const reader = stream.getReader();
-  const limit = inflateLimit(e);
+  // Never more than declared (a lie), the entry limit, or what is left of the file budget.
+  const limit = Math.min(inflateLimit(e), e.size, budget.remaining);
   let produced = 0;
   for (;;) {
     const { done, value } = await reader.read();
-    if (done) return;
+    if (done) {
+      spend(budget, produced);
+      return;
+    }
     produced += value.length;
     if (produced > limit) {
       // Stop inflating now: the rest is never produced.
@@ -529,14 +601,17 @@ export interface XlsxPackage {
  * Open an OOXML workbook package. Returns null when the bytes are not a ZIP package this reader
  * understands (the caller falls back to SheetJS).
  */
-export function openXlsx(bytes: Uint8Array): XlsxPackage | null {
+export function openXlsx(
+  bytes: Uint8Array,
+  budget: InflateBudget = newInflateBudget(bytes.length),
+): XlsxPackage | null {
   const zip = zipDirectory(bytes);
   if (!zip) return null;
   // Refuse up front, so no fallback reader (SheetJS) inflates the entry either.
   for (const e of zip.values()) checkDeclared(e);
   const part = (path: string) => {
     const e = zip.get(path.toLowerCase());
-    return e ? inflateSync(bytes, e) : null;
+    return e ? inflateSync(bytes, e, budget) : null;
   };
   let wbPath = 'xl/workbook.xml';
   const rootRels = part('_rels/.rels');
@@ -583,7 +658,7 @@ export function openXlsx(bytes: Uint8Array): XlsxPackage | null {
     if (sst) return sst;
     const p = new SstParser();
     const e = sstPath ? zip.get(sstPath) : undefined;
-    if (e) p.scanner.feed(inflateSync(bytes, e), true);
+    if (e) p.scanner.feed(inflateSync(bytes, e, budget), true);
     return (sst = p.result());
   };
   const sharedAsync = async (): Promise<SharedStrings> => {
@@ -591,7 +666,7 @@ export function openXlsx(bytes: Uint8Array): XlsxPackage | null {
     const p = new SstParser();
     const e = sstPath ? zip.get(sstPath) : undefined;
     if (e) {
-      for await (const chunk of inflateChunks(bytes, e)) p.scanner.feed(chunk, false);
+      for await (const chunk of inflateChunks(bytes, e, budget)) p.scanner.feed(chunk, false);
       p.scanner.feed(new Uint8Array(0), true);
     }
     return (sst = p.result());
@@ -603,14 +678,14 @@ export function openXlsx(bytes: Uint8Array): XlsxPackage | null {
     readSheet(index) {
       const e = zip.get(sheetPaths[index]!);
       const parser = new SheetParser(formats, date1904);
-      if (e) parser.scanner.feed(inflateSync(bytes, e), true);
+      if (e) parser.scanner.feed(inflateSync(bytes, e, budget), true);
       return parser.grid(parser.usesShared ? sharedSync() : EMPTY_SST);
     },
     async readSheetAsync(index, maxChunk) {
       const e = zip.get(sheetPaths[index]!);
       const parser = new SheetParser(formats, date1904);
       if (e) {
-        for await (const chunk of inflateChunks(bytes, e)) {
+        for await (const chunk of inflateChunks(bytes, e, budget)) {
           if (!maxChunk) parser.scanner.feed(chunk, false);
           else {
             for (let i = 0; i < chunk.length; i += maxChunk) {

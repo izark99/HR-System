@@ -1,6 +1,6 @@
 /**
  * AC-B4-90 (HANDOFF §4 #1): zip-bomb guard of the streaming .xlsx reader. An entry that inflates
- * past 1 GiB, or past 200 × its compressed size (above 16 MiB), is refused early with
+ * past 2 GiB, or past 200 × its compressed size (above 16 MiB), is refused early with
  * `validation.fileTooLarge` on that file; the inflate stops as soon as the limit is passed, even
  * when the declared size lies. Fake data only; files are built in memory.
  */
@@ -120,8 +120,8 @@ function issueKeys(r: { report: { issues: { messageKey: string; file?: string }[
 }
 
 describe('zip-bomb guard (AC-B4-90)', () => {
-  it('limits are 1 GiB per entry and 1:200 above 16 MiB', () => {
-    expect(MAX_ENTRY_BYTES).toBe(1024 ** 3);
+  it('limits are 2 GiB per entry and 1:200 above 16 MiB (MEMORY 2026-10-30 17:32)', () => {
+    expect(MAX_ENTRY_BYTES).toBe(2 * 1024 ** 3);
     expect(MAX_RATIO).toBe(200);
     expect(RATIO_FLOOR_BYTES).toBe(16 * 1024 ** 2);
   });
@@ -152,11 +152,11 @@ describe('zip-bomb guard (AC-B4-90)', () => {
     expect(process.memoryUsage().arrayBuffers - before).toBeLessThan(16 * 1024 * 1024);
   });
 
-  it('an entry declared above 1 GiB is refused before inflating (nothing allocated)', async () => {
-    // 2 GiB of zeros is never produced: the deflate stream is a small stand-in.
+  it('an entry declared above 2 GiB is refused before inflating (nothing allocated)', async () => {
+    // 3 GiB of zeros is never produced: the deflate stream is a small stand-in.
     const f = base({
       data: bombSheet(0),
-      declaredSize: 2 * 1024 ** 3,
+      declaredSize: 3 * 1024 ** 3,
       compressed: new Uint8Array(deflateRawSync(new Uint8Array(1024 * 1024))),
     });
     const before = process.memoryUsage().arrayBuffers;

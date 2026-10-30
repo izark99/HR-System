@@ -16,9 +16,12 @@ import {
   type ValidationReport,
 } from './validation';
 import {
+  EMPTY_GRID,
   mergeOrigins,
+  newInflateBudget,
   openXlsx,
   XlsxTooLargeError,
+  type InflateBudget,
   type CellRead,
   type Grid,
   type XlsxPackage,
@@ -185,37 +188,37 @@ function unreadable(slot: InputSlot, file: SourceFile, err?: unknown): FileReadR
   };
 }
 
-/** Files below this size are retried with SheetJS when the streaming reader fails. */
-const FALLBACK_MAX_BYTES = 64 * 1024 * 1024;
-
 function bytesOf(file: SourceFile): Uint8Array {
   return file.data instanceof Uint8Array ? file.data : new Uint8Array(file.data);
 }
 
-/** Open the workbook: streaming reader for OOXML packages, SheetJS for the rest. */
-function openBook(file: SourceFile): { book: Book; pkg: XlsxPackage | null } {
+/**
+ * Open the workbook: streaming reader for OOXML (ZIP) packages, SheetJS for the rest (.xls). A ZIP
+ * package the streaming reader refuses is unreadable: it never goes to SheetJS, which would
+ * inflate every entry without any limit (zip-bomb guard, AC-B4-90).
+ */
+function openBook(
+  file: SourceFile,
+  budget: InflateBudget,
+): { book: Book; pkg: XlsxPackage | null } {
   const bytes = bytesOf(file);
   if (!hasExcelSignature(bytes)) throw new Error('not an Excel file');
-  let pkg: XlsxPackage | null;
-  try {
-    pkg = startsWith(bytes, ZIP_SIGNATURE) ? openXlsx(bytes) : null;
-  } catch (err) {
-    // A zip bomb must not reach SheetJS either.
-    if (err instanceof XlsxTooLargeError) throw err;
-    pkg = null;
-  }
-  if (pkg) {
-    const p = pkg;
-    const cache = new Map<number, Grid>();
+  if (startsWith(bytes, ZIP_SIGNATURE)) {
+    const pkg = openXlsx(bytes, budget);
+    if (!pkg) throw new Error('unsupported package');
+    // Only the last sheet read is kept (sheets that did not match are not held in memory).
+    let last: { i: number; grid: Grid } | null = null;
     return {
       pkg,
       book: {
-        sheetNames: p.sheetNames,
-        date1904: p.date1904,
+        sheetNames: pkg.sheetNames,
+        date1904: pkg.date1904,
         grid(i) {
-          let g = cache.get(i);
-          if (!g) cache.set(i, (g = p.readSheet(i)));
-          return g;
+          if (last?.i !== i) {
+            last = null;
+            last = { i, grid: pkg.readSheet(i) };
+          }
+          return last.grid;
         },
       },
     };
@@ -232,38 +235,38 @@ function sheetJsBook(wb: XLSX.WorkBook): Book {
 }
 
 /** Read and validate a single file (no cross-file checks). */
-export function readSlotFile(slot: InputSlot, file: SourceFile): FileReadResult {
+export function readSlotFile(
+  slot: InputSlot,
+  file: SourceFile,
+  budget: InflateBudget = newInflateBudget(bytesOf(file).length),
+): FileReadResult {
   let opened: ReturnType<typeof openBook>;
   try {
-    opened = openBook(file);
+    opened = openBook(file, budget);
   } catch (err) {
     return unreadable(slot, file, err);
   }
   try {
     return readBook(slot, file, opened.book);
   } catch (err) {
-    if (err instanceof XlsxTooLargeError) return unreadable(slot, file, err);
-    if (!opened.pkg || bytesOf(file).length > FALLBACK_MAX_BYTES) return unreadable(slot, file);
-  }
-  // The streaming reader failed on this package: let SheetJS try.
-  try {
-    return readBook(slot, file, sheetJsBook(parseWorkbook(file)));
-  } catch {
-    return unreadable(slot, file);
+    return unreadable(slot, file, err);
   }
 }
 
 async function readSlotFileAsync(slot: InputSlot, file: SourceFile): Promise<FileReadResult> {
+  // One budget for every read of this file, including the synchronous retry below.
+  const budget = newInflateBudget(bytesOf(file).length);
   let opened: ReturnType<typeof openBook>;
   try {
-    opened = openBook(file);
+    opened = openBook(file, budget);
   } catch (err) {
     return unreadable(slot, file, err);
   }
   const pkg = opened.pkg;
-  if (!pkg) return readSlotFile(slot, file);
+  if (!pkg) return readSlotFile(slot, file, budget);
   try {
-    // Parse (in chunks) exactly the sheets `pickSheet` will look at, then validate.
+    // Parse (in chunks) exactly the sheets `pickSheet` will look at, then validate. A sheet that
+    // does not match is not kept (only that it did not match).
     const grids = new Map<number, Grid>();
     const book: Book = {
       sheetNames: pkg.sheetNames,
@@ -272,15 +275,20 @@ async function readSlotFileAsync(slot: InputSlot, file: SourceFile): Promise<Fil
     };
     for (const i of sheetCandidates(slot, pkg.sheetNames)) {
       const grid = await pkg.readSheetAsync(i);
-      grids.set(i, grid);
-      if (slot.sheet.mode !== 'firstMatchingHeaders' || sheetMatches(slot, mapHeaders(slot, grid)))
+      if (
+        slot.sheet.mode !== 'firstMatchingHeaders' ||
+        sheetMatches(slot, mapHeaders(slot, grid))
+      ) {
+        grids.set(i, grid);
         break;
+      }
+      grids.set(i, EMPTY_GRID);
     }
     return readBook(slot, file, book);
   } catch (err) {
     // Too large: stop here (the synchronous retry would inflate it all again).
     if (err instanceof XlsxTooLargeError) return unreadable(slot, file, err);
-    return readSlotFile(slot, file);
+    return readSlotFile(slot, file, budget);
   }
 }
 

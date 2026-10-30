@@ -133,12 +133,12 @@ describe('QA zip bomb (AC-B4-90): regular files still read', () => {
   });
 });
 
-describe('KNOWN BUG — zip bomb guard bypasses (AC-B4-90)', () => {
+describe('zip bomb guard bypasses, fixed in R1-fix (AC-B4-90)', () => {
   // xl/workbook.xml declared with uncompressed size 0: `checkDeclared` passes (0 ≤ limit) and
   // SheetJS's `_inflateRaw(data, 0)` treats 0 as "unknown" and grows its buffer without bound; the
   // limit is only checked after the whole entry is inflated. Read through `part()` (inflateSync),
   // i.e. also in the worker's async path. 64 KiB file → > 64 MiB allocated (limit 16 MiB).
-  it.fails('declared size 0: the inflate stops near the 16 MiB limit (async path)', async () => {
+  it('declared size 0: the inflate stops near the 16 MiB limit (async path)', async () => {
     const f: SourceFile = {
       name: 'zero.xlsx',
       data: zip([
@@ -162,121 +162,114 @@ describe('KNOWN BUG — zip bomb guard bypasses (AC-B4-90)', () => {
   // A central-directory flag the streaming reader refuses (0x40) makes `openXlsx` return null, so
   // the whole package goes to SheetJS, which ignores that flag and inflates every entry with no
   // limit at all (here a 256 MiB entry from a < 1 MiB file is inflated and the file "reads").
-  it.fails(
-    'a package the streaming reader refuses is not inflated unguarded by SheetJS',
-    async () => {
-      const f: SourceFile = {
-        name: 'fallback.xlsx',
-        data: zip([
-          text(
-            '[Content_Types].xml',
-            '<?xml version="1.0"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="xml" ContentType="application/xml"/></Types>',
-          ),
-          text('_rels/.rels', ROOT_RELS),
-          text('xl/workbook.xml', `${WB_HEAD}</workbook>`),
-          text('xl/_rels/workbook.xml.rels', WB_RELS),
-          text('xl/worksheets/sheet1.xml', SHEET),
-          {
-            name: 'xl/media/x.bin',
-            data: new Uint8Array(256 * MiB),
-            declaredSize: 0,
-            cdFlags: 0x40,
-          },
-        ]),
-      };
-      expect(f.data.byteLength).toBeLessThan(MiB);
-      const r = await readSlotAsync(S, [f]);
-      // Today: read by SheetJS without any issue (the 256 MiB entry was inflated).
-      expect(keys(r)).toEqual(['validation.fileTooLarge']);
-    },
-  );
+  it('a package the streaming reader refuses is not inflated unguarded by SheetJS', async () => {
+    const f: SourceFile = {
+      name: 'fallback.xlsx',
+      data: zip([
+        text(
+          '[Content_Types].xml',
+          '<?xml version="1.0"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="xml" ContentType="application/xml"/></Types>',
+        ),
+        text('_rels/.rels', ROOT_RELS),
+        text('xl/workbook.xml', `${WB_HEAD}</workbook>`),
+        text('xl/_rels/workbook.xml.rels', WB_RELS),
+        text('xl/worksheets/sheet1.xml', SHEET),
+        {
+          name: 'xl/media/x.bin',
+          data: new Uint8Array(256 * MiB),
+          declaredSize: 0,
+          cdFlags: 0x40,
+        },
+      ]),
+    };
+    expect(f.data.byteLength).toBeLessThan(MiB);
+    const r = await readSlotAsync(S, [f]);
+    // A ZIP the streaming reader refuses is unreadable; it never reaches SheetJS (R1-fix #2).
+    expect(keys(r)).toEqual(['validation.fileUnreadable']);
+  });
 });
 
-describe('KNOWN BUG — no cumulative inflate budget per file (AC-B4-90, decision 2026-10-30)', () => {
+describe('cumulative inflate budget per file (AC-B4-90, decision 2026-10-30)', () => {
   // The 1:200 ratio is only checked per entry above 16 MiB. With `sheet.mode:
   // 'firstMatchingHeaders'` every sheet is inflated (and its grid kept) until one matches, so N
   // sheets × 16 MiB each come from a file of N × ~16 KiB. Measured while verifying: 24 sheets of
   // 915k cells (1.3 MB file) → 430 MB RSS, 9.6 s; it grows linearly with N. Proposed budget: total
   // bytes produced for one file ≤ min(2 GiB, max(64 MiB, 200 × file size)).
-  it.fails(
-    '40 sheets × 15 MiB from a < 1 MiB file: inflate stops at the per-file budget',
-    async () => {
-      const N = 40;
-      const sheetXml = padded(
-        `<?xml version="1.0"?><worksheet xmlns="${NS}"><sheetData>`,
-        15 * MiB,
-        '</sheetData></worksheet>',
-      );
-      const sheets = Array.from(
-        { length: N },
-        (_, i) => `<sheet name="S${i}" sheetId="${i + 1}" r:id="rId${i + 1}"/>`,
-      ).join('');
-      const rels = Array.from(
-        { length: N },
-        (_, i) =>
-          `<Relationship Id="rId${i + 1}" Type="${R}/worksheet" Target="worksheets/sheet${i + 1}.xml"/>`,
-      ).join('');
-      const f: SourceFile = {
-        name: 'many.xlsx',
-        data: zip([
-          text('_rels/.rels', ROOT_RELS),
-          text(
-            'xl/workbook.xml',
-            `<?xml version="1.0"?><workbook xmlns="${NS}" xmlns:r="${R}"><sheets>${sheets}</sheets></workbook>`,
-          ),
-          text(
-            'xl/_rels/workbook.xml.rels',
-            `<?xml version="1.0"?><Relationships xmlns="${PKG}">${rels}</Relationships>`,
-          ),
-          ...Array.from({ length: N }, (_, i) => ({
-            name: `xl/worksheets/sheet${i + 1}.xml`,
-            data: sheetXml,
-          })),
-        ]),
-      };
-      expect(f.data.byteLength).toBeLessThan(MiB);
+  it('40 sheets × 15 MiB from a < 1 MiB file: inflate stops at the per-file budget', async () => {
+    const N = 40;
+    const sheetXml = padded(
+      `<?xml version="1.0"?><worksheet xmlns="${NS}"><sheetData>`,
+      15 * MiB,
+      '</sheetData></worksheet>',
+    );
+    const sheets = Array.from(
+      { length: N },
+      (_, i) => `<sheet name="S${i}" sheetId="${i + 1}" r:id="rId${i + 1}"/>`,
+    ).join('');
+    const rels = Array.from(
+      { length: N },
+      (_, i) =>
+        `<Relationship Id="rId${i + 1}" Type="${R}/worksheet" Target="worksheets/sheet${i + 1}.xml"/>`,
+    ).join('');
+    const f: SourceFile = {
+      name: 'many.xlsx',
+      data: zip([
+        text('_rels/.rels', ROOT_RELS),
+        text(
+          'xl/workbook.xml',
+          `<?xml version="1.0"?><workbook xmlns="${NS}" xmlns:r="${R}"><sheets>${sheets}</sheets></workbook>`,
+        ),
+        text(
+          'xl/_rels/workbook.xml.rels',
+          `<?xml version="1.0"?><Relationships xmlns="${PKG}">${rels}</Relationships>`,
+        ),
+        ...Array.from({ length: N }, (_, i) => ({
+          name: `xl/worksheets/sheet${i + 1}.xml`,
+          data: sheetXml,
+        })),
+      ]),
+    };
+    expect(f.data.byteLength).toBeLessThan(MiB);
 
-      // Count what the native inflater produces.
-      let produced = 0;
-      const Real = globalThis.DecompressionStream;
-      class Counting {
-        readonly writable: WritableStream<Uint8Array>;
-        readonly readable: ReadableStream<Uint8Array>;
-        constructor(format: CompressionFormat) {
-          const inner = new Real(format);
-          this.writable = inner.writable as WritableStream<Uint8Array>;
-          this.readable = (inner.readable as ReadableStream<Uint8Array>).pipeThrough(
-            new TransformStream<Uint8Array, Uint8Array>({
-              transform(chunk, ctl) {
-                produced += chunk.length;
-                ctl.enqueue(chunk);
-              },
-            }),
-          );
-        }
-      }
-      vi.stubGlobal('DecompressionStream', Counting);
-      try {
-        const strict = slot({
-          sheet: { mode: 'firstMatchingHeaders' },
-          columns: [
-            {
-              key: 'ma_nv',
-              label: 'Mã NV',
-              aliases: ['Mã NV'],
-              type: 'string',
-              presence: 'required',
+    // Count what the native inflater produces.
+    let produced = 0;
+    const Real = globalThis.DecompressionStream;
+    class Counting {
+      readonly writable: WritableStream<Uint8Array>;
+      readonly readable: ReadableStream<Uint8Array>;
+      constructor(format: CompressionFormat) {
+        const inner = new Real(format);
+        this.writable = inner.writable as WritableStream<Uint8Array>;
+        this.readable = (inner.readable as ReadableStream<Uint8Array>).pipeThrough(
+          new TransformStream<Uint8Array, Uint8Array>({
+            transform(chunk, ctl) {
+              produced += chunk.length;
+              ctl.enqueue(chunk);
             },
-          ],
-        } as never);
-        const r = await readSlotAsync(strict, [f]);
-        expect(produced).toBeGreaterThan(0);
-        expect(produced).toBeLessThanOrEqual(Math.max(64 * MiB, 200 * f.data.byteLength) + MiB);
-        expect(keys(r)).toEqual(['validation.fileTooLarge']);
-      } finally {
-        vi.unstubAllGlobals();
+          }),
+        );
       }
-    },
-    120_000,
-  );
+    }
+    vi.stubGlobal('DecompressionStream', Counting);
+    try {
+      const strict = slot({
+        sheet: { mode: 'firstMatchingHeaders' },
+        columns: [
+          {
+            key: 'ma_nv',
+            label: 'Mã NV',
+            aliases: ['Mã NV'],
+            type: 'string',
+            presence: 'required',
+          },
+        ],
+      } as never);
+      const r = await readSlotAsync(strict, [f]);
+      expect(produced).toBeGreaterThan(0);
+      expect(produced).toBeLessThanOrEqual(Math.max(64 * MiB, 200 * f.data.byteLength) + MiB);
+      expect(keys(r)).toEqual(['validation.fileTooLarge']);
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  }, 120_000);
 });
