@@ -2,6 +2,7 @@ import type { DataType } from '@hrflow/flow-schema';
 import ExcelJS from 'exceljs';
 import { isDecimal } from '../core/decimal';
 import type { ColumnDef, Table, Value } from '../core/types';
+import { writeStreamingWorkbook } from './xlsx-stream-writer';
 
 export interface SheetSpec {
   name: string;
@@ -24,7 +25,15 @@ const WIDTH_SAMPLE = 1000;
  * Build a multi-sheet .xlsx (spec §11 `output.excel`): bold header, frozen first row,
  * auto-filter, column widths, number format by column type.
  */
-export async function writeWorkbook(sheets: readonly SheetSpec[]): Promise<Uint8Array> {
+export async function writeWorkbook(
+  sheets: readonly SheetSpec[],
+  /** `streaming`: force a writer (tests); `streamingAbove`: cell count threshold. */
+  options: { streaming?: boolean; streamingAbove?: number } = {},
+): Promise<Uint8Array> {
+  const cells = sheets.reduce((n, s) => n + s.table.rowCount * s.table.columns.length, 0);
+  if (options.streaming ?? cells > (options.streamingAbove ?? STREAMING_CELLS)) {
+    return writeStreaming(sheets);
+  }
   const wb = new ExcelJS.Workbook();
   const usedNames = new Set<string>();
 
@@ -57,6 +66,28 @@ export async function writeWorkbook(sheets: readonly SheetSpec[]): Promise<Uint8
 
   const buffer = await wb.xlsx.writeBuffer();
   return new Uint8Array(buffer);
+}
+
+/**
+ * Above this many cells the streaming writer is used: ExcelJS keeps an object per cell (about
+ * 3 M cells already take ~1 GB of heap).
+ */
+const STREAMING_CELLS = 2_000_000;
+
+function writeStreaming(sheets: readonly SheetSpec[]): Promise<Uint8Array> {
+  const used = new Set<string>();
+  const names = sheets.map((s) => uniqueSheetName(s.name, used));
+  return writeStreamingWorkbook(
+    sheets.map((s) => ({
+      name: s.name,
+      columns: s.table.columns,
+      vectors: s.table.columns.map((c) => s.table.vector(c.key)!),
+      rowCount: s.table.rowCount,
+      widths: s.table.columns.map((c) => estimateWidth(c, s.table)),
+      numFmts: s.table.columns.map((c) => c.numFmt ?? DEFAULT_NUM_FMT[c.type]),
+    })),
+    names,
+  );
 }
 
 function numFmtStyle(col: ColumnDef): Partial<ExcelJS.Style> {

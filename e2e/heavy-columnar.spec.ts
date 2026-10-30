@@ -37,7 +37,7 @@ async function generate(): Promise<void> {
     XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(perfBranchAoa()), 'ChiNhanh');
     writeFileSync(BRANCHES, XLSX.write(wb, { type: 'buffer', bookType: 'xlsx' }) as Buffer);
   }
-  if (!existsSync(DATA)) await writePerfWorkbook(DATA, ROWS);
+  if (!existsSync(DATA)) await writePerfWorkbook(ExcelJS, DATA, ROWS);
 }
 
 /** Samples the V8 heap of the page and of every worker (CDP), tagged with the current phase. */

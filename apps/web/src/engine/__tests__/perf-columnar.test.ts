@@ -6,6 +6,7 @@
  * Workbooks are generated once (fixed seed, fake data) into the OS temp dir.
  */
 import { FlowDefinitionSchema } from '@hrflow/flow-schema';
+import ExcelJS from 'exceljs';
 import { existsSync, mkdirSync, readFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -28,7 +29,7 @@ describe.skipIf(!ENABLED)('perf: 30-column flow from .xlsx', () => {
     it(`${n} rows`, { timeout: 3_600_000 }, async () => {
       mkdirSync(DIR, { recursive: true });
       const path = join(DIR, `du_lieu_${n}.xlsx`);
-      if (!existsSync(path)) await writePerfWorkbook(path, n);
+      if (!existsSync(path)) await writePerfWorkbook(ExcelJS, path, n);
       const flow = FlowDefinitionSchema.parse(perfFlow());
       const wb = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(perfBranchAoa()), 'CN');

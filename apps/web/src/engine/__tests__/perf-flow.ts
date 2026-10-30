@@ -5,7 +5,7 @@
  * generate matching workbooks with the same headers.
  */
 import type { FlowDefinitionInput } from '@hrflow/flow-schema';
-import ExcelJS from 'exceljs';
+import type ExcelJSModule from 'exceljs';
 
 export const PERF_STRING_HEADERS = [
   ['ma_nv', 'Mã NV'],
@@ -159,9 +159,14 @@ export function perfBranchAoa(): (string | number)[][] {
 
 /**
  * Write the 30-column fake workbook (sheet "Data", header row 1, fixed seed) with ExcelJS's
- * streaming writer: the generator itself never holds the rows in memory.
+ * streaming writer: the generator itself never holds the rows in memory. ExcelJS is passed in
+ * (Playwright loads it with require, Vitest with import).
  */
-export async function writePerfWorkbook(path: string, rows: number): Promise<void> {
+export async function writePerfWorkbook(
+  ExcelJS: typeof ExcelJSModule,
+  path: string,
+  rows: number,
+): Promise<void> {
   const wb = new ExcelJS.stream.xlsx.WorkbookWriter({
     filename: path,
     useSharedStrings: true,
