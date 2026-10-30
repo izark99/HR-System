@@ -988,7 +988,7 @@ Không thuộc Phase 1: `input.refTable`, bảng tham chiếu, template — Phas
 | ~~Q12~~ | Đã chốt 2026-10-27: dùng Monaco, chỉ trong chunk Designer, worker và font self-host, không dùng CDN loader (§5) | — |
 | ~~Q13~~ | Đã chốt 2026-10-27: node `output.preview` có trong bước 3 (§12.1.10) | — |
 | ~~Q14~~ | Đã chốt 2026-10-27: cột thêm của slot `extraColumns: 'keep'` chỉ dùng được trong `code.sql` lúc chạy, Designer cảnh báo (§12.1.9) | — |
-| Q18 | Canvas Designer, ô Monaco và bảng xem trước dày dữ liệu có giữ cỡ chữ nhỏ (14px) thay vì thang chữ lớn §25.1 không? | Mật độ hiển thị Designer, bảng kết quả |
+| ~~Q18~~ | Đã chốt 2026-10-30 13:29: canvas Designer, Monaco và bảng xem trước giữ chữ 14px (§25.1) | — |
 | ~~Q17~~ | Đã chốt 2026-10-30 13:24: công thức dùng `,` ngăn đối số và `.` thập phân, không nhận `;` (§12.2) | — |
 | ~~Q16~~ | Đã chốt 2026-10-30 13:18: `transform.formula` chỉ nhận công thức Excel (transpile sang SQL), 37 hàm, không có XLOOKUP/VLOOKUP (§9.1, §12.2) | — |
 | ~~Q15~~ | Đã chốt 2026-10-27: CSP giữ `style-src 'self' 'unsafe-inline'` (React Flow, Monaco gán style lúc chạy), script inline vẫn bị chặn; quy tắc `data-privacy.md` sửa cho khớp (§17) | — |
@@ -1121,6 +1121,8 @@ Font duy nhất `Be Vietnam Pro` (400–700), fallback `Arial, sans-serif`, **se
 | `button` | 18px / 600 / lh 24px | 16px | Nhãn nút chuẩn |
 | `button-sm` | 14px / 700 / ls 0.15px | 14px | Nút nhỏ (trong bảng, toolbar) |
 | `code` | font mono hệ thống, 14px | 14px | Monaco, ô công thức, SQL |
+
+**Ngoại lệ mật độ cao** (chốt 2026-10-30 13:29): canvas Designer (node, form cấu hình bên cạnh canvas), Monaco/ô công thức và bảng xem trước dữ liệu (xem trước node, màn Kết quả) dùng chữ 14px / lh 20px, header bảng 13px 600, padding ô 8px 12px; tiêu đề và nút trong các vùng này vẫn theo thang chung.
 
 ### 25.2 Màu
 

@@ -215,6 +215,8 @@
 
 ## Kỹ thuật & tổ chức
 
+2026-10-30 13:29 - Ngoại lệ thang chữ lớn: canvas Designer, ô Monaco/công thức và bảng xem trước dữ liệu giữ chữ 14px; phần còn lại theo §25.1.
+
 2026-10-30 13:26 - Quy tắc frontend đổi tên `.claude/rules/frontend.md` → `.claude/rules/design.md` (UI, design system, i18n, a11y).
 
 2026-10-30 13:26 - Đổi giao diện theo design language bản 2 làm vòng code riêng, ngay sau vòng R1 của `transform.formula`.
