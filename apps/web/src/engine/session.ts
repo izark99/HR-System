@@ -11,7 +11,7 @@ import { normalizeKeyPart } from './core/keys';
 import { isCancelled, planFlow, runFlow, type RunFlowResult } from './core/executor';
 import { createEngineTranslator } from './core/i18n';
 import { EngineError, Table, type Translate, type Value } from './core/types';
-import { readSlot, type SlotReadResult, type SourceFile } from './io/excel-reader';
+import { readSlot, readSlotAsync, type SlotReadResult, type SourceFile } from './io/excel-reader';
 import { writeWorkbook } from './io/excel-writer';
 import { formatIssue } from './io/validation';
 import { compareDiffColumns, MISMATCHED_METRICS_COLUMN } from './nodes/control-compare';
@@ -160,8 +160,12 @@ export class EngineSession {
       sources.push({ name: f.name, data });
     }
     if (!isLatest()) return null;
+    // .xlsx sheets are inflated in chunks (async); a newer call may have started meanwhile.
+    const result = await readSlotAsync(slot, sources);
+    // The file bytes are not needed any more once read (the worker may hold several large files).
+    sources.length = 0;
+    if (!isLatest()) return null;
     // Synchronous from here on: no newer call can interleave before the commit.
-    const result = readSlot(slot, sources);
     this.clearRun();
     if (files.length > 0) this.slotResults.set(slotKey, result);
     else this.slotResults.delete(slotKey);

@@ -6,6 +6,7 @@ export { createEngineTranslator } from './core/i18n';
 export * from './io/validation';
 export {
   readSlot,
+  readSlotAsync,
   readSlotFile,
   SOURCE_FILE_COLUMN,
   type SourceFile,

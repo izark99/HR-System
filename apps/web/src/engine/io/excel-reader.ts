@@ -2,7 +2,9 @@ import type { InputSlot, SlotColumn } from '@hrflow/flow-schema';
 import * as XLSX from 'xlsx';
 import { Big, decimalFrom, isDecimal } from '../core/decimal';
 import { normalizeKeyPart } from '../core/keys';
-import { Table, type ColumnDef, type Row, type Value } from '../core/types';
+import type { DecimalBuilder } from '../core/table';
+import { columnBuilder, exactDouble, StringBuilder, type ColumnBuilder } from '../core/table';
+import { Table, type ColumnDef, type Value } from '../core/types';
 import { coerceValue, isBlank, type RawValue } from './coerce';
 import { normalizeHeader, slugifyHeader } from './normalize';
 import {
@@ -13,6 +15,7 @@ import {
   type ValidationIssue,
   type ValidationReport,
 } from './validation';
+import { mergeOrigins, openXlsx, type CellRead, type Grid, type XlsxPackage } from './xlsx-stream';
 
 /** File content handed over by the UI. The name stays in the browser (never logged/uploaded). */
 export interface SourceFile {
@@ -39,18 +42,21 @@ const EXCEL_ERRORS: Record<number, string> = {
   43: '#GETTING_DATA',
 };
 
-interface RowRef {
-  file: string;
-  row: number;
-}
-
+/** Excel row of every table row (1-based), for cross-file `unique` messages. */
 interface FileReadResult {
-  rows: Row[];
-  refs: RowRef[];
+  table: Table;
+  excelRows: Int32Array;
   extraColumns: ColumnDef[];
   issues: ValidationIssue[];
   skipped: SkippedRow[];
   summary: FileSummary;
+}
+
+/** The sheets of one file; `grid(i)` parses sheet `i` on first use. */
+interface Book {
+  sheetNames: string[];
+  date1904: boolean;
+  grid(index: number): Grid;
 }
 
 /**
@@ -59,13 +65,32 @@ interface FileReadResult {
  * union so duplicates across files are reported with file + row of both occurrences.
  */
 export function readSlot(slot: InputSlot, files: readonly SourceFile[]): SlotReadResult {
-  const issues: ValidationIssue[] = [];
-  const skipped: SkippedRow[] = [];
-  const summaries: FileSummary[] = [];
-  const rows: Row[] = [];
-  const refs: RowRef[] = [];
-  const extraByKey = new Map<string, ColumnDef>();
+  const pre = slotFileIssues(slot, files);
+  return unionFiles(
+    slot,
+    files.map((f) => (pre.accepted.has(f) ? readSlotFile(slot, f) : rejected(slot, f))),
+    pre.issues,
+  );
+}
 
+/**
+ * Same as `readSlot`, for the app: .xlsx sheets are inflated in chunks with the native
+ * decompressor (lower peak memory, faster). Results are identical.
+ */
+export async function readSlotAsync(
+  slot: InputSlot,
+  files: readonly SourceFile[],
+): Promise<SlotReadResult> {
+  const pre = slotFileIssues(slot, files);
+  const results: FileReadResult[] = [];
+  for (const f of files) {
+    results.push(pre.accepted.has(f) ? await readSlotFileAsync(slot, f) : rejected(slot, f));
+  }
+  return unionFiles(slot, results, pre.issues);
+}
+
+function slotFileIssues(slot: InputSlot, files: readonly SourceFile[]) {
+  const issues: ValidationIssue[] = [];
   const maxFiles = slot.multiple.enabled ? slot.multiple.maxFiles : 1;
   const minFiles = slot.multiple.enabled ? slot.multiple.minFiles : 1;
   if (files.length === 0) {
@@ -81,72 +106,186 @@ export function readSlot(slot: InputSlot, files: readonly SourceFile[]): SlotRea
       issue('error', 'files', 'validation.filesTooMany', { max: maxFiles, count: files.length }),
     );
   }
+  const accepted = new Set(
+    files.filter((f) => (slot.accept as readonly string[]).includes(extensionOf(f.name))),
+  );
+  return { issues, accepted };
+}
 
-  for (const file of files) {
-    const ext = extensionOf(file.name);
-    if (!(slot.accept as readonly string[]).includes(ext)) {
-      issues.push({
+function rejected(slot: InputSlot, file: SourceFile): FileReadResult {
+  return {
+    ...emptyResult(slot, file),
+    issues: [
+      {
         ...issue('error', 'file', 'validation.fileTypeNotAccepted', {
           file: file.name,
           accept: slot.accept.join(', '),
         }),
         file: file.name,
-      });
-      summaries.push({ file: file.name, dataRows: 0, skippedRows: 0 });
-      continue;
-    }
-    const result = readSlotFile(slot, file);
+      },
+    ],
+  };
+}
+
+function unionFiles(
+  slot: InputSlot,
+  results: readonly FileReadResult[],
+  issues: ValidationIssue[],
+): SlotReadResult {
+  const skipped: SkippedRow[] = [];
+  const summaries: FileSummary[] = [];
+  const extraByKey = new Map<string, ColumnDef>();
+  for (const result of results) {
     // No `push(...arr)`: spreading a large array as call arguments overflows the stack (~125k).
     appendAll(issues, result.issues);
     appendAll(skipped, result.skipped);
     summaries.push(result.summary);
-    appendAll(rows, result.rows);
-    appendAll(refs, result.refs);
     for (const col of result.extraColumns) {
       if (!extraByKey.has(col.key)) extraByKey.set(col.key, col);
     }
   }
-
-  appendAll(issues, checkUnique(slot, rows, refs));
-
   const columns: ColumnDef[] = [
     ...slot.columns.map((c) => ({ key: c.key, type: c.type, title: columnTitle(c) })),
     ...extraByKey.values(),
   ];
   if (slot.multiple.enabled) columns.push({ key: SOURCE_FILE_COLUMN, type: 'string' });
   // Union by column key: a kept extra column missing in some file becomes null there.
-  for (const row of rows) {
-    for (const col of columns) if (!(col.key in row)) row[col.key] = null;
-  }
-
-  return { table: Table.fromRows(columns, rows), report: buildReport(issues, skipped, summaries) };
+  const table = Table.concat(
+    columns,
+    results.map((r) => r.table),
+  );
+  appendAll(issues, checkUnique(slot, table, results));
+  return { table, report: buildReport(issues, skipped, summaries) };
 }
 
-/** Read and validate a single file (no cross-file checks). */
-export function readSlotFile(slot: InputSlot, file: SourceFile): FileReadResult {
-  const empty = (issues: ValidationIssue[], sheet?: string): FileReadResult => ({
-    rows: [],
-    refs: [],
+function emptyResult(slot: InputSlot, file: SourceFile, sheet?: string): FileReadResult {
+  return {
+    table: Table.empty(slot.columns.map((c) => ({ key: c.key, type: c.type }))),
+    excelRows: new Int32Array(0),
     extraColumns: [],
-    issues,
+    issues: [],
     skipped: [],
     summary: { file: file.name, ...(sheet ? { sheet } : {}), dataRows: 0, skippedRows: 0 },
-  });
+  };
+}
 
-  let wb: XLSX.WorkBook;
-  try {
-    wb = parseWorkbook(file);
-  } catch {
-    return empty([
+function unreadable(slot: InputSlot, file: SourceFile): FileReadResult {
+  return {
+    ...emptyResult(slot, file),
+    issues: [
       {
         ...issue('error', 'file', 'validation.fileUnreadable', { file: file.name }),
         file: file.name,
       },
-    ]);
-  }
-  const date1904 = Boolean(wb.Workbook?.WBProps?.date1904);
+    ],
+  };
+}
 
-  const picked = pickSheet(slot, wb, file.name);
+/** Files below this size are retried with SheetJS when the streaming reader fails. */
+const FALLBACK_MAX_BYTES = 64 * 1024 * 1024;
+
+function bytesOf(file: SourceFile): Uint8Array {
+  return file.data instanceof Uint8Array ? file.data : new Uint8Array(file.data);
+}
+
+/** Open the workbook: streaming reader for OOXML packages, SheetJS for the rest. */
+function openBook(file: SourceFile): { book: Book; pkg: XlsxPackage | null } {
+  const bytes = bytesOf(file);
+  if (!hasExcelSignature(bytes)) throw new Error('not an Excel file');
+  let pkg: XlsxPackage | null;
+  try {
+    pkg = startsWith(bytes, ZIP_SIGNATURE) ? openXlsx(bytes) : null;
+  } catch {
+    pkg = null;
+  }
+  if (pkg) {
+    const p = pkg;
+    const cache = new Map<number, Grid>();
+    return {
+      pkg,
+      book: {
+        sheetNames: p.sheetNames,
+        date1904: p.date1904,
+        grid(i) {
+          let g = cache.get(i);
+          if (!g) cache.set(i, (g = p.readSheet(i)));
+          return g;
+        },
+      },
+    };
+  }
+  return { book: sheetJsBook(parseWorkbook(file)), pkg: null };
+}
+
+function sheetJsBook(wb: XLSX.WorkBook): Book {
+  return {
+    sheetNames: wb.SheetNames,
+    date1904: Boolean(wb.Workbook?.WBProps?.date1904),
+    grid: (i) => makeGrid(wb.Sheets[wb.SheetNames[i]!]!),
+  };
+}
+
+/** Read and validate a single file (no cross-file checks). */
+export function readSlotFile(slot: InputSlot, file: SourceFile): FileReadResult {
+  let opened: ReturnType<typeof openBook>;
+  try {
+    opened = openBook(file);
+  } catch {
+    return unreadable(slot, file);
+  }
+  try {
+    return readBook(slot, file, opened.book);
+  } catch {
+    if (!opened.pkg || bytesOf(file).length > FALLBACK_MAX_BYTES) return unreadable(slot, file);
+  }
+  // The streaming reader failed on this package: let SheetJS try.
+  try {
+    return readBook(slot, file, sheetJsBook(parseWorkbook(file)));
+  } catch {
+    return unreadable(slot, file);
+  }
+}
+
+async function readSlotFileAsync(slot: InputSlot, file: SourceFile): Promise<FileReadResult> {
+  let opened: ReturnType<typeof openBook>;
+  try {
+    opened = openBook(file);
+  } catch {
+    return unreadable(slot, file);
+  }
+  const pkg = opened.pkg;
+  if (!pkg) return readSlotFile(slot, file);
+  try {
+    // Parse (in chunks) exactly the sheets `pickSheet` will look at, then validate.
+    const grids = new Map<number, Grid>();
+    const book: Book = {
+      sheetNames: pkg.sheetNames,
+      date1904: pkg.date1904,
+      grid: (i) => grids.get(i) ?? pkg.readSheet(i),
+    };
+    for (const i of sheetCandidates(slot, pkg.sheetNames)) {
+      const grid = await pkg.readSheetAsync(i);
+      grids.set(i, grid);
+      if (slot.sheet.mode !== 'firstMatchingHeaders' || sheetMatches(slot, mapHeaders(slot, grid)))
+        break;
+    }
+    return readBook(slot, file, book);
+  } catch {
+    return readSlotFile(slot, file);
+  }
+}
+
+/** Decimal column cell kept as a double (fast path) — see `readBook`. */
+const AS_DOUBLE = Symbol('double');
+
+function readBook(slot: InputSlot, file: SourceFile, book: Book): FileReadResult {
+  const empty = (issues: ValidationIssue[], sheet?: string): FileReadResult => ({
+    ...emptyResult(slot, file, sheet),
+    issues,
+  });
+  const date1904 = book.date1904;
+
+  const picked = pickSheet(slot, book, file.name);
   if ('issue' in picked) return empty([picked.issue]);
   const { sheetName, grid, mapping } = picked;
 
@@ -202,8 +341,14 @@ export function readSlotFile(slot: InputSlot, file: SourceFile): FileReadResult 
   if (keyMissing) return empty(issues, sheetName);
 
   const mapped = slot.columns
-    .map((col) => ({ col, c: mapping.matches.get(col.key)?.[0], fallback: blankValue(col) }))
-    .filter((m): m is { col: SlotColumn; c: number; fallback: Value } => m.c !== undefined);
+    .map((col, index) => ({
+      col,
+      index,
+      c: mapping.matches.get(col.key)?.[0],
+      fallback: blankValue(col),
+      bounds: ruleBounds(col),
+    }))
+    .filter((m): m is typeof m & { c: number } => m.c !== undefined);
 
   // Extra columns kept as strings under a slug of their header.
   const extraColumns: ColumnDef[] = [];
@@ -231,12 +376,20 @@ export function readSlotFile(slot: InputSlot, file: SourceFile): FileReadResult 
     .map((text) => ({ text, norm: normalizeHeader(text) }))
     .filter((x) => x.norm !== '');
 
-  const rows: Row[] = [];
-  const refs: RowRef[] = [];
-  const skipped: SkippedRow[] = [];
   const dataStart = (slot.dataStartRow ?? slot.headerRow + slot.headerRows) - 1;
+  const capacity = Math.max(16, grid.lastRow - dataStart + 1);
+  const builders: ColumnBuilder[] = slot.columns.map((c) => columnBuilder(c.type, capacity));
+  const extraBuilders = extraIdx.map(() => new StringBuilder('string', capacity));
+  const sourceBuilder = slot.multiple.enabled ? new StringBuilder('string', capacity) : null;
+  const excelRows: number[] = [];
+  const skipped: SkippedRow[] = [];
   const fillDataMerges = slot.unmergeCells === 'fillDown';
   let blankRun = 0;
+  // One row's values; decimal fast path: AS_DOUBLE + the double in `doubles`.
+  const values = new Array<Value | typeof AS_DOUBLE>(slot.columns.length);
+  const doubles = new Float64Array(slot.columns.length);
+  const dateCache = new Map<number, string | null>();
+  const datetimeCache = new Map<number, string | null>();
 
   for (let r = dataStart; r <= grid.lastRow; r++) {
     const cellAt = (c: number) => grid.cell(r, c, fillDataMerges);
@@ -283,95 +436,236 @@ export function readSlotFile(slot: InputSlot, file: SourceFile): FileReadResult 
       }
     }
 
-    const row: Row = {};
-    for (const col of slot.columns) row[col.key] = null;
+    values.fill(null);
     const rowAt = { ...at, row: excelRow };
 
-    for (const { col, c, fallback } of mapped) {
+    for (const { col, index, c, fallback, bounds } of mapped) {
       const cell = cellAt(c);
       const { error } = cell;
-      const raw = displayRaw(cell, col.type, date1904);
-      const colParams = { ...rowAt, column: columnTitle(col) };
       if (error) {
         issues.push(
           cellIssue('error', 'type', 'validation.type', col, rowAt, {
-            ...colParams,
+            ...rowAt,
+            column: columnTitle(col),
             value: error,
             type: col.type,
           }),
         );
         continue;
       }
+      const raw = displayRaw(cell, col.type, date1904);
       if (isBlank(raw)) {
         if (col.required) {
-          issues.push(cellIssue('error', 'required', 'validation.required', col, rowAt, colParams));
+          issues.push(
+            cellIssue('error', 'required', 'validation.required', col, rowAt, {
+              ...rowAt,
+              column: columnTitle(col),
+            }),
+          );
         } else {
-          row[col.key] = fallback;
+          values[index] = fallback;
         }
+        continue;
+      }
+      // Fast path (no allocation): an Excel number in a decimal column becomes the double of its
+      // 15-significant-digit value, which the decimal vector stores exactly.
+      if (col.type === 'decimal' && typeof raw === 'number' && Number.isFinite(raw)) {
+        const x = round15(raw);
+        values[index] = AS_DOUBLE;
+        doubles[index] = x;
+        if (bounds) checkDoubleRules(col, bounds, x, rowAt, issues);
         continue;
       }
       // A real Excel date cell is always accepted by a date column, whatever dateFormats says.
       const dateCell = isDateCell(cell) && (col.type === 'date' || col.type === 'datetime');
       const dateFormats = dateCell ? ['excelSerial'] : col.dateFormats;
+      // Excel serials repeat a lot (same days): cache their ISO text per file.
+      const cache =
+        typeof raw === 'number' &&
+        (dateFormats ?? ['excelSerial']).includes('excelSerial') &&
+        (col.type === 'date' || col.type === 'datetime')
+          ? col.type === 'date'
+            ? dateCache
+            : datetimeCache
+          : null;
+      const cached = cache?.get(raw as number);
+      if (cached !== undefined && cached !== null && col.rules.length === 0) {
+        values[index] = cached;
+        continue;
+      }
       const coerced = coerceValue(raw, col.type, {
         decimalSeparator: col.decimalSeparator,
         date1904,
         ...(dateFormats ? { dateFormats } : {}),
       });
+      if (cache) cache.set(raw as number, coerced.ok ? (coerced.value as string) : null);
       if (!coerced.ok) {
         issues.push(
           cellIssue('error', 'type', 'validation.type', col, rowAt, {
-            ...colParams,
+            ...rowAt,
+            column: columnTitle(col),
             value: String(raw),
             type: col.type,
           }),
         );
         continue;
       }
-      row[col.key] = coerced.value;
+      values[index] = coerced.value;
       if (coerced.ambiguous) {
         issues.push(
           cellIssue('warning', 'type', 'validation.numberAmbiguous', col, rowAt, {
-            ...colParams,
+            ...rowAt,
+            column: columnTitle(col),
             value: String(raw),
             parsed: displayValue(coerced.value),
           }),
         );
       }
-      appendAll(issues, checkValueRules(col, coerced.value, rowAt, colParams));
+      if (col.rules.length > 0) {
+        appendAll(
+          issues,
+          checkValueRules(col, coerced.value, rowAt, { ...rowAt, column: columnTitle(col) }),
+        );
+      }
     }
 
-    for (const { key, c } of extraIdx) {
-      const coerced = coerceValue(displayRaw(cellAt(c), 'string', date1904), 'string');
-      row[key] = coerced.ok ? coerced.value : null;
+    for (let k = 0; k < builders.length; k++) {
+      const v = values[k];
+      if (v === AS_DOUBLE) (builders[k] as DecimalBuilder).pushDouble(doubles[k]!);
+      else builders[k]!.push(v);
     }
-    if (slot.multiple.enabled) row[SOURCE_FILE_COLUMN] = file.name;
-    rows.push(row);
-    refs.push({ file: file.name, row: excelRow });
+    extraIdx.forEach(({ c }, k) => {
+      const coerced = coerceValue(displayRaw(cellAt(c), 'string', date1904), 'string');
+      extraBuilders[k]!.push(coerced.ok ? coerced.value : null);
+    });
+    sourceBuilder?.push(file.name);
+    excelRows.push(excelRow);
   }
 
-  if (rows.length === 0 && mapped.length > 0) {
+  const rowCount = excelRows.length;
+  if (rowCount === 0 && mapped.length > 0) {
     issues.push({ ...issue('warning', 'rows', 'validation.noDataRows', { ...at }), ...at });
   }
-  if (slot.maxRows !== undefined && rows.length > slot.maxRows) {
+  if (slot.maxRows !== undefined && rowCount > slot.maxRows) {
     issues.push({
       ...issue('warning', 'rows', 'validation.rowsTooMany', {
         file: file.name,
-        count: rows.length,
+        count: rowCount,
         max: slot.maxRows,
       }),
       ...at,
     });
   }
 
+  const columns: ColumnDef[] = [
+    ...slot.columns.map((c) => ({ key: c.key, type: c.type })),
+    ...extraColumns,
+    ...(sourceBuilder ? [{ key: SOURCE_FILE_COLUMN, type: 'string' as const }] : []),
+  ];
+  const table = new Table(
+    columns,
+    [
+      ...builders.map((b) => b.finish()),
+      ...extraBuilders.map((b) => b.finish()),
+      ...(sourceBuilder ? [sourceBuilder.finish()] : []),
+    ],
+    rowCount,
+  );
   return {
-    rows,
-    refs,
+    table,
+    excelRows: Int32Array.from(excelRows),
     extraColumns,
     issues,
     skipped,
-    summary: { ...at, dataRows: rows.length, skippedRows: skipped.length },
+    summary: { ...at, dataRows: rowCount, skippedRows: skipped.length },
   };
+}
+
+const POW10 = [1, 10, 100, 1000, 10000];
+
+/**
+ * `Number(n.toPrecision(15))` (the 15 significant digits Excel shows, spec §9.4) without
+ * allocating for the usual values: integers and numbers with ≤ 4 decimals already are their own
+ * 15-digit value.
+ */
+export function round15(n: number): number {
+  const a = Math.abs(n);
+  if (Number.isInteger(n) && a < 1e15) return n === 0 ? 0 : n;
+  for (let p = 1; p < POW10.length; p++) {
+    const y = Math.round(a * POW10[p]!);
+    if (y < 1e15 && y / POW10[p]! === a) return n;
+  }
+  const x = Number(n.toPrecision(15));
+  return x === 0 ? 0 : x;
+}
+
+interface RuleBound {
+  rule: SlotColumn['rules'][number];
+  kind: 'min' | 'max';
+  /** The bound as an exact-representation double, or null (compare with big.js). */
+  value: number | null;
+  big: InstanceType<typeof Big>;
+}
+
+/** min/max/regex rules of a decimal column, pre-parsed for the double fast path. */
+function ruleBounds(col: SlotColumn): RuleBound[] | null {
+  if (col.type !== 'decimal' || col.rules.length === 0) return null;
+  const out: RuleBound[] = [];
+  for (const rule of col.rules) {
+    if ('min' in rule) {
+      const big = new Big(rule.min);
+      out.push({ rule, kind: 'min', big, value: exactDouble(big.toString()) });
+    }
+    if ('max' in rule) {
+      const big = new Big(rule.max);
+      out.push({ rule, kind: 'max', big, value: exactDouble(big.toString()) });
+    }
+  }
+  return out;
+}
+
+/** `checkValueRules` for a decimal cell kept as a double (same messages, same order). */
+function checkDoubleRules(
+  col: SlotColumn,
+  bounds: RuleBound[],
+  x: number,
+  at: { file: string; sheet: string; row: number },
+  issues: ValidationIssue[],
+): void {
+  const regex = col.rules.some((r) => 'regex' in r);
+  if (!regex && bounds.length === 0) return;
+  if (regex) {
+    // Rare: keep the exact semantics of the general path.
+    appendAll(
+      issues,
+      checkValueRules(col, new Big(String(x)), at, { ...at, column: columnTitle(col) }),
+    );
+    return;
+  }
+  for (const b of bounds) {
+    const fails =
+      b.value !== null
+        ? b.kind === 'min'
+          ? x < b.value
+          : x > b.value
+        : b.kind === 'min'
+          ? new Big(String(x)).lt(b.big)
+          : new Big(String(x)).gt(b.big);
+    if (!fails) continue;
+    const severity = b.rule.severity;
+    issues.push(
+      cellIssue(severity, b.kind, `validation.${b.kind}`, col, at, {
+        ...at,
+        column: columnTitle(col),
+        value: String(x),
+        [b.kind]: String(
+          b.kind === 'min'
+            ? (b.rule as { min: string | number }).min
+            : (b.rule as { max: string | number }).max,
+        ),
+      }),
+    );
+  }
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -457,33 +751,12 @@ function parseWorkbook(file: SourceFile): XLSX.WorkBook {
   });
 }
 
-interface CellRead {
-  value: RawValue;
-  error?: string;
-  /** Excel number format of a numeric cell (absent / "General" when unformatted). */
-  numFmt?: string;
-}
-
-interface Grid {
-  lastRow: number;
-  lastCol: number;
-  cell(r: number, c: number, followMerges: boolean): CellRead;
-  isRowBlank(r: number): boolean;
-}
-
 function makeGrid(ws: XLSX.WorkSheet): Grid {
   const data: (XLSX.CellObject | undefined)[][] = ws['!data'] ?? [];
   const range = ws['!ref'] ? XLSX.utils.decode_range(ws['!ref']) : null;
   const lastRow = range ? range.e.r : -1;
   const lastCol = range ? range.e.c : -1;
-  const mergeOrigin = new Map<string, [number, number]>();
-  for (const m of ws['!merges'] ?? []) {
-    for (let r = m.s.r; r <= m.e.r; r++) {
-      for (let c = m.s.c; c <= m.e.c; c++) {
-        if (r !== m.s.r || c !== m.s.c) mergeOrigin.set(`${r},${c}`, [m.s.r, m.s.c]);
-      }
-    }
-  }
+  const mergeOrigin = mergeOrigins(ws['!merges'] ?? []);
   const raw = (r: number, c: number): CellRead => {
     const cell = data[r]?.[c];
     if (!cell || cell.v === undefined || cell.t === 'z') return { value: null };
@@ -549,34 +822,52 @@ function mapHeaders(slot: InputSlot, grid: Grid): HeaderMapping {
   return { headers, matches };
 }
 
+/** Sheets `pickSheet` may read, in the order it reads them. */
+function sheetCandidates(slot: InputSlot, names: readonly string[]): number[] {
+  const sel = slot.sheet;
+  if (sel.mode === 'byName') {
+    let i = names.findIndex((n) => n === sel.value);
+    if (i < 0) i = names.findIndex((n) => normalizeHeader(n) === normalizeHeader(sel.value));
+    return i < 0 ? [] : [i];
+  }
+  if (sel.mode === 'byIndex') return sel.value < names.length ? [sel.value] : [];
+  return names.map((_, i) => i);
+}
+
+/** `firstMatchingHeaders` sheet mode: every required column has a matching header. */
+function sheetMatches(slot: InputSlot, mapping: HeaderMapping): boolean {
+  return slot.columns
+    .filter((c) => c.presence === 'required')
+    .every((c) => (mapping.matches.get(c.key) ?? []).length > 0);
+}
+
 function pickSheet(
   slot: InputSlot,
-  wb: XLSX.WorkBook,
+  book: Book,
   fileName: string,
 ): { sheetName: string; grid: Grid; mapping: HeaderMapping } | { issue: ValidationIssue } {
-  const load = (name: string) => {
-    const grid = makeGrid(wb.Sheets[name]!);
-    return { sheetName: name, grid, mapping: mapHeaders(slot, grid) };
+  const load = (i: number) => {
+    const grid = book.grid(i);
+    return { sheetName: book.sheetNames[i]!, grid, mapping: mapHeaders(slot, grid) };
   };
   const sel = slot.sheet;
   const fileIssue = (key: string, params: IssueParams): { issue: ValidationIssue } => ({
     issue: { ...issue('error', 'sheet', key, { file: fileName, ...params }), file: fileName },
   });
-
+  const candidates = sheetCandidates(slot, book.sheetNames);
   if (sel.mode === 'byName') {
-    const name =
-      wb.SheetNames.find((n) => n === sel.value) ??
-      wb.SheetNames.find((n) => normalizeHeader(n) === normalizeHeader(sel.value));
-    return name ? load(name) : fileIssue('validation.sheetNotFound', { sheet: sel.value });
+    return candidates.length > 0
+      ? load(candidates[0]!)
+      : fileIssue('validation.sheetNotFound', { sheet: sel.value });
   }
   if (sel.mode === 'byIndex') {
-    const name = wb.SheetNames[sel.value];
-    return name ? load(name) : fileIssue('validation.sheetIndexNotFound', { index: sel.value + 1 });
+    return candidates.length > 0
+      ? load(candidates[0]!)
+      : fileIssue('validation.sheetIndexNotFound', { index: sel.value + 1 });
   }
-  const required = slot.columns.filter((c) => c.presence === 'required');
-  for (const name of wb.SheetNames) {
-    const loaded = load(name);
-    if (required.every((c) => (loaded.mapping.matches.get(c.key) ?? []).length > 0)) return loaded;
+  for (const i of candidates) {
+    const loaded = load(i);
+    if (sheetMatches(slot, loaded.mapping)) return loaded;
   }
   return fileIssue('validation.sheetNoMatchingHeaders', {});
 }
@@ -641,40 +932,58 @@ function compiledRegex(source: string): RegExp {
  * compare node would reject is reported here, at validation time. Messages show the original
  * values of both occurrences.
  */
-function checkUnique(slot: InputSlot, rows: Row[], refs: RowRef[]): ValidationIssue[] {
+function checkUnique(
+  slot: InputSlot,
+  table: Table,
+  files: readonly FileReadResult[],
+): ValidationIssue[] {
   const out: ValidationIssue[] = [];
+  // Row i of the union → file + Excel row.
+  const starts: number[] = [];
+  let n = 0;
+  for (const f of files) {
+    starts.push(n);
+    n += f.table.rowCount;
+  }
+  const refOf = (i: number) => {
+    let k = starts.length - 1;
+    while (k > 0 && starts[k]! > i) k--;
+    const f = files[k]!;
+    return { file: f.summary.file, row: f.excelRows[i - starts[k]!]! };
+  };
   for (const col of slot.columns) {
     const rule = col.rules.find((r) => 'unique' in r);
     if (!rule) continue;
     const keyOf = col.type === 'string' ? normalizeKeyPart : displayValue;
-    const first = new Map<string, { ref: RowRef; value: string }>();
-    rows.forEach((row, i) => {
-      const v = row[col.key];
-      if (v === null || v === undefined) return;
+    const vec = table.vector(col.key)!;
+    const first = new Map<string, number>();
+    for (let i = 0; i < table.rowCount; i++) {
+      const v = vec.get(i);
+      if (v === null) continue;
       const k = keyOf(v);
-      const value = displayValue(v);
-      const seen = first.get(k);
-      const ref = refs[i]!;
-      if (!seen) {
-        first.set(k, { ref, value });
-        return;
+      const seenAt = first.get(k);
+      if (seenAt === undefined) {
+        first.set(k, i);
+        continue;
       }
+      const ref = refOf(i);
+      const seen = refOf(seenAt);
       out.push({
         ...issue(rule.severity, 'unique', 'validation.unique', {
-          value,
+          value: displayValue(v),
           column: columnTitle(col),
           file: ref.file,
           row: ref.row,
-          otherValue: seen.value,
-          otherFile: seen.ref.file,
-          otherRow: seen.ref.row,
+          otherValue: displayValue(vec.get(seenAt)),
+          otherFile: seen.file,
+          otherRow: seen.row,
         }),
         file: ref.file,
         row: ref.row,
         column: col.key,
-        ...(seen.ref.file !== ref.file ? { relatedFile: seen.ref.file } : {}),
+        ...(seen.file !== ref.file ? { relatedFile: seen.file } : {}),
       });
-    });
+    }
   }
   return out;
 }
@@ -780,3 +1089,13 @@ function extensionOf(name: string): string {
   const i = name.lastIndexOf('.');
   return i < 0 ? '' : name.slice(i).toLowerCase();
 }
+
+/** Reader internals for the parity tests (streaming grid vs SheetJS grid). Not used by the app. */
+export const readerInternals = {
+  sheetJsGrid(file: SourceFile, index: number): Grid {
+    return sheetJsBook(parseWorkbook(file)).grid(index);
+  },
+  openXlsx(file: SourceFile): XlsxPackage | null {
+    return openXlsx(bytesOf(file));
+  },
+};
