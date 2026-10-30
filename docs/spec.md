@@ -597,7 +597,7 @@ Mỗi node type được định nghĩa bằng một **plugin** gồm: Zod schem
 - Tham chiếu cột: `[Tiêu đề]` hoặc `[key]`. Khi lưu, Designer chuẩn hóa về `[key]`; khi hiển thị đổi lại theo tiêu đề hiện tại. Tiêu đề trùng nhau giữa 2 cột → `formula.error.ambiguousTitle` (dùng `[key]`). Ký tự `]` trong tiêu đề viết là `]]` (như Excel Table).
 - Phạm vi tham chiếu: cột của đầu vào + cột đã định nghĩa **phía trên** trong cùng node. Tham chiếu cột phía dưới → `formula.error.forwardReference`. Cột đang ghi đè tham chiếu chính nó → lấy giá trị **cũ** (VD `luong = [luong]*1.1`). Cột thêm của slot `extraColumns: 'keep'` không dùng được (§12.1.9).
 - Toán tử: `+ - * / ^ & = <> < > <= >=`, dấu trừ một ngôi, `%` hậu tố, ngoặc. Thứ tự ưu tiên như Excel. Tên hàm không phân biệt hoa thường; độ sâu lồng tối đa 64.
-- Hằng: số, chuỗi `"..."` (`""` để viết dấu nháy), `TRUE`/`FALSE`. Dấu phân cách đối số và dấu thập phân: **chờ chốt Q17** (§22).
+- Hằng: số, chuỗi `"..."` (`""` để viết dấu nháy), `TRUE`/`FALSE`. Dấu phân cách đối số là `,`, dấu thập phân là `.` (chốt 2026-10-30 13:24, Q17); gõ `;` → `formula.error.syntax` kèm gợi ý dùng `,` và `.`.
 - Tham số: `PARAM("ten")` — tên phải khai báo trong `params`, nếu không → `formula.error.unknownParam`. Kiểu: `month` → `date` (ngày 1 của tháng), `date` → `date`, `number` → `decimal`, `boolean` → `boolean`, `string`/`select` → `string`; để trống → trống.
 - Hàm ngoài danh sách §9.1 → `formula.error.unknownFunction` (kèm gợi ý: XLOOKUP/VLOOKUP → node Join; còn lại → `code.sql`). Sai số đối số → `formula.error.argCount`; sai cú pháp → `formula.error.syntax` kèm vị trí ký tự.
 
@@ -988,7 +988,7 @@ Không thuộc Phase 1: `input.refTable`, bảng tham chiếu, template — Phas
 | ~~Q12~~ | Đã chốt 2026-10-27: dùng Monaco, chỉ trong chunk Designer, worker và font self-host, không dùng CDN loader (§5) | — |
 | ~~Q13~~ | Đã chốt 2026-10-27: node `output.preview` có trong bước 3 (§12.1.10) | — |
 | ~~Q14~~ | Đã chốt 2026-10-27: cột thêm của slot `extraColumns: 'keep'` chỉ dùng được trong `code.sql` lúc chạy, Designer cảnh báo (§12.1.9) | — |
-| Q17 | Dấu phân cách đối số và dấu thập phân trong công thức (`,` + `.` như Excel tiếng Anh, hay `;` + `,` như Excel cài vùng Việt Nam)? | `transform.formula` (§12.2) |
+| ~~Q17~~ | Đã chốt 2026-10-30 13:24: công thức dùng `,` ngăn đối số và `.` thập phân, không nhận `;` (§12.2) | — |
 | ~~Q16~~ | Đã chốt 2026-10-30 13:18: `transform.formula` chỉ nhận công thức Excel (transpile sang SQL), 37 hàm, không có XLOOKUP/VLOOKUP (§9.1, §12.2) | — |
 | ~~Q15~~ | Đã chốt 2026-10-27: CSP giữ `style-src 'self' 'unsafe-inline'` (React Flow, Monaco gán style lúc chạy), script inline vẫn bị chặn; quy tắc `data-privacy.md` sửa cho khớp (§17) | — |
 

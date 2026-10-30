@@ -133,6 +133,8 @@
 
 ## Flow & xử lý
 
+2026-10-30 13:24 - `transform.formula`: dấu phân cách đối số là `,`, dấu thập phân là `.` (như Excel tiếng Anh / cách Excel lưu trong file); không nhận kiểu `;` của Excel vùng Việt Nam.
+
 2026-10-30 13:18 - `transform.formula`: golden test lấy kết quả từ Excel thật: Claude sinh file .xlsx chứa công thức (dữ liệu giả), Harold mở bằng Excel, lưu lại và gửi về làm fixture.
 
 2026-10-30 13:18 - `transform.formula` trong Designer: ô nhập Monaco (tô màu, gợi ý cột khi gõ `[`, gợi ý hàm + tooltip cú pháp, báo lỗi tại chỗ sau 300 ms), bảng tra "Hàm hỗ trợ", nút "Xem SQL đã sinh", xem trước bằng cơ chế xem trước node sẵn có.
