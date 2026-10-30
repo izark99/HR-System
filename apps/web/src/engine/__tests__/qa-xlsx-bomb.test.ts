@@ -1,11 +1,10 @@
 /**
  * QA (verifier) — AC-B4-90 zip-bomb guard, independent of the developer's tests. Fake data only;
- * every file is built in memory. The synchronous inflater (SheetJS `CFB.utils._inflateRaw`) is
- * spied on to read the size of what it actually produced (deterministic, unlike memory sampling).
+ * every file is built in memory. `inflateStats.produced` (xlsx-stream) counts the bytes the
+ * inflaters actually produced (deterministic, unlike memory sampling).
  */
 import { crc32, deflateRawSync } from 'node:zlib';
-import * as XLSX from 'xlsx';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { readSlot, readSlotAsync, type SourceFile } from '../io/excel-reader';
 import { inflateStats } from '../io/xlsx-stream';
 import { slot } from './helpers';
@@ -97,25 +96,12 @@ const S = slot({
 const keys = (r: { report: { issues: { messageKey: string }[] } }) =>
   r.report.issues.map((i) => i.messageKey);
 
-const CFB = XLSX.CFB as unknown as {
-  utils: { _inflateRaw(data: Uint8Array, size: number): ArrayLike<number> };
-};
-
-/** Spy on the synchronous inflater; returns the largest output it produced. */
-function watchInflate(): () => number {
-  let max = 0;
-  const real = CFB.utils._inflateRaw.bind(CFB.utils);
-  vi.spyOn(CFB.utils, '_inflateRaw').mockImplementation((data, size) => {
-    const out = real(data, size);
-    max = Math.max(max, out.length);
-    return out;
-  });
-  return () => max;
+/** Bytes produced by the inflaters (sync and async) while `fn` runs. */
+async function producedBy(fn: () => unknown): Promise<number> {
+  const before = inflateStats.produced;
+  await fn();
+  return inflateStats.produced - before;
 }
-
-afterEach(() => {
-  vi.restoreAllMocks();
-});
 
 describe('QA zip bomb (AC-B4-90): regular files still read', () => {
   it('a normal small package reads without issues (sync and async)', async () => {
@@ -154,10 +140,15 @@ describe('zip bomb guard bypasses, fixed in R1-fix (AC-B4-90)', () => {
       ]),
     };
     expect(f.data.byteLength).toBeLessThan(MiB);
-    const largest = watchInflate();
-    const r = await readSlotAsync(S, [f]);
-    expect(keys(r)).toEqual(['validation.fileTooLarge']);
-    expect(largest()).toBeLessThanOrEqual(16 * MiB + 64 * 1024);
+    let r: Awaited<ReturnType<typeof readSlotAsync>> | undefined;
+    const produced = await producedBy(async () => (r = await readSlotAsync(S, [f])));
+    expect(keys(r!)).toEqual(['validation.fileTooLarge']);
+    // Refused on the declared size (0 with data): nothing is inflated.
+    expect(produced).toBeLessThanOrEqual(16 * MiB + 64 * 1024);
+    const producedSync = await producedBy(() =>
+      expect(keys(readSlot(S, [f]))).toEqual(['validation.fileTooLarge']),
+    );
+    expect(producedSync).toBeLessThanOrEqual(16 * MiB + 64 * 1024);
   });
 
   // A central-directory flag the streaming reader refuses (0x40) makes `openXlsx` return null, so
@@ -287,4 +278,60 @@ describe('lying small declared size stops early on the sync path (fixed in R1-fi
     expect(keys(r)).not.toEqual([]);
     expect(ms).toBeLessThan(1500);
   }, 120_000);
+});
+
+describe('QA R1-fix3: 1 MB → 1 GiB bomb stopped early on every inflate path', () => {
+  const cache = new Map<number, SourceFile>();
+  const liar = (declaredSize: number): SourceFile => {
+    const hit = cache.get(declaredSize);
+    if (hit) return hit;
+    const f: SourceFile = {
+      name: 'liar.xlsx',
+      data: zip([
+        text('_rels/.rels', ROOT_RELS),
+        text('xl/workbook.xml', `${WB_HEAD}</workbook>`),
+        text('xl/_rels/workbook.xml.rels', WB_RELS),
+        {
+          name: 'xl/worksheets/sheet1.xml',
+          data: padded(
+            `<?xml version="1.0"?><worksheet xmlns="${NS}"><sheetData>`,
+            1024 * MiB,
+            '</sheetData></worksheet>',
+          ),
+          declaredSize,
+        },
+      ]),
+    };
+    cache.set(declaredSize, f);
+    return f;
+  };
+
+  it.each([
+    ['sync (fflate)', 'sync'],
+    ['async (native DecompressionStream)', 'native'],
+    ['async without DecompressionStream (fflate)', 'fflate'],
+  ])(
+    '%s: < 1 s, little produced, file reported',
+    async (_n, path) => {
+      for (const declared of [1000, 10 * MiB]) {
+        const f = liar(declared);
+        expect(f.data.byteLength).toBeLessThan(1.2 * MiB);
+        if (path === 'fflate') vi.stubGlobal('DecompressionStream', undefined);
+        try {
+          const t0 = performance.now();
+          let r: Awaited<ReturnType<typeof readSlotAsync>> | undefined;
+          const produced = await producedBy(async () => {
+            r = path === 'sync' ? readSlot(S, [f]) : await readSlotAsync(S, [f]);
+          });
+          expect(performance.now() - t0, `${path} ${declared}`).toBeLessThan(1000);
+          // Never more than the declared size plus one inflate step (≤ ~17 MiB).
+          expect(produced, `${path} ${declared}`).toBeLessThan(declared + 20 * MiB);
+          expect(['validation.fileTooLarge', 'validation.fileUnreadable']).toContain(keys(r!)[0]);
+        } finally {
+          vi.unstubAllGlobals();
+        }
+      }
+    },
+    60_000,
+  );
 });
