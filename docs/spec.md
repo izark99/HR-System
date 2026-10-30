@@ -301,6 +301,8 @@ def run(inputs: dict[str, pd.DataFrame], params: dict) -> pd.DataFrame | dict[st
 
 `string`, `integer`, `decimal`, `boolean`, `date`, `datetime`. Tiền lương, ngày công dùng `decimal` (không dùng float) để tránh sai số làm tròn.
 
+Lưu trữ `decimal` bên trong engine: mỗi ô lưu dạng số double **chỉ khi** biểu diễn ngắn nhất của double đó trùng đúng giá trị thập phân (`String(x) === big.toString()`); ngược lại lưu dạng text chính xác. Đây chỉ là cách mã hóa không mất mát: đọc ô luôn trả về `Big`, mọi phép tính dùng big.js, không có phép tính nào trên double.
+
 Ánh xạ giữa engine (TypeScript, big.js) và DuckDB (từ bước 3):
 
 | Kiểu engine | Giá trị trong engine | Kiểu trong DuckDB | Quy tắc chuyển đổi |
@@ -588,7 +590,8 @@ Mỗi node type được định nghĩa bằng một **plugin** gồm: Zod schem
 Đặc điểm:
 - **Cancel** bất kỳ lúc nào (terminate worker; khởi động lại worker và kiểm tra lại file, chốt 2026-10-26 13:08).
 - **Giới hạn bộ nhớ**: WASM 32-bit ≈ 4GB/tab. Mục tiêu thiết kế: ổn định tới **1 triệu dòng × 50 cột**. Bảng trong engine lưu dạng cột (columnar, dựa trên Arrow) thay cho mảng object theo dòng, để vừa heap JS của trình duyệt (~3,8 GB) và tránh chi phí GC; bước 3 chỉ hoàn tất khi 1 triệu dòng × 30 cột chạy được không crash (chốt 2026-10-27). Flow cảnh báo khi file vượt ngưỡng do Admin cấu hình (`maxRows` mỗi slot). Việc chuyển bảng sang DuckDB tạo thêm một bản sao dữ liệu; engine giải phóng bảng TS trung gian ngay khi không còn node nào cần.
-- File rất lớn: tối ưu đọc .xlsx theo luồng (streaming) sẽ xem xét sau; hiện không nhận CSV (chốt 2026-10-26).
+- File rất lớn: .xlsx được đọc theo luồng (giải nén từng phần bằng `DecompressionStream`, quét XML thành lưới gọn; giá trị ô giống SheetJS); .xls và file lạ dùng SheetJS (chỉ khi < 64 MB). Kết quả > 2 triệu ô ghi bằng bộ ghi theo luồng, cùng bố cục với ExcelJS. Không nhận CSV (chốt 2026-10-26).
+- Bảng trong engine lưu theo cột (mỗi cột một vector typed array kiểu Arrow; chữ/ngày là UTF-8 + offset). Đo trên Chromium (30 cột): 100k dòng đọc + chạy ≈ 8–10 giây; 1 triệu dòng đọc ≈ 68 giây, chạy ≈ 25 giây, không crash.
 
 ### 13.1 DuckDB-WASM runtime (bước 3, chốt 2026-10-26 22:52)
 

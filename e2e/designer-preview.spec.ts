@@ -30,10 +30,38 @@ function withDraft(supabase: SupabaseMock) {
 const node = (page: Page, id: string) => page.getByTestId(`rf__node-${id}`);
 const data = (page: Page) => page.getByRole('region', { name: 'Dữ liệu mẫu và xem trước' });
 
+/** Fit view animates the viewport on open: wait until the canvas stops moving before clicking nodes. */
+async function settle(page: Page) {
+  const viewport = page.locator('.react-flow__viewport');
+  let last = '';
+  await expect
+    .poll(
+      async () => {
+        const now = (await viewport.getAttribute('style')) ?? '';
+        const still = now === last;
+        last = now;
+        return still;
+      },
+      { intervals: [150] },
+    )
+    .toBe(true);
+}
+
+/** Select a canvas node; under load a click can land while the canvas re-renders, so retry until the panel follows. */
+async function select(page: Page, id: string, label: string) {
+  await expect(async () => {
+    await node(page, id).click();
+    await expect(data(page).getByRole('button', { name: `Xem trước ${label}` })).toBeVisible({
+      timeout: 2000,
+    });
+  }).toPass({ timeout: 30000 });
+}
+
 async function openPanel(page: Page) {
   await page.goto(DESIGNER);
   await expect(node(page, 'cmp')).toBeVisible();
   await page.getByRole('button', { name: 'Dữ liệu mẫu và xem trước' }).click();
+  await settle(page);
 }
 
 test('AC-B3-50..55: samples stay in the browser; preview runs ancestors only; compare shows 4 tables', async ({
@@ -53,7 +81,7 @@ test('AC-B3-50..55: samples stay in the browser; preview runs ancestors only; co
   await expect(run).toBeDisabled();
 
   // AC-B3-55: no sample yet.
-  await node(page, 'cmp').click();
+  await select(page, 'cmp', 'Đối chiếu');
   await panel.getByRole('button', { name: 'Xem trước Đối chiếu' }).click();
   await expect(panel.getByRole('alert')).toContainText('Chưa có file mẫu cho Bảng lương');
 
@@ -112,7 +140,7 @@ test('AC-B3-56/57: header-only sample shows an empty table with columns; samples
   await expect(panel.getByText('0 dòng')).toBeVisible();
   await expect(panel.getByText('1 cảnh báo')).toBeVisible();
   await pickMonth(page, '2026-09', panel.getByRole('button', { name: /Kỳ lương/ }));
-  await node(page, 'in_luong').click();
+  await select(page, 'in_luong', 'Bảng lương');
   await panel.getByRole('button', { name: 'Xem trước Bảng lương' }).click();
   const table = panel.getByRole('region', { name: 'table' });
   await expect(table.getByRole('columnheader')).not.toHaveCount(0);
@@ -126,7 +154,7 @@ test('AC-B3-56/57: header-only sample shows an empty table with columns; samples
   await page.getByRole('button', { name: 'Dữ liệu mẫu và xem trước' }).click();
   await expect(data(page).getByText('0 dòng')).toHaveCount(0);
   await pickMonth(page, '2026-09', data(page).getByRole('button', { name: /Kỳ lương/ }));
-  await node(page, 'in_luong').click();
+  await select(page, 'in_luong', 'Bảng lương');
   await data(page).getByRole('button', { name: 'Xem trước Bảng lương' }).click();
   await expect(data(page).getByRole('alert')).toContainText('Chưa có file mẫu');
 });
