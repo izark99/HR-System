@@ -90,6 +90,8 @@ export interface CompiledFormula {
   /** Output schema: input columns (overwritten ones replaced in place), then new columns. */
   output: InputColumn[];
   bindings: Binding[];
+  /** Nested projections of the generated SQL. */
+  depth: number;
   /** SELECT over `from`; adds `ORD` and, with `withErrors`, one error column per column. */
   sql(from: string, ord: string, withErrors: boolean): string;
 }
@@ -164,7 +166,7 @@ interface Scope {
 }
 
 class Compiler {
-  private readonly stages: string[][] = [];
+  private readonly stages: { name: string; sql: string }[][] = [];
   readonly bindings: Binding[] = [];
   private n = 0;
   private readonly levels = new Map<string, number>();
@@ -199,7 +201,7 @@ class Compiler {
     this.depthOf.set(`"${name}"`, local);
     const stage = lvl + 1;
     while (this.stages.length <= stage) this.stages.push([]);
-    this.stages[stage]!.push(`${sql} AS "${name}"`);
+    this.stages[stage]!.push({ name: `"${name}"`, sql });
     this.levels.set(`"${name}"`, stage);
     const ref = { ref: `"${name}"`, lvl: stage };
     if (!bound) this.seen.set(sql, ref);
@@ -233,12 +235,38 @@ class Compiler {
   }
 
   /** Assemble the nested projections. */
-  assemble(from: string, final: string): string {
+  /**
+   * Assemble the nested projections. Each level passes on the input columns (`keep`) and only the
+   * hidden columns read further up, so the projections stay narrow (planning time); bound values
+   * are always kept (placeholder order).
+   */
+  assemble(from: string, final: string, keep: readonly string[]): string {
+    const refs = (sql: string) => sql.match(/"hr\$f\d+"/g) ?? [];
+    const top = this.stages.length - 1;
+    // Backward pass: what each level must output.
+    let needed = new Set(refs(final));
+    const used: { name: string; sql: string }[][] = [];
+    const carried: string[][] = [];
+    for (let k = top; k >= 1; k--) {
+      const defs = (this.stages[k] ?? []).filter(
+        (d) => needed.has(d.name) || d.sql.includes(PARAM_MARK),
+      );
+      const names = new Set(defs.map((d) => d.name));
+      // Output of level k: what is read above it, computed below it or here.
+      const through = [...needed].filter((n) => !names.has(n));
+      const before = new Set(through);
+      for (const d of defs) for (const r of refs(d.sql)) before.add(r);
+      used[k] = defs;
+      carried[k] = through;
+      needed = before;
+    }
     let sql = `SELECT * FROM ${from}`;
-    this.stages.forEach((cols, k) => {
-      if (k === 0 || cols.length === 0) return;
-      sql = `SELECT *, ${cols.join(', ')} FROM (${sql}) AS "hr$s${k}"`;
-    });
+    for (let k = 1; k <= top; k++) {
+      const defs = used[k] ?? [];
+      if (defs.length === 0 && k < top) continue;
+      const list = [...keep, ...(carried[k] ?? []), ...defs.map((d) => `${d.sql} AS ${d.name}`)];
+      sql = `SELECT ${list.join(', ')} FROM (${sql}) AS "hr$s${k}"`;
+    }
     return `SELECT ${final} FROM (${sql}) AS "hr$s"`;
   }
 
@@ -555,18 +583,14 @@ class Compiler {
   div(a: Ex, b: Ex): Ex {
     const x = this.share(this.toNum(a));
     const y = this.share(this.toNum(b));
-    // Fast exact path for |value| < 10^17 (scaled integers computed once, one HUGEINT division);
-    // larger values use the general macro.
-    const scaled = (z: Ex) =>
-      this.temp(
-        `CASE WHEN abs(${z.v}) < 100000000000000000 THEN CAST(${z.v} * 10000000000 AS HUGEINT) END`,
-        z.lvl,
-      );
-    const sx = scaled(x);
-    const sy = scaled(y);
+    // Scaled integers (× 10^10) computed once; |value| < 10^17: one HUGEINT division, larger values
+    // the general macro (both on the hidden columns, so the SQL stays small to plan).
+    const sx = this.temp(`hrflow_fx_s(${x.v})`, x.lvl);
+    const sy = this.temp(`hrflow_fx_s(${y.v})`, y.lvl);
+    const small = (r: string) => `abs(${r}) < CAST('1000000000000000000000000000' AS HUGEINT)`;
     return this.checked(
       'number',
-      `CASE WHEN ${y.v} = 0 THEN NULL WHEN ${sx.ref} IS NOT NULL AND ${sy.ref} IS NOT NULL THEN hrflow_fx_qdiv(${sx.ref}, ${sy.ref}) ELSE hrflow_fx_div(${x.v}, ${y.v}) END`,
+      `CASE WHEN ${y.v} = 0 THEN NULL WHEN ${small(sx.ref)} AND ${small(sy.ref)} THEN hrflow_fx_qdiv(${sx.ref}, ${sy.ref}) ELSE hrflow_fx_sdiv(${sx.ref}, ${sy.ref}) END`,
       [x, y, { ...x, lvl: Math.max(sx.lvl, sy.lvl) }],
       '#NUM!',
       [`CASE WHEN ${y.v} = 0 THEN '#DIV/0!' END`],
@@ -765,10 +789,18 @@ class Compiler {
         const mode = { ROUND: 0, ROUNDUP: 1, ROUNDDOWN: 2 }[node.name];
         // The scaled value is computed once (a hidden column), not once per use in the macro.
         const sc = this.temp(`hrflow_fx_s(${x.v})`, x.lvl);
+        // 10^(10 - n): a constant when n is, else computed once.
+        const p =
+          n.num !== undefined
+            ? {
+                ref: `CAST('${10n ** BigInt(Math.min(38, Math.max(0, 10 - n.num)))}' AS HUGEINT)`,
+                lvl: 0,
+              }
+            : this.temp(`hrflow_fx_p10(greatest(least(10 - ${n.v}, 38), 0))`, n.lvl);
         return this.checked(
           'number',
-          `hrflow_fx_round(${x.v}, ${sc.ref}, ${n.v}, ${mode})`,
-          [x, n, { ...x, lvl: sc.lvl }],
+          `hrflow_fx_round(${x.v}, ${sc.ref}, ${n.v}, ${p.ref}, ${mode})`,
+          [x, n, { ...x, lvl: Math.max(sc.lvl, p.lvl) }],
           '#NUM!',
         );
       }
@@ -1262,6 +1294,7 @@ export function compileFormula(
     columns: compiled,
     output,
     bindings: comp.bindings,
+    depth: comp.depth,
     sql(from, ord, withErrors) {
       const byKey = new Map(compiled.map((c) => [c.key, c]));
       const list = output.map((c) => {
@@ -1272,7 +1305,8 @@ export function compileFormula(
       if (withErrors) {
         for (const c of compiled) if (c.err) list.push(`${c.err} AS "hr$err${c.index}"`);
       }
-      return comp.assemble(from, list.join(', '));
+      const keep = [...input.map((c) => quote(c.key)), ord];
+      return comp.assemble(from, list.join(', '), keep);
     },
   };
 }

@@ -22,16 +22,16 @@ export const FORMULA_MACROS: readonly string[] = [
   `CREATE MACRO hrflow_fx_rdiv(n, d) AS n // d + CASE WHEN 2 * abs(n % d) >= abs(d) THEN sign(n) * sign(d) ELSE 0 END`,
   // a × b, exact then rounded to 10 places (half away from zero)
   `CREATE MACRO hrflow_fx_mul(a, b) AS TRY(CAST(a * CAST(trunc(b) AS DECIMAL(38,0)) + CAST(trunc(a) AS DECIMAL(38,0)) * CAST(b - trunc(b) AS DECIMAL(11,10)) + CAST(round(CAST(a - trunc(a) AS DECIMAL(11,10)) * CAST(b - trunc(b) AS DECIMAL(11,10)), 10) AS ${D}) AS ${D}))`,
-  // a / b (b <> 0) rounded half away from zero to 10 places. |b| ≥ 10^18: quotient by the integer
-  // part of b (relative error < 10^-18).
-  `CREATE MACRO hrflow_fx_div(a, b) AS TRY(CASE WHEN abs(hrflow_fx_s(b)) < CAST('10000000000000000000000000000' AS HUGEINT) THEN hrflow_fx_u((hrflow_fx_s(a) // hrflow_fx_s(b)) * ${SCALE} + hrflow_fx_rdiv((hrflow_fx_s(a) % hrflow_fx_s(b)) * ${SCALE}, hrflow_fx_s(b))) ELSE hrflow_fx_u(hrflow_fx_rdiv(hrflow_fx_s(a), hrflow_fx_s(b) // ${SCALE})) END)`,
+  // Scaled a / b (A, B = hrflow_fx_s of a, b; B <> 0) rounded half away from zero to 10 places.
+  // |b| ≥ 10^18: quotient by the integer part of b (relative error < 10^-18).
+  `CREATE MACRO hrflow_fx_sdiv(a, b) AS TRY(CASE WHEN abs(b) < CAST('10000000000000000000000000000' AS HUGEINT) THEN hrflow_fx_u((a // b) * ${SCALE} + hrflow_fx_rdiv((a % b) * ${SCALE}, b)) ELSE hrflow_fx_u(hrflow_fx_rdiv(a, b // ${SCALE})) END)`,
   // Scaled a / b (|a|, |b| < 10^27, b <> 0) rounded half away from zero: one HUGEINT division.
   `CREATE MACRO hrflow_fx_qdiv(a, b) AS hrflow_fx_u((2 * a * ${SCALE} + sign(a) * abs(b)) // (2 * b))`,
   `CREATE MACRO hrflow_fx_p10(k) AS CAST([${P10}] AS HUGEINT[])[k + 1]`,
-  // ROUND/ROUNDUP/ROUNDDOWN of x to n places; s = hrflow_fx_s(x)
+  // ROUND/ROUNDUP/ROUNDDOWN of x to n places; s = hrflow_fx_s(x), p = 10^(10 - n)
   // round the scaled integer s to a multiple of p: 0 = half away from zero, 1 = up, 2 = down
   `CREATE MACRO hrflow_fx_rnd(s, p, m) AS CASE m WHEN 0 THEN (s + sign(s) * (p // 2)) // p * p WHEN 1 THEN (s + sign(s) * (p - 1)) // p * p ELSE s // p * p END`,
-  `CREATE MACRO hrflow_fx_round(x, s, n, m) AS CASE WHEN n >= 10 THEN x WHEN n < -27 THEN CASE WHEN m = 1 AND x <> 0 THEN NULL ELSE CAST(0 AS ${D}) END ELSE hrflow_fx_u(hrflow_fx_rnd(s, hrflow_fx_p10(10 - n), m)) END`,
+  `CREATE MACRO hrflow_fx_round(x, s, n, p, m) AS CASE WHEN n >= 10 THEN x WHEN n < -27 THEN CASE WHEN m = 1 AND x <> 0 THEN NULL ELSE CAST(0 AS ${D}) END ELSE hrflow_fx_u(hrflow_fx_rnd(s, p, m)) END`,
   // Excel MOD: sign of the divisor
   `CREATE MACRO hrflow_fx_mod(n, d) AS CASE WHEN n % d <> 0 AND (n % d < 0) <> (d < 0) THEN n % d + d ELSE n % d END`,
   // number → text like Excel's General format (no trailing zeros)

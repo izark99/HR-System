@@ -199,8 +199,8 @@ function inflateSync(bytes: Uint8Array, e: ZipEntry, budget: InflateBudget): Uin
   return out;
 }
 
-/** Compressed bytes given to the inflater per step: bounds what one step can produce (~16 MiB). */
-const INFLATE_STEP = 16 * 1024;
+/** Compressed bytes given to the inflater per step: bounds what one step can produce (~4 MiB). */
+const INFLATE_STEP = 4 * 1024;
 
 /** Bytes produced by the inflater since start (tests: the guard stops early). */
 export const inflateStats = { produced: 0 };

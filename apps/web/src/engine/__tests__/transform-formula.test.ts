@@ -228,6 +228,56 @@ describe('too many chained operations (R1-fix #6)', () => {
     }
   });
 
+  it('50 chained columns of a moderate formula run (groups materialized), exact (R1-fix5)', async () => {
+    const formula = (p: string) =>
+      `=IF([${p}]>100,ROUND([${p}]*0.105/[b],0),IFERROR(ROUND([${p}]/[b]*1.5,2),0))+MAX([a],[${p}]/3)`;
+    const columns = Array.from({ length: 50 }, (_, i) => ({
+      key: `c${i}`,
+      formula: formula(i === 0 ? 'a' : `c${i - 1}`),
+    }));
+    const rows: [string, string][] = [
+      ['1000', '3'],
+      ['250.5', '0.7'],
+      ['-40', '7'],
+      ['99.99', '2'],
+      ['500', '0'],
+    ];
+    const input = table(
+      [
+        ['a', 'decimal'],
+        ['b', 'decimal'],
+      ],
+      rows.map(([a, b]) => [new Big(a), new Big(b)]),
+    );
+    const t0 = performance.now();
+    const r = await run(columns, input);
+    const ms = performance.now() - t0;
+    // Reference in big.js: division rounded half away from zero to 10 places like the engine.
+    const div = (x: Big, y: Big) => x.div(y).round(10, 1);
+    const ref = rows.map(([a0, b0]) => {
+      const a = new Big(a0);
+      const b = new Big(b0);
+      const out: (string | null)[] = [];
+      let p: Big | null = a;
+      for (let i = 0; i < 50; i++) {
+        const pv: Big = p ?? new Big(0);
+        let v: Big | null;
+        if (pv.gt(100)) v = b.eq(0) ? null : div(pv.times('0.105').round(10, 1), b).round(0, 1);
+        else v = b.eq(0) ? new Big(0) : div(pv, b).times('1.5').round(10, 1).round(2, 1);
+        const third = div(pv, new Big(3));
+        v = v === null ? null : v.plus(a.gt(third) ? a : third);
+        out.push(v === null ? null : v.toFixed());
+        p = v;
+      }
+      return out;
+    });
+    expect(r.out.out!.rows.map((row) => columns.map((c) => plain(row[c.key])))).toEqual(ref);
+    // Row errors (b = 0 on the IF branch) are reported per column, row 5.
+    expect(r.warnings.length).toBeGreaterThan(0);
+    for (const w of r.warnings) expect(w.params).toMatchObject({ error: '#DIV/0!', rows: '5' });
+    expect(ms).toBeLessThan(15_000);
+  });
+
   it('the same subexpression is computed once', () => {
     const sql = compile('=IF([luong]/[cong]>1,[luong]/[cong],0)').sql('"hr$x"', '"hr$ord"', true);
     expect(sql.match(/hrflow_fx_qdiv/g)).toHaveLength(1);

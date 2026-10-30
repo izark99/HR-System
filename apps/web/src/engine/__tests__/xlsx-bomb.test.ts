@@ -145,8 +145,8 @@ describe('zip-bomb guard (AC-B4-90)', () => {
       ['validation.fileTooLarge', 'bom.xlsx'],
     ]);
     expect(performance.now() - t0).toBeLessThan(5000);
-    // The synchronous inflater (SheetJS) never writes past the declared size: the file reads as
-    // truncated, memory stays bounded.
+    // The synchronous path (fflate, 4 KiB steps) stops past the declared size: memory stays
+    // bounded (each step produces at most ~4 MiB).
     const before = process.memoryUsage().arrayBuffers;
     expect(() => readSlot(S, [f])).not.toThrow();
     expect(process.memoryUsage().arrayBuffers - before).toBeLessThan(16 * 1024 * 1024);
