@@ -409,3 +409,18 @@ describe('text length argument above 2^32 (fixed in R1-fix)', () => {
     expect((await col('=MID([ma_nv],1,[luong]*1000)')).values[0]).toBe('NV001');
   });
 });
+
+describe('KNOWN BUG — R1-fix: tooComplex counts projection levels of the whole node', () => {
+  // MAX_STAGES = 150 applies to the node, not to one column: a realistic payroll chain where
+  // each column rounds the previous one (`=ROUND([prev]*1.1/[cong],2)`) is refused at the 17th
+  // column (c16), and the message advises splitting into more formula *columns*, which does not
+  // help (only splitting into several nodes does). `=IFERROR([prev]/[b],0)+[a]` stops at c25.
+  it.fails('20 chained ROUND columns compile and run', async () => {
+    const columns = Array.from({ length: 20 }, (_, i) => ({
+      key: `c${i}`,
+      formula: `=ROUND([${i === 0 ? 'luong' : `c${i - 1}`}]*1.1/[cong],2)`,
+    }));
+    const r = await runNode('transform.formula', { columns }, { in: tb });
+    expect(r.out.out!.rows).toHaveLength(3);
+  });
+});

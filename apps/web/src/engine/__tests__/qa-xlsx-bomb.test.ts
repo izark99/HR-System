@@ -273,3 +273,37 @@ describe('cumulative inflate budget per file (AC-B4-90, decision 2026-10-30)', (
     }
   }, 120_000);
 });
+
+describe('KNOWN BUG — R1-fix: lying small declared size still inflates fully on the sync path', () => {
+  // xl/workbook.xml declares 1,000 bytes but its deflate stream expands to 1 GiB (file ≈ 1 MB).
+  // `part()` always uses `inflateSync`; SheetJS's inflater writes at most 1,000 bytes but keeps
+  // decoding the whole stream (no stop at `usz`), so the CPU time grows with the real size:
+  // measured 4.4 s per MB of file (≈ 45 s for 10 MB, minutes for 100 MB) before "unreadable".
+  // AC-B4-90: "dừng giải nén sớm". Fix idea: stop at min(size, limit) (bounded inflater or
+  // DecompressionStream for the parts too), or refuse compressedSize > size + overhead.
+  it.fails(
+    'stops early: under 1.5 s for a 1 MB file that expands to 1 GiB',
+    async () => {
+      const f: SourceFile = {
+        name: 'liar.xlsx',
+        data: zip([
+          text('_rels/.rels', ROOT_RELS),
+          {
+            name: 'xl/workbook.xml',
+            data: padded(WB_HEAD, 1024 * MiB, '</workbook>'),
+            declaredSize: 1000,
+          },
+          text('xl/_rels/workbook.xml.rels', WB_RELS),
+          text('xl/worksheets/sheet1.xml', SHEET),
+        ]),
+      };
+      expect(f.data.byteLength).toBeLessThan(1.2 * MiB);
+      const t0 = performance.now();
+      const r = await readSlotAsync(S, [f]);
+      const ms = performance.now() - t0;
+      expect(keys(r)).not.toEqual([]);
+      expect(ms).toBeLessThan(1500);
+    },
+    120_000,
+  );
+});
