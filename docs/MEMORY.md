@@ -225,6 +225,8 @@
 
 ## Kỹ thuật & tổ chức
 
+2026-10-30 22:59 - Giải nén entry .xlsx (đường đồng bộ và bất đồng bộ có giới hạn) dùng thư viện `fflate` (MIT, giải nén theo luồng, dừng sớm được), không dùng bộ giải mã DEFLATE tự viết.
+
 2026-10-30 13:29 - Ngoại lệ thang chữ lớn: canvas Designer, ô Monaco/công thức và bảng xem trước dữ liệu giữ chữ 14px; phần còn lại theo §25.1.
 
 2026-10-30 13:26 - Quy tắc frontend đổi tên `.claude/rules/frontend.md` → `.claude/rules/design.md` (UI, design system, i18n, a11y).
