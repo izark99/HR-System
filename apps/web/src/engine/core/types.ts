@@ -2,6 +2,7 @@ import type { DataType, FlowDefinition } from '@hrflow/flow-schema';
 import type { SlotReadResult } from '../io/excel-reader';
 import type { DuckDbProvider } from '../duckdb/base';
 import type { Decimal } from './decimal';
+import { Table } from './table';
 
 /**
  * In-memory value representation (pure-TS executor):
@@ -26,10 +27,8 @@ export interface ColumnDef {
 
 export type Row = Record<string, Value>;
 
-export interface Table {
-  columns: ColumnDef[];
-  rows: Row[];
-}
+/** Tables are columnar (`core/table.ts`); `Table.fromRows` builds one from row objects. */
+export { Table };
 
 export type Translate = (key: string, params?: Record<string, unknown>) => string;
 

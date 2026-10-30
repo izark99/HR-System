@@ -9,14 +9,19 @@ import {
   Utf8,
   type Vector,
 } from 'apache-arrow';
-import { Big, decimalFrom, isDecimal, type Decimal } from '../core/decimal';
-import { EngineError, type ColumnDef, type Row, type Table, type Value } from '../core/types';
+import { concatVectors, type Vector as EngineVector } from '../core/table';
+import { EngineError, Table, type ColumnDef } from '../core/types';
+import {
+  booleanFromArrow,
+  decimalFromUtf8,
+  integerFromUtf8,
+  stringFromUtf8,
+  toArrow,
+} from './arrow-io';
 import { DuckDbError, type SqlParam } from './base';
 import type { DuckDb } from './db';
 import {
   decimalOverflow,
-  decimalToSql,
-  SCALE,
   DUCK_TYPE,
   mergeCtes,
   ORD,
@@ -126,131 +131,6 @@ export function decimal128Vector(values: readonly (string | null)[]): Vector {
   );
 }
 
-/**
- * UTF-8 column straight from the rows: one growing buffer + `encodeInto`, no per-cell
- * temporaries (garbage collection dominated large uploads).
- */
-function utf8Column(rows: readonly Row[], from: number, n: number, key: string): Vector {
-  const offsets = new Int32Array(n + 1);
-  const valid = new Uint8Array((n + 7) >> 3);
-  let buf = new Uint8Array(Math.max(1024, n * 16));
-  let pos = 0;
-  let nulls = 0;
-  for (let i = 0; i < n; i++) {
-    const v = rows[from + i]![key];
-    if (v === null || v === undefined) nulls++;
-    else {
-      valid[i >> 3]! |= 1 << (i & 7);
-      const text = isDecimal(v) ? v.toFixed() : String(v);
-      if (pos + text.length * 3 > buf.length) {
-        const bigger = new Uint8Array(Math.max(pos + text.length * 3, buf.length * 2));
-        bigger.set(buf.subarray(0, pos));
-        buf = bigger;
-      }
-      pos += encoder.encodeInto(text, buf.subarray(pos)).written;
-    }
-    offsets[i + 1] = pos;
-  }
-  return makeVector(
-    makeData({
-      type: new Utf8(),
-      length: n,
-      nullCount: nulls,
-      nullBitmap: valid,
-      valueOffsets: offsets,
-      data: buf.subarray(0, pos),
-    }),
-  );
-}
-
-const TWO_32 = 4294967296;
-
-/**
- * Decimal128(38,10) column straight from big.js digits. Values with at most 15 significant digits
- * once scaled by 10^10 (the usual money/day values) are computed exactly in doubles; others go
- * through the canonical text (rounding half-up, overflow check) and BigInt.
- */
-function decimalColumn(rows: readonly Row[], from: number, n: number, key: string): Vector {
-  const words = new Uint32Array(n * 4);
-  const valid = new Uint8Array((n + 7) >> 3);
-  let nulls = 0;
-  for (let i = 0; i < n; i++) {
-    const raw = rows[from + i]![key];
-    if (raw === null || raw === undefined) {
-      nulls++;
-      continue;
-    }
-    valid[i >> 3]! |= 1 << (i & 7);
-    const v = isDecimal(raw) ? raw : decimalFrom(typeof raw === 'boolean' ? String(raw) : raw);
-    const c = v.c;
-    const places = Math.max(0, c.length - v.e - 1);
-    const scaledDigits = Math.max(c.length, v.e + 1) + (SCALE - places);
-    if (places <= SCALE && scaledDigits <= 15) {
-      let x = 0;
-      for (let d = 0; d < c.length; d++) x = x * 10 + c[d]!;
-      x *= 10 ** (v.e - (c.length - 1) + SCALE);
-      const lo = x % TWO_32;
-      const hi = Math.floor(x / TWO_32);
-      if (v.s < 0 && x !== 0) {
-        // Two's complement of (hi:lo) over 128 bits.
-        const nlo = (~lo >>> 0) + 1;
-        words[4 * i] = nlo >>> 0;
-        words[4 * i + 1] = ((~hi >>> 0) + (nlo > 0xffffffff ? 1 : 0)) >>> 0;
-        words[4 * i + 2] = 0xffffffff;
-        words[4 * i + 3] = 0xffffffff;
-      } else {
-        words[4 * i] = lo;
-        words[4 * i + 1] = hi;
-      }
-      continue;
-    }
-    const text = decimalToSql(v, key);
-    const dot = text.indexOf('.');
-    const int = dot < 0 ? text : text.slice(0, dot);
-    const frac = dot < 0 ? '' : text.slice(dot + 1);
-    const scaled = BigInt.asUintN(128, BigInt(`${int}${frac.padEnd(SCALE, '0')}`));
-    for (let w = 0; w < 4; w++) {
-      words[4 * i + w] = Number((scaled >> BigInt(32 * w)) & 0xffffffffn);
-    }
-  }
-  return makeVector(
-    makeData({
-      type: new ArrowDecimal(10, 38, 128),
-      length: n,
-      nullCount: nulls,
-      nullBitmap: valid,
-      data: words,
-    }),
-  );
-}
-
-function buildVector(rows: readonly Row[], from: number, to: number, col: ColumnDef): Vector {
-  const n = to - from;
-  if (col.type === 'integer') {
-    const values = new Array<number | null>(n);
-    for (let i = 0; i < n; i++) {
-      const v = rows[from + i]![col.key];
-      values[i] =
-        v === null || v === undefined
-          ? null
-          : typeof v === 'number'
-            ? v
-            : Number(isDecimal(v) ? v.toFixed() : v);
-    }
-    return float64Vector(values);
-  }
-  if (col.type === 'boolean') {
-    const values = new Array<boolean | null>(n);
-    for (let i = 0; i < n; i++) {
-      const v = rows[from + i]![col.key];
-      values[i] = v === null || v === undefined ? null : v === true || v === 'true';
-    }
-    return boolVector(values);
-  }
-  if (col.type === 'decimal') return decimalColumn(rows, from, n, col.key);
-  return utf8Column(rows, from, n, col.key);
-}
-
 /** DuckDB → engine type of a *canonical* relation column, read back as text where lossless. */
 function readExpr(col: ColumnDef): string {
   const c = q(col.key);
@@ -263,11 +143,6 @@ function readExpr(col: ColumnDef): string {
     default:
       return `CAST(${c} AS VARCHAR)`;
   }
-}
-
-function parseInteger(s: string): number | Decimal {
-  const n = Number(s);
-  return Number.isSafeInteger(n) ? n : new Big(s);
 }
 
 /**
@@ -321,17 +196,21 @@ export class SqlScope {
     this.track(raw, 'TABLE');
     const cols = table.columns;
     const casts = cols.map((c) => `CAST(${q(c.key)} AS ${DUCK_TYPE[c.type]}) AS ${q(c.key)}`);
-    if (table.rows.length === 0) {
+    if (table.rowCount === 0) {
       const defs = [...cols.map((c) => `${q(c.key)} ${DUCK_TYPE[c.type]}`), `${ORD} BIGINT`];
       this.run(`CREATE TABLE ${qName(name)} (${defs.join(', ')})`);
     } else {
-      for (let from = 0; from < table.rows.length; from += CHUNK_ROWS) {
-        const to = Math.min(table.rows.length, from + CHUNK_ROWS);
+      for (let from = 0; from < table.rowCount; from += CHUNK_ROWS) {
+        const to = Math.min(table.rowCount, from + CHUNK_ROWS);
         const vectors: Record<string, Vector> = {};
-        for (const c of cols) vectors[c.key] = buildVector(table.rows, from, to, c);
-        const ord = new Array<number>(to - from);
+        cols.forEach((c, i) => {
+          vectors[c.key] = toArrow(table.vectors[i]!, from, to - from, c.key);
+        });
+        const ord = new Float64Array(to - from);
         for (let i = 0; i < ord.length; i++) ord[i] = from + i + 1;
-        vectors[ORD_NAME] = float64Vector(ord);
+        vectors[ORD_NAME] = makeVector(
+          makeData({ type: new Float64(), length: ord.length, nullCount: 0, data: ord }),
+        );
         const ipc = tableToIPC(new ArrowTable(vectors), 'stream');
         try {
           this.db.insertArrow(ipc, raw, from === 0);
@@ -344,7 +223,7 @@ export class SqlScope {
       );
     }
     this.drop(raw);
-    return new SqlRel(table.columns, name, [], table.rows.length);
+    return new SqlRel(table.columns, name, [], table.rowCount);
   }
 
   /** A new lazy relation: `sql` reads the input relations by name; its CTE chain is merged. */
@@ -431,47 +310,37 @@ export class SqlScope {
   private read(rel: SqlRel): Table {
     const total = rel.rowCount ?? 0;
     const columns = rel.columns.map((c) => ({ ...c }));
-    const rows: Row[] = new Array<Row>(total);
     const select = columns.map((c) => `${readExpr(c)} AS ${q(c.key)}`).join(', ');
-    let unsafe: Set<string> | null = null;
+    // Read in chunks (bounds the Arrow copy); each chunk becomes one vector per column.
+    const parts: EngineVector[][] = columns.map(() => []);
     for (let from = 0; from < total; from += CHUNK_ROWS) {
       const to = Math.min(total, from + CHUNK_ROWS);
       const result = this.run(
         `SELECT ${select || '1 AS "hr$none"'} FROM ${qName(rel.name)} WHERE ${ORD} > ${from} AND ${ORD} <= ${to} ORDER BY ${ORD}`,
       );
       const n = to - from;
-      for (let i = 0; i < n; i++) rows[from + i] = {};
-      for (const col of columns) {
+      columns.forEach((col, k) => {
         const vec = result.getChild(col.key);
-        if (!vec) continue;
-        for (let i = 0; i < n; i++) {
-          // Read expressions return VARCHAR / BOOLEAN only (see readExpr).
-          const raw = vec.get(i) as string | boolean | null | undefined;
-          let v: Value = null;
-          if (raw !== null && raw !== undefined) {
-            if (col.type === 'integer') {
-              v = parseInteger(String(raw));
-              if (typeof v !== 'number') (unsafe ??= new Set()).add(col.key);
-            } else if (col.type === 'decimal') v = new Big(String(raw));
-            else if (col.type === 'boolean') v = Boolean(raw);
-            else v = String(raw);
-          }
-          rows[from + i]![col.key] = v;
-        }
-      }
+        if (!vec) throw new Error('missing result column');
+        // Read expressions return VARCHAR / BOOLEAN only (see readExpr).
+        parts[k]!.push(
+          col.type === 'decimal'
+            ? decimalFromUtf8(vec, n)
+            : col.type === 'integer'
+              ? integerFromUtf8(vec, n)
+              : col.type === 'boolean'
+                ? booleanFromArrow(vec, n)
+                : stringFromUtf8(vec, n, col.type),
+        );
+      });
     }
-    // An integer result outside the safe range (e.g. a large SUM) turns the column into decimal.
-    if (unsafe) {
-      for (const col of columns) {
-        if (!unsafe.has(col.key)) continue;
-        col.type = 'decimal';
-        for (const row of rows) {
-          const v = row[col.key];
-          if (typeof v === 'number') row[col.key] = new Big(v);
-        }
-      }
-    }
-    return { columns, rows };
+    const vectors = columns.map((col, k) => {
+      const chunks = parts[k]!;
+      // An integer result outside the safe range (e.g. a large SUM) turns the column into decimal.
+      if (col.type === 'integer' && chunks.some((v) => v.type === 'decimal')) col.type = 'decimal';
+      return concatVectors(col.type, chunks, total);
+    });
+    return new Table(columns, vectors, total);
   }
 
   /** Drop every object created by this scope. */

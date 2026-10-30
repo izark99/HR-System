@@ -1,5 +1,6 @@
 import { InputSlotSchema, type InputSlotInput } from '@hrflow/flow-schema';
 import * as XLSX from 'xlsx';
+import { Table, type ColumnDef, type Value } from '../core/types';
 import type { SourceFile } from '../io/excel-reader';
 
 type Cell = string | number | boolean | null;
@@ -22,6 +23,14 @@ export function xlsxFile(
 
 export function csvFile(name: string, text: string): SourceFile {
   return { name, data: new TextEncoder().encode(text) };
+}
+
+/** Columnar table from a `{ columns, rows }` literal (tests build small tables from rows). */
+export function asTable(t: {
+  columns: ColumnDef[];
+  rows: readonly Record<string, Value | undefined>[];
+}): Table {
+  return Table.fromRows(t.columns, t.rows as Record<string, Value>[]);
 }
 
 export function slot(input: Partial<InputSlotInput> & Pick<InputSlotInput, 'columns'>) {

@@ -7,6 +7,7 @@ import type { AnyNodePlugin, TsNodePlugin } from '../core/plugin';
 import type { Table, Value } from '../core/types';
 import { nodePlugins } from '../nodes';
 import { nodeDuckDb } from './duckdb-node';
+import { asTable } from './helpers';
 
 export const t = createEngineTranslator('vi');
 
@@ -24,10 +25,10 @@ function sourcePlugin(tables: Record<string, Table>): TsNodePlugin<{ name: strin
 
 /** Build a table from column specs and row arrays. */
 export function table(columns: [key: string, type: DataType][], rows: Value[][]): Table {
-  return {
+  return asTable({
     columns: columns.map(([key, type]) => ({ key, type, title: key.toUpperCase() })),
     rows: rows.map((r) => Object.fromEntries(columns.map(([key], i) => [key, r[i] ?? null]))),
-  };
+  });
 }
 
 /** Rows as arrays of plain values (decimals as strings) in column order. */

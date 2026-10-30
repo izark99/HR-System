@@ -4,17 +4,18 @@ import { Big, type Decimal } from '../core/decimal';
 import { createEngineTranslator } from '../core/i18n';
 import { EngineError, type Table, type Value } from '../core/types';
 import { controlComparePlugin, executeCompare } from '../nodes/control-compare';
+import { asTable } from './helpers';
 
 const ctx = { t: createEngineTranslator('vi') };
 
 function table(rows: [string, Value][]): Table {
-  return {
+  return asTable({
     columns: [
       { key: 'ma_nv', type: 'string' },
       { key: 'cong', type: 'decimal' },
     ],
     rows: rows.map(([ma_nv, cong]) => ({ ma_nv, cong })),
-  };
+  });
 }
 
 const d = (s: string) => new Big(s);
@@ -55,7 +56,7 @@ describe('control.compare', () => {
   });
 
   it('splits only-left / only-right and carries columns', () => {
-    const left: Table = {
+    const left: Table = asTable({
       columns: [
         { key: 'ma_nv', type: 'string' },
         { key: 'ho_ten', type: 'string' },
@@ -65,7 +66,7 @@ describe('control.compare', () => {
         { ma_nv: 'NV00001', ho_ten: 'A', cong: d('26') },
         { ma_nv: 'NV00002', ho_ten: 'B', cong: d('26') },
       ],
-    };
+    });
     const right = table([
       ['NV00001', d('20')],
       ['NV00009', d('1')],
@@ -108,14 +109,14 @@ describe('control.compare', () => {
   });
 
   it('accepts integer metric columns', () => {
-    const l: Table = {
+    const l: Table = asTable({
       columns: [
         { key: 'ma_nv', type: 'string' },
         { key: 'cong', type: 'integer' },
       ],
       rows: [{ ma_nv: 'NV1', cong: 3 }],
-    };
-    const r: Table = { ...l, rows: [{ ma_nv: 'NV1', cong: 5 }] };
+    });
+    const r: Table = asTable({ ...l, rows: [{ ma_nv: 'NV1', cong: 5 }] });
     const out = run(l, r, {
       metrics: [{ left: 'cong', right: 'cong', label: 'Công', tolerance: 1 }],
     });
@@ -136,13 +137,13 @@ describe('control.compare', () => {
     expect(() => run(table([]), table([]), { keys: ['nope'] })).toThrow(
       'compare.error.missingColumn',
     );
-    const textCol: Table = {
+    const textCol: Table = asTable({
       columns: [
         { key: 'ma_nv', type: 'string' },
         { key: 'cong', type: 'string' },
       ],
       rows: [],
-    };
+    });
     expect(() => run(textCol, table([]))).toThrow('compare.error.notNumeric');
   });
 

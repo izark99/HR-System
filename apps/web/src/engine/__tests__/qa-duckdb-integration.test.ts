@@ -8,6 +8,7 @@ import type { UploadFile } from '../protocol';
 import { EngineSession } from '../session';
 import { nodeDuckDb } from './duckdb-node';
 import { runNode, runWith, table } from './sql-helpers';
+import { asTable } from './helpers';
 
 /**
  * QA: the acceptance flow with DuckDB nodes in front of control.compare must still equal
@@ -292,10 +293,12 @@ describe('normalizeKeys: SQL = normalizeKeyPart over every BMP code point and th
       );
       const scope = new SqlScope(db);
       try {
-        const rel = scope.upload({
-          columns: [{ key: 'k', type: 'string' }],
-          rows: strs.map((k) => ({ k })),
-        });
+        const rel = scope.upload(
+          asTable({
+            columns: [{ key: 'k', type: 'string' }],
+            rows: strs.map((k) => ({ k })),
+          }),
+        );
         const res = db.query(`SELECT hrflow_norm_key(k) AS n FROM "${rel.name}" ORDER BY "hr$ord"`);
         slice.forEach((c, j) => {
           if (String(res.getChild('n')?.get(j)) !== normalizeKeyPart(strs[j])) bad.push(c);

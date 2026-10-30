@@ -21,6 +21,7 @@ import type { ColumnDef, Row, Table } from '../core/types';
 import { float64Vector, SqlScope } from '../duckdb/scope';
 import { DUCK_TYPE, ORD, ORD_NAME, q, qName } from '../duckdb/sql';
 import { nodeDuckDb } from './duckdb-node';
+import { asTable } from './helpers';
 
 const ENABLED = process.env.HRFLOW_PERF === '1';
 const SIZES = (process.env.HRFLOW_PERF_SIZES ?? '100000,400000').split(',').map(Number);
@@ -138,7 +139,7 @@ function bigTable(n: number): Table {
     for (let c = 0; c < 12; c++) r[`txt_${c}`] = `Giá trị ${c}-${i % 997}`;
     rows[i] = r;
   }
-  return { columns, rows };
+  return asTable({ columns, rows });
 }
 
 describe.skipIf(!ENABLED)('QA ingestion variant (allocation-free builders)', () => {
@@ -189,7 +190,7 @@ describe.skipIf(!ENABLED)('QA ingestion variant (allocation-free builders)', () 
         );
 
         // Same values as the app's own upload (first 2000 rows), compared inside DuckDB.
-        const small: Table = { columns: tbl.columns, rows: tbl.rows.slice(0, 2000) };
+        const small: Table = asTable({ columns: tbl.columns, rows: tbl.rows.slice(0, 2000) });
         const scope = new SqlScope(db);
         const rel = scope.upload(small);
         const cols = tbl.columns.map((c) => c.key);

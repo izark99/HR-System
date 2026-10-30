@@ -495,7 +495,7 @@ export async function runFlow(
       for (const value of Object.values(result)) hold(value, 1);
       const rows: Record<string, number> = {};
       for (const [port, value] of Object.entries(result)) {
-        if (!isSqlRel(value)) rows[port] = value.rows.length;
+        if (!isSqlRel(value)) rows[port] = value.rowCount;
         else if (value.rowCount !== null) rows[port] = value.rowCount;
       }
       const durationMs = now() - t0;

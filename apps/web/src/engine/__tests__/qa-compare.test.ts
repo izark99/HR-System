@@ -18,19 +18,20 @@ import {
   timesheetFile,
   type EmpRow,
 } from './qa-helpers';
+import { asTable } from './helpers';
 
 const ctx = { t: createEngineTranslator('vi') };
 const d = (s: string | number) => new Big(s);
 const str = (v: Value | undefined) => (isDecimal(v) ? v.toString() : v);
 
 function tbl(rows: Record<string, Value>[], decimals = ['cong', 'ot']): Table {
-  return {
+  return asTable({
     columns: [
       { key: 'ma_nv', type: 'string' },
       ...decimals.map((k) => ({ key: k, type: 'decimal' as const })),
     ],
     rows,
-  };
+  });
 }
 
 function cmp(left: Table, right: Table, cfg: Partial<CompareConfigInput> = {}) {
@@ -257,14 +258,15 @@ describe('QA compare: keys', () => {
   });
 
   it('composite keys do not collide on separator characters', () => {
-    const t2 = (a: string, b: string) => ({
-      columns: [
-        { key: 'k1', type: 'string' as const },
-        { key: 'k2', type: 'string' as const },
-        { key: 'cong', type: 'decimal' as const },
-      ],
-      rows: [{ k1: a, k2: b, cong: d(1) }],
-    });
+    const t2 = (a: string, b: string) =>
+      asTable({
+        columns: [
+          { key: 'k1', type: 'string' as const },
+          { key: 'k2', type: 'string' as const },
+          { key: 'cong', type: 'decimal' as const },
+        ],
+        rows: [{ k1: a, k2: b, cong: d(1) }],
+      });
     const out = executeCompare(
       CompareConfigSchema.parse({
         keys: ['k1', 'k2'],

@@ -2,6 +2,7 @@ import type { DataType } from '@hrflow/flow-schema';
 import ExcelJS from 'exceljs';
 import { isDecimal } from '../core/decimal';
 import type { ColumnDef, Table, Value } from '../core/types';
+import { writeStreamingWorkbook } from './xlsx-stream-writer';
 
 export interface SheetSpec {
   name: string;
@@ -24,13 +25,22 @@ const WIDTH_SAMPLE = 1000;
  * Build a multi-sheet .xlsx (spec §11 `output.excel`): bold header, frozen first row,
  * auto-filter, column widths, number format by column type.
  */
-export async function writeWorkbook(sheets: readonly SheetSpec[]): Promise<Uint8Array> {
+export async function writeWorkbook(
+  sheets: readonly SheetSpec[],
+  /** `streaming`: force a writer (tests); `streamingAbove`: cell count threshold. */
+  options: { streaming?: boolean; streamingAbove?: number } = {},
+): Promise<Uint8Array> {
+  const cells = sheets.reduce((n, s) => n + s.table.rowCount * s.table.columns.length, 0);
+  if (options.streaming ?? cells > (options.streamingAbove ?? STREAMING_CELLS)) {
+    return writeStreaming(sheets);
+  }
   const wb = new ExcelJS.Workbook();
   const usedNames = new Set<string>();
 
   for (const spec of sheets) {
     const name = uniqueSheetName(spec.name, usedNames);
-    const { columns, rows } = spec.table;
+    const { columns } = spec.table;
+    const vectors = columns.map((c) => spec.table.vector(c.key)!);
     const ws = wb.addWorksheet(name, { views: [{ state: 'frozen', ySplit: 1 }] });
 
     ws.columns = columns.map((col) => ({
@@ -39,8 +49,8 @@ export async function writeWorkbook(sheets: readonly SheetSpec[]): Promise<Uint8
       width: estimateWidth(col, spec.table),
       style: numFmtStyle(col),
     }));
-    for (const row of rows) {
-      ws.addRow(columns.map((col) => toCellValue(row[col.key] ?? null, col.type)));
+    for (let i = 0; i < spec.table.rowCount; i++) {
+      ws.addRow(columns.map((col, k) => toCellValue(vectors[k]!.get(i), col.type)));
     }
 
     const header = ws.getRow(1);
@@ -56,6 +66,28 @@ export async function writeWorkbook(sheets: readonly SheetSpec[]): Promise<Uint8
 
   const buffer = await wb.xlsx.writeBuffer();
   return new Uint8Array(buffer);
+}
+
+/**
+ * Above this many cells the streaming writer is used: ExcelJS keeps an object per cell (about
+ * 3 M cells already take ~1 GB of heap).
+ */
+const STREAMING_CELLS = 2_000_000;
+
+function writeStreaming(sheets: readonly SheetSpec[]): Promise<Uint8Array> {
+  const used = new Set<string>();
+  const names = sheets.map((s) => uniqueSheetName(s.name, used));
+  return writeStreamingWorkbook(
+    sheets.map((s) => ({
+      name: s.name,
+      columns: s.table.columns,
+      vectors: s.table.columns.map((c) => s.table.vector(c.key)!),
+      rowCount: s.table.rowCount,
+      widths: s.table.columns.map((c) => estimateWidth(c, s.table)),
+      numFmts: s.table.columns.map((c) => c.numFmt ?? DEFAULT_NUM_FMT[c.type]),
+    })),
+    names,
+  );
 }
 
 function numFmtStyle(col: ColumnDef): Partial<ExcelJS.Style> {
@@ -89,9 +121,10 @@ function displayLength(v: Value, type: DataType): number {
 
 function estimateWidth(col: ColumnDef, table: Table): number {
   let max = (col.title ?? col.key).length;
-  const n = Math.min(table.rows.length, WIDTH_SAMPLE);
-  for (let i = 0; i < n; i++) {
-    max = Math.max(max, displayLength(table.rows[i]![col.key] ?? null, col.type));
+  const n = Math.min(table.rowCount, WIDTH_SAMPLE);
+  const vec = table.vector(col.key);
+  for (let i = 0; vec && i < n; i++) {
+    max = Math.max(max, displayLength(vec.get(i), col.type));
   }
   return Math.min(MAX_WIDTH, Math.max(MIN_WIDTH, max + 2));
 }

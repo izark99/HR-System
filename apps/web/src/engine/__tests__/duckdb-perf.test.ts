@@ -9,6 +9,7 @@ import { Big } from '../core/decimal';
 import type { ColumnDef, Row, Table } from '../core/types';
 import { nodeDuckDb } from './duckdb-node';
 import { runWith } from './sql-helpers';
+import { asTable } from './helpers';
 
 const ENABLED = process.env.HRFLOW_PERF === '1';
 const N = Number(process.env.HRFLOW_PERF_ROWS ?? 100_000);
@@ -32,20 +33,20 @@ function bigTable(n: number): Table {
     for (let c = 0; c < 12; c++) r[`txt_${c}`] = `Giá trị ${c}-${i % 997}`;
     rows[i] = r;
   }
-  return { columns, rows };
+  return asTable({ columns, rows });
 }
 
 describe.skipIf(!ENABLED)(`DuckDB perf: ${N} rows × 30 columns`, () => {
   it('filter → join → groupBy → output stays within budget', { timeout: 900_000 }, async () => {
     await nodeDuckDb(); // not part of the budget (first load)
     const left = bigTable(N);
-    const right: Table = {
+    const right: Table = asTable({
       columns: [
         { key: 'ma_nv', type: 'string' },
         { key: 'he_so', type: 'decimal' },
       ],
       rows: left.rows.map((r, i) => ({ ma_nv: r.ma_nv ?? null, he_so: new Big(1 + (i % 5) / 10) })),
-    };
+    });
     const t0 = performance.now();
     const result = await runWith(
       { left, right },

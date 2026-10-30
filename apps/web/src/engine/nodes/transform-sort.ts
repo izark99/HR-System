@@ -1,7 +1,7 @@
 import { SortConfigSchema, type SortConfig } from '@hrflow/flow-schema';
-import { decimalFrom, isDecimal, type Decimal } from '../core/decimal';
 import type { NodePlugin } from '../core/plugin';
-import type { ColumnDef, Row, Table, Value } from '../core/types';
+import { DecimalVector } from '../core/table';
+import type { ColumnDef, Table } from '../core/types';
 import { isSqlRel, ORD, q, qName } from '../duckdb/sql';
 import { findColumn, IN_PORT, OUT_PORT } from './shared';
 
@@ -18,8 +18,43 @@ function sortColumns(config: SortConfig, input: readonly ColumnDef[]): ColumnDef
   );
 }
 
-function blankValue(v: Value | undefined, type: ColumnDef['type']): boolean {
-  return v === null || v === undefined || (type === 'string' && String(v).trim() === '');
+/**
+ * Per-row sort keys of one column: a rank (strings, in collator order), a number, or the text
+ * (date/datetime ISO text sorts as text); `null` = blank.
+ */
+function sortKeys(table: Table, col: ColumnDef): (number | string | null)[] {
+  const vec = table.vector(col.key)!;
+  const n = table.rowCount;
+  const out = new Array<number | string | null>(n);
+  if (col.type === 'string') {
+    const texts = new Array<string | null>(n);
+    const distinct = new Set<string>();
+    for (let i = 0; i < n; i++) {
+      const v = vec.get(i) as string | null;
+      const blank = v === null || v.trim() === '';
+      texts[i] = blank ? null : v;
+      if (!blank) distinct.add(v);
+    }
+    const sorted = [...distinct].sort(VI_COLLATOR.compare);
+    const rank = new Map<string, number>();
+    let current = 0;
+    sorted.forEach((s, i) => {
+      if (i > 0 && VI_COLLATOR.compare(sorted[i - 1]!, s) !== 0) current++;
+      rank.set(s, current);
+    });
+    for (let i = 0; i < n; i++) out[i] = texts[i] === null ? null : rank.get(texts[i]!)!;
+    return out;
+  }
+  for (let i = 0; i < n; i++) {
+    if (vec.isNull(i)) out[i] = null;
+    else if (vec instanceof DecimalVector)
+      out[i] = 0; // compared exactly through the vector
+    else {
+      const v = vec.get(i);
+      out[i] = typeof v === 'boolean' ? (v ? 1 : 0) : v;
+    }
+  }
+  return out;
 }
 
 /**
@@ -28,37 +63,12 @@ function blankValue(v: Value | undefined, type: ColumnDef['type']): boolean {
  */
 export function sortTable(config: SortConfig, table: Table): Table {
   const cols = sortColumns(config, table.columns);
-  const rows = table.rows;
-  const keys = cols.map((col): ((r: Row) => number | string | null) => {
-    if (col.type === 'string') {
-      const distinct = new Set<string>();
-      for (const r of rows) {
-        const v = r[col.key];
-        if (!blankValue(v, 'string')) distinct.add(String(v));
-      }
-      const sorted = [...distinct].sort(VI_COLLATOR.compare);
-      const rank = new Map<string, number>();
-      let current = 0;
-      sorted.forEach((s, i) => {
-        if (i > 0 && VI_COLLATOR.compare(sorted[i - 1]!, s) !== 0) current++;
-        rank.set(s, current);
-      });
-      return (r) => {
-        const v = r[col.key];
-        return blankValue(v, 'string') ? null : rank.get(String(v))!;
-      };
-    }
-    return (r) => {
-      const v = r[col.key];
-      if (blankValue(v, col.type)) return null;
-      if (isDecimal(v)) return v.toNumber();
-      if (typeof v === 'boolean') return v ? 1 : 0;
-      return v as number | string;
-    };
+  const cache = cols.map((c) => sortKeys(table, c));
+  const decimals = cols.map((c) => {
+    const v = table.vector(c.key);
+    return v instanceof DecimalVector ? v : null;
   });
-  const decimals = cols.map((c) => c.type === 'decimal');
-  const index = rows.map((_, i) => i);
-  const cache = keys.map((k) => rows.map(k));
+  const index = Array.from({ length: table.rowCount }, (_, i) => i);
   index.sort((a, b) => {
     for (let k = 0; k < cols.length; k++) {
       const spec = config.by[k]!;
@@ -69,20 +79,14 @@ export function sortTable(config: SortConfig, table: Table): Table {
         const blankFirst = spec.blanks === 'first';
         return (va === null) === blankFirst ? -1 : 1;
       }
-      let cmp: number;
-      if (decimals[k]) {
-        // Exact decimal comparison (the cached number only marks blanks).
-        const da = rows[a]![cols[k]!.key] as Decimal | number | string;
-        const db = rows[b]![cols[k]!.key] as Decimal | number | string;
-        cmp = decimalFrom(da).cmp(decimalFrom(db));
-      } else cmp = va < vb ? -1 : va > vb ? 1 : 0;
+      const dec = decimals[k];
+      // Exact decimal comparison (the cached key only marks blanks).
+      const cmp = dec ? dec.compare(a, b) : va < vb ? -1 : va > vb ? 1 : 0;
       if (cmp !== 0) return spec.direction === 'desc' ? -cmp : cmp;
     }
     return a - b;
   });
-  const out = new Array<Row>(index.length);
-  for (let i = 0; i < index.length; i++) out[i] = rows[index[i]!]!;
-  return { columns: table.columns, rows: out };
+  return table.take(index);
 }
 
 /** `transform.sort` (spec §12.1.3). */

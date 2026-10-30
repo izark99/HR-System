@@ -1,8 +1,9 @@
 import BigJs from 'big.js';
 import { GroupByConfigSchema, type GroupByConfig } from '@hrflow/flow-schema';
-import { Big, decimalFrom, type Decimal } from '../core/decimal';
+import { decimalFrom, type Decimal } from '../core/decimal';
 import type { NodePlugin } from '../core/plugin';
-import type { ColumnDef, Row } from '../core/types';
+import { DecimalBuilder } from '../core/table';
+import { Table, type ColumnDef } from '../core/types';
 import { isBlank, ORD, q, qName } from '../duckdb/sql';
 import { configError, findColumn, IN_PORT, OUT_PORT, passColumn } from './shared';
 
@@ -128,22 +129,23 @@ export const transformGroupByPlugin: NodePlugin<GroupByConfig> = {
 
     // avg = SUM / COUNT from DuckDB, divided exactly with big.js (never through DOUBLE).
     const table = ctx.sql.fetch(rel);
-    for (const row of table.rows) {
-      plan.aggs.forEach((a, i) => {
-        if (a.fn !== 'avg') return;
-        const sum = row[SUM_KEY(i)];
-        const count = row[COUNT_KEY(i)];
-        row[a.key] =
-          typeof count === 'number' && count > 0 && sum !== null && sum !== undefined
-            ? new Big(new AvgBig(decimalFrom(sum as Decimal | number)).div(count).toFixed())
-            : null;
-        delete row[SUM_KEY(i)];
-        delete row[COUNT_KEY(i)];
-      });
-    }
-    const outRows: Row[] = table.rows;
     // `fetch` turned an integer SUM beyond 2^53 into decimal: keep its column types.
     const columns = table.columns.filter((c) => plan.columns.some((p) => p.key === c.key));
-    return { [OUT_PORT]: { columns, rows: outRows } };
+    const vectors = columns.map((col) => {
+      const i = plan.aggs.findIndex((a) => a.key === col.key);
+      if (i < 0 || plan.aggs[i]!.fn !== 'avg') return table.vector(col.key)!;
+      const sums = table.vector(SUM_KEY(i))!;
+      const counts = table.vector(COUNT_KEY(i))!;
+      const out = new DecimalBuilder(table.rowCount);
+      for (let r = 0; r < table.rowCount; r++) {
+        const sum = sums.get(r);
+        const count = counts.get(r);
+        if (typeof count === 'number' && count > 0 && sum !== null) {
+          out.push(new AvgBig(decimalFrom(sum as Decimal | number)).div(count).toFixed());
+        } else out.pushNull();
+      }
+      return out.finish();
+    });
+    return { [OUT_PORT]: new Table(columns, vectors, table.rowCount) };
   },
 };

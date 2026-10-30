@@ -11,6 +11,7 @@ import { Big } from '../core/decimal';
 import type { ColumnDef, Row, Table } from '../core/types';
 import { SqlScope, float64Vector } from '../duckdb/scope';
 import { nodeDuckDb } from './duckdb-node';
+import { asTable } from './helpers';
 
 const ENABLED = process.env.HRFLOW_PERF === '1';
 const SIZES = (process.env.HRFLOW_PERF_SIZES ?? '100000,250000').split(',').map(Number);
@@ -39,7 +40,7 @@ function bigTable(n: number): Table {
     }
     rows[i] = r;
   }
-  return { columns, rows };
+  return asTable({ columns, rows });
 }
 
 describe.skipIf(!ENABLED)('QA ingestion profile', () => {

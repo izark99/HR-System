@@ -2,14 +2,8 @@ import { CompareConfigSchema, type CompareConfig } from '@hrflow/flow-schema';
 import { Big, decimalFrom, isDecimal, ZERO, type Decimal } from '../core/decimal';
 import { normalizeKeyPart } from '../core/keys';
 import type { NodeOutputs, TsNodePlugin } from '../core/plugin';
-import {
-  EngineError,
-  type ColumnDef,
-  type EngineContext,
-  type Row,
-  type Table,
-  type Value,
-} from '../core/types';
+import { columnBuilder } from '../core/table';
+import { EngineError, Table, type ColumnDef, type EngineContext, type Value } from '../core/types';
 
 /**
  * `control.compare` (spec §24.2): reconcile two tables by key.
@@ -177,16 +171,21 @@ function toDecimal(v: Value): Decimal | null {
   throw new EngineError('compare.error.notNumeric', { side: '', column: String(v) });
 }
 
-function indexByKey(table: Table, keys: string[], side: string): Map<string, Row> {
-  const index = new Map<string, Row>();
-  for (const row of table.rows) {
-    const parts = keys.map((k) => normalizeKeyPart(row[k]));
-    const id = JSON.stringify(parts);
+/** Normalized key of every row → row index (first occurrence; duplicates are an error). */
+function indexByKey(table: Table, keys: string[], side: string): Map<string, number> {
+  const index = new Map<string, number>();
+  const vectors = keys.map((k) => table.vector(k));
+  for (let i = 0; i < table.rowCount; i++) {
+    const values = vectors.map((v) => v?.get(i) ?? null);
+    const id =
+      keys.length === 1
+        ? normalizeKeyPart(values[0])
+        : JSON.stringify(values.map(normalizeKeyPart));
     if (index.has(id)) {
-      const shown = keys.map((k) => normalizeKeyPart(row[k]) && String(row[k]).trim());
+      const shown = values.map((v) => normalizeKeyPart(v) && String(v).trim());
       throw new EngineError('compare.error.duplicateKey', { side, key: shown.join(' | ') });
     }
-    index.set(id, row);
+    index.set(id, i);
   }
   return index;
 }
@@ -205,25 +204,27 @@ export function executeCompare(
   const rightIndex = indexByKey(right, config.keys, sides.right);
 
   const perMetric = plans.map(() => ({ matched: 0, mismatched: 0, totalDiff: ZERO }));
-  const mismatchedRows: Row[] = [];
-  const onlyLeft: Row[] = [];
+  const out = schemas.mismatched.map((c) => columnBuilder(c.type));
+  const slot = new Map(schemas.mismatched.map((c, i) => [c.key, out[i]!]));
+  const onlyLeft: number[] = [];
+  let mismatchedCount = 0;
   let matchedKeys = 0;
   const carry = config.carryColumns.filter((c) => !config.keys.includes(c));
+  const metricVectors = plans.map((m) => [left.vector(m.left)!, right.vector(m.right)!] as const);
 
-  for (const [id, lrow] of leftIndex) {
-    const rrow = rightIndex.get(id);
-    if (!rrow) {
-      onlyLeft.push({ ...lrow });
+  for (const [id, li] of leftIndex) {
+    const ri = rightIndex.get(id);
+    if (ri === undefined) {
+      onlyLeft.push(li);
       continue;
     }
-    const out: Row = {};
-    for (const k of config.keys) out[k] = lrow[k] ?? null;
-    for (const c of carry) out[c] = lrow[c] ?? rrow[c] ?? null;
     const failed: string[] = [];
+    const cells: (Decimal | null)[] = [];
 
     plans.forEach((m, i) => {
-      const srcL = toDecimal(lrow[m.left] ?? null);
-      const srcR = toDecimal(rrow[m.right] ?? null);
+      const [lv, rv] = metricVectors[i]!;
+      const srcL = toDecimal(lv.get(li));
+      const srcR = toDecimal(rv.get(ri));
       let l = srcL;
       let r = srcR;
       if (config.nullAsZero) {
@@ -247,24 +248,28 @@ export function executeCompare(
         perMetric[i]!.matched++;
       }
       // Blank source values stay blank in the output, even when compared as 0.
-      out[m.keyLeft] = srcL;
-      out[m.keyRight] = srcR;
-      out[m.keyDiff] = diff;
+      cells.push(srcL, srcR, diff);
     });
 
-    if (failed.length > 0) {
-      out[MISMATCHED_METRICS_COLUMN] = failed.join(', ');
-      mismatchedRows.push(out);
-    } else {
+    if (failed.length === 0) {
       matchedKeys++;
+      continue;
     }
+    mismatchedCount++;
+    for (const k of config.keys) slot.get(k)!.push(left.value(li, k));
+    for (const c of carry) slot.get(c)!.push(left.value(li, c) ?? right.value(ri, c));
+    plans.forEach((m, i) => {
+      slot.get(m.keyLeft)!.push(cells[3 * i]);
+      slot.get(m.keyRight)!.push(cells[3 * i + 1]);
+      slot.get(m.keyDiff)!.push(cells[3 * i + 2]);
+    });
+    slot.get(MISMATCHED_METRICS_COLUMN)!.push(failed.join(', '));
   }
 
-  const onlyRight = [...rightIndex]
-    .filter(([id]) => !leftIndex.has(id))
-    .map(([, row]) => ({ ...row }));
+  const onlyRight: number[] = [];
+  for (const [id, ri] of rightIndex) if (!leftIndex.has(id)) onlyRight.push(ri);
 
-  const summaryRows: Row[] = plans.map((m, i) => ({
+  const summaryRows: Record<string, Value>[] = plans.map((m, i) => ({
     metric: m.label,
     tolerance: m.tolerance,
     matched: perMetric[i]!.matched,
@@ -277,17 +282,21 @@ export function executeCompare(
     metric: ctx.t('compare.summary.totalRow'),
     tolerance: null,
     matched: matchedKeys,
-    mismatched: mismatchedRows.length,
+    mismatched: mismatchedCount,
     only_left: onlyLeft.length,
     only_right: onlyRight.length,
     total_diff: null,
   });
 
   return {
-    summary: { columns: schemas.summary, rows: summaryRows },
-    mismatched: { columns: schemas.mismatched, rows: mismatchedRows },
-    only_left: { columns: schemas.only_left, rows: onlyLeft },
-    only_right: { columns: schemas.only_right, rows: onlyRight },
+    summary: Table.fromRows(schemas.summary, summaryRows),
+    mismatched: new Table(
+      schemas.mismatched,
+      out.map((b) => b.finish()),
+      mismatchedCount,
+    ),
+    only_left: left.take(onlyLeft),
+    only_right: right.take(onlyRight),
   };
 }
 

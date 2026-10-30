@@ -10,8 +10,8 @@ import type { DuckDbProvider } from './duckdb/base';
 import { normalizeKeyPart } from './core/keys';
 import { isCancelled, planFlow, runFlow, type RunFlowResult } from './core/executor';
 import { createEngineTranslator } from './core/i18n';
-import { EngineError, type Table, type Translate, type Value } from './core/types';
-import { readSlot, type SlotReadResult, type SourceFile } from './io/excel-reader';
+import { EngineError, Table, type Translate, type Value } from './core/types';
+import { readSlot, readSlotAsync, type SlotReadResult, type SourceFile } from './io/excel-reader';
 import { writeWorkbook } from './io/excel-writer';
 import { formatIssue } from './io/validation';
 import { compareDiffColumns, MISMATCHED_METRICS_COLUMN } from './nodes/control-compare';
@@ -160,12 +160,16 @@ export class EngineSession {
       sources.push({ name: f.name, data });
     }
     if (!isLatest()) return null;
+    // .xlsx sheets are inflated in chunks (async); a newer call may have started meanwhile.
+    const result = await readSlotAsync(slot, sources);
+    // The file bytes are not needed any more once read (the worker may hold several large files).
+    sources.length = 0;
+    if (!isLatest()) return null;
     // Synchronous from here on: no newer call can interleave before the commit.
-    const result = readSlot(slot, sources);
     this.clearRun();
     if (files.length > 0) this.slotResults.set(slotKey, result);
     else this.slotResults.delete(slotKey);
-    return { slotKey, report: result.report, rowCount: result.table.rows.length };
+    return { slotKey, report: result.report, rowCount: result.table.rowCount };
   }
 
   async run(
@@ -224,7 +228,7 @@ export class EngineSession {
             name: view.title,
             role: 'table',
             kind: 'preview',
-            rowCount: view.table.rows.length,
+            rowCount: view.table.rowCount,
             totalRows: view.totalRows,
             columns: view.table.columns.map((c) => ({
               key: c.key,
@@ -263,7 +267,7 @@ export class EngineSession {
             name: sheet.name,
             role,
             kind: 'excel',
-            rowCount: table.rows.length,
+            rowCount: table.rowCount,
             columns: table.columns.map((c) => ({
               key: c.key,
               title: c.title ?? c.key,
@@ -310,9 +314,10 @@ export class EngineSession {
   }
 
   private compareKpis(config: CompareConfig, outputs: Record<string, Table>): CompareKpis | null {
-    const rows = outputs.summary?.rows;
-    const total = rows?.[rows.length - 1];
-    if (!rows || !total) return null;
+    const summary = outputs.summary;
+    if (!summary || summary.rowCount === 0) return null;
+    const rows = Array.from({ length: summary.rowCount }, (_, i) => summary.row(i));
+    const total = rows[rows.length - 1]!;
     const num = (v: Value | undefined) => (typeof v === 'number' ? v : 0);
     return {
       matched: num(total.matched),
@@ -344,19 +349,20 @@ export class EngineSession {
     if (filters.length === 0 && !needle && !sort) return null;
     const key = JSON.stringify([filters, needle, sort ? query.sort : null]);
     if (s.filterCache?.key === key) return s.filterCache.indexes;
-    const rows = s.table.rows;
-    const shown = s.info.columns.map((c) => c.key);
+    const table = s.table;
+    const shown = s.info.columns.map((c) => table.vector(c.key));
+    const filterVectors = filters.map((f) => table.vector(f.column));
     let indexes: number[] = [];
-    rows.forEach((row, i) => {
-      const ok = filters.every((f) => {
-        const cell = toCell(row[f.column]);
+    for (let i = 0; i < table.rowCount; i++) {
+      const ok = filters.every((f, k) => {
+        const cell = toCell(filterVectors[k]?.get(i));
         const text = cell === null ? '' : String(cell);
         return f.op === 'eq' ? text === f.value : text.split(LIST_SEPARATOR).includes(f.value);
       });
-      if (!ok) return;
-      if (needle && !shown.some((k) => normalizeKeyPart(row[k]).includes(needle))) return;
+      if (!ok) continue;
+      if (needle && !shown.some((v) => normalizeKeyPart(v?.get(i)).includes(needle))) continue;
       indexes.push(i);
-    });
+    }
     if (sort) indexes = sortIndexes(indexes, s.table, sort, query.sort!.direction);
     s.filterCache = { key, indexes };
     return indexes;
@@ -365,16 +371,17 @@ export class EngineSession {
   getRows(sheetId: string, query: RowQuery): RowPage {
     const s = this.sheet(sheetId);
     const indexes = this.filtered(s, query);
-    const total = indexes ? indexes.length : s.table.rows.length;
+    const total = indexes ? indexes.length : s.table.rowCount;
     const offset = Math.max(0, Math.min(query.offset, total));
     const end = Math.min(total, offset + Math.max(0, query.limit));
-    const keys = s.info.columns.map((c) => c.key);
+    const vectors = s.info.columns.map((c) => s.table.vector(c.key));
+    const metrics = s.table.vector(MISMATCHED_METRICS_COLUMN);
     const rows: CellValue[][] = [];
     const highlights: string[][] = [];
     for (let i = offset; i < end; i++) {
-      const row = s.table.rows[indexes ? indexes[i]! : i]!;
-      rows.push(keys.map((k) => toCell(row[k])));
-      const failed = String(row[MISMATCHED_METRICS_COLUMN] ?? '').split(LIST_SEPARATOR);
+      const r = indexes ? indexes[i]! : i;
+      rows.push(vectors.map((v) => toCell(v?.get(r))));
+      const failed = String(metrics?.get(r) ?? '').split(LIST_SEPARATOR);
       highlights.push(s.diffColumns.filter((d) => failed.includes(d.label)).map((d) => d.key));
     }
     return { total, offset, rows, highlights };
@@ -388,13 +395,14 @@ export class EngineSession {
       const col = s.info.columns.find((c) => c.key === key);
       if (!col) continue;
       const values = new Set<string>();
-      for (const row of s.table.rows) {
-        const v = toCell(row[key]);
+      const vec = s.table.vector(key);
+      for (let i = 0; vec && i < s.table.rowCount; i++) {
+        const v = toCell(vec.get(i));
         if (v !== null && v !== '') values.add(String(v));
         if (values.size > MAX_FILTER_VALUES) break;
       }
       // Only low-cardinality columns (e.g. branch) make useful filters; names do not.
-      if (values.size < 2 || values.size > MAX_FILTER_VALUES || values.size >= s.table.rows.length)
+      if (values.size < 2 || values.size > MAX_FILTER_VALUES || values.size >= s.table.rowCount)
         continue;
       options.push({
         column: key,
@@ -465,7 +473,9 @@ export class EngineSession {
       type: key === 'row' ? ('integer' as const) : ('string' as const),
       title: t(`report.${key}`),
     }));
-    const data = await writeWorkbook([{ name: t('report.sheetName'), table: { columns, rows } }]);
+    const data = await writeWorkbook([
+      { name: t('report.sheetName'), table: Table.fromRows(columns, rows) },
+    ]);
     return { fileName: t('report.fileName'), mimeType: XLSX_MIME, data: data.slice().buffer };
   }
 }
@@ -491,12 +501,13 @@ function sortIndexes(
     const y = String(b);
     return x < y ? -1 : x > y ? 1 : 0;
   };
+  const vec = table.vector(column.key);
   return [...indexes].sort((i, j) => {
-    const a = table.rows[i]![column.key];
-    const b = table.rows[j]![column.key];
+    const a = vec?.get(i) ?? null;
+    const b = vec?.get(j) ?? null;
     const ba = blank(a);
     const bb = blank(b);
     if (ba || bb) return ba === bb ? i - j : ba ? 1 : -1;
-    return sign * cmpValues(a!, b!) || i - j;
+    return sign * cmpValues(a, b) || i - j;
   });
 }
