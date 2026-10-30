@@ -1,5 +1,6 @@
 import * as XLSX from 'xlsx';
 import type { RawValue } from './coerce';
+import { InflateOverflowError, inflateRawBounded } from './inflate';
 
 /**
  * Streaming .xlsx reader (spec §10, §13 memory): reads only the sheet that is needed, inflates it
@@ -178,11 +179,7 @@ function entryData(bytes: Uint8Array, e: ZipEntry): Uint8Array {
   return bytes.subarray(start, start + e.compressedSize);
 }
 
-const CFB = XLSX.CFB as unknown as {
-  utils: { _inflateRaw(data: Uint8Array, size: number): ArrayLike<number> };
-};
-
-/** Whole entry, inflated synchronously (SheetJS's inflater). */
+/** Whole entry, inflated synchronously. */
 function inflateSync(bytes: Uint8Array, e: ZipEntry, budget: InflateBudget): Uint8Array {
   const data = entryData(bytes, e);
   if (e.method === 0) return data;
@@ -190,11 +187,15 @@ function inflateSync(bytes: Uint8Array, e: ZipEntry, budget: InflateBudget): Uin
   checkDeclared(e);
   if (e.size > budget.remaining) throw new XlsxTooLargeError();
   if (e.size === 0) return new Uint8Array(0);
-  // SheetJS writes at most the size given (never grows the buffer); the CRC-32 tells a truncated
-  // (lying) or corrupt entry apart.
+  // Bounded decoder: stops as soon as the entry would produce more than declared (a lie).
   spend(budget, e.size);
-  const raw = CFB.utils._inflateRaw(data, e.size);
-  const out = raw instanceof Uint8Array ? raw : new Uint8Array(raw);
+  let out: Uint8Array;
+  try {
+    out = inflateRawBounded(data, e.size);
+  } catch (err) {
+    if (err instanceof InflateOverflowError) throw new XlsxTooLargeError();
+    throw err;
+  }
   if (crc32(out) !== e.crc) throw new Error('bad zip entry checksum');
   return out;
 }
