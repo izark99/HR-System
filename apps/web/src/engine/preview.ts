@@ -51,12 +51,14 @@ function cell(v: Value | undefined): CellValue {
 }
 
 function head(name: string, table: Table): PreviewTable {
-  const rows = table.rows.slice(0, PREVIEW_ROWS);
+  const n = Math.min(table.rowCount, PREVIEW_ROWS);
+  const rows: CellValue[][] = [];
+  for (let i = 0; i < n; i++) rows.push(table.vectors.map((v) => cell(v.get(i))));
   return {
     name,
     columns: table.columns.map((c) => ({ key: c.key, title: c.title ?? c.key, type: c.type })),
-    rows: rows.map((r) => table.columns.map((c) => cell(r[c.key]))),
-    total: table.rows.length,
+    rows,
+    total: table.rowCount,
   };
 }
 
@@ -114,7 +116,7 @@ export class PreviewSession {
     const slot = InputSlotSchema.safeParse(slotConfig);
     if (!files || !slot.success) return null;
     const r = readSlot(slot.data, files);
-    return { slotKey, report: r.report, rowCount: r.table.rows.length };
+    return { slotKey, report: r.report, rowCount: r.table.rowCount };
   }
 
   clear(): void {
@@ -212,7 +214,7 @@ export class PreviewSession {
         ok: true,
         nodeId,
         ran,
-        tables: [head(cfg.title ?? nodeId, { columns: cols, rows: tbl.rows })],
+        tables: [head(cfg.title ?? nodeId, tbl.select(cols))],
       };
     } catch (err) {
       return { ok: false, error: info(err), ran };
