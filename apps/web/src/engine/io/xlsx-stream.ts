@@ -90,8 +90,9 @@ function zipDirectory(bytes: Uint8Array): Map<string, ZipEntry> | null {
     const commentLen = u16(bytes, p + 32);
     const localHeader = u32(bytes, p + 42);
     if (flags & 0x41) return null; // encrypted
-    if (compressedSize === 0xffffffff || size === 0xffffffff || localHeader === 0xffffffff)
-      return null;
+    // ZIP64 sizes: an entry of 4 GiB or more is past the inflate limit anyway.
+    if (compressedSize === 0xffffffff || size === 0xffffffff) throw new XlsxTooLargeError();
+    if (localHeader === 0xffffffff) return null;
     const name = latin1.decode(bytes.subarray(p + 46, p + 46 + nameLen));
     out.set(name.replace(/^\/+/, '').toLowerCase(), {
       method,
@@ -102,6 +103,34 @@ function zipDirectory(bytes: Uint8Array): Map<string, ZipEntry> | null {
     p += 46 + nameLen + extraLen + commentLen;
   }
   return out;
+}
+
+/**
+ * Zip-bomb guard (HANDOFF §4 #1, AC-B4-90): an entry may inflate to at most `MAX_ENTRY_BYTES`, and
+ * beyond `RATIO_FLOOR_BYTES` to at most `MAX_RATIO` × its compressed size. Checked on the declared
+ * sizes when the package opens and again on the bytes actually produced, stopping the inflate as
+ * soon as a limit is passed (the declared size may lie).
+ */
+export const MAX_ENTRY_BYTES = 1024 * 1024 * 1024;
+export const MAX_RATIO = 200;
+/** Small parts compress very well (repeated XML) and cannot exhaust memory: no ratio check. */
+export const RATIO_FLOOR_BYTES = 16 * 1024 * 1024;
+
+/** The package expands beyond the limits: reported as "File quá lớn để xử lý". */
+export class XlsxTooLargeError extends Error {
+  constructor() {
+    super('xlsx entry too large');
+    this.name = 'XlsxTooLargeError';
+  }
+}
+
+/** Largest output allowed for an entry. */
+function inflateLimit(e: ZipEntry): number {
+  return Math.min(MAX_ENTRY_BYTES, Math.max(RATIO_FLOOR_BYTES, e.compressedSize * MAX_RATIO));
+}
+
+function checkDeclared(e: ZipEntry): void {
+  if (e.method !== 0 && e.size > inflateLimit(e)) throw new XlsxTooLargeError();
 }
 
 function entryData(bytes: Uint8Array, e: ZipEntry): Uint8Array {
@@ -120,7 +149,9 @@ function inflateSync(bytes: Uint8Array, e: ZipEntry): Uint8Array {
   const data = entryData(bytes, e);
   if (e.method === 0) return data;
   if (e.method !== 8) throw new Error('unsupported zip method');
+  checkDeclared(e);
   const out = CFB.utils._inflateRaw(data, e.size);
+  if (out.length > inflateLimit(e)) throw new XlsxTooLargeError();
   return out instanceof Uint8Array ? out : new Uint8Array(out);
 }
 
@@ -136,13 +167,22 @@ async function* inflateChunks(bytes: Uint8Array, e: ZipEntry): AsyncGenerator<Ui
     yield inflateSync(bytes, e);
     return;
   }
+  checkDeclared(e);
   const stream = new Blob([data as Uint8Array<ArrayBuffer>])
     .stream()
     .pipeThrough(new DecompressionStream('deflate-raw'));
   const reader = stream.getReader();
+  const limit = inflateLimit(e);
+  let produced = 0;
   for (;;) {
     const { done, value } = await reader.read();
     if (done) return;
+    produced += value.length;
+    if (produced > limit) {
+      // Stop inflating now: the rest is never produced.
+      void reader.cancel().catch(() => undefined);
+      throw new XlsxTooLargeError();
+    }
     yield value;
   }
 }
@@ -191,28 +231,66 @@ function isNameEnd(c: number): boolean {
  * keeps the rest (an incomplete tag / its following text) for the next chunk.
  */
 class XmlScanner {
-  private carry: Uint8Array | null = null;
+  /**
+   * Bytes not scanned yet (an unfinished construct, or text without `<`), at the start of a buffer
+   * that grows geometrically, so a long run without `<` costs linear time (zip-bomb guard: the
+   * inflate is stopped at its limit, not after a quadratic copy).
+   */
+  private store: Uint8Array | null = null;
+  private carryLen = 0;
+  /** Offset of the last `<` in the carried bytes, -1 when none. */
+  private carryLt = -1;
 
   constructor(private readonly h: XmlHandler) {}
 
   feed(chunk: Uint8Array, final: boolean): void {
     let buf = chunk;
-    if (this.carry) {
-      buf = new Uint8Array(this.carry.length + chunk.length);
-      buf.set(this.carry);
-      buf.set(chunk, this.carry.length);
-      this.carry = null;
+    let base = 0;
+    if (this.carryLen > 0) {
+      const n = this.carryLen + chunk.length;
+      let store = this.store!;
+      if (store.length < n) {
+        const grown = new Uint8Array(Math.max(n, store.length * 2));
+        grown.set(store.subarray(0, this.carryLen));
+        store = grown;
+      }
+      store.set(chunk, this.carryLen);
+      this.store = store;
+      base = this.carryLen;
+      buf = store.subarray(0, n);
     }
+    const carriedLt = this.carryLt;
+    this.carryLen = 0;
+    this.carryLt = -1;
     let end = buf.length;
     if (!final) {
-      end = buf.lastIndexOf(LT);
+      const lt = chunk.lastIndexOf(LT);
+      end = lt >= 0 ? base + lt : carriedLt;
       if (end < 0) {
-        this.carry = buf.slice();
+        this.keep(buf, 0, -1);
         return;
       }
     }
     const done = this.scan(buf, end, final);
-    if (done < buf.length) this.carry = buf.slice(done);
+    // `scan` stops at a `<` (≤ end, the last `<` of buf).
+    if (done < buf.length) this.keep(buf, done, final ? -1 : end - done);
+  }
+
+  /** Carry `buf[from…]` to the next chunk; in place when it already starts the store. */
+  private keep(buf: Uint8Array, from: number, lastLt: number): void {
+    if (
+      from === 0 &&
+      this.store !== null &&
+      buf.buffer === this.store.buffer &&
+      buf.byteOffset === 0
+    ) {
+      this.carryLen = buf.length;
+    } else {
+      const rest = buf.slice(from);
+      this.store = rest;
+      this.carryLen = rest.length;
+    }
+    this.carryLt = lastLt;
   }
 
   /** Returns the index up to which bytes were consumed. */
@@ -454,6 +532,8 @@ export interface XlsxPackage {
 export function openXlsx(bytes: Uint8Array): XlsxPackage | null {
   const zip = zipDirectory(bytes);
   if (!zip) return null;
+  // Refuse up front, so no fallback reader (SheetJS) inflates the entry either.
+  for (const e of zip.values()) checkDeclared(e);
   const part = (path: string) => {
     const e = zip.get(path.toLowerCase());
     return e ? inflateSync(bytes, e) : null;

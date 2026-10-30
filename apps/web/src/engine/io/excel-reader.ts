@@ -15,7 +15,14 @@ import {
   type ValidationIssue,
   type ValidationReport,
 } from './validation';
-import { mergeOrigins, openXlsx, type CellRead, type Grid, type XlsxPackage } from './xlsx-stream';
+import {
+  mergeOrigins,
+  openXlsx,
+  XlsxTooLargeError,
+  type CellRead,
+  type Grid,
+  type XlsxPackage,
+} from './xlsx-stream';
 
 /** File content handed over by the UI. The name stays in the browser (never logged/uploaded). */
 export interface SourceFile {
@@ -169,15 +176,12 @@ function emptyResult(slot: InputSlot, file: SourceFile, sheet?: string): FileRea
   };
 }
 
-function unreadable(slot: InputSlot, file: SourceFile): FileReadResult {
+function unreadable(slot: InputSlot, file: SourceFile, err?: unknown): FileReadResult {
+  const key =
+    err instanceof XlsxTooLargeError ? 'validation.fileTooLarge' : 'validation.fileUnreadable';
   return {
     ...emptyResult(slot, file),
-    issues: [
-      {
-        ...issue('error', 'file', 'validation.fileUnreadable', { file: file.name }),
-        file: file.name,
-      },
-    ],
+    issues: [{ ...issue('error', 'file', key, { file: file.name }), file: file.name }],
   };
 }
 
@@ -195,7 +199,9 @@ function openBook(file: SourceFile): { book: Book; pkg: XlsxPackage | null } {
   let pkg: XlsxPackage | null;
   try {
     pkg = startsWith(bytes, ZIP_SIGNATURE) ? openXlsx(bytes) : null;
-  } catch {
+  } catch (err) {
+    // A zip bomb must not reach SheetJS either.
+    if (err instanceof XlsxTooLargeError) throw err;
     pkg = null;
   }
   if (pkg) {
@@ -230,12 +236,13 @@ export function readSlotFile(slot: InputSlot, file: SourceFile): FileReadResult 
   let opened: ReturnType<typeof openBook>;
   try {
     opened = openBook(file);
-  } catch {
-    return unreadable(slot, file);
+  } catch (err) {
+    return unreadable(slot, file, err);
   }
   try {
     return readBook(slot, file, opened.book);
-  } catch {
+  } catch (err) {
+    if (err instanceof XlsxTooLargeError) return unreadable(slot, file, err);
     if (!opened.pkg || bytesOf(file).length > FALLBACK_MAX_BYTES) return unreadable(slot, file);
   }
   // The streaming reader failed on this package: let SheetJS try.
@@ -250,8 +257,8 @@ async function readSlotFileAsync(slot: InputSlot, file: SourceFile): Promise<Fil
   let opened: ReturnType<typeof openBook>;
   try {
     opened = openBook(file);
-  } catch {
-    return unreadable(slot, file);
+  } catch (err) {
+    return unreadable(slot, file, err);
   }
   const pkg = opened.pkg;
   if (!pkg) return readSlotFile(slot, file);
@@ -270,7 +277,9 @@ async function readSlotFileAsync(slot: InputSlot, file: SourceFile): Promise<Fil
         break;
     }
     return readBook(slot, file, book);
-  } catch {
+  } catch (err) {
+    // Too large: stop here (the synchronous retry would inflate it all again).
+    if (err instanceof XlsxTooLargeError) return unreadable(slot, file, err);
     return readSlotFile(slot, file);
   }
 }

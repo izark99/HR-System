@@ -1,6 +1,7 @@
 {
   "validation": {
     "fileUnreadable": "Không đọc được file {{file}}: định dạng không hợp lệ hoặc file bị hỏng.",
+    "fileTooLarge": "File quá lớn để xử lý: {{file}} (nội dung giải nén vượt giới hạn an toàn). Hãy tách file thành nhiều file nhỏ hơn.",
     "fileTypeNotAccepted": "File {{file}}: định dạng không được hỗ trợ (chỉ nhận {{accept}}).",
     "filesTooFew": "Cần ít nhất {{min}} file, mới có {{count}} file.",
     "filesTooMany": "Tối đa {{max}} file, đang có {{count}} file.",
