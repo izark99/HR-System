@@ -107,6 +107,8 @@ export class FormulaColumnError extends Error {
 }
 
 const IDENTIFIER = /^[a-z_][a-z0-9_]*$/;
+/** Nested projections of one node (operations chained deeper than this → tooComplex). */
+export const MAX_STAGES = 150;
 const D = 'DECIMAL(38,10)';
 const ZERO = `CAST(0 AS ${D})`;
 const ONE = `CAST(1 AS ${D})`;
@@ -163,6 +165,7 @@ class Compiler {
   readonly bindings: Binding[] = [];
   private n = 0;
   private readonly levels = new Map<string, number>();
+  private readonly seen = new Map<string, { ref: string; lvl: number }>();
   /** Set when an IF/IFS/SWITCH/IFERROR mixes result types (warning `mixedTypes`). */
   mixed = false;
 
@@ -170,12 +173,24 @@ class Compiler {
 
   /** Store `sql` in a hidden column computed at level `lvl + 1`. */
   temp(sql: string, lvl: number): { ref: string; lvl: number } {
+    // The same expression is computed once (bound values are never shared: same text, other value).
+    const bound = sql.includes(PARAM_MARK);
+    const known = bound ? undefined : this.seen.get(sql);
+    if (known) return known;
     const name = `hr$f${++this.n}`;
     const stage = lvl + 1;
+    if (stage > MAX_STAGES) throw new FormulaError('formula.error.tooComplex', { max: MAX_STAGES });
     while (this.stages.length <= stage) this.stages.push([]);
     this.stages[stage]!.push(`${sql} AS "${name}"`);
     this.levels.set(`"${name}"`, stage);
-    return { ref: `"${name}"`, lvl: stage };
+    const ref = { ref: `"${name}"`, lvl: stage };
+    if (!bound) this.seen.set(sql, ref);
+    return ref;
+  }
+
+  /** Projection levels used so far. */
+  get depth(): number {
+    return this.stages.length - 1;
   }
 
   /** Deepest hidden column read by `sql` (0 = input columns only). */
@@ -358,6 +373,21 @@ class Compiler {
       v: `CAST(trunc(greatest(least(${n.v}, 1000000000000000), -1000000000000000)) AS BIGINT)`,
       simple: false,
       num: n.num !== undefined ? Math.trunc(n.num) : undefined,
+    };
+  }
+
+  /**
+   * Text length / position / occurrence argument: an integer clamped to ±(2^31 − 1). DuckDB's
+   * left()/substring() raise on lengths above 2^32; any value that large means "beyond the text"
+   * anyway, so the result per row stays the same as Excel's (AC-B4-24: errors never stop a run).
+   */
+  toLen(x: Ex): Ex {
+    const n = this.toNum(x);
+    return {
+      ...n,
+      v: `CAST(trunc(greatest(least(${n.v}, 2147483647), -2147483647)) AS BIGINT)`,
+      simple: false,
+      num: undefined,
     };
   }
 
@@ -764,7 +794,7 @@ class Compiler {
       case 'LEFT':
       case 'RIGHT': {
         const s = this.toStr(c(0));
-        const n = this.share(args[1] ? this.toInt(c(1)) : intConst(1));
+        const n = this.share(args[1] ? this.toLen(c(1)) : intConst(1));
         const fn = node.name === 'LEFT' ? 'left' : 'right';
         return this.ex(
           'string',
@@ -775,8 +805,8 @@ class Compiler {
       }
       case 'MID': {
         const s = this.toStr(c(0));
-        const st = this.share(this.toInt(c(1)));
-        const n = this.share(this.toInt(c(2)));
+        const st = this.share(this.toLen(c(1)));
+        const n = this.share(this.toLen(c(2)));
         const bad = `${st.v} < 1 OR ${n.v} < 0`;
         return this.ex(
           'string',
@@ -831,7 +861,7 @@ class Compiler {
             [s, o, nw],
           );
         }
-        const k = this.share(this.toInt(c(3)));
+        const k = this.share(this.toLen(c(3)));
         return this.ex(
           'string',
           `CASE WHEN ${k.v} < 1 THEN NULL ELSE hrflow_fx_subst(${s.v}, ${o.v}, ${nw.v}, ${k.v}) END`,
@@ -843,7 +873,7 @@ class Compiler {
       case 'SEARCH': {
         const f = this.share(this.toStr(c(0)));
         const w = this.share(this.toStr(c(1)));
-        const st = this.share(args[2] ? this.toInt(c(2)) : intConst(1));
+        const st = this.share(args[2] ? this.toLen(c(2)) : intConst(1));
         const fn = node.name === 'FIND' ? 'hrflow_fx_find' : 'hrflow_fx_search';
         return this.checked(
           'number',
@@ -1159,16 +1189,21 @@ export function compileFormula(
         }),
       );
     }
-    const fin = finalize(comp, ex, type);
     let value: string;
     let err: string | null = null;
-    if (fin.e === null) {
-      value = fin.simple ? fin.v : comp.temp(fin.v, fin.lvl).ref;
-    } else {
-      const e = comp.temp(fin.e, fin.lvl);
-      const v = comp.temp(`CASE WHEN ${e.ref} IS NULL THEN ${fin.v} END`, e.lvl);
-      value = v.ref;
-      err = e.ref;
+    try {
+      const fin = finalize(comp, ex, type);
+      if (fin.e === null) {
+        value = fin.simple ? fin.v : comp.temp(fin.v, fin.lvl).ref;
+      } else {
+        const e = comp.temp(fin.e, fin.lvl);
+        const v = comp.temp(`CASE WHEN ${e.ref} IS NULL THEN ${fin.v} END`, e.lvl);
+        value = v.ref;
+        err = e.ref;
+      }
+    } catch (cause) {
+      if (cause instanceof FormulaError) throw new FormulaColumnError(i, 'formula', cause);
+      throw cause;
     }
     const prev = input.find((c) => c.key === cfg.key);
     const title = cfg.title ?? prev?.title ?? cfg.key;

@@ -397,15 +397,15 @@ describe('QA runtime errors (AC-B4-20, AC-B4-21, AC-B4-24)', () => {
 
 // ---------------------------------------------------------------------------------------------
 
-describe('KNOWN BUG — text length argument above 2^32 raises a DuckDB error', () => {
+describe('text length argument above 2^32 (fixed in R1-fix)', () => {
   // toInt clamps to ±10^15, but DuckDB's left()/substring() refuse a length > 4,294,967,295
   // ("Out of Range Error: Substring length outside of supported range"). One row with a large
   // count stops the whole run with the misleading `duckdb.error.decimalOverflow` (AC-B4-24:
   // errors are per row; macros never raise). RIGHT is not affected.
-  it.fails('LEFT("abc",10^10) → "abc" like Excel (count larger than the text)', async () => {
+  it('LEFT("abc",10^10) → "abc" like Excel (count larger than the text)', async () => {
     expect((await col('=LEFT("abc",10^10)')).values[0]).toBe('abc');
   });
-  it.fails('MID([ma_nv],1,[luong]*1000) → whole text', async () => {
+  it('MID([ma_nv],1,[luong]*1000) → whole text', async () => {
     expect((await col('=MID([ma_nv],1,[luong]*1000)')).values[0]).toBe('NV001');
   });
 });

@@ -181,6 +181,28 @@ describe('design-time errors (AC-B4-02, AC-B4-03)', () => {
   });
 });
 
+describe('too many chained operations (R1-fix #6)', () => {
+  it('a long chain of operations → formula.error.tooComplex at design time', () => {
+    expect(compileError(`=${Array(250).fill('[cong]').join('*')}`).key).toBe(
+      'formula.error.tooComplex',
+    );
+    expect(compileError(`=1${'%'.repeat(400)}`).key).toBe('formula.error.tooComplex');
+  });
+
+  it('a chain just below the limit still runs, quickly', async () => {
+    const t0 = performance.now();
+    const v = await values(`=${Array(60).fill('[cong]').join('*')}`);
+    expect(v[2]).toBe('0');
+    expect(performance.now() - t0).toBeLessThan(15_000);
+    expect((await values(`=1${'+1'.repeat(500)}`))[0]).toBe('501');
+  });
+
+  it('the same subexpression is computed once', () => {
+    const sql = compile('=IF([luong]/[cong]>1,[luong]/[cong],0)').sql('"hr$x"', '"hr$ord"', true);
+    expect(sql.match(/hrflow_fx_qdiv/g)).toHaveLength(1);
+  });
+});
+
 describe('column references (AC-B4-04, AC-B4-05, AC-B4-06)', () => {
   it('[Title] and [key] give the same result; stored form uses the key, shown by title', async () => {
     expect(await values('=[Lương cơ bản]*2')).toEqual(await values('=[luong]*2'));

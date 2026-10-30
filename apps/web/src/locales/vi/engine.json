@@ -242,6 +242,7 @@
       "syntax_name": "Node \"{{node}}\", cột \"{{formulaColumn}}\": tại ký tự {{pos}} có tên không xác định; tên cột phải đặt trong [ ], chuỗi trong dấu \" \".",
       "tooLong": "Node \"{{node}}\", cột \"{{formulaColumn}}\": công thức dài quá {{max}} ký tự.",
       "tooDeep": "Node \"{{node}}\", cột \"{{formulaColumn}}\": công thức lồng quá {{max}} cấp.",
+      "tooComplex": "Node \"{{node}}\", cột \"{{formulaColumn}}\": công thức có quá nhiều phép tính nối tiếp nhau (quá {{max}} tầng). Hãy tách thành nhiều cột công thức.",
       "unknownFunction": "Node \"{{node}}\", cột \"{{formulaColumn}}\": hàm {{fn}} chưa được hỗ trợ. Với phép tính phức tạp hơn, hãy dùng node SQL (code.sql).",
       "unknownFunction_lookup": "Node \"{{node}}\", cột \"{{formulaColumn}}\": hàm {{fn}} chưa được hỗ trợ. Để tra cứu sang bảng khác, hãy dùng node Join (lấy đủ mọi dòng khớp).",
       "unknownFunction_other": "Node \"{{node}}\", cột \"{{formulaColumn}}\": hàm {{fn}} chưa được hỗ trợ. Với phép tính phức tạp hơn, hãy dùng node SQL (code.sql).",
