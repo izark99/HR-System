@@ -22,7 +22,7 @@ Yêu cầu mới mâu thuẫn với MEMORY.md/spec.md → dừng, nêu mâu thu�
 | `workflow.md` | Team agent và quy trình làm 1 tính năng | Luôn luôn |
 | `git.md` | Commit, secrets, tên công ty | Luôn luôn |
 | `engine.md` | Engine, node plugin, worker, decimal | Khi làm trong `apps/web/src/engine/**`, `packages/flow-schema/**` |
-| `frontend.md` | UI, design system, i18n, a11y | Khi làm trong `apps/web/src/**/*.tsx`, `*.css` |
+| `design.md` | UI, design system, i18n, a11y | Khi làm trong `apps/web/src/**/*.tsx`, `*.css` |
 | `testing.md` | Unit, E2E, dữ liệu giả, test nặng | Khi làm với file test, `e2e/**`, `fixtures/**` |
 
 ## Stack

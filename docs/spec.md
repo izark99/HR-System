@@ -988,6 +988,7 @@ Không thuộc Phase 1: `input.refTable`, bảng tham chiếu, template — Phas
 | ~~Q12~~ | Đã chốt 2026-10-27: dùng Monaco, chỉ trong chunk Designer, worker và font self-host, không dùng CDN loader (§5) | — |
 | ~~Q13~~ | Đã chốt 2026-10-27: node `output.preview` có trong bước 3 (§12.1.10) | — |
 | ~~Q14~~ | Đã chốt 2026-10-27: cột thêm của slot `extraColumns: 'keep'` chỉ dùng được trong `code.sql` lúc chạy, Designer cảnh báo (§12.1.9) | — |
+| Q18 | Canvas Designer, ô Monaco và bảng xem trước dày dữ liệu có giữ cỡ chữ nhỏ (14px) thay vì thang chữ lớn §25.1 không? | Mật độ hiển thị Designer, bảng kết quả |
 | ~~Q17~~ | Đã chốt 2026-10-30 13:24: công thức dùng `,` ngăn đối số và `.` thập phân, không nhận `;` (§12.2) | — |
 | ~~Q16~~ | Đã chốt 2026-10-30 13:18: `transform.formula` chỉ nhận công thức Excel (transpile sang SQL), 37 hàm, không có XLOOKUP/VLOOKUP (§9.1, §12.2) | — |
 | ~~Q15~~ | Đã chốt 2026-10-27: CSP giữ `style-src 'self' 'unsafe-inline'` (React Flow, Monaco gán style lúc chạy), script inline vẫn bị chặn; quy tắc `data-privacy.md` sửa cho khớp (§17) | — |
@@ -1100,19 +1101,26 @@ AC-11 … AC-13 được chi tiết hóa ở §26 (AC-B3-33, AC-B3-53, AC-B3-61,
 
 ## 25. Design system (UI)
 
-Toàn bộ UI dùng **một** design language ("bright executive"), áp dụng như nhau cho phần User và Admin. Wireframe tham chiếu: https://claude.ai/artifact/BUfBGjG3F8XyXmctD86QzW (7 màn hình).
+Toàn bộ UI dùng **một** design language ("bright executive" **bản 2**, chốt 2026-10-30 13:26), áp dụng như nhau cho phần User và Admin. Bản 2 giữ nguyên bộ màu và font của bản 1, đổi sang phong cách **phẳng**: bo góc vừa (12px), viền mảnh thay cho shadow, nút 3 cấp, eyebrow chữ in hoa không nền, thang chữ lớn. Wireframe cũ (bản 1, chỉ tham khảo bố cục): https://claude.ai/artifact/BUfBGjG3F8XyXmctD86QzW.
 
 ### 25.1 Typography
 
-| Token | Giá trị |
-|-------|---------|
-| Font | `Be Vietnam Pro` (400–800), fallback `Arial, sans-serif`. Một family duy nhất, hỗ trợ đầy đủ tiếng Việt. **Self-host** trong app (woff2, subset Latin + Vietnamese), không gọi Google Fonts (chốt 2026-10-26) |
-| Page title | 30px / 700 / letter-spacing −0.8px; viết như một câu kết luận ("Kỳ 09/2026 có 9 nhân viên lệch công cần xử lý") |
-| Section title | 18px / 700 |
-| Body | 14–15px / 400 |
-| Label | 13–14px / 600 |
-| Big number (KPI) | 44px / 800 |
-| Eyebrow pill | 12px / 700 / uppercase / letter-spacing 0.06em |
+Font duy nhất `Be Vietnam Pro` (400–700), fallback `Arial, sans-serif`, **self-host** (woff2, subset Latin + Vietnamese), không gọi Google Fonts (chốt 2026-10-26). Tiêu đề dùng weight 600 (không 700/800). Chữ in hoa chỉ dùng cho eyebrow; tiêu đề viết hoa đầu câu.
+
+| Token | Desktop (≥ 768px) | Mobile (< 768px) | Dùng cho |
+|-------|-------------------|------------------|----------|
+| `display-xl` | 56px / 600 / lh 60px | 36px / lh 40px | Số KPI lớn |
+| `display-lg` | 48px / 600 / lh 52px / ls −0.5px | 32px / lh 36px | Tiêu đề trang; viết như một câu kết luận ("Kỳ 09/2026 có 9 nhân viên lệch công cần xử lý") |
+| `title-md` | 24px / 600 / lh 30px / ls −0.6px | 20px / lh 26px | Tiêu đề section, tiêu đề card |
+| `title-sm` | 20px / 600 / lh 26px / ls −0.3px | 18px | Tiêu đề nhỏ trong card, tiêu đề dialog |
+| `body-lg` | 18px / 400 / lh 27px | 16px / lh 24px | Đoạn dẫn, mô tả dưới tiêu đề trang, chữ trong input |
+| `body` | 16px / 400 / lh 24px | 16px | Chữ mặc định, ô dữ liệu trong bảng |
+| `label` | 16px / 600 / lh 24px | 16px | Nhãn form, chữ in đậm trong câu |
+| `caption` | 14px / 400 / lh 21px | 14px | Chú thích, header bảng (600), thông tin phụ |
+| `eyebrow` | 14px / 600 / lh 14px / ls 1px / UPPERCASE | 13px | Eyebrow trên tiêu đề, tiêu đề nhóm trong Select |
+| `button` | 18px / 600 / lh 24px | 16px | Nhãn nút chuẩn |
+| `button-sm` | 14px / 700 / ls 0.15px | 14px | Nút nhỏ (trong bảng, toolbar) |
+| `code` | font mono hệ thống, 14px | 14px | Monaco, ô công thức, SQL |
 
 ### 25.2 Màu
 
@@ -1124,38 +1132,57 @@ Toàn bộ UI dùng **một** design language ("bright executive"), áp dụng n
 | Coral — rủi ro / lỗi | `#F97362` | `#C2410C` | `#FFF1E7` |
 | Amber — cảnh báo | `#FBBF24` | `#B45309` | `#FFF8E1` |
 | Blue — thông tin / Admin | `#3B82F6` | `#1D4ED8` | `#EAF2FF` |
-| Viền input / nút phụ | `#CBD5E1` | — | — |
-| Đường kẻ bảng | `#E2E8F0` | — | — |
+| Viền input | `#475569` (đạt 3:1 cho viền control, WCAG 1.4.11) | — | — |
+| Viền nút outline | `#1F2A44` | — | — |
+| Viền card / đường kẻ bảng | `#E2E8F0` | — | — |
 
 - Chữ trắng chỉ đặt trên `#0F766E`, `#1F2A44` hoặc `#1D4ED8` (đạt WCAG AA). Không đặt chữ trắng trên `#14B8A6`.
-- Trang đăng nhập: nền gradient `linear-gradient(135deg, #E3F8F3, #F4FBFF, #FFF1E7)` + 3 vòng tròn trang trí (teal, coral, blue; opacity 0.35–0.5).
+- Trang đăng nhập: nền phẳng `#F7FAF9`, card đăng nhập có viền (chốt 2026-10-30 13:26; bỏ gradient và vòng tròn trang trí).
 
 ### 25.3 Component
 
+Thang khoảng cách cơ sở 4px: `2 · 4 · 8 · 12 · 16 · 24 · 32 · 48 · 64` px. Bo góc: `6px` (input, chip vuông), `12px` (card, nút, popover, dialog, node), `999px` (pill: status chip, tab, badge). Độ nổi:
+
+| Mức | Cách thể hiện | Dùng cho |
+|-----|---------------|----------|
+| 0 — Phẳng | Không viền, không shadow | Nền trang, band nội dung |
+| 1 — Viền mảnh | Viền 1px `#E2E8F0`, không shadow | Card, bảng, node trên canvas |
+| 2 — Nổi | Viền 1px `#E2E8F0` + shadow `0 8px 28px rgba(31,42,68,0.12)` | Chỉ lớp nổi trên nội dung: popover (Select, picker, menu), dialog, toast |
+
 | Component | Quy cách |
 |-----------|----------|
-| Card | Nền trắng, radius 20px (card lớn 24px), padding 24px, shadow `0 8px 28px rgba(31,42,68,0.08)`, không viền |
-| KPI card | Như card + viền trên 8px theo ý nghĩa (teal khớp, coral lệch, amber cần xem) |
-| Eyebrow pill | Trên mỗi tiêu đề trang; chữ màu trên nền tint; radius 999px |
-| Status chip | 12px / 700, radius 999px, chữ màu trên nền tint |
-| Nút chính | Cao 44px, radius 12px, nền `#0F766E`, chữ trắng 700 |
-| Nút phụ | Cao 44px, radius 12px, nền trắng, viền `#CBD5E1`, chữ `#1F2A44` 600 |
-| Input / select | Cao 42–46px, radius 12px, viền `#CBD5E1` |
-| Tab | Dạng pill; tab đang chọn dùng nền tint + chữ màu đậm |
-| Menu trái | Item cao 44px, radius 12px; item đang chọn nền `#DDF5EF`, chữ `#0F766E` 700 |
-| Callout | Nền tint, radius 14–16px, mở đầu bằng nhãn in đậm (`An toàn dữ liệu:`, `Lưu ý:`, `Hợp lệ:`) |
-| Bảng | Trong card; header `#475569` 600; dòng cần chú ý tô nền tint; ô chênh lệch tô coral tint |
-| Node trên canvas | Card radius 16px; vạch màu trên theo nhóm node (blue đầu vào, teal `#14B8A6` biến đổi, coral kiểm soát, `#475569` code, amber đầu ra); node đang chọn có ring teal; node lỗi viền coral `#F97362` 2px; sticky note nền amber tint `#FFF8E1` |
-| Month/Date picker | Tự làm, không dùng picker mặc định của trình duyệt. Nút trigger giống input, hiển thị "Tháng 10/2026" / `dd/MM/yyyy`; popover card radius 20px; lưới 12 tháng ("Th 1"…"Th 12") hoặc lịch tuần bắt đầu thứ Hai; ô chọn nền `#0F766E` chữ trắng; điều hướng bằng phím mũi tên, PageUp/PageDown đổi năm, Esc đóng (chốt 2026-10-26) |
-| Select (dropdown) | Tự làm, không dùng `<select>` mặc định của trình duyệt ở mọi màn. Trigger giống input (cao 42–46px, radius 12px, viền `#CBD5E1`, mũi tên bên phải); popover card radius 12–20px + shadow nhẹ; hỗ trợ nhóm (tiêu đề nhóm dạng eyebrow, VD "Tài khoản" / "Nhóm"); mục đang chọn nền teal nhạt + dấu check, hover nền `#F1F5F9`; tìm kiếm khi > 8 mục; bàn phím: mũi tên, Enter, Esc, gõ ký tự để nhảy; ARIA listbox/combobox (chốt 2026-10-27) |
-| Vùng kéo thả file | Viền đứt 2px `#99E0D2`, nền `#F3FBF8`, radius 16px |
+| Card | Nền trắng, radius 12px, padding 24px, viền 1px `#E2E8F0`, **không shadow** |
+| Card tối (nhấn mạnh) | Nền `#1F2A44`, chữ trắng, radius 12px, padding 24px; tối đa 1 card tối mỗi màn (VD kết luận chính của màn Kết quả) |
+| KPI card | Như card + vạch trên 4px theo ý nghĩa (teal khớp, coral lệch, amber cần xem); số dùng `display-xl` |
+| Eyebrow | Trên mỗi tiêu đề trang; `eyebrow` (in hoa, giãn chữ 1px), **không nền**; màu chữ theo ý nghĩa (`#0F766E`, `#1D4ED8`, `#C2410C`, `#B45309`) |
+| Status chip | `caption` 600, radius 999px, chữ màu trên nền tint |
+| Nút chính | Cao 48px (nút nhỏ 36px), padding ngang 24px, radius 12px, nền `#0F766E`, chữ trắng `button`; mỗi vùng chỉ 1 nút chính |
+| Nút tối | Như nút chính, nền `#1F2A44`, chữ trắng; cho hành động quan trọng thứ hai |
+| Nút outline | Như nút chính, nền trắng, viền 1px `#1F2A44`, chữ `#1F2A44` |
+| Nút chữ | Không viền, nền trong suốt, chữ `#1F2A44` `button-sm`, padding 8px 16px, radius 12px; hover nền `#F1F5F9` |
+| Nút nguy hiểm | Như nút outline, viền và chữ `#C2410C` |
+| Input / Select trigger / picker trigger | Cao 48px, radius 6px, viền 1px `#475569`, chữ `body-lg`; focus: viền `#0F766E` + ring 3px `#DDF5EF`; lỗi: viền `#C2410C` + thông báo `caption` |
+| Tab | Dạng pill; tab đang chọn nền tint + chữ màu đậm |
+| Menu trái | Item cao 44px, radius 6px; item đang chọn nền `#DDF5EF`, chữ `#0F766E` 600, **vạch trái 3px `#0F766E`** |
+| Thanh trên (top bar) | Nền trắng, viền dưới 1px `#E2E8F0`, padding 12px 24px |
+| Callout | Nền tint, radius 12px, không viền, mở đầu bằng nhãn in đậm (`An toàn dữ liệu:`, `Lưu ý:`, `Hợp lệ:`) |
+| Bảng | Trong card; header nền `#F1F5F9`, chữ `caption` 600 `#475569`; ô `body`, padding 12px 16px; đường kẻ dòng `#E2E8F0`; dòng cần chú ý tô nền tint; ô chênh lệch tô coral tint |
+| Dialog | Độ nổi mức 2, radius 12px, padding 24px; tiêu đề `title-sm`; nút đặt phải, nút chính ngoài cùng |
+| Toast | Độ nổi mức 2, radius 12px, padding 12px 16px, chữ `body` |
+| Node trên canvas | Card radius 12px, viền 1px `#E2E8F0`; vạch màu trên theo nhóm node (blue đầu vào, teal `#14B8A6` biến đổi, coral kiểm soát, `#475569` code, amber đầu ra); node đang chọn có ring teal; node lỗi viền coral `#F97362` 2px; sticky note nền amber tint `#FFF8E1` |
+| Month/Date picker | Tự làm, không dùng picker mặc định của trình duyệt. Trigger giống input, hiển thị "Tháng 10/2026" / `dd/MM/yyyy`; popover radius 12px, độ nổi mức 2; lưới 12 tháng ("Th 1"…"Th 12") hoặc lịch tuần bắt đầu thứ Hai; ô chọn nền `#0F766E` chữ trắng; điều hướng bằng phím mũi tên, PageUp/PageDown đổi năm, Esc đóng (chốt 2026-10-26) |
+| Select (dropdown) | Tự làm, không dùng `<select>` mặc định của trình duyệt ở mọi màn. Trigger giống input; popover radius 12px, độ nổi mức 2; hỗ trợ nhóm (tiêu đề nhóm dạng `eyebrow`, VD "Tài khoản" / "Nhóm"); mục đang chọn nền teal nhạt + dấu check, hover nền `#F1F5F9`; tìm kiếm khi > 8 mục; bàn phím: mũi tên, Enter, Esc, gõ ký tự để nhảy; ARIA listbox/combobox (chốt 2026-10-27) |
+| Vùng kéo thả file | Viền đứt 2px `#99E0D2`, nền `#F3FBF8`, radius 12px |
+| Trang đăng nhập | Nền phẳng `#F7FAF9`; card đăng nhập rộng tối đa 440px, viền 1px `#E2E8F0`, padding 32px |
+
+Breakpoint: mobile < 768px (1 cột, menu trái thu thành nút mở), tablet 768–1023px, desktop ≥ 1024px. Nội dung trang rộng tối đa 1280px, căn giữa.
 
 ### 25.4 Giọng văn UI
 
 - Xưng "bạn", câu ngắn, rõ hành động. Tiêu đề trang nói được kết luận chính.
 - Định dạng số kiểu Việt Nam (`0,5`, `1.234.567`).
 - Không dùng ký hiệu có thể thiếu trong font (≤ ≥ → × −) trong text UI; dùng chữ hoặc `-`.
-- Touch target tối thiểu 44px; tương phản chữ đạt WCAG AA.
+- Touch target tối thiểu 44px (nút chuẩn 48px); tương phản chữ đạt WCAG AA.
 
 ---
 

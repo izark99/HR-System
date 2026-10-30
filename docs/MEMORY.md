@@ -215,6 +215,12 @@
 
 ## Kỹ thuật & tổ chức
 
+2026-10-30 13:26 - Quy tắc frontend đổi tên `.claude/rules/frontend.md` → `.claude/rules/design.md` (UI, design system, i18n, a11y).
+
+2026-10-30 13:26 - Đổi giao diện theo design language bản 2 làm vòng code riêng, ngay sau vòng R1 của `transform.formula`.
+
+2026-10-30 13:26 - UI/UX đồng nhất theo design language "bright executive" bản 2 (phong cách phẳng): giữ nguyên bộ màu (nền #F7FAF9, card trắng; teal = tốt/chính, coral = rủi ro/lỗi, amber = cảnh báo, blue = thông tin) và font Be Vietnam Pro (tiêu đề weight 600); card bo 12px, viền 1px #E2E8F0, không shadow (popover/modal/toast giữ shadow nhẹ); input bo 6px; nút 3 cấp bo 12px cao 48px (chính teal #0F766E, tối #1F2A44, outline viền #1F2A44); eyebrow chữ in hoa giãn chữ, không nền; menu trái mục đang chọn có vạch màu bên trái; thang chữ lớn (body 16–18px, tiêu đề trang 48px); trang đăng nhập nền phẳng + card có viền. Chi tiết token ở docs/spec.md §25.
+
 2026-10-30 12:51 - Đội agent theo mô hình generator–verifier: bỏ `requirements-analyst` (thay bằng skill `clarify` chạy trong session chính); gộp `tester` + `reviewer` thành `verifier` (test + review, chỉ viết file test); giữ `developer` cho vòng code lớn, sửa nhỏ session chính tự làm; giao việc kèm gói bối cảnh ngắn; mỗi lúc chỉ 1 subagent. Ghi trong `.claude/rules/workflow.md`.
 
 ~~2026-10-29 21:18 - Tester và reviewer chạy nối tiếp nhau (không song song) để tiết kiệm hạn mức; ghi trong `.claude/rules/workflow.md`.~~ → thay bởi 2026-10-30 12:51
@@ -237,7 +243,7 @@
 
 2026-10-26 09:24 - Nút chính dùng teal đậm #0F766E (đạt tương phản WCAG AA với chữ trắng); #14B8A6 chỉ dùng cho mảng màu/trang trí.
 
-2026-10-26 09:24 - UI/UX đồng nhất theo design language "bright executive": font Be Vietnam Pro, nền sáng #F7FAF9, card trắng bo 20px + shadow nhẹ, eyebrow pill trên tiêu đề, màu theo ý nghĩa (teal = tốt/chính, coral = rủi ro/lỗi, amber = cảnh báo, blue = thông tin). Chi tiết token ở docs/spec.md §25.
+~~2026-10-26 09:24 - UI/UX đồng nhất theo design language "bright executive": font Be Vietnam Pro, nền sáng #F7FAF9, card trắng bo 20px + shadow nhẹ, eyebrow pill trên tiêu đề, màu theo ý nghĩa (teal = tốt/chính, coral = rủi ro/lỗi, amber = cảnh báo, blue = thông tin). Chi tiết token ở docs/spec.md §25.~~ → thay bởi 2026-10-30 13:26
 
 2026-10-26 08:44 - Tài liệu dự án đặt trong `docs/` (spec.md, MEMORY.md); CLAUDE.md và README.md giữ ở root.
 
