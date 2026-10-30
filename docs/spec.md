@@ -119,7 +119,7 @@ Kiến trúc giữ tính **portable**: frontend là static build; backend chỉ 
 | Data grid preview | TanStack Table + virtualization | Hiển thị hàng trăm nghìn dòng mượt |
 | Chart | Apache ECharts | |
 | Đọc Excel | SheetJS (bản CE từ cdn.sheetjs.com, vendor tại `vendor/`) | Đọc .xlsx, .xls (CSV không nhận, chốt 2026-10-26) |
-| Giải nén .xlsx | `fflate` (MIT) | Giải nén entry theo luồng, dừng sớm khi vượt giới hạn chống zip bomb (chốt 2026-10-30 22:59) |
+| Giải nén .xlsx | `fflate` (MIT) cho đường đồng bộ; `DecompressionStream` của trình duyệt cho đường bất đồng bộ (worker) | Giải nén entry theo luồng, đếm byte, dừng sớm khi vượt giới hạn chống zip bomb (chốt 2026-10-30 23:29) |
 | Ghi Excel | ExcelJS | Giữ style/format khi đổ vào template |
 | Engine SQL | DuckDB-WASM (bundle `eh`, đơn luồng) | Chạy trong engine worker; tự host, tách file `.wasm` thành phần < 25 MiB (§13.1) |
 | Định dạng cột | Apache Arrow JS (Apache-2.0) | Trao đổi bảng giữa engine (TS) và DuckDB |
