@@ -258,7 +258,10 @@ export function crc32(buf: Uint8Array): number {
   return (c ^ -1) >>> 0;
 }
 
-/** Entry inflated in chunks (lower peak memory), stopping at the limits. */
+/**
+ * Entry inflated in chunks (lower peak memory), stopping at the limits: native DecompressionStream
+ * when available, fflate otherwise.
+ */
 async function* inflateChunks(
   bytes: Uint8Array,
   e: ZipEntry,
@@ -276,11 +279,31 @@ async function* inflateChunks(
   // Never more than declared (a lie), the entry limit, or what is left of the file budget.
   const limit = Math.min(inflateLimit(e), e.size, budget.remaining);
   let produced = 0;
-  for (const chunk of inflateIter(data, limit)) {
-    produced += chunk.length;
-    yield chunk;
-    // Let other tasks of the worker run between chunks.
-    await Promise.resolve();
+  if (typeof DecompressionStream === 'undefined') {
+    // No native inflater in this environment: fflate, step by step.
+    for (const chunk of inflateIter(data, limit)) {
+      produced += chunk.length;
+      yield chunk;
+      await Promise.resolve();
+    }
+  } else {
+    // Native inflater (decision 25A: faster on large sheets), counted and stopped at the limit.
+    const stream = new Blob([data as Uint8Array<ArrayBuffer>])
+      .stream()
+      .pipeThrough(new DecompressionStream('deflate-raw'));
+    const reader = stream.getReader();
+    for (;;) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      produced += value.length;
+      inflateStats.produced += value.length;
+      if (produced > limit) {
+        // Stop inflating now: the rest is never produced.
+        void reader.cancel().catch(() => undefined);
+        throw new XlsxTooLargeError();
+      }
+      yield value;
+    }
   }
   if (produced !== e.size) throw new Error('truncated zip entry');
   spend(budget, produced);
