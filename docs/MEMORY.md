@@ -133,6 +133,8 @@
 
 ## Flow & xử lý
 
+2026-10-30 17:24 - `transform.formula` bản đầu hỗ trợ 41 hàm (40 hàm + PARAM; sửa số đếm sai "37", danh sách không đổi): IF, IFS, AND, OR, NOT, SWITCH, IFERROR, ISBLANK, ISNUMBER; ROUND, ROUNDUP, ROUNDDOWN, INT, ABS, MIN, MAX, MOD, SUM; LEFT, RIGHT, MID, LEN, TRIM, UPPER, LOWER, PROPER, CONCAT, TEXTJOIN, SUBSTITUTE, FIND, SEARCH, VALUE; DATE, YEAR, MONTH, DAY, EDATE, EOMONTH, DATEDIF, WEEKDAY; PARAM.
+
 2026-10-30 13:24 - `transform.formula`: dấu phân cách đối số là `,`, dấu thập phân là `.` (như Excel tiếng Anh / cách Excel lưu trong file); không nhận kiểu `;` của Excel vùng Việt Nam.
 
 2026-10-30 13:18 - `transform.formula`: golden test lấy kết quả từ Excel thật: Claude sinh file .xlsx chứa công thức (dữ liệu giả), Harold mở bằng Excel, lưu lại và gửi về làm fixture.
@@ -151,7 +153,7 @@
 
 2026-10-30 13:18 - `transform.formula`: người dùng chỉ viết công thức Excel, hệ thống tự transpile sang SQL DuckDB (không transpile sang Python); node không có chế độ viết SQL/Python (SQL dùng `code.sql`, Python dùng `code.python` ở Phase 2).
 
-2026-10-30 13:18 - `transform.formula` bản đầu hỗ trợ 37 hàm: IF, IFS, AND, OR, NOT, SWITCH, IFERROR, ISBLANK, ISNUMBER; ROUND, ROUNDUP, ROUNDDOWN, INT, ABS, MIN, MAX, MOD, SUM; LEFT, RIGHT, MID, LEN, TRIM, UPPER, LOWER, PROPER, CONCAT, TEXTJOIN, SUBSTITUTE, FIND, SEARCH, VALUE; DATE, YEAR, MONTH, DAY, EDATE, EOMONTH, DATEDIF, WEEKDAY; PARAM.
+~~2026-10-30 13:18 - `transform.formula` bản đầu hỗ trợ 37 hàm: IF, IFS, AND, OR, NOT, SWITCH, IFERROR, ISBLANK, ISNUMBER; ROUND, ROUNDUP, ROUNDDOWN, INT, ABS, MIN, MAX, MOD, SUM; LEFT, RIGHT, MID, LEN, TRIM, UPPER, LOWER, PROPER, CONCAT, TEXTJOIN, SUBSTITUTE, FIND, SEARCH, VALUE; DATE, YEAR, MONTH, DAY, EDATE, EOMONTH, DATEDIF, WEEKDAY; PARAM.~~ → thay bởi 2026-10-30 17:24
 
 2026-10-29 21:18 - Designer: luôn cho lưu draft, kể cả khi chưa có node nào hoặc còn lỗi; lỗi chỉ chặn ở bước Publish.
 

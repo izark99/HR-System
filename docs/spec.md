@@ -262,7 +262,7 @@ Ba ngôn ngữ đều là **công dân hạng nhất**, ở hai mức:
 ### 9.1 Hàm Excel (chốt 2026-10-30 13:18)
 
 - Mục tiêu: người không biết code thêm/sửa cột bằng công thức Excel quen thuộc; hệ thống tự transpile sang **SQL DuckDB** (không sang Python) → chạy vector hóa trên cả triệu dòng. Đặc tả node: §12.2.
-- Danh sách hàm bản đầu (37 hàm):
+- Danh sách hàm bản đầu (41 hàm: 40 hàm + `PARAM`):
   - Logic: `IF, IFS, AND, OR, NOT, SWITCH, IFERROR, ISBLANK, ISNUMBER`
   - Toán: `ROUND, ROUNDUP, ROUNDDOWN, INT, ABS, MIN, MAX, MOD, SUM` (theo dòng)
   - Chuỗi: `LEFT, RIGHT, MID, LEN, TRIM, UPPER, LOWER, PROPER, CONCAT, TEXTJOIN, SUBSTITUTE, FIND, SEARCH, VALUE`
@@ -990,7 +990,7 @@ Không thuộc Phase 1: `input.refTable`, bảng tham chiếu, template — Phas
 | ~~Q14~~ | Đã chốt 2026-10-27: cột thêm của slot `extraColumns: 'keep'` chỉ dùng được trong `code.sql` lúc chạy, Designer cảnh báo (§12.1.9) | — |
 | ~~Q18~~ | Đã chốt 2026-10-30 13:29: canvas Designer, Monaco và bảng xem trước giữ chữ 14px (§25.1) | — |
 | ~~Q17~~ | Đã chốt 2026-10-30 13:24: công thức dùng `,` ngăn đối số và `.` thập phân, không nhận `;` (§12.2) | — |
-| ~~Q16~~ | Đã chốt 2026-10-30 13:18: `transform.formula` chỉ nhận công thức Excel (transpile sang SQL), 37 hàm, không có XLOOKUP/VLOOKUP (§9.1, §12.2) | — |
+| ~~Q16~~ | Đã chốt 2026-10-30 13:18: `transform.formula` chỉ nhận công thức Excel (transpile sang SQL), 41 hàm, không có XLOOKUP/VLOOKUP (§9.1, §12.2) | — |
 | ~~Q15~~ | Đã chốt 2026-10-27: CSP giữ `style-src 'self' 'unsafe-inline'` (React Flow, Monaco gán style lúc chạy), script inline vẫn bị chặn; quy tắc `data-privacy.md` sửa cho khớp (§17) | — |
 
 ---
@@ -1343,7 +1343,7 @@ Breakpoint: mobile < 768px (1 cột, menu trái thu thành nút mở), tablet 76
 
 | # | Given / When / Then |
 |---|---------------------|
-| AC-B4-01 | **Given** công thức chỉ dùng 37 hàm §9.1, **when** lưu, **then** không có lỗi thiết kế; mỗi hàm có ít nhất 1 unit test transpile + chạy trên DuckDB. |
+| AC-B4-01 | **Given** công thức chỉ dùng 41 hàm §9.1, **when** lưu, **then** không có lỗi thiết kế; mỗi hàm có ít nhất 1 unit test transpile + chạy trên DuckDB. |
 | AC-B4-02 | `=XLOOKUP(...)` → `formula.error.unknownFunction` kèm gợi ý dùng node Join; `=FOO(1)` → cùng mã lỗi kèm gợi ý `code.sql`; báo lúc thiết kế, không lỗi lúc chạy. |
 | AC-B4-03 | Sai cú pháp (`=IF([A]>0,1`) → `formula.error.syntax` kèm vị trí ký tự; sai số đối số (`=ROUND(1)`) → `formula.error.argCount`. Thiếu `=` đầu → `formula.error.syntax`. |
 | AC-B4-04 | Gõ `[Lương cơ bản]` (title) và `[luong_co_ban]` (key) cho cùng kết quả; giá trị lưu trong definition là `[luong_co_ban]`; đổi title ở node phía trên → công thức vẫn chạy và hiển thị theo title mới. |
@@ -1377,7 +1377,7 @@ Breakpoint: mobile < 768px (1 cột, menu trái thu thành nút mở), tablet 76
 | AC-B4-40 | Gõ `[` trong ô công thức → danh sách gợi ý gồm cột đầu vào + cột phía trên trong node, hiển thị title, key, kiểu; chọn → chèn `[Title]`. Gõ `RO` → gợi ý `ROUND, ROUNDUP, ROUNDDOWN` kèm tooltip cú pháp tiếng Việt. |
 | AC-B4-41 | Gõ công thức sai → trong ≤ 300 ms sau khi ngừng gõ có gạch đỏ đúng vị trí và thông báo tiếng Việt; sửa đúng → hết lỗi. |
 | AC-B4-42 | Nút "Xem SQL đã sinh" hiện SQL chỉ đọc, tham số hiển thị dạng placeholder (`$1`…), không hiện giá trị. |
-| AC-B4-43 | Bảng "Hàm hỗ trợ" liệt kê đủ 37 hàm theo nhóm, có cú pháp và ví dụ. |
+| AC-B4-43 | Bảng "Hàm hỗ trợ" liệt kê đủ 41 hàm theo nhóm, có cú pháp và ví dụ. |
 | AC-B4-44 | Xem trước node formula bằng file mẫu hiện 200 dòng đầu với cột mới; cảnh báo `rowErrors` hiển thị trên node. |
 | AC-B4-45 | Thêm/xóa/sắp lại cột công thức bằng bàn phím được; mọi control có nhãn a11y; Select kiểu và `onError` dùng Select tự làm (không `<select>`). |
 | AC-B4-46 | Entry chunk (gzip) vẫn trong ngân sách bundle (MEMORY 2026-10-27 07:36); code transpiler dùng chung Designer/worker nhưng Monaco không vào chunk của User. |
