@@ -209,3 +209,41 @@ export const OutputPreviewConfigSchema = z.strictObject({
   maxRows: z.number().int().min(1).max(1_000_000).default(100_000),
 });
 export type OutputPreviewConfig = z.infer<typeof OutputPreviewConfigSchema>;
+
+/** Column types of `transform.formula`; `auto` = inferred from the formula (§12.2). */
+export const FORMULA_TYPES = ['auto', 'string', 'integer', 'decimal', 'boolean', 'date'] as const;
+export type FormulaType = (typeof FORMULA_TYPES)[number];
+
+/** `transform.formula` (§12.2): computed columns from Excel formulas, evaluated top to bottom. */
+export const FormulaConfigSchema = z
+  .strictObject({
+    columns: z
+      .array(
+        z.strictObject({
+          /** New column, or key of an existing column to overwrite. */
+          key: IdentifierSchema,
+          title: z.string().trim().min(1).max(200).optional(),
+          /** Starts with "=" (checked by the transpiler, with the character position). */
+          formula: z.string().max(2000),
+          type: z.enum(FORMULA_TYPES).default('auto'),
+          onError: z.enum(['blank', 'fail']).default('blank'),
+        }),
+      )
+      .min(1)
+      .max(50),
+  })
+  .superRefine((cfg, ctx) => {
+    const seen = new Set<string>();
+    cfg.columns.forEach((c, i) => {
+      if (seen.has(c.key)) {
+        ctx.addIssue({
+          code: 'custom',
+          path: ['columns', i, 'key'],
+          message: `duplicate column "${c.key}"`,
+        });
+      }
+      seen.add(c.key);
+    });
+  });
+export type FormulaConfig = z.infer<typeof FormulaConfigSchema>;
+export type FormulaConfigInput = z.input<typeof FormulaConfigSchema>;

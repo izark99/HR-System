@@ -72,6 +72,14 @@ export const NODE_TYPES: NodeTypeSpec[] = [
     defaults: () => ({ match: 'all', conditions: [], normalizeText: true }),
   },
   {
+    type: 'transform.formula',
+    group: 'transform',
+    idPrefix: 'formula',
+    inputs: () => one('in'),
+    outputs: OUT,
+    defaults: () => ({ columns: [] }),
+  },
+  {
     type: 'transform.sort',
     group: 'transform',
     idPrefix: 'sort',

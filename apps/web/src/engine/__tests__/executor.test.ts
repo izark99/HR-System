@@ -452,7 +452,7 @@ describe('output.excel file name', () => {
     expect(resolveFileName('{missing}', {})).toBe('output.xlsx');
   });
 
-  it('registers the step-1 nodes and the step-3 nodes (spec §12)', () => {
+  it('registers the step-1, step-3 and step-4 nodes (spec §12)', () => {
     expect(Object.keys(nodePlugins).sort()).toEqual([
       'code.sql',
       'control.compare',
@@ -461,6 +461,7 @@ describe('output.excel file name', () => {
       'output.preview',
       'transform.dedupe',
       'transform.filter',
+      'transform.formula',
       'transform.groupBy',
       'transform.join',
       'transform.select',

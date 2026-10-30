@@ -222,5 +222,42 @@
       "dateFormats": "Mục upload \"{{slot}}\": định dạng ngày ở mục {{field}} không hợp lệ.",
       "skipRows": "Mục upload \"{{slot}}\": cấu hình bỏ qua dòng không hợp lệ (cột khóa phải là cột của mục upload)."
     }
+  },
+  "formula": {
+    "error": {
+      "syntax": "Node \"{{node}}\", cột \"{{formulaColumn}}\": công thức sai cú pháp tại ký tự {{pos}}.",
+      "syntax_missingEquals": "Node \"{{node}}\", cột \"{{formulaColumn}}\": công thức phải bắt đầu bằng dấu \"=\".",
+      "syntax_empty": "Node \"{{node}}\", cột \"{{formulaColumn}}\": công thức chưa có nội dung sau dấu \"=\".",
+      "syntax_semicolon": "Node \"{{node}}\", cột \"{{formulaColumn}}\": tại ký tự {{pos}} có dấu \";\". Hãy dùng dấu \",\" để ngăn cách đối số và dấu \".\" cho số thập phân (VD =ROUND([A],2), 1.5).",
+      "syntax_unterminatedString": "Node \"{{node}}\", cột \"{{formulaColumn}}\": chuỗi bắt đầu tại ký tự {{pos}} chưa có dấu \" đóng.",
+      "syntax_unterminatedRef": "Node \"{{node}}\", cột \"{{formulaColumn}}\": tham chiếu cột tại ký tự {{pos}} chưa có dấu \"]\" đóng.",
+      "syntax_emptyRef": "Node \"{{node}}\", cột \"{{formulaColumn}}\": tham chiếu cột tại ký tự {{pos}} đang trống; hãy ghi tên cột trong [ ].",
+      "syntax_missingParen": "Node \"{{node}}\", cột \"{{formulaColumn}}\": thiếu dấu \")\" tại ký tự {{pos}}.",
+      "syntax_unbalanced": "Node \"{{node}}\", cột \"{{formulaColumn}}\": dấu \")\" tại ký tự {{pos}} không có dấu \"(\" tương ứng.",
+      "syntax_unexpected": "Node \"{{node}}\", cột \"{{formulaColumn}}\": công thức sai cú pháp tại ký tự {{pos}}.",
+      "syntax_unexpectedChar": "Node \"{{node}}\", cột \"{{formulaColumn}}\": ký tự không hợp lệ tại vị trí {{pos}}.",
+      "syntax_end": "Node \"{{node}}\", cột \"{{formulaColumn}}\": công thức kết thúc chưa đủ (thiếu giá trị sau toán tử hoặc dấu \",\").",
+      "syntax_cellRef": "Node \"{{node}}\", cột \"{{formulaColumn}}\": tại ký tự {{pos}}: không dùng địa chỉ ô kiểu Excel (A1); hãy tham chiếu cột bằng [Tên cột].",
+      "syntax_name": "Node \"{{node}}\", cột \"{{formulaColumn}}\": tại ký tự {{pos}} có tên không xác định; tên cột phải đặt trong [ ], chuỗi trong dấu \" \".",
+      "tooLong": "Node \"{{node}}\", cột \"{{formulaColumn}}\": công thức dài quá {{max}} ký tự.",
+      "tooDeep": "Node \"{{node}}\", cột \"{{formulaColumn}}\": công thức lồng quá {{max}} cấp.",
+      "unknownFunction": "Node \"{{node}}\", cột \"{{formulaColumn}}\": hàm {{fn}} chưa được hỗ trợ. Với phép tính phức tạp hơn, hãy dùng node SQL (code.sql).",
+      "unknownFunction_lookup": "Node \"{{node}}\", cột \"{{formulaColumn}}\": hàm {{fn}} chưa được hỗ trợ. Để tra cứu sang bảng khác, hãy dùng node Join (lấy đủ mọi dòng khớp).",
+      "unknownFunction_other": "Node \"{{node}}\", cột \"{{formulaColumn}}\": hàm {{fn}} chưa được hỗ trợ. Với phép tính phức tạp hơn, hãy dùng node SQL (code.sql).",
+      "argCount": "Node \"{{node}}\", cột \"{{formulaColumn}}\": hàm {{fn}} nhận từ {{min}} đến {{max}} đối số (hoặc sai số lượng đối số).",
+      "unknownColumn": "Node \"{{node}}\", cột \"{{formulaColumn}}\": cột [{{column}}] không có ở bước trước.",
+      "ambiguousTitle": "Node \"{{node}}\", cột \"{{formulaColumn}}\": có nhiều cột cùng tiêu đề \"{{column}}\"; hãy tham chiếu bằng mã cột, VD [ma_cot].",
+      "forwardReference": "Node \"{{node}}\", cột \"{{formulaColumn}}\": cột [{{column}}] được định nghĩa ở dòng phía dưới; chỉ dùng được cột đầu vào và cột phía trên.",
+      "unknownParam": "Node \"{{node}}\", cột \"{{formulaColumn}}\": tham số \"{{param}}\" chưa được khai báo trong flow.",
+      "paramName": "Node \"{{node}}\", cột \"{{formulaColumn}}\": PARAM cần tên tham số trong dấu \" \", VD PARAM(\"ky_luong\").",
+      "typeMismatch": "Node \"{{node}}\", cột \"{{formulaColumn}}\": kết quả công thức là {{inferred}}, không chuyển được sang kiểu {{type}}.",
+      "duplicateKey": "Node \"{{node}}\": có 2 cột công thức cùng mã \"{{key}}\".",
+      "reservedKey": "Node \"{{node}}\": mã cột \"{{key}}\" không được bắt đầu bằng \"_\" (dành cho cột hệ thống).",
+      "rowError": "Node \"{{node}}\", cột \"{{column}}\": dòng {{row}} bị lỗi {{error}} (tổng {{count}} dòng lỗi); lần chạy đã dừng. Hãy kiểm tra dữ liệu nguồn hoặc dùng IFERROR."
+    },
+    "warning": {
+      "mixedTypes": "Cột \"{{column}}\": các nhánh của công thức trả về kiểu khác nhau (số và chữ) nên kết quả là chữ.",
+      "rowErrors": "Node \"{{node}}\", cột \"{{column}}\": {{error}}: {{count}} dòng, các ô này được để trống (các dòng đầu tiên: {{rows}})."
+    }
   }
 }

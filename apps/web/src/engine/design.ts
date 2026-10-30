@@ -508,7 +508,13 @@ export async function checkDesign(
     }
     try {
       for (const w of (await r.plugin.warnings?.(r.config, defs, ctx)) ?? []) {
-        add('warning', w.messageKey, { ...w.params, node: label }, { nodeId: r.node.id });
+        const path = typeof w.params.path === 'string' ? w.params.path : undefined;
+        add(
+          'warning',
+          w.messageKey,
+          { ...w.params, node: label },
+          { nodeId: r.node.id, ...(path !== undefined ? { path } : {}) },
+        );
       }
     } catch {
       // Warnings never block; a failure here was already reported by inferSchema.

@@ -9,6 +9,7 @@ import {
   type SqlParam,
   type SqlTokens,
 } from './base';
+import { FORMULA_MACROS } from '../formula/macros';
 
 /**
  * Thin synchronous wrapper around DuckDB-WASM's *blocking* bindings (spec §13.1). The same class
@@ -45,7 +46,7 @@ export class DuckDb {
       query: { castBigIntToDouble: false, castDecimalToDouble: false },
     });
     this.conn = bindings.connect();
-    for (const sql of MACROS) this.exec(sql);
+    for (const sql of [...MACROS, ...FORMULA_MACROS]) this.exec(sql);
     for (const sql of LOCKDOWN_STATEMENTS) this.exec(sql);
   }
 

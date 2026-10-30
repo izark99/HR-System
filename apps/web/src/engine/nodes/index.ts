@@ -6,6 +6,7 @@ import { outputExcelPlugin } from './output-excel';
 import { outputPreviewPlugin } from './output-preview';
 import { transformDedupePlugin } from './transform-dedupe';
 import { transformFilterPlugin } from './transform-filter';
+import { transformFormulaPlugin } from './transform-formula';
 import { transformGroupByPlugin } from './transform-group-by';
 import { transformJoinPlugin } from './transform-join';
 import { transformSelectPlugin } from './transform-select';
@@ -25,5 +26,6 @@ export const nodePlugins: Record<string, AnyNodePlugin> = {
   [transformUnionPlugin.type]: transformUnionPlugin,
   [transformGroupByPlugin.type]: transformGroupByPlugin,
   [transformDedupePlugin.type]: transformDedupePlugin,
+  [transformFormulaPlugin.type]: transformFormulaPlugin,
   [codeSqlPlugin.type]: codeSqlPlugin,
 };
