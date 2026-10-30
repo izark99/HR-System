@@ -275,11 +275,14 @@ describe('filter literals with SQL-special text', () => {
 
 describe('normalizeKeys: SQL = normalizeKeyPart over every BMP code point and the Latin supplementary planes', () => {
   // Characters that DuckDB 1.32's Unicode tables predate (Unicode 16: U+1C89, U+A7CB, U+A7CC,
-  // U+A7DA, U+A7DC, Garay U+10D50–U+10D65) lower-case differently from V8. None is used in
-  // Vietnamese/Latin business data; the test pins the mismatch set so a new one fails loudly.
+  // U+A7DA, U+A7DC, Garay U+10D50–U+10D65) lower-case differently from V8. Node builds whose ICU
+  // ships Unicode 17 (as on CI) add U+A7CE, U+A7D2, U+A7D4 and Beria Erfe U+16EA0–U+16EDF. None is
+  // used in Vietnamese/Latin business data; the test pins the mismatch set so a new one fails loudly.
   const KNOWN_NEWER_THAN_DUCKDB = (c: number) =>
     // U+0: RE2 in DuckDB stops at an embedded NUL (see KNOWN BUG below); Excel text cannot hold one.
-    [0x0, 0x1c89, 0xa7cb, 0xa7cc, 0xa7da, 0xa7dc].includes(c) || (c >= 0x10d50 && c <= 0x10d65);
+    [0x0, 0x1c89, 0xa7cb, 0xa7cc, 0xa7ce, 0xa7d2, 0xa7d4, 0xa7da, 0xa7dc].includes(c) ||
+    (c >= 0x10d50 && c <= 0x10d65) ||
+    (c >= 0x16ea0 && c <= 0x16edf);
 
   it('no mismatch except the Unicode-16 letters', async () => {
     const db = await nodeDuckDb();
