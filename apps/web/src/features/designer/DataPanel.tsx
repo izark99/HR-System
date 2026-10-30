@@ -48,7 +48,8 @@ export function DataPanel({
   definition: JsonObject;
   node: DNode | null;
   /** Run warnings of the last preview (e.g. formula row errors), shown on the canvas nodes too. */
-  onRunWarnings?: (warnings: RunWarningInfo[]) => void;
+  /** `at` = the definition when the preview was started (to tell stale warnings apart). */
+  onRunWarnings?: (warnings: RunWarningInfo[], at: JsonObject) => void;
 }) {
   const { t } = useTranslation('designer');
   const { t: tc } = useTranslation();
@@ -110,11 +111,12 @@ export function DataPanel({
     setRunning(true);
     setTab(0);
     try {
-      const result = await engine().api.previewRun(definition, node.id, params);
+      const at = definition;
+      const result = await engine().api.previewRun(at, node.id, params);
       setOutcome(result);
-      onRunWarnings?.(result.ok ? result.warnings : []);
+      onRunWarnings?.(result.ok ? result.warnings : [], at);
     } catch {
-      onRunWarnings?.([]);
+      onRunWarnings?.([], definition);
       setOutcome({
         ok: false,
         error: { messageKey: 'executor.error.engineCrashed', params: {} },

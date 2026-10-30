@@ -52,6 +52,7 @@ import {
   type XY,
 } from './model';
 import { DataPanel } from './DataPanel';
+import { upstreamSignature } from './preview-signature';
 import { DRAG_MIME, Palette } from './Palette';
 import { StatusBar } from './StatusBar';
 import { useDesignCheck } from './use-design-check';
@@ -183,28 +184,25 @@ export function DesignerEditor(props: DesignerEditorProps) {
 
   // ---- canvas model ---------------------------------------------------------------------------
 
-  // Run warnings of the last preview (formula row errors, AC-B4-44), shown on their nodes.
-  // Each warning keeps the config of its node at preview time: once the Admin edits that node the
-  // warning is stale and no longer shown.
+  // Run warnings of the last preview (formula row errors, AC-B4-44), shown on their nodes. Each
+  // keeps the signature of its node and everything upstream (configs, edges, slots, params) taken
+  // when the preview was started: once any of it is edited, the warning is stale and hidden.
   const [previewWarnings, setPreviewWarnings] = useState<
-    { warning: RunWarningInfo; config: string }[]
+    { warning: RunWarningInfo; signature: string }[]
   >([]);
   const onRunWarnings = useCallback(
-    (ws: RunWarningInfo[]) =>
+    (ws: RunWarningInfo[], at: JsonObject) =>
       setPreviewWarnings(
-        ws.map((warning) => ({
-          warning,
-          config: JSON.stringify(doc.nodes.find((n) => n.id === warning.nodeId)?.config ?? null),
-        })),
+        ws.map((warning) => ({ warning, signature: upstreamSignature(at, warning.nodeId) })),
       ),
-    [doc.nodes],
+    [],
   );
   const previewByNode = useMemo(() => {
     const m = new Map<string, { texts: { key: string; text: string }[]; rowErrors: number }>();
-    for (const { warning: w, config } of previewWarnings) {
+    for (const { warning: w, signature } of previewWarnings) {
       const e = m.get(w.nodeId) ?? { texts: [], rowErrors: 0 };
       const node = doc.nodes.find((n) => n.id === w.nodeId);
-      if (!node || JSON.stringify(node.config) !== config) continue;
+      if (!node || upstreamSignature(definition, w.nodeId) !== signature) continue;
       e.texts.push({
         key: w.messageKey,
         text: te(w.messageKey, { ...w.params, node: node?.label || w.nodeId }),
@@ -213,7 +211,7 @@ export function DesignerEditor(props: DesignerEditorProps) {
       m.set(w.nodeId, e);
     }
     return m;
-  }, [previewWarnings, doc.nodes, te]);
+  }, [previewWarnings, doc.nodes, definition, te]);
 
   const issuesByNode = useMemo(() => {
     const m = new Map<string, { errors: DesignIssue[]; warnings: DesignIssue[] }>();
