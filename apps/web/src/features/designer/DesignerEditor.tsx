@@ -121,6 +121,18 @@ export interface DesignerEditorProps {
   creatingDraft: boolean;
   /** Latest definition on the canvas (kept by the page for the crash fallback). */
   onDefinition?: (definition: JsonObject) => void;
+  /**
+   * Last saved state when the editor is remounted after a crash ("Thử lại"): `initial` is then the
+   * unsaved canvas, compared with this to know it is dirty.
+   */
+  savedState?: SavedState;
+  /** Called after every successful save (the page keeps it for a remount). */
+  onSaved?: (state: SavedState) => void;
+}
+
+export interface SavedState {
+  json: string;
+  updatedAt: string;
 }
 
 export function DesignerEditor(props: DesignerEditorProps) {
@@ -135,8 +147,13 @@ export function DesignerEditor(props: DesignerEditorProps) {
   const doc = hist.present;
   const definition = useMemo(() => toDefinition(doc), [doc]);
   const json = useMemo(() => JSON.stringify(definition), [definition]);
-  const [savedJson, setSavedJson] = useState(() => JSON.stringify(toDefinition(props.initial)));
-  const [updatedAt, setUpdatedAt] = useState(props.version.updatedAt);
+  const [savedJson, setSavedJson] = useState(
+    () => props.savedState?.json ?? JSON.stringify(toDefinition(props.initial)),
+  );
+  const [updatedAt, setUpdatedAt] = useState(
+    props.savedState?.updatedAt ?? props.version.updatedAt,
+  );
+  const { onSaved } = props;
   const dirty = !ro && json !== savedJson;
   const { onDefinition } = props;
   useEffect(() => {
@@ -412,6 +429,7 @@ export function DesignerEditor(props: DesignerEditorProps) {
       const next = await api.saveDraft(props.version.id, definition as Json, updatedAt);
       setUpdatedAt(next);
       setSavedJson(snapshot);
+      onSaved?.({ json: snapshot, updatedAt: next });
       setToast({ tone: 'teal', text: t('save.done') });
     } catch (err) {
       const key = errorKeyOf(err);
@@ -430,7 +448,19 @@ export function DesignerEditor(props: DesignerEditorProps) {
     } finally {
       setSaving(false);
     }
-  }, [api, definition, json, props.flowCode, props.version.id, ro, saving, t, tc, updatedAt]);
+  }, [
+    api,
+    definition,
+    json,
+    onSaved,
+    props.flowCode,
+    props.version.id,
+    ro,
+    saving,
+    t,
+    tc,
+    updatedAt,
+  ]);
 
   const doUndo = useCallback(() => {
     if (!ro) setHist(undo);

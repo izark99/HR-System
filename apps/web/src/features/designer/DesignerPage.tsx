@@ -2,16 +2,18 @@ import '@xyflow/react/dist/style.css';
 import './designer.css';
 import './i18n';
 import { ReactFlowProvider } from '@xyflow/react';
-import { Link, useNavigate, useParams, useSearch } from '@tanstack/react-router';
+import { Link, useBlocker, useNavigate, useParams, useSearch } from '@tanstack/react-router';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Button, Callout } from '../../components/ui';
 import { saveFile } from '../../lib/download';
 import { errorKeyOf, type AdminErrorKey, type FlowVersions } from '../admin/admin-api';
+import { Dialog } from '../admin/Dialog';
 import { useAdminApi } from '../admin/use-admin';
-import { DesignerEditor } from './DesignerEditor';
+import { DesignerEditor, type SavedState } from './DesignerEditor';
 import { DesignerErrorBoundary } from './ErrorBoundary';
-import { fromDefinition, type JsonObject } from './model';
+import { fromDefinition, toDefinition, type JsonObject } from './model';
+import { useUnsavedChanges } from '../auth/idle/activity';
 
 /**
  * Flow Designer route (spec §15.3; Admin only, lazy chunk with React Flow). Always edits the
@@ -56,10 +58,26 @@ export function DesignerPage() {
   const readOnly = version?.status !== 'draft';
   const initial = useMemo(() => (version ? fromDefinition(version.definition) : null), [version]);
 
-  const reload = useCallback(() => setTick((n) => n + 1), []);
+  // "Thử lại" after a crash remounts the editor from the latest canvas (still unsaved), not from
+  // the server version.
+  const [remount, setRemount] = useState<{
+    versionId: string;
+    doc: ReturnType<typeof fromDefinition>;
+    saved: SavedState;
+  } | null>(null);
   const latest = useRef<JsonObject | null>(null);
+  const saved = useRef<SavedState | null>(null);
+  const reload = useCallback(() => {
+    latest.current = null;
+    saved.current = null;
+    setRemount(null);
+    setTick((n) => n + 1);
+  }, []);
   const keepLatest = useCallback((d: JsonObject) => {
     latest.current = d;
+  }, []);
+  const keepSaved = useCallback((s: SavedState) => {
+    saved.current = s;
   }, []);
   const exportLatest = () => {
     if (!latest.current) return;
@@ -95,6 +113,8 @@ export function DesignerPage() {
       setCreating(false);
     }
   }, [api, draft, flowCode, navigate, reload, tc, version]);
+
+  const restored = remount && remount.versionId === version?.id ? remount : null;
 
   if (error) {
     return (
@@ -149,6 +169,14 @@ export function DesignerPage() {
       <DesignerErrorBoundary
         fallback={(reset) => (
           <div className="flex flex-col gap-3 p-6">
+            <CrashGuard
+              dirty={
+                !readOnly &&
+                latest.current !== null &&
+                JSON.stringify(latest.current) !==
+                  (saved.current?.json ?? JSON.stringify(toDefinition(initial)))
+              }
+            />
             <h1 className="m-0 text-page-title text-ink">{t('crash.title')}</h1>
             <Callout tone="coral" label={t('toast.errorLabel')} role="alert">
               {t('crash.text')}
@@ -157,17 +185,36 @@ export function DesignerPage() {
               <Button variant="primary" onClick={exportLatest}>
                 {t('crash.export')}
               </Button>
-              <Button onClick={reset}>{t('crash.retry')}</Button>
+              <Button
+                onClick={() => {
+                  if (latest.current && !readOnly) {
+                    setRemount({
+                      versionId: version.id,
+                      doc: fromDefinition(latest.current),
+                      saved: saved.current ?? {
+                        json: JSON.stringify(toDefinition(initial)),
+                        updatedAt: version.updatedAt,
+                      },
+                    });
+                  }
+                  reset();
+                }}
+              >
+                {t('crash.retry')}
+              </Button>
             </div>
           </div>
         )}
       >
         <DesignerEditor
+          key={restored ? 'restored' : 'server'}
           onDefinition={keepLatest}
+          onSaved={keepSaved}
+          {...(restored ? { savedState: restored.saved } : {})}
           flowCode={flowCode}
           flowName={data.flow.name}
           version={version}
-          initial={initial}
+          initial={restored?.doc ?? initial}
           readOnly={readOnly}
           onReload={reload}
           onCreateDraft={() => void createDraft()}
@@ -175,5 +222,34 @@ export function DesignerPage() {
         />
       </DesignerErrorBoundary>
     </ReactFlowProvider>
+  );
+}
+
+/**
+ * While the crash fallback is shown, unsaved work still blocks in-app navigation and the tab
+ * close prompt (the editor that normally guards it is unmounted).
+ */
+function CrashGuard({ dirty }: { dirty: boolean }) {
+  const { t } = useTranslation('designer');
+  useUnsavedChanges(dirty);
+  const blocker = useBlocker({
+    shouldBlockFn: () => dirty,
+    enableBeforeUnload: false,
+    withResolver: true,
+  });
+  return (
+    <Dialog
+      open={blocker.status === 'blocked'}
+      onClose={() => blocker.reset?.()}
+      title={t('leave.title')}
+    >
+      <p className="m-0 text-copy text-body">{t('leave.text')}</p>
+      <div className="flex flex-wrap justify-end gap-3">
+        <Button onClick={() => blocker.reset?.()}>{t('leave.stay')}</Button>
+        <Button variant="primary" onClick={() => blocker.proceed?.()}>
+          {t('leave.leave')}
+        </Button>
+      </div>
+    </Dialog>
   );
 }
