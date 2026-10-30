@@ -604,12 +604,12 @@ Mỗi node type được định nghĩa bằng một **plugin** gồm: Zod schem
 **Ngữ nghĩa**
 
 - **Ô trống**: là 0 khi làm toán hạng của toán tử số hoặc đối số số của hàm; là `""` khi nối chuỗi / đối số chuỗi; `ISBLANK` đúng; `[A]=""` và `[A]=0` đều đúng. Kết quả của cả công thức là **một tham chiếu cột trần** (VD `=[A]`, hoặc nhánh `IF` trả về `[A]`) mà ô trống → kết quả trống.
-- **Số**: mọi phép tính trên `DECIMAL(38,10)`, không qua `DOUBLE` (§9.4). Phép chia làm tròn half-up về 10 chữ số thập phân. `ROUND` làm tròn ra xa số 0 (half away from zero) như Excel; `ROUNDUP`/`ROUNDDOWN` ra xa / về phía số 0. `^` với số mũ nguyên tính chính xác; số mũ không nguyên dùng quy tắc 15 chữ số có nghĩa (`decimalFromNumber`). Tràn `DECIMAL(38,10)` → lỗi `#NUM!`.
+- **Số**: mọi phép tính trên `DECIMAL(38,10)`, không qua `DOUBLE` (§9.4). Phép chia làm tròn half-up về 10 chữ số thập phân. `ROUND` làm tròn ra xa số 0 (half away from zero) như Excel; `ROUNDUP`/`ROUNDDOWN` ra xa / về phía số 0. `^` với số mũ là hằng nguyên (|n| ≤ 64) tính chính xác; số mũ không nguyên hoặc lấy từ cột dùng quy tắc 15 chữ số có nghĩa (`decimalFromNumber`) (chốt 2026-10-30 17:32). Tràn `DECIMAL(38,10)` → lỗi `#NUM!`.
 - **So sánh chuỗi** không phân biệt hoa thường (như Excel), không bỏ khoảng trắng. `FIND` phân biệt hoa thường; `SEARCH` không phân biệt, hỗ trợ `*`, `?`, `~`.
-- **Chuyển kiểu ngầm** như Excel: chuỗi đọc được là số thì dùng như số trong phép toán, không đọc được → `#VALUE!`; `TRUE`/`FALSE` = 1/0 trong phép toán.
+- **Chuyển kiểu ngầm** như Excel: chuỗi đọc được là số (chỉ dạng `1.5`, `-2`, `1e3`; không nhận "1,500", "50%", chữ ngày — chốt 2026-10-30 17:32) thì dùng như số trong phép toán và trong `VALUE`, không đọc được → `#VALUE!`; `TRUE`/`FALSE` = 1/0 trong phép toán.
 - **Ngày**: `date ± số` → `date`; `date − date` → số ngày; `DATEDIF` hỗ trợ `"Y","M","D","MD","YM","YD"`; `WEEKDAY` hỗ trợ `return_type` 1, 2, 3. Kết quả ngoài 1900-01-01…9999-12-31 → `#NUM!`.
 - **Hành vi chi tiết từng hàm** theo Excel; golden test với Excel thật là chuẩn đối chiếu khi có khác biệt.
-- **Suy diễn kiểu** (`type: 'auto'`): theo kiểu kết quả của biểu thức; số → `decimal` (Admin đổi được sang `integer`, khi đó giá trị không nguyên → lỗi `#VALUE!`). Các nhánh `IF`/`IFS`/`SWITCH` khác kiểu (số và chữ) → kiểu `string` kèm cảnh báo `formula.warning.mixedTypes`. Admin chọn `type` khác kiểu suy diễn mà không chuyển được → `formula.error.typeMismatch` lúc thiết kế.
+- **Suy diễn kiểu** (`type: 'auto'`): theo kiểu kết quả của biểu thức; số → `decimal` (Admin đổi được sang `integer`, khi đó giá trị không nguyên → lỗi `#VALUE!`). Các nhánh `IF`/`IFS`/`SWITCH` khác kiểu (số và chữ) → kiểu `string` kèm cảnh báo `formula.warning.mixedTypes`. Admin chọn `type` khác kiểu suy diễn mà không chuyển được → `formula.error.typeMismatch` lúc thiết kế: `date`, `boolean` chỉ nhận biểu thức đúng kiểu đó; `decimal`, `integer`, `string` nhận mọi kiểu. Key bắt đầu bằng `_` → `formula.error.reservedKey` (chốt 2026-10-30 17:32).
 - **Lỗi lúc chạy** (`#DIV/0!`, `#VALUE!`, `#NUM!`): `IFERROR` bắt được. Không được bắt:
   - `onError: 'blank'` → ô kết quả trống; cảnh báo `formula.warning.rowErrors` gồm cột, số dòng theo từng loại lỗi, tối đa 5 số dòng (thứ tự dòng đầu vào, đếm từ 1); **không** chứa giá trị ô.
   - `onError: 'fail'` → dừng lần chạy, lỗi `formula.error.rowError` kèm node, cột, loại lỗi, số dòng đầu tiên.
@@ -1378,7 +1378,7 @@ Breakpoint: mobile < 768px (1 cột, menu trái thu thành nút mở), tablet 76
 | AC-B4-41 | Gõ công thức sai → trong ≤ 300 ms sau khi ngừng gõ có gạch đỏ đúng vị trí và thông báo tiếng Việt; sửa đúng → hết lỗi. |
 | AC-B4-42 | Nút "Xem SQL đã sinh" hiện SQL chỉ đọc, tham số hiển thị dạng placeholder (`$1`…), không hiện giá trị. |
 | AC-B4-43 | Bảng "Hàm hỗ trợ" liệt kê đủ 41 hàm theo nhóm, có cú pháp và ví dụ. |
-| AC-B4-44 | Xem trước node formula bằng file mẫu hiện 200 dòng đầu với cột mới; cảnh báo `rowErrors` hiển thị trên node. |
+| AC-B4-44 | Xem trước node formula bằng file mẫu hiện 200 dòng đầu với cột mới; cảnh báo `rowErrors` hiển thị trên node ở canvas và trong panel xem trước. |
 | AC-B4-45 | Thêm/xóa/sắp lại cột công thức bằng bàn phím được; mọi control có nhãn a11y; Select kiểu và `onError` dùng Select tự làm (không `<select>`). |
 | AC-B4-46 | Entry chunk (gzip) vẫn trong ngân sách bundle (MEMORY 2026-10-27 07:36); code transpiler dùng chung Designer/worker nhưng Monaco không vào chunk của User. |
 
@@ -1387,10 +1387,10 @@ Breakpoint: mobile < 768px (1 cột, menu trái thu thành nút mở), tablet 76
 | # | Given / When / Then |
 |---|---------------------|
 | AC-B4-30 | Claude sinh `fixtures/formula-golden/golden.xlsx` (dữ liệu giả; mỗi hàm ≥ 3 case gồm biên: ô trống, số âm, chuỗi có dấu, ngày cuối tháng/năm nhuận, lỗi). Harold mở bằng Excel thật, lưu thành `golden-excel.xlsx`. Test đọc giá trị Excel đã lưu và so với kết quả transpile: khớp tuyệt đối (số so sau làm tròn 15 chữ số có nghĩa như Excel hiển thị); khác biệt có chủ đích (VD decimal chính xác hơn Excel) liệt kê rõ trong file test. |
-| AC-B4-31 | 1 triệu dòng × 30 cột + node formula 10 cột chạy xong không crash trên Chromium (`HRFLOW_PERF=1`). 100k × 30 với 5 cột công thức: thời gian node formula ≤ 2 giây trên máy 4 nhân *(mục tiêu, đo báo cáo nếu không đạt)*. |
+| AC-B4-31 | 1 triệu dòng × 30 cột + node formula 10 cột chạy xong không crash trên Chromium (`HRFLOW_PERF=1`). 100k × 30 với 5 cột công thức: thời gian chạy SQL công thức ≤ 2 giây trên máy 4 nhân, không tính thời gian đẩy dữ liệu vào DuckDB (chốt 2026-10-30 17:32) *(mục tiêu, đo báo cáo nếu không đạt)*. |
 
 ### 27.5 Sửa lỗi tồn (HANDOFF §4 #1)
 
 | # | Given / When / Then |
 |---|---------------------|
-| AC-B4-90 | **Given** file .xlsx có entry giải nén > 1 GB hoặc tỉ lệ nén > 1:200 (zip bomb dữ liệu giả sinh trong test), **when** đọc trong worker, **then** dừng giải nén sớm (không cấp phát hết bộ nhớ), báo lỗi i18n "File quá lớn để xử lý" trên đúng file, không crash worker; file .xlsx bình thường 1 triệu dòng × 30 cột vẫn đọc được. |
+| AC-B4-90 | **Given** file .xlsx có entry giải nén > 2 GiB, hoặc entry giải nén > 16 MiB có tỉ lệ nén > 1:200, hoặc nhiều entry nhỏ cộng dồn vượt giới hạn tổng (zip bomb dữ liệu giả sinh trong test; chốt 2026-10-30 17:32), **when** đọc trong worker, **then** dừng giải nén sớm (không cấp phát hết bộ nhớ), báo lỗi i18n "File quá lớn để xử lý" trên đúng file, không crash worker; file .xlsx bình thường 1 triệu dòng × 30 cột vẫn đọc được. |

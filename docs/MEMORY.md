@@ -9,7 +9,9 @@
 
 ## Phạm vi & sản phẩm
 
-2026-10-30 13:18 - Vòng code đầu của bước 4 gộp thêm HANDOFF §4 mục #1 (giới hạn giải nén .xlsx: ~1 GB/entry, tỉ lệ nén ≤ 1:200, vượt → báo "file quá lớn"); mục #2, #4 giữ nguyên (chấp nhận); mục #3 (nối cạnh bằng bàn phím) và #5 (tối ưu hiệu năng) làm vòng riêng sau `transform.formula`.
+2026-10-30 17:32 - Vòng code đầu của bước 4 gộp thêm HANDOFF §4 mục #1 (giới hạn giải nén .xlsx: 2 GiB/entry; tỉ lệ nén ≤ 1:200 chỉ áp cho entry giải nén > 16 MiB, kèm giới hạn chống cộng dồn nhiều entry nhỏ; vượt → báo "file quá lớn"); mục #2, #4 giữ nguyên (chấp nhận); mục #3 (nối cạnh bằng bàn phím) và #5 (tối ưu hiệu năng, gồm thời gian đẩy dữ liệu vào DuckDB) làm vòng riêng sau `transform.formula`.
+
+~~2026-10-30 13:18 - Vòng code đầu của bước 4 gộp thêm HANDOFF §4 mục #1 (giới hạn giải nén .xlsx: ~1 GB/entry, tỉ lệ nén ≤ 1:200, vượt → báo "file quá lớn"); mục #2, #4 giữ nguyên (chấp nhận); mục #3 (nối cạnh bằng bàn phím) và #5 (tối ưu hiệu năng) làm vòng riêng sau `transform.formula`.~~ → thay bởi 2026-10-30 17:32
 
 2026-10-30 13:18 - `transform.formula` bản đầu không có XLOOKUP/VLOOKUP: tra cứu dùng `transform.join` (lấy đủ mọi dòng khớp). TEXT, NETWORKDAYS, TODAY, IFNA để sau.
 
@@ -132,6 +134,12 @@
 2026-10-26 08:20 - Đăng nhập bằng username + password do Admin cấp; bắt đổi mật khẩu lần đầu; Admin reset mật khẩu; không có 2FA; không public sign-up.
 
 ## Flow & xử lý
+
+2026-10-30 17:32 - `transform.formula`: cảnh báo dòng lỗi (`rowErrors`) hiện cả trên node ở canvas (không chỉ panel xem trước); sửa trong vòng sửa R1.
+
+2026-10-30 17:32 - `transform.formula`: chấp nhận 4 khác biệt: `^` với số mũ lấy từ cột dùng quy tắc 15 chữ số có nghĩa (số mũ là hằng nguyên vẫn chính xác); VALUE chỉ nhận dạng `1.5`/`1e3`, không nhận "1,500", "50%"; key cột bắt đầu bằng `_` bị cấm (`formula.error.reservedKey`); `type` `date`/`boolean` chỉ nhận biểu thức đúng kiểu đó (`decimal`/`integer`/`string` nhận mọi kiểu).
+
+2026-10-30 17:32 - `transform.formula`: mục tiêu hiệu năng AC-B4-31 (≤ 2 giây cho 100k × 30, 5 cột công thức) chỉ tính thời gian chạy SQL công thức, không tính thời gian đẩy dữ liệu vào DuckDB.
 
 2026-10-30 17:24 - `transform.formula` bản đầu hỗ trợ 41 hàm (40 hàm + PARAM; sửa số đếm sai "37", danh sách không đổi): IF, IFS, AND, OR, NOT, SWITCH, IFERROR, ISBLANK, ISNUMBER; ROUND, ROUNDUP, ROUNDDOWN, INT, ABS, MIN, MAX, MOD, SUM; LEFT, RIGHT, MID, LEN, TRIM, UPPER, LOWER, PROPER, CONCAT, TEXTJOIN, SUBSTITUTE, FIND, SEARCH, VALUE; DATE, YEAR, MONTH, DAY, EDATE, EOMONTH, DATEDIF, WEEKDAY; PARAM.
 
