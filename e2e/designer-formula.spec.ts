@@ -211,4 +211,10 @@ test('AC-B4-44/45: preview with row-error warnings; keyboard list editing; custo
   await expect(badge).toHaveText(/\d+ dòng lỗi/);
   await expect(badge).toHaveAttribute('aria-label', /dòng tính lỗi/);
   await expect(page.getByTestId('rf__node-formula_1').locator('.border-amber')).toHaveCount(1);
+  // Editing the node after the preview makes the warning stale: it is no longer shown.
+  const ed = page.getByTestId('formula-editor-0');
+  await ed.locator('.view-lines').click();
+  await page.keyboard.press('End');
+  await page.keyboard.type('+0');
+  await expect(badge).toHaveCount(0);
 });

@@ -184,12 +184,27 @@ export function DesignerEditor(props: DesignerEditorProps) {
   // ---- canvas model ---------------------------------------------------------------------------
 
   // Run warnings of the last preview (formula row errors, AC-B4-44), shown on their nodes.
-  const [previewWarnings, setPreviewWarnings] = useState<RunWarningInfo[]>([]);
+  // Each warning keeps the config of its node at preview time: once the Admin edits that node the
+  // warning is stale and no longer shown.
+  const [previewWarnings, setPreviewWarnings] = useState<
+    { warning: RunWarningInfo; config: string }[]
+  >([]);
+  const onRunWarnings = useCallback(
+    (ws: RunWarningInfo[]) =>
+      setPreviewWarnings(
+        ws.map((warning) => ({
+          warning,
+          config: JSON.stringify(doc.nodes.find((n) => n.id === warning.nodeId)?.config ?? null),
+        })),
+      ),
+    [doc.nodes],
+  );
   const previewByNode = useMemo(() => {
     const m = new Map<string, { texts: { key: string; text: string }[]; rowErrors: number }>();
-    for (const w of previewWarnings) {
+    for (const { warning: w, config } of previewWarnings) {
       const e = m.get(w.nodeId) ?? { texts: [], rowErrors: 0 };
       const node = doc.nodes.find((n) => n.id === w.nodeId);
+      if (!node || JSON.stringify(node.config) !== config) continue;
       e.texts.push({
         key: w.messageKey,
         text: te(w.messageKey, { ...w.params, node: node?.label || w.nodeId }),
@@ -791,7 +806,7 @@ export function DesignerEditor(props: DesignerEditorProps) {
                 doc={doc}
                 definition={definition}
                 node={selectedNode}
-                onRunWarnings={setPreviewWarnings}
+                onRunWarnings={onRunWarnings}
               />
             </div>
           </section>
