@@ -387,6 +387,42 @@
       "portHint": "Dùng tên này trong câu SQL (FROM ten_view); cũng là tên cổng vào của node.",
       "sql": "Câu SQL",
       "editorHint": "Gõ để được gợi ý tên view, cột và tham số ($ma_tham_so). Kết quả nên có ORDER BY để thứ tự dòng ổn định."
+    },
+    "formula": {
+      "columns": "Cột công thức",
+      "add": "Thêm cột công thức",
+      "columnN": "Cột {{n}}",
+      "key": "Mã cột",
+      "keyHint": "Mã cột mới, hoặc mã của cột có sẵn để ghi đè (công thức vẫn đọc được giá trị cũ).",
+      "title": "Tiêu đề",
+      "titleHint": "Để trống: giữ tiêu đề cột bị ghi đè, hoặc dùng mã cột.",
+      "formula": "Công thức",
+      "editorHint": "Bắt đầu bằng \"=\". Gõ [ để chọn cột, gõ tên hàm để được gợi ý. Dấu \",\" ngăn cách đối số, dấu \".\" cho số thập phân.",
+      "type": "Kiểu kết quả",
+      "typeAuto": "Tự động ({{type}})",
+      "typeAutoUnknown": "Tự động",
+      "onError": "Khi một dòng tính lỗi",
+      "onErrorBlank": "Để trống ô và cảnh báo",
+      "onErrorFail": "Dừng lần chạy",
+      "onErrorHint": "Lỗi như #DIV/0!, #VALUE!; dùng IFERROR trong công thức để tự xử lý.",
+      "functionsShow": "Hàm hỗ trợ",
+      "functionsTitle": "Hàm hỗ trợ ({{count}} hàm)",
+      "sqlShow": "Xem SQL đã sinh",
+      "sqlTitle": "SQL đã sinh (chỉ đọc)",
+      "sqlHint": "Hằng số và tham số được truyền riêng dưới dạng giá trị ($1, $2, …), không nằm trong câu SQL.",
+      "sqlError": "Chưa sinh được SQL: cột {{n}} đang có lỗi.",
+      "sqlNoInput": "Chưa sinh được SQL: hãy nối node phía trước và sửa lỗi của nó.",
+      "colFn": "Hàm",
+      "colSyntax": "Cú pháp",
+      "colExample": "Ví dụ",
+      "colDesc": "Mô tả",
+      "groups": {
+        "logic": "Logic",
+        "math": "Toán",
+        "text": "Chuỗi",
+        "date": "Ngày",
+        "param": "Tham số"
+      }
     }
   },
   "params": {
@@ -522,5 +558,214 @@
     "text": "Màn thiết kế gặp lỗi ngoài dự kiến. Thay đổi chưa lưu vẫn còn: hãy xuất JSON để giữ lại, rồi thử mở lại.",
     "export": "Xuất JSON thay đổi của tôi",
     "retry": "Thử lại"
+  },
+  "formula": {
+    "fn": {
+      "IF": {
+        "syntax": "IF(điều_kiện, giá_trị_nếu_đúng, [giá_trị_nếu_sai])",
+        "desc": "Trả về giá trị theo điều kiện đúng/sai.",
+        "example": "=IF([Ngày công]>=26,\"Đủ công\",\"Thiếu\")"
+      },
+      "IFS": {
+        "syntax": "IFS(điều_kiện1, giá_trị1, [điều_kiện2, giá_trị2], …)",
+        "desc": "Trả về giá trị của điều kiện đúng đầu tiên; không điều kiện nào đúng: #N/A.",
+        "example": "=IFS([Điểm]>=8,\"Giỏi\",[Điểm]>=5,\"Khá\",TRUE,\"Yếu\")"
+      },
+      "AND": {
+        "syntax": "AND(điều_kiện1, [điều_kiện2], …)",
+        "desc": "Đúng khi mọi điều kiện đều đúng.",
+        "example": "=AND([Ngày công]>0,[OT]>0)"
+      },
+      "OR": {
+        "syntax": "OR(điều_kiện1, [điều_kiện2], …)",
+        "desc": "Đúng khi có ít nhất một điều kiện đúng.",
+        "example": "=OR([Phép]>0,[Không lương]>0)"
+      },
+      "NOT": {
+        "syntax": "NOT(điều_kiện)",
+        "desc": "Đảo đúng thành sai và ngược lại.",
+        "example": "=NOT(ISBLANK([Mã NV]))"
+      },
+      "SWITCH": {
+        "syntax": "SWITCH(biểu_thức, giá_trị1, kết_quả1, …, [mặc_định])",
+        "desc": "So biểu thức với từng giá trị, trả về kết quả tương ứng; không khớp và không có mặc định: #N/A.",
+        "example": "=SWITCH([Chi nhánh],\"CN01\",\"Hồ Chí Minh\",\"Khác\")"
+      },
+      "IFERROR": {
+        "syntax": "IFERROR(giá_trị, giá_trị_nếu_lỗi)",
+        "desc": "Trả về giá trị thay thế khi biểu thức bị lỗi (#DIV/0!, #VALUE!…).",
+        "example": "=IFERROR([Lương]/[Ngày công],0)"
+      },
+      "ISBLANK": {
+        "syntax": "ISBLANK(giá_trị)",
+        "desc": "Đúng khi ô trống.",
+        "example": "=ISBLANK([Ghi chú])"
+      },
+      "ISNUMBER": {
+        "syntax": "ISNUMBER(giá_trị)",
+        "desc": "Đúng khi giá trị là số (kể cả ngày).",
+        "example": "=ISNUMBER([Lương])"
+      },
+      "ROUND": {
+        "syntax": "ROUND(số, số_chữ_số)",
+        "desc": "Làm tròn như Excel (5 làm tròn ra xa số 0).",
+        "example": "=ROUND([Lương]/26,0)"
+      },
+      "ROUNDUP": {
+        "syntax": "ROUNDUP(số, số_chữ_số)",
+        "desc": "Làm tròn lên (ra xa số 0).",
+        "example": "=ROUNDUP([Giờ OT],1)"
+      },
+      "ROUNDDOWN": {
+        "syntax": "ROUNDDOWN(số, số_chữ_số)",
+        "desc": "Làm tròn xuống (về phía số 0).",
+        "example": "=ROUNDDOWN([Ngày công],0)"
+      },
+      "INT": {
+        "syntax": "INT(số)",
+        "desc": "Phần nguyên (làm tròn xuống số nguyên gần nhất).",
+        "example": "=INT([Giờ OT]/8)"
+      },
+      "ABS": {
+        "syntax": "ABS(số)",
+        "desc": "Giá trị tuyệt đối.",
+        "example": "=ABS([Chênh lệch])"
+      },
+      "MIN": {
+        "syntax": "MIN(số1, [số2], …)",
+        "desc": "Số nhỏ nhất; bỏ qua ô trống.",
+        "example": "=MIN([Ngày công],26)"
+      },
+      "MAX": {
+        "syntax": "MAX(số1, [số2], …)",
+        "desc": "Số lớn nhất; bỏ qua ô trống.",
+        "example": "=MAX([Lương]-[Khấu trừ],0)"
+      },
+      "MOD": {
+        "syntax": "MOD(số, số_chia)",
+        "desc": "Số dư của phép chia (cùng dấu với số chia).",
+        "example": "=MOD([Giờ OT],8)"
+      },
+      "SUM": {
+        "syntax": "SUM(số1, [số2], …)",
+        "desc": "Tổng các giá trị trên cùng dòng.",
+        "example": "=SUM([Lương],[Phụ cấp],[Thưởng])"
+      },
+      "LEFT": {
+        "syntax": "LEFT(chuỗi, [số_ký_tự])",
+        "desc": "Lấy các ký tự bên trái.",
+        "example": "=LEFT([Mã NV],2)"
+      },
+      "RIGHT": {
+        "syntax": "RIGHT(chuỗi, [số_ký_tự])",
+        "desc": "Lấy các ký tự bên phải.",
+        "example": "=RIGHT([Mã NV],3)"
+      },
+      "MID": {
+        "syntax": "MID(chuỗi, vị_trí_bắt_đầu, số_ký_tự)",
+        "desc": "Lấy ký tự ở giữa chuỗi.",
+        "example": "=MID([Mã NV],3,4)"
+      },
+      "LEN": {
+        "syntax": "LEN(chuỗi)",
+        "desc": "Số ký tự của chuỗi.",
+        "example": "=LEN([Mã NV])"
+      },
+      "TRIM": {
+        "syntax": "TRIM(chuỗi)",
+        "desc": "Bỏ khoảng trắng đầu/cuối và khoảng trắng thừa ở giữa.",
+        "example": "=TRIM([Họ tên])"
+      },
+      "UPPER": {
+        "syntax": "UPPER(chuỗi)",
+        "desc": "Chuyển thành chữ in hoa.",
+        "example": "=UPPER([Mã NV])"
+      },
+      "LOWER": {
+        "syntax": "LOWER(chuỗi)",
+        "desc": "Chuyển thành chữ thường.",
+        "example": "=LOWER([Email])"
+      },
+      "PROPER": {
+        "syntax": "PROPER(chuỗi)",
+        "desc": "Viết hoa chữ cái đầu mỗi từ.",
+        "example": "=PROPER([Họ tên])"
+      },
+      "CONCAT": {
+        "syntax": "CONCAT(chuỗi1, [chuỗi2], …)",
+        "desc": "Nối các chuỗi.",
+        "example": "=CONCAT([Họ],\" \",[Tên])"
+      },
+      "TEXTJOIN": {
+        "syntax": "TEXTJOIN(dấu_ngăn, bỏ_ô_trống, chuỗi1, …)",
+        "desc": "Nối các chuỗi bằng dấu ngăn cách, có thể bỏ qua ô trống.",
+        "example": "=TEXTJOIN(\", \",TRUE,[Phòng],[Chi nhánh])"
+      },
+      "SUBSTITUTE": {
+        "syntax": "SUBSTITUTE(chuỗi, chuỗi_cũ, chuỗi_mới, [lần_thứ])",
+        "desc": "Thay chuỗi cũ bằng chuỗi mới (phân biệt hoa thường).",
+        "example": "=SUBSTITUTE([Mã NV],\"-\",\"\")"
+      },
+      "FIND": {
+        "syntax": "FIND(chuỗi_tìm, chuỗi, [vị_trí_bắt_đầu])",
+        "desc": "Vị trí xuất hiện (phân biệt hoa thường); không thấy: #VALUE!.",
+        "example": "=FIND(\"-\",[Mã NV])"
+      },
+      "SEARCH": {
+        "syntax": "SEARCH(chuỗi_tìm, chuỗi, [vị_trí_bắt_đầu])",
+        "desc": "Vị trí xuất hiện (không phân biệt hoa thường, hỗ trợ * và ?); không thấy: #VALUE!.",
+        "example": "=SEARCH(\"trưởng\",[Chức danh])"
+      },
+      "VALUE": {
+        "syntax": "VALUE(chuỗi)",
+        "desc": "Chuyển chuỗi số thành số (dấu \".\" là thập phân).",
+        "example": "=VALUE([Số tiền dạng chữ])"
+      },
+      "DATE": {
+        "syntax": "DATE(năm, tháng, ngày)",
+        "desc": "Tạo ngày; tháng/ngày vượt quá được cộng dồn như Excel.",
+        "example": "=DATE(2026,9,1)"
+      },
+      "YEAR": {
+        "syntax": "YEAR(ngày)",
+        "desc": "Năm của ngày.",
+        "example": "=YEAR([Ngày vào])"
+      },
+      "MONTH": {
+        "syntax": "MONTH(ngày)",
+        "desc": "Tháng của ngày (1–12).",
+        "example": "=MONTH([Ngày vào])"
+      },
+      "DAY": {
+        "syntax": "DAY(ngày)",
+        "desc": "Ngày trong tháng (1–31).",
+        "example": "=DAY([Ngày vào])"
+      },
+      "EDATE": {
+        "syntax": "EDATE(ngày, số_tháng)",
+        "desc": "Cộng/trừ số tháng (giữ cuối tháng nếu cần).",
+        "example": "=EDATE([Ngày vào],2)"
+      },
+      "EOMONTH": {
+        "syntax": "EOMONTH(ngày, số_tháng)",
+        "desc": "Ngày cuối tháng sau khi cộng/trừ số tháng.",
+        "example": "=EOMONTH([Ngày vào],0)"
+      },
+      "DATEDIF": {
+        "syntax": "DATEDIF(ngày_đầu, ngày_cuối, \"Y\"|\"M\"|\"D\"|\"MD\"|\"YM\"|\"YD\")",
+        "desc": "Khoảng cách giữa 2 ngày theo năm, tháng hoặc ngày.",
+        "example": "=DATEDIF([Ngày vào],PARAM(\"ky_luong\"),\"M\")"
+      },
+      "WEEKDAY": {
+        "syntax": "WEEKDAY(ngày, [kiểu])",
+        "desc": "Thứ trong tuần; kiểu 1: CN=1…T7=7, kiểu 2: T2=1…CN=7, kiểu 3: T2=0…CN=6.",
+        "example": "=WEEKDAY([Ngày],2)"
+      },
+      "PARAM": {
+        "syntax": "PARAM(\"mã_tham_số\")",
+        "desc": "Giá trị tham số User nhập khi chạy (tham số kiểu tháng là ngày 1 của tháng).",
+        "example": "=EOMONTH(PARAM(\"ky_luong\"),0)"
+      }
+    }
   }
 }

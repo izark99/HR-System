@@ -17,7 +17,7 @@ import type {
   SlotValidation,
   UploadFile,
 } from './protocol';
-import { ENGINE_CRASHED_KEY } from './protocol';
+import { ENGINE_CRASHED_KEY, type RunWarningInfo } from './protocol';
 
 /**
  * Per-node preview in the Designer (spec §13.3, AC-B3-50..57). Sample files live only in this
@@ -42,7 +42,14 @@ export interface PreviewTable {
 }
 
 export type PreviewOutcome =
-  | { ok: true; nodeId: string; tables: PreviewTable[]; ran: string[] }
+  | {
+      ok: true;
+      nodeId: string;
+      tables: PreviewTable[];
+      ran: string[];
+      /** Run warnings of the previewed nodes (counts and row numbers only, e.g. formula errors). */
+      warnings: RunWarningInfo[];
+    }
   | { ok: false; error: EngineErrorInfo; ran: string[] };
 
 function cell(v: Value | undefined): CellValue {
@@ -172,10 +179,12 @@ export class PreviewSession {
         },
       });
 
+      const warnings: RunWarningInfo[] = result.warnings.map((w) => ({ ...w }));
       if (!isOutput) {
         const outs = result.outputs[nodeId] ?? {};
         return {
           ok: true,
+          warnings,
           nodeId,
           ran,
           tables: Object.entries(outs).map(([port, table]) => head(port, table)),
@@ -197,6 +206,7 @@ export class PreviewSession {
       if (node.type === 'output.excel') {
         return {
           ok: true,
+          warnings,
           nodeId,
           ran,
           tables: (cfg.sheets ?? []).flatMap((s) => {
@@ -206,12 +216,13 @@ export class PreviewSession {
         };
       }
       const tbl = input('in');
-      if (!tbl) return { ok: true, nodeId, ran, tables: [] };
+      if (!tbl) return { ok: true, nodeId, ran, warnings, tables: [] };
       const cols = cfg.columns
         ? cfg.columns.flatMap((k) => tbl.columns.filter((c) => c.key === k))
         : tbl.columns;
       return {
         ok: true,
+        warnings,
         nodeId,
         ran,
         tables: [head(cfg.title ?? nodeId, tbl.select(cols))],

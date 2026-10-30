@@ -173,6 +173,15 @@ export function DataPanel({
           {te(outcome.error.messageKey, outcome.error.params)}
         </Callout>
       )}
+      {outcome?.ok &&
+        outcome.warnings.map((w, i) => (
+          <Callout key={i} tone="amber" label={t('form.noteLabel')}>
+            {te(w.messageKey, {
+              ...w.params,
+              node: nodeLabel(definition, w.nodeId),
+            })}
+          </Callout>
+        ))}
       {outcome?.ok && tables.length === 0 && (
         <p className="m-0 text-small text-muted">{t('data.noTables')}</p>
       )}
@@ -316,4 +325,15 @@ function SampleCard({
       )}
     </div>
   );
+}
+
+/** Label of a node of the canvas definition (falls back to its id). */
+function nodeLabel(definition: JsonObject, id: string): string {
+  const nodes: unknown[] = Array.isArray(definition.nodes) ? definition.nodes : [];
+  for (const n of nodes) {
+    if (typeof n !== 'object' || n === null || Array.isArray(n)) continue;
+    const o = n as Record<string, unknown>;
+    if (o.id === id) return typeof o.label === 'string' && o.label ? o.label : id;
+  }
+  return id;
 }

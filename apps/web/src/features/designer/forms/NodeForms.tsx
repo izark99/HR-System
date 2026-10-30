@@ -6,6 +6,7 @@ import type { ColumnInfo } from '../../../engine/protocol';
 import type { DesignerDoc, DNode, JsonObject } from '../model';
 /** Monaco (and its worker) load only when an SQL form opens (spec §5, AC-B3-49). */
 const SqlEditor = lazy(() => import('../sql/SqlEditor'));
+import { FormulaForm } from '../formula/FormulaForm';
 
 import {
   CheckField,
@@ -1042,6 +1043,7 @@ const FORMS: Record<string, (p: NodeFormProps) => ReactNode> = {
   'output.preview': OutputPreviewForm,
   'transform.select': SelectForm,
   'transform.filter': FilterForm,
+  'transform.formula': FormulaForm,
   'transform.sort': SortForm,
   'transform.join': JoinForm,
   'transform.union': UnionForm,
