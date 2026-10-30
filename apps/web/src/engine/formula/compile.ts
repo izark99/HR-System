@@ -507,10 +507,19 @@ class Compiler {
   div(a: Ex, b: Ex): Ex {
     const x = this.share(this.toNum(a));
     const y = this.share(this.toNum(b));
+    // Fast exact path for |value| < 10^17 (scaled integers computed once, one HUGEINT division);
+    // larger values use the general macro.
+    const scaled = (z: Ex) =>
+      this.temp(
+        `CASE WHEN abs(${z.v}) < 100000000000000000 THEN CAST(${z.v} * 10000000000 AS HUGEINT) END`,
+        z.lvl,
+      );
+    const sx = scaled(x);
+    const sy = scaled(y);
     return this.checked(
       'number',
-      `CASE WHEN ${y.v} = 0 THEN NULL ELSE hrflow_fx_div(${x.v}, ${y.v}) END`,
-      [x, y],
+      `CASE WHEN ${y.v} = 0 THEN NULL WHEN ${sx.ref} IS NOT NULL AND ${sy.ref} IS NOT NULL THEN hrflow_fx_qdiv(${sx.ref}, ${sy.ref}) ELSE hrflow_fx_div(${x.v}, ${y.v}) END`,
+      [x, y, { ...x, lvl: Math.max(sx.lvl, sy.lvl) }],
       '#NUM!',
       [`CASE WHEN ${y.v} = 0 THEN '#DIV/0!' END`],
     );
@@ -706,7 +715,14 @@ class Compiler {
         const x = this.share(this.toNum(c(0)));
         const n = this.share(this.toInt(c(1)));
         const mode = { ROUND: 0, ROUNDUP: 1, ROUNDDOWN: 2 }[node.name];
-        return this.checked('number', `hrflow_fx_round(${x.v}, ${n.v}, ${mode})`, [x, n], '#NUM!');
+        // The scaled value is computed once (a hidden column), not once per use in the macro.
+        const sc = this.temp(`hrflow_fx_s(${x.v})`, x.lvl);
+        return this.checked(
+          'number',
+          `hrflow_fx_round(${x.v}, ${sc.ref}, ${n.v}, ${mode})`,
+          [x, n, { ...x, lvl: sc.lvl }],
+          '#NUM!',
+        );
       }
       case 'INT': {
         const x = this.toNum(c(0));

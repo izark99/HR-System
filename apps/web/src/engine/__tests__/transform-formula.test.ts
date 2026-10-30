@@ -335,6 +335,64 @@ describe('semantics (AC-B4-07 … AC-B4-12)', () => {
   });
 });
 
+describe('exact arithmetic against big.js (fast and wide paths)', () => {
+  it('a/b, a*b and ROUND match big.js rounded half away from zero to 10 places', async () => {
+    let seed = 7;
+    const rnd = () => (seed = (seed * 1103515245 + 12345) & 0x7fffffff) / 0x7fffffff;
+    const num = (digits: number) => {
+      const int =
+        Math.floor(rnd() * 10 ** Math.min(digits, 15)).toString() +
+        (digits > 15 ? '0'.repeat(digits - 15) : '');
+      const frac = Math.floor(rnd() * 1e10)
+        .toString()
+        .padStart(10, '0');
+      return `${rnd() < 0.5 ? '-' : ''}${int}.${frac}`;
+    };
+    const pairs: [string, string][] = [
+      ['1', '3'],
+      ['-2', '3'],
+      ['0.0000000001', '3'],
+      ['99999999999999999', '0.0000000003'],
+      ['123456789012345678.5', '0.5'],
+      ['-123456789012345678901234.5', '7'],
+      ['0.0000000005', '1'],
+      ['5', '-0.0000000002'],
+    ];
+    for (let i = 0; i < 60; i++) pairs.push([num(1 + (i % 20)), num(1 + ((i * 7) % 17))]);
+    const input = table(
+      [
+        ['a', 'decimal'],
+        ['b', 'decimal'],
+      ],
+      pairs.map(([a, b]) => [new Big(a), new Big(b)]),
+    );
+    const r = await run(
+      [
+        { key: 'q', formula: '=[a]/[b]' },
+        { key: 'm', formula: '=[a]*[b]' },
+        { key: 'r', formula: '=ROUND([a],2)' },
+        { key: 'u', formula: '=ROUNDUP([a],-3)' },
+      ],
+      input,
+    );
+    const half = 1; // Big.roundHalfUp: half away from zero
+    r.out.out!.rows.forEach((row, i) => {
+      const [a, b] = pairs[i]!.map((x) => new Big(x)) as [Big, Big];
+      const q = a.div(b);
+      const m = a.times(b).round(10, half);
+      const fits = (x: Big) => x.abs().lt(new Big('1e28'));
+      const at = `${pairs[i]![0]} / ${pairs[i]![1]}`;
+      if (b.abs().lt(new Big('1e18'))) {
+        expect(plain(row.q), at).toBe(fits(q) ? new Big(a).div(b).round(10, half).toFixed() : null);
+      }
+      expect(plain(row.m), at).toBe(fits(m) ? m.toFixed() : null);
+      expect(plain(row.r), at).toBe(a.round(2, half).toFixed());
+      const up = a.div(1000).round(0, 3).times(1000);
+      expect(plain(row.u), at).toBe(fits(up) ? up.toFixed() : null);
+    });
+  });
+});
+
 describe('params and injection (AC-B4-13, AC-B4-14)', () => {
   it('PARAM month → first day of the month; blank → blank; values are bound, not in the SQL', async () => {
     expect((await values('=PARAM("ky_luong")', staff, { ky_luong: '2026-09' }))[0]).toBe(
