@@ -107,7 +107,10 @@ export class FormulaColumnError extends Error {
 }
 
 const IDENTIFIER = /^[a-z_][a-z0-9_]*$/;
-/** Nested projections of one node (operations chained deeper than this → tooComplex). */
+/**
+ * Chained computation steps of one formula column (deeper → tooComplex); the columns of a node
+ * may chain further (a later column builds on an earlier one).
+ */
 export const MAX_STAGES = 150;
 const D = 'DECIMAL(38,10)';
 const ZERO = `CAST(0 AS ${D})`;
@@ -166,6 +169,15 @@ class Compiler {
   private n = 0;
   private readonly levels = new Map<string, number>();
   private readonly seen = new Map<string, { ref: string; lvl: number }>();
+  /** Chain length of each hidden column within its own formula column. */
+  private readonly depthOf = new Map<string, number>();
+  /** Hidden columns numbered above this belong to the formula column being compiled. */
+  private colStart = 0;
+
+  /** Start compiling the next formula column (MAX_STAGES applies per column). */
+  beginColumn(): void {
+    this.colStart = this.n;
+  }
   /** Set when an IF/IFS/SWITCH/IFERROR mixes result types (warning `mixedTypes`). */
   mixed = false;
 
@@ -177,9 +189,15 @@ class Compiler {
     const bound = sql.includes(PARAM_MARK);
     const known = bound ? undefined : this.seen.get(sql);
     if (known) return known;
+    // Chained steps of the column being compiled (hidden columns of earlier columns count 0).
+    let local = 1;
+    for (const m of sql.matchAll(/"hr\$f(\d+)"/g)) {
+      if (Number(m[1]) > this.colStart) local = Math.max(local, (this.depthOf.get(m[0]) ?? 0) + 1);
+    }
+    if (local > MAX_STAGES) throw new FormulaError('formula.error.tooComplex', { max: MAX_STAGES });
     const name = `hr$f${++this.n}`;
+    this.depthOf.set(`"${name}"`, local);
     const stage = lvl + 1;
-    if (stage > MAX_STAGES) throw new FormulaError('formula.error.tooComplex', { max: MAX_STAGES });
     while (this.stages.length <= stage) this.stages.push([]);
     this.stages[stage]!.push(`${sql} AS "${name}"`);
     this.levels.set(`"${name}"`, stage);
@@ -1168,6 +1186,7 @@ export function compileFormula(
       .map((c) => ({ key: c.key, title: c.title ?? c.key }));
     const scope: Scope = { refs, later, get: (key) => visible.get(key)!.ex };
     comp.mixed = false;
+    comp.beginColumn();
     let ex: Ex;
     try {
       ex = comp.compile(parseFormula(cfg.formula), scope);

@@ -197,6 +197,37 @@ describe('too many chained operations (R1-fix #6)', () => {
     expect((await values(`=1${'+1'.repeat(500)}`))[0]).toBe('501');
   });
 
+  it('the limit is per column: 50 chained ROUND/IFERROR columns run (R1-fix2)', async () => {
+    const columns = Array.from({ length: 50 }, (_, i) => {
+      const prev = i === 0 ? 'luong' : `c${i - 1}`;
+      return {
+        key: `c${i}`,
+        formula: i % 2 ? `=IFERROR([${prev}]/[cong],0)+1` : `=ROUND([${prev}]*1.1/[cong],2)`,
+      };
+    });
+    const t0 = performance.now();
+    const r = await run(columns);
+    expect(r.out.out!.rows).toHaveLength(3);
+    expect(performance.now() - t0).toBeLessThan(20_000);
+    // A single column too deep is still refused, on that column.
+    try {
+      compileFormula(
+        [
+          { key: 'ok', formula: '=[cong]*2' },
+          { key: 'deep', formula: `=${Array(250).fill('[ok]').join('*')}` },
+        ],
+        cols(),
+        { params: [] },
+      );
+      throw new Error('no error');
+    } catch (e) {
+      expect((e as { index: number; error: { messageKey: string } }).index).toBe(1);
+      expect((e as { error: { messageKey: string } }).error.messageKey).toBe(
+        'formula.error.tooComplex',
+      );
+    }
+  });
+
   it('the same subexpression is computed once', () => {
     const sql = compile('=IF([luong]/[cong]>1,[luong]/[cong],0)').sql('"hr$x"', '"hr$ord"', true);
     expect(sql.match(/hrflow_fx_qdiv/g)).toHaveLength(1);
