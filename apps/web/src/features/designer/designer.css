@@ -1,0 +1,91 @@
+/*
+ * Designer canvas (spec §25.3 "Node trên canvas"). React Flow's own stylesheet is imported next to
+ * this file; only theme colours from index.css are used here.
+ */
+
+.hr-designer .react-flow {
+  --xy-edge-stroke-default: var(--color-muted);
+  --xy-edge-stroke-selected-default: var(--color-teal-strong);
+  --xy-connectionline-stroke-default: var(--color-teal-strong);
+  --xy-background-pattern-dots-color-default: var(--color-line-input);
+  --xy-node-boxshadow-selected-default: none;
+  --xy-node-border-radius-default: 16px;
+  background: var(--color-page);
+  font-family: var(--font-sans);
+}
+
+/* Cards draw their own border/ring; the wrapper of a custom node stays transparent. */
+.hr-designer .react-flow__node-flow,
+.hr-designer .react-flow__node-note {
+  border-radius: 16px;
+}
+
+.hr-designer .react-flow__node:focus-visible {
+  outline: 3px solid var(--color-blue-text);
+  outline-offset: 4px;
+}
+
+.hr-designer .hr-handle {
+  width: 12px;
+  height: 12px;
+  border: 2px solid var(--color-card);
+  background: var(--color-muted);
+}
+
+.hr-designer .react-flow__handle-left.hr-handle {
+  left: -7px;
+}
+
+.hr-designer .react-flow__handle-right.hr-handle {
+  right: -7px;
+}
+
+.hr-designer .react-flow__handle.connectingto,
+.hr-designer .react-flow__handle.valid {
+  background: var(--color-teal-strong);
+}
+
+/* Tooltip of a node with problems: on hover and when the node has keyboard focus. */
+.hr-designer .hr-node-tip {
+  display: none;
+  position: absolute;
+  left: 0;
+  top: calc(100% + 8px);
+  z-index: 10;
+  width: 300px;
+  padding: 10px 12px;
+  border-radius: 14px;
+  background: var(--color-card);
+  box-shadow: var(--shadow-card);
+  font-size: 13px;
+  line-height: 1.4;
+  pointer-events: none;
+}
+
+.hr-designer .react-flow__node:hover .hr-node-tip,
+.hr-designer .react-flow__node:focus .hr-node-tip,
+.hr-designer .react-flow__node:focus-within .hr-node-tip {
+  display: block;
+}
+
+.hr-designer .react-flow__node:hover,
+.hr-designer .react-flow__node:focus {
+  z-index: 1000 !important;
+}
+
+.hr-designer .react-flow__minimap {
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: var(--shadow-soft);
+}
+
+.hr-designer .react-flow__controls {
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: var(--shadow-soft);
+}
+
+.hr-designer .react-flow__controls-button {
+  width: 44px;
+  height: 44px;
+}

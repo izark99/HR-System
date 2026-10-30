@@ -83,7 +83,7 @@ test.describe('AC-B3-06 in the browser: code.sql cannot reach the network', () =
       expect(logs.filter((l) => /example\.com|NV0000|Content Security Policy/i.test(l))).toEqual(
         [],
       );
-      expect(supabase.runLogs.at(-1)?.error_code).toBe('sql.error.forbidden');
+      await expect.poll(() => supabase.runLogs.at(-1)?.error_code).toBe('sql.error.forbidden');
     });
   }
 });

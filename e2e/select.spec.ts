@@ -143,9 +143,14 @@ test.describe('custom Select', () => {
     await open(page);
     const t = trigger(page);
     await t.click();
-    const search = page.getByRole('combobox', { name: 'Tìm trong danh sách' });
+    const search = page.getByRole('searchbox', { name: 'Tìm trong danh sách' });
     await expect(search).toBeFocused();
     await search.fill('DA');
+    // Home/End move the text cursor of the search box, not the active option.
+    await page.keyboard.press('Home');
+    await expect.poll(() => search.evaluate((el: HTMLInputElement) => el.selectionStart)).toBe(0);
+    await page.keyboard.press('End');
+    await expect.poll(() => search.evaluate((el: HTMLInputElement) => el.selectionStart)).toBe(2);
     const list = listbox(page);
     await expect(list.getByRole('option')).toHaveText(['Đào tạo', 'dang.nv07']);
     await expect(list.getByRole('group', { name: 'Nhóm' })).toBeVisible();
@@ -153,8 +158,12 @@ test.describe('custom Select', () => {
     await page.keyboard.press('Enter');
     await expect(t).toContainText('dang.nv07');
     await t.click();
-    await page.getByRole('combobox', { name: 'Tìm trong danh sách' }).fill('khong-co');
-    await expect(listbox(page)).toContainText('Không có mục phù hợp.');
+    await page.getByRole('searchbox', { name: 'Tìm trong danh sách' }).fill('khong-co');
+    // The message is a status next to the (empty) listbox, not inside it.
+    await expect(
+      page.getByRole('status').filter({ hasText: 'Không có mục phù hợp.' }),
+    ).toBeVisible();
+    await expect(listbox(page).getByText('Không có mục phù hợp.')).toHaveCount(0);
     await page.keyboard.press('Escape');
     await expect(t).toContainText('dang.nv07');
   });

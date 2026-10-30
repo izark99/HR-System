@@ -121,7 +121,8 @@
       "errorLabel": "Chưa xác định được phiên bản:",
       "error": "không kết nối được máy chủ.",
       "retry": "Thử lại"
-    }
+    },
+    "engineLoadingLabel": "Đang chuẩn bị:"
   },
   "slot": {
     "multiple": "Nhiều file · {{accept}}",
@@ -200,7 +201,13 @@
     "rowsFailed": "không lấy được các dòng của sheet này.",
     "retry": "Thử lại",
     "noteLabel": "Lưu ý:",
-    "note": "kết quả chỉ nằm trong trình duyệt. Hãy tải file về trước khi đóng tab."
+    "note": "kết quả chỉ nằm trong trình duyệt. Hãy tải file về trước khi đóng tab.",
+    "viewOnly": "Chỉ xem",
+    "truncated": "Đang hiển thị {{shown}} / {{total}} dòng đầu.",
+    "warningsLabel": "Cảnh báo:",
+    "search": "Tìm trong bảng",
+    "sortHint": "Bấm để sắp xếp tăng dần, giảm dần hoặc bỏ sắp xếp",
+    "noMatch": "Không có dòng nào khớp từ khóa tìm kiếm."
   },
   "config": {
     "title": "Ứng dụng chưa được cấu hình",
@@ -473,10 +480,28 @@
       },
       "rangeOpen": "từ {{from}}",
       "rangeTo": "từ {{from}} đến trước {{to}}",
-      "note": "Phiên bản đã publish không sửa được; muốn thay đổi thì nhập phiên bản mới. Màn quản lý version và Flow Designer có ở bước sau.",
+      "note": "Phiên bản đã publish không sửa được; muốn thay đổi hãy tạo bản nháp (draft) rồi sửa trong Designer, hoặc nhập phiên bản mới từ file JSON.",
       "manageVersions": "Phiên bản",
       "manageVersionsFor": "Quản lý phiên bản và hiệu lực của {{name}}",
-      "actions": "Thao tác"
+      "actions": "Thao tác",
+      "openDesigner": "Designer",
+      "openDesignerFor": "Mở Designer của {{name}}",
+      "create": {
+        "button": "Tạo flow mới",
+        "title": "Tạo flow mới",
+        "code": "Mã flow",
+        "codeHint": "Chữ thường không dấu, số và dấu \"-\", 3-64 ký tự (VD doi-chieu-luong). Không đổi được sau khi tạo.",
+        "codeInvalid": "Mã flow chưa đúng định dạng.",
+        "name": "Tên flow",
+        "nameRequired": "Hãy nhập tên flow.",
+        "description": "Mô tả",
+        "category": "Nhóm",
+        "instructions": "Hướng dẫn cho User",
+        "submit": "Tạo và mở Designer",
+        "creating": "Đang tạo...",
+        "duplicate": "Mã flow này đã có. Hãy chọn mã khác.",
+        "intro": "Tạo flow cùng bản nháp v1 trống; sau đó dựng flow trong Designer và publish ở màn Phiên bản."
+      }
     },
     "import": {
       "button": "Nhập flow JSON",
@@ -632,7 +657,8 @@
         },
         "before": "v{{version}} (cũ)",
         "after": "v{{version}} (mới)"
-      }
+      },
+      "viewInDesigner": "Xem trong Designer"
     }
   },
   "idle": {

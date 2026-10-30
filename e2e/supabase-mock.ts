@@ -603,6 +603,70 @@ export class SupabaseMock {
       Object.assign(row, next, { updated_at: this.nextUpdatedAt() });
       return json(200, [{ id: row.id }]);
     }
+    if (path === '/rest/v1/rpc/admin_save_flow_draft') {
+      if (!adminOnly) return denied();
+      const p = parsed() as {
+        p_version_id?: string;
+        p_definition?: unknown;
+        p_expected_updated_at?: string | null;
+      };
+      const def = p.p_definition as { schemaVersion?: unknown } | null;
+      if (!def || typeof def !== 'object' || def.schemaVersion !== 1) {
+        return json(400, { code: '22023', message: 'invalid_definition' });
+      }
+      if (!p.p_expected_updated_at) {
+        return json(400, { code: '22023', message: 'expected_updated_at_required' });
+      }
+      const row = this.versions.find((v) => v.id === p.p_version_id);
+      if (!row) return json(404, { code: 'P0002', message: 'version_not_found' });
+      if (row.status !== 'draft')
+        return json(400, { code: 'HF001', message: 'flow_version_immutable' });
+      if ((row.updated_at ?? DEFAULT_UPDATED_AT) !== p.p_expected_updated_at) {
+        return json(409, { code: 'HF002', message: 'draft_conflict' });
+      }
+      row.definition = structuredClone(p.p_definition);
+      row.updated_at = this.nextUpdatedAt();
+      return json(200, row.updated_at);
+    }
+    if (path === '/rest/v1/rpc/admin_create_flow') {
+      if (!adminOnly) return denied();
+      const p = parsed();
+      const text = (v: unknown) => (typeof v === 'string' ? v : '');
+      const code = text(p.p_code);
+      if (this.flows.some((f) => f.code === code)) {
+        return json(409, {
+          code: '23505',
+          message: 'duplicate key value violates unique constraint',
+        });
+      }
+      const n = this.flows.length + 1;
+      const flowId = `00000000-0000-4000-8000-0000000005${String(n).padStart(2, '0')}`;
+      const versionId = `00000000-0000-4000-8000-0000000006${String(n).padStart(2, '0')}`;
+      const updated = this.nextUpdatedAt();
+      this.flows.push({
+        id: flowId,
+        code,
+        name: text(p.p_name),
+        description: text(p.p_description),
+        category: text(p.p_category),
+        instructions: text(p.p_instructions),
+        is_archived: false,
+      });
+      this.versions.push({
+        id: versionId,
+        flow_id: flowId,
+        version_no: 1,
+        status: 'draft',
+        effective_from: '',
+        effective_to: null,
+        definition: structuredClone(p.p_definition),
+        published_at: null,
+        change_note: '',
+        published_by: null,
+        updated_at: updated,
+      });
+      return json(200, [{ flow_id: flowId, version_id: versionId, updated_at: updated }]);
+    }
     if (path === '/rest/v1/rpc/admin_create_draft_from_version') {
       if (!adminOnly) return denied();
       const { p_version_id } = parsed() as { p_version_id?: string };

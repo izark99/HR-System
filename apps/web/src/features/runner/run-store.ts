@@ -53,6 +53,8 @@ export interface RunState {
   summary: RunSummary | null;
   /** Params used by the run (the form may change afterwards). */
   params: ParamValues;
+  /** DuckDB being downloaded / checked before the first DuckDB node (spec §13.1). */
+  engineLoading?: { loadedBytes: number; totalBytes: number } | null;
 }
 
 export type LoadStatus = 'idle' | 'loading' | 'ready' | 'notFound' | 'invalid' | 'error';
@@ -444,12 +446,22 @@ export class RunStore {
     }));
 
     const onProgress = (e: RunProgressEvent) => {
-      // `engine-loading` (DuckDB download) has no node; its UI comes with the Designer rounds.
-      if (token !== this.token || e.type === 'run-started' || e.type === 'engine-loading') return;
+      if (token !== this.token || e.type === 'run-started') return;
+      if (e.type === 'engine-loading') {
+        this.set((s) => ({
+          ...s,
+          run: {
+            ...s.run,
+            engineLoading: { loadedBytes: e.loadedBytes, totalBytes: e.totalBytes },
+          },
+        }));
+        return;
+      }
       this.set((s) => ({
         ...s,
         run: {
           ...s.run,
+          engineLoading: null,
           nodes: s.run.nodes.map((n) =>
             n.id !== e.nodeId
               ? n

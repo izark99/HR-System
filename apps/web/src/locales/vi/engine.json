@@ -162,7 +162,8 @@
       "invalidColumnName": "Node \"{{node}}\": tên cột kết quả \"{{column}}\" không hợp lệ (chỉ chữ thường không dấu, số, \"_\"; đặt bằng AS).",
       "duplicateColumn": "Node \"{{node}}\": có 2 cột kết quả cùng tên \"{{column}}\".",
       "unsupportedType": "Node \"{{node}}\": cột \"{{column}}\" có kiểu {{type}} chưa được hỗ trợ; hãy CAST sang kiểu khác.",
-      "runtime": "Node \"{{node}}\": câu SQL lỗi khi chạy. {{message}}"
+      "runtime": "Node \"{{node}}\": câu SQL lỗi khi chạy. {{message}}",
+      "notFinite": "Node \"{{node}}\": cột \"{{column}}\" có giá trị không phải số hữu hạn (NaN hoặc vô cực, VD do chia cho 0); hãy xử lý trường hợp này trong câu SQL (VD NULLIF(mẫu số, 0))."
     },
     "warning": {
       "doubleColumn": "Cột \"{{column}}\" là số thực (DOUBLE); nên CAST(... AS DECIMAL(38,10)) để tránh sai số làm tròn.",
@@ -181,12 +182,45 @@
   "preview": {
     "error": {
       "unknownColumn": "Node \"{{node}}\": cột \"{{column}}\" không có ở bước trước.",
-      "duplicateTitle": "Node \"{{node}}\": tên tab \"{{title}}\" trùng với một bảng xem trước hoặc sheet khác."
+      "duplicateTitle": "Node \"{{node}}\": tên tab \"{{title}}\" trùng với một bảng xem trước hoặc sheet khác.",
+      "flowInvalid": "Flow trên canvas chưa hợp lệ nên chưa xem trước được; hãy sửa các lỗi trong thanh trạng thái.",
+      "noSample": "Chưa có file mẫu cho {{slot}}.",
+      "sampleInvalid": "File mẫu của {{slot}} có lỗi; hãy xem báo cáo kiểm tra file."
     }
   },
   "inputExcel": {
     "warning": {
       "extraColumnsRuntimeOnly": "Mục \"{{slot}}\" giữ cả cột không khai báo: các cột này chỉ dùng được trong node SQL khi chạy, không chọn được ở các node khác."
+    }
+  },
+  "design": {
+    "flow": {
+      "noNodes": "Flow chưa có node nào.",
+      "structure": "Định nghĩa flow không hợp lệ ở mục {{path}}."
+    },
+    "node": {
+      "slotInvalid": "Node \"{{node}}\": mục upload \"{{slot}}\" đang có lỗi cấu hình, chưa xác định được cột."
+    },
+    "param": {
+      "invalidField": "Tham số \"{{param}}\": giá trị ở mục {{field}} không hợp lệ.",
+      "duplicateKey": "Tham số \"{{param}}\": mã \"{{key}}\" trùng với tham số khác.",
+      "asOfType": "Tham số \"{{param}}\": chỉ tham số kiểu tháng hoặc ngày mới làm ngày hiệu lực được.",
+      "multipleAsOf": "Tham số \"{{param}}\": flow chỉ được có 1 tham số làm ngày hiệu lực.",
+      "noOptions": "Tham số \"{{param}}\": kiểu danh sách chọn cần ít nhất 1 lựa chọn."
+    },
+    "slot": {
+      "invalidField": "Mục upload \"{{slot}}\": giá trị ở mục {{field}} không hợp lệ.",
+      "key": "Mục upload \"{{slot}}\": mã chỉ gồm chữ thường không dấu, số và \"_\".",
+      "duplicateKey": "Mục upload \"{{slot}}\": mã \"{{key}}\" trùng với mục upload khác.",
+      "dataStartRow": "Mục upload \"{{slot}}\": dòng dữ liệu đầu tiên phải nằm sau các dòng tiêu đề.",
+      "minMaxFiles": "Mục upload \"{{slot}}\": số file tối thiểu không được lớn hơn số file tối đa.",
+      "defaultValue": "Mục upload \"{{slot}}\": giá trị mặc định ở mục {{field}} không đúng kiểu của cột (hoặc cột đang bắt buộc có giá trị).",
+      "columnKey": "Mục upload \"{{slot}}\": mã cột ở mục {{field}} không hợp lệ (chữ thường không dấu, số, \"_\"; không bắt đầu bằng \"_\").",
+      "columns": "Mục upload \"{{slot}}\": cần ít nhất 1 cột và mã cột không được trùng.",
+      "rule": "Mục upload \"{{slot}}\": quy tắc kiểm tra ở mục {{field}} không hợp lệ (VD biểu thức regex không biên dịch được).",
+      "aliases": "Mục upload \"{{slot}}\": mỗi cột cần ít nhất 1 tên cột trong file.",
+      "dateFormats": "Mục upload \"{{slot}}\": định dạng ngày ở mục {{field}} không hợp lệ.",
+      "skipRows": "Mục upload \"{{slot}}\": cấu hình bỏ qua dòng không hợp lệ (cột khóa phải là cột của mục upload)."
     }
   }
 }

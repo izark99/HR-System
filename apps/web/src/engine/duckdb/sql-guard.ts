@@ -86,6 +86,50 @@ interface Token {
   start: number;
   /** Token text (comments/whitespace before the next token removed). */
   text: string;
+  /** What follows the token up to the next token, comments removed (whitespace kept). */
+  rest: string;
+}
+
+/**
+ * Allowlist outside strings, quoted identifiers and comments: ASCII, letters, combining marks and
+ * digits only. DuckDB's tokenizer keeps other characters (NBSP, U+3000, the invisible U+2060
+ * WORD JOINER, tag characters…) inside an identifier while its parser ignores or skips them, so
+ * `query\u2060(…)` would not be seen as a call by the checks below. Refusing everything else is
+ * robust against characters added to that list in future versions.
+ */
+// eslint-disable-next-line no-control-regex -- the ASCII range is allowed as a whole
+const NOT_ALLOWED = /[^\x00-\x7F\p{L}\p{M}\p{N}]/u;
+const COMMENTS = /--[^\n]*|\/\*[\s\S]*?(?:\*\/|$)/g;
+
+/** End (exclusive, within `slice`) of the string literal a string token starts with. */
+function stringEnd(slice: string): number {
+  const dollar = /^\$([A-Za-z_][A-Za-z0-9_]*)?\$/.exec(slice);
+  if (dollar) {
+    const close = slice.indexOf(dollar[0], dollar[0].length);
+    return close < 0 ? slice.length : close + dollar[0].length;
+  }
+  const quote = slice.indexOf("'");
+  if (quote < 0) return slice.length;
+  const escapes = /^[eE]/.test(slice);
+  for (let i = quote + 1; i < slice.length; i++) {
+    const ch = slice[i];
+    if (escapes && ch === '\\') i++;
+    else if (ch === "'") {
+      if (slice[i + 1] === "'") i++;
+      else return i + 1;
+    }
+  }
+  return slice.length;
+}
+
+/** Length of the comment a comment token starts with. */
+function commentEnd(slice: string): number {
+  if (slice.startsWith('--')) {
+    const nl = slice.indexOf('\n');
+    return nl < 0 ? slice.length : nl + 1;
+  }
+  const close = slice.indexOf('*/', 2);
+  return close < 0 ? slice.length : close + 2;
 }
 
 function tokens(db: DuckDb, sql: string): Token[] {
@@ -95,22 +139,76 @@ function tokens(db: DuckDb, sql: string): Token[] {
   } catch (err) {
     throw sqlError(err);
   }
-  return raw.offsets.map((start, i) => {
-    const end = raw.offsets[i + 1] ?? sql.length;
+  // DuckDB reports UTF-8 byte offsets; any non-ASCII character before a token (Vietnamese text
+  // in a string, NBSP) would shift every later slice if used as string indices.
+  const index = byteToIndex(sql);
+  const starts = raw.offsets.map((b) => index(b));
+  return starts.map((start, i) => {
+    const end = starts[i + 1] ?? sql.length;
     const slice = sql.slice(start, end);
     const type = raw.types[i] ?? TOKEN.operator;
     // The slice runs to the next token, so it may end with whitespace or a comment glued to the
     // token ("query/**/(", "$p--c"): only identifier characters belong to a name.
     let text: string;
+    /** Length of the token itself in `slice` (strings, quoted names and comments are skipped). */
+    let body: number;
     if (type === TOKEN.identifier || type === TOKEN.keyword) {
-      text = /^"(?:[^"]|"")*"/.exec(slice)?.[0] ?? /^[\p{L}\p{N}_$]+/u.exec(slice)?.[0] ?? slice;
+      const quoted = /^"(?:[^"]|"")*"/.exec(slice)?.[0];
+      text = quoted ?? /^[\p{L}\p{N}_$]+/u.exec(slice)?.[0] ?? slice;
+      body = quoted ? quoted.length : 0;
     } else if (type === TOKEN.operator) {
       text = /^\$\d+/.exec(slice)?.[0] ?? slice.split(/\s|--|\/\*/)[0] ?? slice;
+      body = 0;
+    } else if (type === TOKEN.string) {
+      body = stringEnd(slice);
+      text = slice.slice(0, body);
+    } else if (type === TOKEN.comment) {
+      body = commentEnd(slice);
+      text = slice.slice(0, body);
     } else {
       text = slice.trimEnd();
+      body = 0;
     }
-    return { type, start, text };
+    const code = slice.slice(body).replace(COMMENTS, ' ');
+    const space = NOT_ALLOWED.exec(code);
+    if (space) {
+      const point = space[0].codePointAt(0)!.toString(16).toUpperCase().padStart(4, '0');
+      fail('sql.error.syntax', { message: `U+${point}` });
+    }
+    const rest = slice.slice(Math.max(body, text.length)).replace(COMMENTS, ' ');
+    return { type, start, text, rest };
   });
+}
+
+/** UTF-8 byte offset → index in the JS (UTF-16) string. */
+function byteToIndex(sql: string): (byte: number) => number {
+  const bytes: number[] = [];
+  const indices: number[] = [];
+  let b = 0;
+  for (let i = 0; i < sql.length;) {
+    const cp = sql.codePointAt(i)!;
+    bytes.push(b);
+    indices.push(i);
+    b += cp < 0x80 ? 1 : cp < 0x800 ? 2 : cp < 0x10000 ? 3 : 4;
+    i += cp > 0xffff ? 2 : 1;
+  }
+  return (byte) => {
+    if (byte >= b) return sql.length;
+    let lo = 0;
+    let hi = bytes.length - 1;
+    while (lo < hi) {
+      const mid = (lo + hi + 1) >> 1;
+      if (bytes[mid]! <= byte) lo = mid;
+      else hi = mid - 1;
+    }
+    return indices[lo]!;
+  };
+}
+
+/** A name directly followed by `(` (possibly across whitespace or comments): a function call. */
+function isCall(t: Token, next: Token | undefined): boolean {
+  if (/^\s*\(/.test(t.rest)) return true;
+  return next?.type === TOKEN.operator && next.text.startsWith('(') && t.rest.trim() === '';
 }
 
 function word(t: Token): string {
@@ -184,9 +282,17 @@ export function guardSql(db: DuckDb, sql: string, paramKeys: ReadonlySet<string>
         prev.type === TOKEN.operator && prev.text === ',' && clause[depth] === 'FROM';
       if (afterFrom || inFromList) fail('sql.error.forbidden', {});
     }
+    // Same for a quoted name that looks like a path or URL (`FROM "a.csv"`, `JOIN "s3://x"`).
+    if (t.type === TOKEN.identifier && t.text.startsWith('"') && prev && /[./:]/.test(word(t))) {
+      const afterFrom =
+        prev.type === TOKEN.keyword && ['FROM', 'JOIN'].includes(prev.text.toUpperCase());
+      const inFromList =
+        prev.type === TOKEN.operator && prev.text === ',' && clause[depth] === 'FROM';
+      if (afterFrom || inFromList) fail('sql.error.forbidden', {});
+    }
     if (t.type === TOKEN.identifier || t.type === TOKEN.keyword) {
       const name = word(t).toLowerCase();
-      if (next?.type === TOKEN.operator && next.text.startsWith('(')) {
+      if (isCall(t, next)) {
         if (
           FORBIDDEN_FUNCTIONS.has(name) ||
           FORBIDDEN_FUNCTION_PREFIXES.some((p) => name.startsWith(p))

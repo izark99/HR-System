@@ -73,6 +73,16 @@ export function RunProgress({
           style={{ width: `${percent}%` }}
         />
       </div>
+      {run.engineLoading && (
+        <Callout tone="blue" label={t('run.engineLoadingLabel')} role="status">
+          {te('duckdb.loading')}
+          {run.engineLoading.totalBytes > 0 &&
+            ` (${Math.min(
+              100,
+              Math.round((run.engineLoading.loadedBytes / run.engineLoading.totalBytes) * 100),
+            )}%)`}
+        </Callout>
+      )}
       <ol className="m-0 flex list-none flex-col gap-2 p-0 text-label" aria-live="polite">
         {run.nodes.map((n) => {
           const rows = n.rows ? Object.values(n.rows).reduce((a, b) => a + b, 0) : null;

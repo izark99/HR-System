@@ -191,6 +191,36 @@ describe('errors and clean-up of lazy chains', () => {
     });
   });
 
+  it('an error in a lazy chain read by code.sql names the producing node, not code.sql', async () => {
+    const big = table(
+      [['x', 'decimal']],
+      [[new Big('9999999999999999999999999999')], [new Big('9999999999999999999999999999')]],
+    );
+    await expect(
+      runWith(
+        { src: big },
+        [
+          {
+            id: 'g',
+            type: 'transform.groupBy',
+            label: 'Tổng',
+            config: { aggregations: [{ key: 's', fn: 'sum', column: 'x' }] },
+          },
+          {
+            id: 'q',
+            type: 'code.sql',
+            config: { inputs: [{ port: 't' }], sql: 'SELECT s FROM t' },
+          },
+        ],
+        [
+          { from: 'src', to: 'g' },
+          { from: 'g', to: 'q', toPort: 't' },
+        ],
+        { collect: ['q'] },
+      ),
+    ).rejects.toMatchObject({ messageKey: 'duckdb.error.decimalOverflow', nodeId: 'g' });
+  });
+
   it('with releaseIntermediate, DuckDB tables are dropped once nothing reads them', async () => {
     const db = await nodeDuckDb();
     const count = () =>

@@ -21,6 +21,19 @@ export function AdminLayout() {
   const { t } = useTranslation();
   const path = useRouterState({ select: (s) => s.location.pathname });
 
+  // The Designer needs the whole width (desktop only, spec §15.3): no side menu, no padding.
+  if (/^\/admin\/flows\/[^/]+\/designer\/?$/.test(path)) {
+    return (
+      <main id="main" className="flex min-w-0 flex-col">
+        {appConfig.mode === 'supabase' ? (
+          <Outlet />
+        ) : (
+          <p className="m-0 p-6 text-muted">{t('admin.localMode')}</p>
+        )}
+      </main>
+    );
+  }
+
   return (
     <div className="flex flex-wrap">
       <nav

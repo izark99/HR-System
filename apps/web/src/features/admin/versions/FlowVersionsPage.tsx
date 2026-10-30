@@ -6,6 +6,7 @@ import { Select } from '../../../components/Select';
 import {
   ArrowLeftIcon,
   Button,
+  buttonClass,
   Callout,
   Card,
   Chip,
@@ -85,10 +86,16 @@ type DialogState =
   | { kind: 'end'; version: AdminVersionDetail }
   | null;
 
-/** Engine check before publishing (the same check as import and the run page). */
+/**
+ * Engine check before publishing (spec §14.4): the structural load used by the run page plus the
+ * full design check (`planFlow` + `checkConfig` + `inferSchema`), errors listed per node.
+ */
 async function checkDefinition(definition: Json): Promise<string[] | null> {
   const engine = new EngineClient();
   try {
+    const design = await engine.api.checkDesign(definition);
+    const errors = design.issues.filter((i) => i.severity === 'error').map((i) => i.text);
+    if (errors.length > 0) return errors;
     const result = await engine.api.loadFlow(definition);
     return result.ok ? [] : result.problems;
   } catch {
@@ -296,13 +303,15 @@ export function FlowVersionsPage() {
                       <div className="flex flex-wrap gap-2">
                         {v.status === 'draft' && (
                           <>
-                            <Button
-                              className={smallButton}
-                              disabled
+                            <Link
+                              to="/admin/flows/$flowCode/designer"
+                              params={{ flowCode }}
+                              search={{}}
                               aria-label={action(t('admin.versions.openDesigner'), v)}
+                              className={cx(buttonClass.secondary, smallButton, 'no-underline')}
                             >
-                              {t('admin.versions.openDesigner')} ({t('admin.nav.soon')})
-                            </Button>
+                              {t('admin.versions.openDesigner')}
+                            </Link>
                             <Button
                               variant="primary"
                               className={smallButton}
@@ -322,6 +331,17 @@ export function FlowVersionsPage() {
                               {t('admin.versions.discard')}
                             </Button>
                           </>
+                        )}
+                        {v.status !== 'draft' && (
+                          <Link
+                            to="/admin/flows/$flowCode/designer"
+                            params={{ flowCode }}
+                            search={{ version: v.id }}
+                            aria-label={action(t('admin.versions.viewInDesigner'), v)}
+                            className={cx(buttonClass.secondary, smallButton, 'no-underline')}
+                          >
+                            {t('admin.versions.viewInDesigner')}
+                          </Link>
                         )}
                         {v.status !== 'draft' && (
                           <Button
