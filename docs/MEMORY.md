@@ -191,7 +191,9 @@
 
 ## Kỹ thuật & tổ chức
 
-2026-10-29 21:18 - Tester và reviewer chạy nối tiếp nhau (không song song) để tiết kiệm hạn mức; ghi trong `.claude/rules/workflow.md`.
+2026-10-30 12:51 - Đội agent theo mô hình generator–verifier: bỏ `requirements-analyst` (thay bằng skill `clarify` chạy trong session chính); gộp `tester` + `reviewer` thành `verifier` (test + review, chỉ viết file test); giữ `developer` cho vòng code lớn, sửa nhỏ session chính tự làm; giao việc kèm gói bối cảnh ngắn; mỗi lúc chỉ 1 subagent. Ghi trong `.claude/rules/workflow.md`.
+
+~~2026-10-29 21:18 - Tester và reviewer chạy nối tiếp nhau (không song song) để tiết kiệm hạn mức; ghi trong `.claude/rules/workflow.md`.~~ → thay bởi 2026-10-30 12:51
 
 2026-10-28 07:46 - Do hạn mức gói có hạn: từ sau các vòng đang chạy (R3, R1b), mỗi thời điểm chỉ 1 developer chạy, các vòng code làm tuần tự; ghi trong `.claude/rules/workflow.md`.
 
@@ -215,7 +217,7 @@
 
 2026-10-26 08:44 - Tài liệu dự án đặt trong `docs/` (spec.md, MEMORY.md); CLAUDE.md và README.md giữ ở root.
 
-2026-10-26 08:20 - Team agent gồm: requirements-analyst (viết yêu cầu), developer (code), tester (test), reviewer (review code & bảo mật, read-only).
+~~2026-10-26 08:20 - Team agent gồm: requirements-analyst (viết yêu cầu), developer (code), tester (test), reviewer (review code & bảo mật, read-only).~~ → thay bởi 2026-10-30 12:51
 
 2026-10-26 08:20 - Dùng CLAUDE.md (hướng dẫn dự án) + MEMORY.md (nhật ký quyết định) + team agent trong `.claude/agents/`.
 

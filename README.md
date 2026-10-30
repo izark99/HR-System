@@ -48,7 +48,8 @@ vendor/                Thư viện vendored (SheetJS CE), có checksum
 docs/
   spec.md              Đặc tả hệ thống
   MEMORY.md            Nhật ký quyết định (YYYY-MM-DD HH:MM - Quyết định)
-.claude/agents/        Team agent: requirements-analyst, developer, tester, reviewer
+.claude/agents/        Subagent: developer (làm), verifier (kiểm)
+.claude/skills/        Skill: clarify (làm rõ yêu cầu, chạy trong session chính)
 .claude/rules/         Quy tắc chi tiết cho Claude (giao tiếp, dữ liệu, engine, frontend, test…)
 CLAUDE.md              Hướng dẫn làm việc cho Claude trên dự án
 ```
