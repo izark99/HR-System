@@ -218,8 +218,8 @@ Flow là một **DAG** (đồ thị có hướng, không vòng) gồm các node 
     { "id": "j1", "type": "transform.join",
       "config": { "how": "left", "on": [{ "left": "ma_nv", "right": "ma_nv" }] } },
     { "id": "f1", "type": "transform.formula",
-      "config": { "language": "excel", "column": "chenh_lech",
-                  "expr": "=IF([cong_thuc_te]<>[cong_tinh_luong], [cong_thuc_te]-[cong_tinh_luong], 0)" } },
+      "config": { "columns": [{ "key": "chenh_lech",
+                  "formula": "=IF([cong_thuc_te]<>[cong_tinh_luong], [cong_thuc_te]-[cong_tinh_luong], 0)" }] } },
     { "id": "py1", "type": "code.python", "config": { "code": "def run(inputs, params):\n    ..." } },
     { "id": "out1", "type": "output.template",
       "config": { "template": "TPL_DOI_CHIEU", "mappings": [ /* §11 */ ] } }
@@ -252,26 +252,25 @@ Flow là một **DAG** (đồ thị có hướng, không vòng) gồm các node 
 
 ## 9. Xử lý dữ liệu: Excel · SQL · Python
 
-Ba ngôn ngữ đều là **công dân hạng nhất** và có thể dùng ở hai mức:
+Ba ngôn ngữ đều là **công dân hạng nhất**, ở hai mức:
 
 | Mức | Excel | SQL | Python |
 |-----|-------|-----|--------|
-| **Cột tính toán** (node `transform.formula`) — 1 biểu thức → 1 cột | `=IF([A]>0,[A]*0.1,0)` | `CASE WHEN a > 0 THEN a*0.1 ELSE 0 END` | `df["a"].where(df["a"] > 0, 0) * 0.1` |
+| **Cột tính toán** (node `transform.formula`) — mỗi công thức → 1 cột | `=IF([A]>0,[A]*0.1,0)` — người dùng chỉ viết công thức Excel, hệ thống tự transpile sang SQL DuckDB | (không có chế độ riêng; dùng `code.sql`) | (không có chế độ riêng; dùng `code.python`, P2) |
 | **Node code** — nhận N bảng, trả về 1..N bảng | (không áp dụng) | `code.sql` | `code.python` |
 
-### 9.1 Hàm Excel
+### 9.1 Hàm Excel (chốt 2026-10-30 13:18)
 
-- Cú pháp quen thuộc với HR: bắt đầu bằng `=`, tham chiếu cột bằng `[Tên cột]` (structured reference giống Excel Table).
-- **Thực thi bằng transpile sang SQL DuckDB** → chạy vector hóa, nhanh trên cả triệu dòng.
-- Danh sách hàm hỗ trợ trong MVP (ưu tiên hàm HR hay dùng):
-  - Logic: `IF, IFS, AND, OR, NOT, IFERROR, IFNA, SWITCH, ISBLANK, ISNUMBER`
+- Mục tiêu: người không biết code thêm/sửa cột bằng công thức Excel quen thuộc; hệ thống tự transpile sang **SQL DuckDB** (không sang Python) → chạy vector hóa trên cả triệu dòng. Đặc tả node: §12.2.
+- Danh sách hàm bản đầu (37 hàm):
+  - Logic: `IF, IFS, AND, OR, NOT, SWITCH, IFERROR, ISBLANK, ISNUMBER`
   - Toán: `ROUND, ROUNDUP, ROUNDDOWN, INT, ABS, MIN, MAX, MOD, SUM` (theo dòng)
-  - Chuỗi: `LEFT, RIGHT, MID, LEN, TRIM, UPPER, LOWER, PROPER, CONCAT, TEXTJOIN, SUBSTITUTE, FIND, SEARCH, TEXT, VALUE`
-  - Ngày: `DATE, YEAR, MONTH, DAY, TODAY, EDATE, EOMONTH, DATEDIF, NETWORKDAYS, WEEKDAY`
-  - Tra cứu: `XLOOKUP, VLOOKUP` (tra cứu sang bảng khác trong flow → transpile thành LEFT JOIN)
+  - Chuỗi: `LEFT, RIGHT, MID, LEN, TRIM, UPPER, LOWER, PROPER, CONCAT, TEXTJOIN, SUBSTITUTE, FIND, SEARCH, VALUE`
+  - Ngày: `DATE, YEAR, MONTH, DAY, EDATE, EOMONTH, DATEDIF, WEEKDAY`
   - Tham số: `PARAM("ky_luong")`
-- Hàm chưa hỗ trợ → báo lỗi ngay khi Admin nhập (kèm gợi ý dùng SQL/Python), không lỗi lúc runtime.
-- Có bộ test so sánh kết quả với Excel thật cho từng hàm (golden test).
+- Không làm ở bản đầu: `XLOOKUP`, `VLOOKUP` (tra cứu dùng `transform.join`, lấy đủ mọi dòng khớp); `TEXT`, `NETWORKDAYS`, `TODAY`, `IFNA` (để sau).
+- Hàm chưa hỗ trợ → báo lỗi ngay khi Admin nhập, kèm gợi ý (VD XLOOKUP → dùng node Join; hàm khác → dùng `code.sql`), không lỗi lúc runtime.
+- Golden test: kết quả mong đợi lấy từ **Excel thật** (§12.2, AC-B4-30).
 
 ### 9.2 SQL
 
@@ -409,7 +408,7 @@ Cột "Bước": **Đã có** = đã chạy được từ bước 1; **B3** = l�
 | | `input.refTable` | Bảng tham chiếu (tự chọn version theo effective date) | P2 | — |
 | | `input.params` | Bảng 1 dòng chứa tham số runtime | Chưa chốt | — |
 | **Cột** | `transform.select` | Chọn / đổi tên / sắp xếp thứ tự cột | **B3** | DuckDB |
-| | `transform.formula` | Thêm/sửa cột bằng Excel, SQL hoặc Python | Bước 4 (chốt 2026-10-27) | DuckDB (transpile) |
+| | `transform.formula` | Thêm/sửa cột bằng công thức Excel (§9.1, §12.2) | Bước 4 (chốt 2026-10-27) | DuckDB (transpile) |
 | | `transform.cast` | Đổi kiểu dữ liệu | P2 | — |
 | | `transform.split` / `transform.merge` | Tách / gộp cột | P2 | — |
 | | `transform.fillDown` | Điền giá trị xuống (dữ liệu có ô merge) | P2 | — |
@@ -574,6 +573,56 @@ Mỗi node type được định nghĩa bằng một **plugin** gồm: Zod schem
 - Kết quả preview nằm trong bộ nhớ cùng kết quả lần chạy (nút "Xem kết quả", MEMORY 13:08); bị giải phóng khi chạy lần mới, đổi flow, đóng tab hoặc tự đăng xuất.
 - Trong Designer, xem trước node này (§13.3) hiển thị 200 dòng đầu như các node khác.
 - Output schema: không có (node cuối). Lỗi: `preview.error.unknownColumn`, `preview.error.duplicateTitle`.
+
+### 12.2 Đặc tả node bước 4: `transform.formula` (chốt 2026-10-30 13:18)
+
+Áp dụng toàn bộ quy ước chung của §12.1 (port, `__ord`, mã lỗi i18n, bind giá trị, tên cột qua `IdentifierSchema` + nháy kép).
+
+**Config**
+
+```ts
+{
+  columns: [{                        // 1..50, tính tuần tự từ trên xuống
+    key: Identifier,                 // cột mới, hoặc key của cột có sẵn để ghi đè
+    title?: string,                  // mặc định: title cột bị ghi đè, hoặc = key
+    formula: string,                 // bắt đầu bằng "=", tối đa 2.000 ký tự; lưu dạng chuẩn hóa [key]
+    type?: 'auto' | 'string' | 'integer' | 'decimal' | 'boolean' | 'date',   // mặc định 'auto'
+    onError?: 'blank' | 'fail'       // mặc định 'blank'
+  }]
+}
+```
+
+**Cú pháp**
+
+- Tham chiếu cột: `[Tiêu đề]` hoặc `[key]`. Khi lưu, Designer chuẩn hóa về `[key]`; khi hiển thị đổi lại theo tiêu đề hiện tại. Tiêu đề trùng nhau giữa 2 cột → `formula.error.ambiguousTitle` (dùng `[key]`). Ký tự `]` trong tiêu đề viết là `]]` (như Excel Table).
+- Phạm vi tham chiếu: cột của đầu vào + cột đã định nghĩa **phía trên** trong cùng node. Tham chiếu cột phía dưới → `formula.error.forwardReference`. Cột đang ghi đè tham chiếu chính nó → lấy giá trị **cũ** (VD `luong = [luong]*1.1`). Cột thêm của slot `extraColumns: 'keep'` không dùng được (§12.1.9).
+- Toán tử: `+ - * / ^ & = <> < > <= >=`, dấu trừ một ngôi, `%` hậu tố, ngoặc. Thứ tự ưu tiên như Excel. Tên hàm không phân biệt hoa thường; độ sâu lồng tối đa 64.
+- Hằng: số, chuỗi `"..."` (`""` để viết dấu nháy), `TRUE`/`FALSE`. Dấu phân cách đối số và dấu thập phân: **chờ chốt Q17** (§22).
+- Tham số: `PARAM("ten")` — tên phải khai báo trong `params`, nếu không → `formula.error.unknownParam`. Kiểu: `month` → `date` (ngày 1 của tháng), `date` → `date`, `number` → `decimal`, `boolean` → `boolean`, `string`/`select` → `string`; để trống → trống.
+- Hàm ngoài danh sách §9.1 → `formula.error.unknownFunction` (kèm gợi ý: XLOOKUP/VLOOKUP → node Join; còn lại → `code.sql`). Sai số đối số → `formula.error.argCount`; sai cú pháp → `formula.error.syntax` kèm vị trí ký tự.
+
+**Ngữ nghĩa**
+
+- **Ô trống**: là 0 khi làm toán hạng của toán tử số hoặc đối số số của hàm; là `""` khi nối chuỗi / đối số chuỗi; `ISBLANK` đúng; `[A]=""` và `[A]=0` đều đúng. Kết quả của cả công thức là **một tham chiếu cột trần** (VD `=[A]`, hoặc nhánh `IF` trả về `[A]`) mà ô trống → kết quả trống.
+- **Số**: mọi phép tính trên `DECIMAL(38,10)`, không qua `DOUBLE` (§9.4). Phép chia làm tròn half-up về 10 chữ số thập phân. `ROUND` làm tròn ra xa số 0 (half away from zero) như Excel; `ROUNDUP`/`ROUNDDOWN` ra xa / về phía số 0. `^` với số mũ nguyên tính chính xác; số mũ không nguyên dùng quy tắc 15 chữ số có nghĩa (`decimalFromNumber`). Tràn `DECIMAL(38,10)` → lỗi `#NUM!`.
+- **So sánh chuỗi** không phân biệt hoa thường (như Excel), không bỏ khoảng trắng. `FIND` phân biệt hoa thường; `SEARCH` không phân biệt, hỗ trợ `*`, `?`, `~`.
+- **Chuyển kiểu ngầm** như Excel: chuỗi đọc được là số thì dùng như số trong phép toán, không đọc được → `#VALUE!`; `TRUE`/`FALSE` = 1/0 trong phép toán.
+- **Ngày**: `date ± số` → `date`; `date − date` → số ngày; `DATEDIF` hỗ trợ `"Y","M","D","MD","YM","YD"`; `WEEKDAY` hỗ trợ `return_type` 1, 2, 3. Kết quả ngoài 1900-01-01…9999-12-31 → `#NUM!`.
+- **Hành vi chi tiết từng hàm** theo Excel; golden test với Excel thật là chuẩn đối chiếu khi có khác biệt.
+- **Suy diễn kiểu** (`type: 'auto'`): theo kiểu kết quả của biểu thức; số → `decimal` (Admin đổi được sang `integer`, khi đó giá trị không nguyên → lỗi `#VALUE!`). Các nhánh `IF`/`IFS`/`SWITCH` khác kiểu (số và chữ) → kiểu `string` kèm cảnh báo `formula.warning.mixedTypes`. Admin chọn `type` khác kiểu suy diễn mà không chuyển được → `formula.error.typeMismatch` lúc thiết kế.
+- **Lỗi lúc chạy** (`#DIV/0!`, `#VALUE!`, `#NUM!`): `IFERROR` bắt được. Không được bắt:
+  - `onError: 'blank'` → ô kết quả trống; cảnh báo `formula.warning.rowErrors` gồm cột, số dòng theo từng loại lỗi, tối đa 5 số dòng (thứ tự dòng đầu vào, đếm từ 1); **không** chứa giá trị ô.
+  - `onError: 'fail'` → dừng lần chạy, lỗi `formula.error.rowError` kèm node, cột, loại lỗi, số dòng đầu tiên.
+- **Output schema**: cột đầu vào giữ nguyên thứ tự; cột ghi đè giữ vị trí, đổi kiểu/title theo cấu hình; cột mới thêm cuối theo thứ tự khai báo. Thứ tự dòng giữ nguyên.
+- **Bảo mật**: hằng chuỗi/số và tham số luôn bind dưới dạng giá trị của prepared statement; công thức không bao giờ được nối thẳng thành chuỗi SQL ngoài tên cột đã kiểm tra. Transpiler chỉ sinh SQL từ danh sách hàm cho phép (whitelist), không có đường đi cho SQL tùy ý.
+
+**Designer**
+
+- Mỗi cột một dòng trong form: key, tiêu đề, ô công thức (Monaco), kiểu (Select, hiện kiểu suy diễn), `onError`.
+- Ô công thức: tô màu cú pháp; gõ `[` → gợi ý cột (theo tiêu đề, kèm key và kiểu); gõ tên hàm → gợi ý hàm + tooltip cú pháp/mô tả tiếng Việt; lỗi gạch đỏ đúng vị trí, kiểm tra lại 300 ms sau khi ngừng gõ. Monaco chỉ nằm trong chunk Designer.
+- Bảng tra "Hàm hỗ trợ" (nhóm, cú pháp, ví dụ); nút "Xem SQL đã sinh" (chỉ đọc).
+- Xem trước: cơ chế xem trước node có sẵn (§13.3).
+- Lỗi thiết kế tô đỏ đúng cột/trường; flow có lỗi không publish được (§14.4).
 
 ---
 
@@ -902,12 +951,12 @@ Toàn bộ Phase 1:
 - Run Wizard + run log.
 - Deploy Cloudflare Pages + Supabase + keep-alive.
 
-**Bước 4** (ngay sau bước 3, chốt 2026-10-27 07:31): `transform.formula` — hàm Excel transpile sang SQL DuckDB (§9.1), dùng DuckDB runtime của bước 3.
+**Bước 4** (ngay sau bước 3, chốt 2026-10-27 07:31; chi tiết chốt 2026-10-30 13:18): `transform.formula` — công thức Excel transpile sang SQL DuckDB (§9.1, §12.2), dùng DuckDB runtime của bước 3. User story + AC: §27. Vòng code đầu gộp HANDOFF §4 mục #1 (giới hạn giải nén .xlsx).
 
 Không thuộc Phase 1: `input.refTable`, bảng tham chiếu, template — Phase 2.
 
 ### Phase 2 — Mở rộng xử lý & báo cáo
-- `code.python` + formula Python (Pyodide).
+- `code.python` (Pyodide). `transform.formula` không có chế độ Python (chốt 2026-10-30 13:18).
 - `output.template` (template Excel, bảng `templates`), `output.chart`.
 - Bảng tham chiếu (`ref_tables`, `ref_table_versions`) có effective date, import từ Excel, node `input.refTable` (chốt 2026-10-26 22:52).
 - `control.assert`, `pivot/unpivot`, `window`, `lookup`, `fillDown`, `cast`, `split/merge`, `sample/limit`.
@@ -939,6 +988,8 @@ Không thuộc Phase 1: `input.refTable`, bảng tham chiếu, template — Phas
 | ~~Q12~~ | Đã chốt 2026-10-27: dùng Monaco, chỉ trong chunk Designer, worker và font self-host, không dùng CDN loader (§5) | — |
 | ~~Q13~~ | Đã chốt 2026-10-27: node `output.preview` có trong bước 3 (§12.1.10) | — |
 | ~~Q14~~ | Đã chốt 2026-10-27: cột thêm của slot `extraColumns: 'keep'` chỉ dùng được trong `code.sql` lúc chạy, Designer cảnh báo (§12.1.9) | — |
+| Q17 | Dấu phân cách đối số và dấu thập phân trong công thức (`,` + `.` như Excel tiếng Anh, hay `;` + `,` như Excel cài vùng Việt Nam)? | `transform.formula` (§12.2) |
+| ~~Q16~~ | Đã chốt 2026-10-30 13:18: `transform.formula` chỉ nhận công thức Excel (transpile sang SQL), 37 hàm, không có XLOOKUP/VLOOKUP (§9.1, §12.2) | — |
 | ~~Q15~~ | Đã chốt 2026-10-27: CSP giữ `style-src 'self' 'unsafe-inline'` (React Flow, Monaco gán style lúc chạy), script inline vẫn bị chặn; quy tắc `data-privacy.md` sửa cho khớp (§17) | — |
 
 ---
@@ -1246,3 +1297,71 @@ Toàn bộ UI dùng **một** design language ("bright executive"), áp dụng n
 | AC-B3-90 | **Given** flow đang chạy, **when** User đổi kỳ (as-of date đổi version) rồi hủy cứng, **then** sau khi hủy, trạng thái kiểm tra version không kẹt ở "đang kiểm tra": hệ thống tự kiểm tra lại cho kỳ mới và nút Chạy dùng được mà không cần đổi kỳ lần nữa (`run-store.ts`: khi bỏ câu trả lời vì token đổi, lưu lại `deferredAsOf` để thử lại). Có unit test tái hiện. |
 | AC-B3-91 | **Given** file import có slot chỉ nhận `.csv`, **when** import, **then** dialog hiện thông báo riêng cho `acceptCsvOnlyReplaced` ("chỉ nhận .csv nên đã chuyển sang nhận .xlsx, .xls"), còn slot có `.csv` lẫn định dạng khác hiện thông báo `acceptCsvRemoved`; cả hai theo nhãn hiển thị của slot. |
 | AC-B3-92 | **Given** đăng nhập bằng User thường, **when** mở danh sách flow và trang chạy, **then** không có request nào tải chunk của khu vực Admin (kể cả Designer/Version) — kiểm bằng E2E theo dõi request JS; Admin vẫn vào khu Admin bình thường. |
+
+---
+
+## 27. Bước 4: `transform.formula` — User story & Acceptance criteria
+
+> Phạm vi theo quyết định 2026-10-30 13:18 (§9.1, §12.2, Q16). Dữ liệu kiểm thử luôn là dữ liệu giả.
+
+**US-B4-01** — Là Admin không biết code, tôi muốn thêm/sửa cột bằng công thức Excel quen thuộc, để cấu hình flow mà không phải viết SQL.
+
+**US-B4-02** — Là Admin, tôi muốn thấy lỗi công thức ngay khi gõ và xem trước kết quả, để không phải chạy thử cả flow mới biết sai.
+
+**US-B4-03** — Là User, tôi muốn biết dòng nào tính lỗi (mà file không bị lộ nội dung), để sửa dữ liệu nguồn.
+
+### 27.1 Transpile & ngữ nghĩa
+
+| # | Given / When / Then |
+|---|---------------------|
+| AC-B4-01 | **Given** công thức chỉ dùng 37 hàm §9.1, **when** lưu, **then** không có lỗi thiết kế; mỗi hàm có ít nhất 1 unit test transpile + chạy trên DuckDB. |
+| AC-B4-02 | `=XLOOKUP(...)` → `formula.error.unknownFunction` kèm gợi ý dùng node Join; `=FOO(1)` → cùng mã lỗi kèm gợi ý `code.sql`; báo lúc thiết kế, không lỗi lúc chạy. |
+| AC-B4-03 | Sai cú pháp (`=IF([A]>0,1`) → `formula.error.syntax` kèm vị trí ký tự; sai số đối số (`=ROUND(1)`) → `formula.error.argCount`. Thiếu `=` đầu → `formula.error.syntax`. |
+| AC-B4-04 | Gõ `[Lương cơ bản]` (title) và `[luong_co_ban]` (key) cho cùng kết quả; giá trị lưu trong definition là `[luong_co_ban]`; đổi title ở node phía trên → công thức vẫn chạy và hiển thị theo title mới. |
+| AC-B4-05 | 2 cột cùng title "Ghi chú" → `[Ghi chú]` báo `formula.error.ambiguousTitle`, `[ghi_chu_2]` chạy được. Title chứa `]` viết `]]` được nhận đúng. |
+| AC-B4-06 | Cột B dùng cột A định nghĩa phía trên trong cùng node → chạy đúng; cột A dùng cột B phía dưới → `formula.error.forwardReference`. Ghi đè `luong` bằng `=[luong]*1.1` → dùng giá trị cũ; vị trí cột không đổi. |
+| AC-B4-07 | Ô trống: `=[A]+1` → 1; `=[A]&"x"` → "x"; `=ISBLANK([A])` → TRUE; `=[A]=""` → TRUE; `=[A]=0` → TRUE; `=[A]` → trống; `=IF(TRUE,[A],0)` → trống; `=SUM([A],[B])` với A trống, B = 2 → 2. |
+| AC-B4-08 | Decimal: `=0.1+0.2` → đúng `0.3`; `=1/3` → `0.3333333333`; `=[luong]*1.1` trên `1234567890123.25` không có sai số float; kết quả trong DuckDB là `DECIMAL(38,10)`, không có cột trung gian `DOUBLE` (kiểm SQL sinh ra). |
+| AC-B4-09 | `=ROUND(2.675,2)` → 2.68; `=ROUND(-2.5,0)` → -3; `=ROUNDUP(-1.21,1)` → -1.3; `=ROUNDDOWN(1.29,1)` → 1.2; `=INT(-1.5)` → -2; `=MOD(-3,2)` → 1 (như Excel). |
+| AC-B4-10 | Chuỗi: `="abc"="ABC"` → TRUE; `=FIND("a","ABa")` → 3; `=SEARCH("b*","aBc")` → 2; `=MID("Nguyễn",2,3)` → "guy"; `=LEN("Nguyễn")` → 6 (chuỗi NFC); `=PROPER("nguyễn văn a")` → "Nguyễn Văn A"; `=TEXTJOIN(", ",TRUE,"a","","b")` → "a, b". |
+| AC-B4-11 | Chuyển kiểu: `="12"+1` → 13; `="abc"+1` → `#VALUE!`; `=TRUE+1` → 2; `=VALUE("1.5")` → 1.5. |
+| AC-B4-12 | Ngày: `=[ngay_vao]+30` → `date`; `=[ngay_ra]-[ngay_vao]` → số ngày; `=EOMONTH(DATE(2026,2,10),0)` → 2026-02-28; `=EDATE(DATE(2026,1,31),1)` → 2026-02-28; `=DATEDIF(DATE(2020,3,15),DATE(2026,3,14),"Y")` → 5; `=WEEKDAY(DATE(2026,10,30),2)` → 5; `=DATE(2026,13,1)` → 2027-01-01. |
+| AC-B4-13 | `PARAM("ky_luong")` với tham số `month` = 2026-09 → date 2026-09-01; tham số trống → trống; `PARAM("khong_co")` → `formula.error.unknownParam`. Giá trị tham số được bind (kiểm SQL sinh ra không chứa giá trị). |
+| AC-B4-14 | Hằng chuỗi `"'); DROP TABLE x; --"` được bind như giá trị, kết quả là đúng chuỗi đó; SQL sinh ra không chứa hằng này. |
+| AC-B4-15 | Suy diễn kiểu: `=[A]*2` → `decimal`; `=LEN([A])` → `decimal` (Admin đổi được `integer`); `=IF([A]>0,"Có",0)` → `string` + `formula.warning.mixedTypes`; Admin chọn `type: 'date'` cho `=LEN([A])` → `formula.error.typeMismatch`; `type: 'integer'` mà kết quả 1.5 → `#VALUE!` theo `onError`. |
+| AC-B4-16 | Thứ tự dòng đầu ra = đầu vào; cột mới thêm cuối đúng thứ tự khai báo; schema suy diễn (§13.2) khớp kết quả chạy thật. |
+
+### 27.2 Lỗi lúc chạy
+
+| # | Given / When / Then |
+|---|---------------------|
+| AC-B4-20 | **Given** 1.000 dòng, 7 dòng có `[cong]` = 0, **when** chạy `=[luong]/[cong]` với `onError` mặc định, **then** 7 ô trống, cảnh báo `formula.warning.rowErrors` ghi `#DIV/0!: 7 dòng` và đúng 5 số dòng đầu tiên; nội dung cảnh báo (và run log) không chứa giá trị ô nào. |
+| AC-B4-21 | Cùng dữ liệu với `onError: 'fail'` → lần chạy dừng, lỗi `formula.error.rowError` có node, cột, `#DIV/0!`, số dòng đầu tiên; không tạo file kết quả. |
+| AC-B4-22 | `=IFERROR([luong]/[cong],0)` → 7 ô bằng 0, không có cảnh báo. |
+| AC-B4-23 | Lỗi lan truyền: cột B = `=[A_loi]+1` với A_loi là cột lỗi (đã để trống theo `onError`) → B tính A_loi là trống (= 0), không báo lỗi lần 2. Trong cùng 1 công thức, lỗi ở biểu thức con lan ra cả công thức như Excel. |
+| AC-B4-24 | Tràn số (`=10^30*10^30`) → `#NUM!` theo `onError`, không ra `duckdb.error.decimalOverflow`. |
+
+### 27.3 Designer
+
+| # | Given / When / Then |
+|---|---------------------|
+| AC-B4-40 | Gõ `[` trong ô công thức → danh sách gợi ý gồm cột đầu vào + cột phía trên trong node, hiển thị title, key, kiểu; chọn → chèn `[Title]`. Gõ `RO` → gợi ý `ROUND, ROUNDUP, ROUNDDOWN` kèm tooltip cú pháp tiếng Việt. |
+| AC-B4-41 | Gõ công thức sai → trong ≤ 300 ms sau khi ngừng gõ có gạch đỏ đúng vị trí và thông báo tiếng Việt; sửa đúng → hết lỗi. |
+| AC-B4-42 | Nút "Xem SQL đã sinh" hiện SQL chỉ đọc, tham số hiển thị dạng placeholder (`$1`…), không hiện giá trị. |
+| AC-B4-43 | Bảng "Hàm hỗ trợ" liệt kê đủ 37 hàm theo nhóm, có cú pháp và ví dụ. |
+| AC-B4-44 | Xem trước node formula bằng file mẫu hiện 200 dòng đầu với cột mới; cảnh báo `rowErrors` hiển thị trên node. |
+| AC-B4-45 | Thêm/xóa/sắp lại cột công thức bằng bàn phím được; mọi control có nhãn a11y; Select kiểu và `onError` dùng Select tự làm (không `<select>`). |
+| AC-B4-46 | Entry chunk (gzip) vẫn trong ngân sách bundle (MEMORY 2026-10-27 07:36); code transpiler dùng chung Designer/worker nhưng Monaco không vào chunk của User. |
+
+### 27.4 Golden test & hiệu năng
+
+| # | Given / When / Then |
+|---|---------------------|
+| AC-B4-30 | Claude sinh `fixtures/formula-golden/golden.xlsx` (dữ liệu giả; mỗi hàm ≥ 3 case gồm biên: ô trống, số âm, chuỗi có dấu, ngày cuối tháng/năm nhuận, lỗi). Harold mở bằng Excel thật, lưu thành `golden-excel.xlsx`. Test đọc giá trị Excel đã lưu và so với kết quả transpile: khớp tuyệt đối (số so sau làm tròn 15 chữ số có nghĩa như Excel hiển thị); khác biệt có chủ đích (VD decimal chính xác hơn Excel) liệt kê rõ trong file test. |
+| AC-B4-31 | 1 triệu dòng × 30 cột + node formula 10 cột chạy xong không crash trên Chromium (`HRFLOW_PERF=1`). 100k × 30 với 5 cột công thức: thời gian node formula ≤ 2 giây trên máy 4 nhân *(mục tiêu, đo báo cáo nếu không đạt)*. |
+
+### 27.5 Sửa lỗi tồn (HANDOFF §4 #1)
+
+| # | Given / When / Then |
+|---|---------------------|
+| AC-B4-90 | **Given** file .xlsx có entry giải nén > 1 GB hoặc tỉ lệ nén > 1:200 (zip bomb dữ liệu giả sinh trong test), **when** đọc trong worker, **then** dừng giải nén sớm (không cấp phát hết bộ nhớ), báo lỗi i18n "File quá lớn để xử lý" trên đúng file, không crash worker; file .xlsx bình thường 1 triệu dòng × 30 cột vẫn đọc được. |

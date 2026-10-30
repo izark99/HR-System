@@ -9,6 +9,10 @@
 
 ## Phạm vi & sản phẩm
 
+2026-10-30 13:18 - Vòng code đầu của bước 4 gộp thêm HANDOFF §4 mục #1 (giới hạn giải nén .xlsx: ~1 GB/entry, tỉ lệ nén ≤ 1:200, vượt → báo "file quá lớn"); mục #2, #4 giữ nguyên (chấp nhận); mục #3 (nối cạnh bằng bàn phím) và #5 (tối ưu hiệu năng) làm vòng riêng sau `transform.formula`.
+
+2026-10-30 13:18 - `transform.formula` bản đầu không có XLOOKUP/VLOOKUP: tra cứu dùng `transform.join` (lấy đủ mọi dòng khớp). TEXT, NETWORKDAYS, TODAY, IFNA để sau.
+
 2026-10-27 07:31 - Bước 3 gồm: Flow Designer (React Flow) với node `input.excel`, `control.compare`, `output.excel`, `output.preview` + DuckDB-WASM và nhóm transform cơ bản `transform.select`, `transform.filter`, `transform.sort`, `transform.join`, `transform.union`, `transform.groupBy`, `transform.dedupe`, `code.sql`; màn Version & hiệu lực (kèm diff); tự đăng xuất sau 8 giờ.
 
 2026-10-27 07:31 - `transform.formula` (hàm Excel → SQL) làm ở bước 4, ngay sau bước 3.
@@ -128,6 +132,24 @@
 2026-10-26 08:20 - Đăng nhập bằng username + password do Admin cấp; bắt đổi mật khẩu lần đầu; Admin reset mật khẩu; không có 2FA; không public sign-up.
 
 ## Flow & xử lý
+
+2026-10-30 13:18 - `transform.formula`: golden test lấy kết quả từ Excel thật: Claude sinh file .xlsx chứa công thức (dữ liệu giả), Harold mở bằng Excel, lưu lại và gửi về làm fixture.
+
+2026-10-30 13:18 - `transform.formula` trong Designer: ô nhập Monaco (tô màu, gợi ý cột khi gõ `[`, gợi ý hàm + tooltip cú pháp, báo lỗi tại chỗ sau 300 ms), bảng tra "Hàm hỗ trợ", nút "Xem SQL đã sinh", xem trước bằng cơ chế xem trước node sẵn có.
+
+2026-10-30 13:18 - `transform.formula`: số tính bằng `DECIMAL(38,10)` theo §9.4 (không dùng float); ROUND làm tròn kiểu Excel (half away from zero).
+
+2026-10-30 13:18 - `transform.formula`: lỗi lúc chạy (#DIV/0!, #VALUE!…) xử lý theo tùy chọn từng cột: "để trống + cảnh báo" (mặc định; cảnh báo đếm số dòng theo loại lỗi, tối đa 5 số dòng, không kèm nội dung ô) hoặc "dừng chạy"; IFERROR luôn bắt được lỗi.
+
+2026-10-30 13:18 - `transform.formula`: ô trống theo Excel: là 0 trong phép toán, "" khi nối chuỗi, ISBLANK đúng, `[A]=""` đúng; riêng công thức chỉ gồm tham chiếu cột (VD `=[A]`) với ô trống → kết quả trống.
+
+2026-10-30 13:18 - `transform.formula`: 1 node nhiều cột công thức, tính tuần tự, cột sau dùng được cột trước; được ghi đè cột có sẵn; kiểu kết quả tự suy diễn, Admin sửa được.
+
+2026-10-30 13:18 - `transform.formula`: tham chiếu cột gõ `[Tiêu đề]` hoặc `[key]` đều được; lưu chuẩn hóa thành `[key]`, hiển thị lại theo tiêu đề; 2 cột trùng tiêu đề → lỗi, yêu cầu dùng `[key]`.
+
+2026-10-30 13:18 - `transform.formula`: người dùng chỉ viết công thức Excel, hệ thống tự transpile sang SQL DuckDB (không transpile sang Python); node không có chế độ viết SQL/Python (SQL dùng `code.sql`, Python dùng `code.python` ở Phase 2).
+
+2026-10-30 13:18 - `transform.formula` bản đầu hỗ trợ 37 hàm: IF, IFS, AND, OR, NOT, SWITCH, IFERROR, ISBLANK, ISNUMBER; ROUND, ROUNDUP, ROUNDDOWN, INT, ABS, MIN, MAX, MOD, SUM; LEFT, RIGHT, MID, LEN, TRIM, UPPER, LOWER, PROPER, CONCAT, TEXTJOIN, SUBSTITUTE, FIND, SEARCH, VALUE; DATE, YEAR, MONTH, DAY, EDATE, EOMONTH, DATEDIF, WEEKDAY; PARAM.
 
 2026-10-29 21:18 - Designer: luôn cho lưu draft, kể cả khi chưa có node nào hoặc còn lỗi; lỗi chỉ chặn ở bước Publish.
 
