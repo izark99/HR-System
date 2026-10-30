@@ -596,9 +596,10 @@ Mỗi node type được định nghĩa bằng một **plugin** gồm: Zod schem
 
 - Tham chiếu cột: `[Tiêu đề]` hoặc `[key]`. Khi lưu, Designer chuẩn hóa về `[key]`; khi hiển thị đổi lại theo tiêu đề hiện tại. Tiêu đề trùng nhau giữa 2 cột → `formula.error.ambiguousTitle` (dùng `[key]`). Ký tự `]` trong tiêu đề viết là `]]` (như Excel Table).
 - Phạm vi tham chiếu: cột của đầu vào + cột đã định nghĩa **phía trên** trong cùng node. Tham chiếu cột phía dưới → `formula.error.forwardReference`. Cột đang ghi đè tham chiếu chính nó → lấy giá trị **cũ** (VD `luong = [luong]*1.1`). Cột thêm của slot `extraColumns: 'keep'` không dùng được (§12.1.9).
-- Toán tử: `+ - * / ^ & = <> < > <= >=`, dấu trừ một ngôi, `%` hậu tố, ngoặc. Thứ tự ưu tiên như Excel. Tên hàm không phân biệt hoa thường; độ sâu lồng tối đa 64.
+- Toán tử: `+ - * / ^ & = <> < > <= >=`, dấu trừ một ngôi, `%` hậu tố, ngoặc. Thứ tự ưu tiên như Excel. Tên hàm không phân biệt hoa thường; độ sâu lồng tối đa 64. Công thức có quá nhiều phép tính nối tiếp nhau (quá 150 tầng tính toán trong một node, VD `=1*1*…*1` vài trăm lần) → `formula.error.tooComplex` lúc thiết kế.
 - Hằng: số, chuỗi `"..."` (`""` để viết dấu nháy), `TRUE`/`FALSE`. Dấu phân cách đối số là `,`, dấu thập phân là `.` (chốt 2026-10-30 13:24, Q17); gõ `;` → `formula.error.syntax` kèm gợi ý dùng `,` và `.`.
 - Tham số: `PARAM("ten")` — tên phải khai báo trong `params`, nếu không → `formula.error.unknownParam`. Kiểu: `month` → `date` (ngày 1 của tháng), `date` → `date`, `number` → `decimal`, `boolean` → `boolean`, `string`/`select` → `string`; để trống → trống.
+- Đối số độ dài/vị trí/lần xuất hiện của LEFT, RIGHT, MID, FIND, SEARCH, SUBSTITUTE lớn hơn 2^31 − 1 được coi như 2^31 − 1 (kết quả theo từng dòng như Excel, không dừng lần chạy).
 - Hàm ngoài danh sách §9.1 → `formula.error.unknownFunction` (kèm gợi ý: XLOOKUP/VLOOKUP → node Join; còn lại → `code.sql`). Sai số đối số → `formula.error.argCount`; sai cú pháp → `formula.error.syntax` kèm vị trí ký tự.
 
 **Ngữ nghĩa**
@@ -639,7 +640,7 @@ Mỗi node type được định nghĩa bằng một **plugin** gồm: Zod schem
 Đặc điểm:
 - **Cancel** bất kỳ lúc nào (terminate worker; khởi động lại worker và kiểm tra lại file, chốt 2026-10-26 13:08).
 - **Giới hạn bộ nhớ**: WASM 32-bit ≈ 4GB/tab. Mục tiêu thiết kế: ổn định tới **1 triệu dòng × 50 cột**. Bảng trong engine lưu dạng cột (columnar, dựa trên Arrow) thay cho mảng object theo dòng, để vừa heap JS của trình duyệt (~3,8 GB) và tránh chi phí GC; bước 3 chỉ hoàn tất khi 1 triệu dòng × 30 cột chạy được không crash (chốt 2026-10-27). Flow cảnh báo khi file vượt ngưỡng do Admin cấu hình (`maxRows` mỗi slot). Việc chuyển bảng sang DuckDB tạo thêm một bản sao dữ liệu; engine giải phóng bảng TS trung gian ngay khi không còn node nào cần.
-- File rất lớn: .xlsx được đọc theo luồng (giải nén từng phần bằng `DecompressionStream`, quét XML thành lưới gọn; giá trị ô giống SheetJS); .xls và file lạ dùng SheetJS (chỉ khi < 64 MB). Kết quả > 2 triệu ô ghi bằng bộ ghi theo luồng, cùng bố cục với ExcelJS. Không nhận CSV (chốt 2026-10-26).
+- File rất lớn: .xlsx được đọc theo luồng (giải nén từng phần bằng `DecompressionStream`, quét XML thành lưới gọn; giá trị ô giống SheetJS); .xls dùng SheetJS (chỉ khi < 64 MB). File có chữ ký ZIP mà bộ đọc theo luồng không đọc được (ZIP64, mã hóa, cấu trúc lạ) → `validation.fileUnreadable`, không chuyển sang SheetJS (SheetJS giải nén không giới hạn). Giới hạn giải nén (AC-B4-90): mỗi entry ≤ 2 GiB; entry > 16 MiB có tỉ lệ ≤ 1:200; tổng số byte giải nén của một file (mọi entry, mọi lần đọc) ≤ min(2 GiB, max(64 MiB, 200 × kích thước file)); entry giải nén ra nhiều hơn kích thước khai báo, hoặc khai báo 0 byte mà có dữ liệu → `validation.fileTooLarge`; sai CRC-32 → `validation.fileUnreadable`. Kết quả > 2 triệu ô ghi bằng bộ ghi theo luồng, cùng bố cục với ExcelJS. Không nhận CSV (chốt 2026-10-26).
 - Bảng trong engine lưu theo cột (mỗi cột một vector typed array kiểu Arrow; chữ/ngày là UTF-8 + offset). Đo trên Chromium (30 cột): 100k dòng đọc + chạy ≈ 8–10 giây; 1 triệu dòng đọc ≈ 68 giây, chạy ≈ 25 giây, không crash.
 
 ### 13.1 DuckDB-WASM runtime (bước 3, chốt 2026-10-26 22:52)
