@@ -665,7 +665,9 @@ test.describe('assign flows', () => {
     browser,
   }) => {
     await openUsers(page);
-    const userView = async () => {
+    // Waits for the User's flow list to settle on `expected` links (counting right after the
+    // heading appeared raced the list load: verifier, R1-fix5).
+    const userView = async (expected: number) => {
       const ctx = await browser.newContext({ locale: 'vi-VN' });
       await supabase.install(ctx);
       const p = await ctx.newPage();
@@ -674,17 +676,20 @@ test.describe('assign flows', () => {
       await expect(p.getByRole('heading', { level: 1 })).toHaveText(
         'Chọn quy trình cần chạy hôm nay',
       );
-      const seen = await p.getByRole('link', { name: /^Chạy flow Đối chiếu bảng lương/ }).count();
+      // 0 must mean "list loaded and empty", not "not loaded yet".
+      if (expected === 0) await expect(p.getByText('Không tìm thấy flow phù hợp.')).toBeVisible();
+      await expect(p.getByRole('link', { name: /^Chạy flow Đối chiếu bảng lương/ })).toHaveCount(
+        expected,
+      );
       await ctx.close();
-      return seen;
     };
-    expect(await userView()).toBe(1);
+    await userView(1);
     await flowBox(page).click();
     await expect(page.getByRole('status').filter({ hasText: 'Đã gỡ flow' })).toBeVisible();
-    expect(await userView()).toBe(0);
+    await userView(0);
     await flowBox(page).click();
     await expect(page.getByRole('status').filter({ hasText: 'Đã gán flow' })).toBeVisible();
-    expect(await userView()).toBe(1);
+    await userView(1);
   });
 
   test('each toggle sends exactly one request (no double submit)', async ({ page, supabase }) => {
