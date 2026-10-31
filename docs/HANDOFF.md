@@ -1,6 +1,6 @@
 # HANDOFF — Trạng thái dự án để mở session mới
 
-> Cập nhật: 2026-10-30. Đọc file này sau `CLAUDE.md` và `docs/MEMORY.md`.
+> Cập nhật: 2026-10-31. Đọc file này sau `CLAUDE.md` và `docs/MEMORY.md`.
 
 ## 1. Đã xong
 
@@ -11,7 +11,8 @@
 | Deploy: Cloudflare Pages deploy từ `main` → https://hr-data-flow.pages.dev | ✅ |
 | Keep-alive Supabase: `.github/workflows/keep-alive.yml` (GitHub Actions, 08:07 giờ VN) | ✅ |
 | Bước 3: DuckDB-WASM + 8 node transform/SQL + `output.preview`, Flow Designer (React Flow, Monaco, xem trước từng node), màn Version & hiệu lực + diff, tự đăng xuất 8 giờ, Select tự làm, engine dạng cột + đọc/ghi .xlsx theo luồng (1 triệu × 30 cột chạy được) — lên `main` 2026-10-30 (`2ffa225`) | ✅ |
-| Test: Vitest (~790 test), Playwright E2E (~320 test, Supabase được mock; test nặng opt-in `HEAVY_E2E=1`, `HRFLOW_PERF=1`) | ✅ |
+| Bước 4 – R1: node `transform.formula` (41 hàm Excel → SQL DuckDB, decimal chính xác, onError theo cột, Designer Monaco + bảng hàm + Xem SQL, cảnh báo dòng lỗi trên canvas, chạy chuỗi cột dài theo nhóm bảng tạm), golden test 182 case khớp Excel thật (`fixtures/formula-golden/golden-excel.xlsx`), chống zip bomb .xlsx (2 GiB/entry, tỉ lệ 1:200 cho entry > 16 MiB, ngân sách theo file; sync dùng `fflate`, async dùng `DecompressionStream`) — lên `main` 2026-10-31 | ✅ |
+| Test: Vitest (~1050 test), Playwright E2E (~325 test, Supabase được mock; test nặng opt-in `HEAVY_E2E=1`, `HRFLOW_PERF=1`) | ✅ |
 
 ## 2. Môi trường
 
@@ -33,15 +34,27 @@
 
 ## 4. Việc còn tồn (MINOR, chấp nhận để sau)
 
-1. `apps/web/src/engine/io/xlsx-stream.ts` (`inflateSync`, `part()`): chưa giới hạn kích thước sau giải nén / số ô mỗi sheet → file độc hại có thể làm worker hết bộ nhớ (worker tự khởi động lại, không rò rỉ). Đề xuất: giới hạn ~1 GB/entry, tỉ lệ nén ≤ 1:200, báo "file quá lớn".
+1. ~~Giới hạn giải nén .xlsx~~ → đã làm ở bước 4 – R1.
 2. `xlsx-stream.ts` `isoToSerial`: ô `t="d"` có múi giờ (`+07:00`) hoặc phần lẻ giây đọc khác SheetJS (Excel không ghi dạng này). Test `it.fails` đang giữ chỗ.
 3. Designer: nối cạnh chỉ bằng chuột (chốt 2026-10-29); cách nối bằng bàn phím chưa làm.
-4. `hrflow_norm_key` khác `normalizeKeyPart` với sigma cuối Hy Lạp, ký tự NUL, vài chữ Unicode 16 (2 test `it.fails`, chấp nhận).
-5. AC-B3-24 (100k × 30 < 10 giây) đạt với biên mỏng: đọc + chạy ≈ 8,4–9,5 giây trên máy 4 nhân. 1 triệu dòng: đọc ≈ 68 giây, upload DuckDB ≈ 20 giây, ghi ≈ 60 giây — điểm tối ưu tiếp.
+4. `hrflow_norm_key` khác `normalizeKeyPart` với sigma cuối Hy Lạp, ký tự NUL, chữ Unicode 16/17 mới (DuckDB 1.32 có bảng Unicode cũ hơn Node; CI chạy Node có ICU Unicode 17). Chấp nhận.
+5. Hiệu năng: AC-B3-24 (100k × 30 < 10 giây) biên mỏng. 1 triệu × 30: đọc async ≈ 30–36 s, sync ≈ 42–48 s (dao động theo tải máy), upload DuckDB ≈ 19 s, SQL công thức 10 cột ≈ 28 s, ghi ≈ 60 s. AC-B4-31 mới đo trên Node, chưa đo trên Chromium.
+6. File DEFLATE dựng đặc biệt (hàng chục nghìn block tí hon) đọc chậm ~100 lần/byte (cả `DecompressionStream` native cũng vậy); file ~50 MB như vậy có thể treo worker vài phút, nút Hủy vẫn dùng được. Phương án nếu cần: trần thời gian đọc mỗi file.
+7. `transform.formula`: chuỗi 50 cột nối tiếp mất ≈ 3–4 s lập kế hoạch SQL (không phụ thuộc số dòng), kể cả khi xem trước; chưa có E2E cho việc ẩn cảnh báo khi sửa node phía trên (mới có unit test `preview-signature`).
+8. CI GitHub (`ci.yml`) không chạy E2E; E2E phải chạy local trước khi lên `main`.
 
-## 5. Bước tiếp theo: Bước 4 (theo MEMORY 2026-10-27 07:31)
+## 5. Bước tiếp theo
 
-- `transform.formula`: hàm Excel → SQL DuckDB, chỉ hỗ trợ hàm trong danh sách đã định nghĩa (MEMORY 2026-10-26 08:20). Cần làm rõ với Harold (skill `clarify`): danh sách hàm, cú pháp tham chiếu cột, xử lý lỗi/kiểu.
-- Sau đó: các mục Phase 2 trong spec §21 (Python/Pyodide, template Excel, bảng tham chiếu có effective date…) — hỏi Harold thứ tự.
+- **Đổi giao diện theo design language bản 2** (MEMORY 2026-10-30 13:26, 13:29; spec §25; `.claude/rules/design.md`) — vòng code riêng, ngay sau `transform.formula`.
+- Sau đó: HANDOFF §4 mục #3 (nối cạnh bằng bàn phím) và #5 (tối ưu hiệu năng), rồi các mục Phase 2 trong spec §21 (`code.python`/Pyodide, template Excel, bảng tham chiếu có effective date…) — hỏi Harold thứ tự.
 
-Wireframe: https://claude.ai/artifact/BUfBGjG3F8XyXmctD86QzW (7 màn).
+## 6. Token theo vòng (để so sánh hiệu quả)
+
+| Vòng | Agent | Token (theo thông báo kết thúc, cộng dồn) |
+|------|-------|------------------------------------------|
+| Bước 4 – R1 + 5 vòng sửa | developer | ≈ 631k |
+| Bước 4 – R1 kiểm 5 lần | verifier | ≈ 349k |
+
+Ghi chú: vòng sửa nhiều do lỗ hổng zip bomb (size khai báo sai, fallback SheetJS, cộng dồn) và giới hạn tầng SQL; lần sau nên giao verifier fuzz sớm với phần nhạy cảm bảo mật.
+
+Wireframe (bản 1, chỉ tham khảo bố cục): https://claude.ai/artifact/BUfBGjG3F8XyXmctD86QzW (7 màn).
