@@ -55,6 +55,8 @@
 |------|-------|------------------------------------------|
 | Bước 4 – R1 + 5 vòng sửa | developer | ≈ 631k |
 | Bước 4 – R1 kiểm 5 lần | verifier | ≈ 349k |
+| Giao diện bản 2 (5 phần, dừng giữa để đổi tham chiếu thiết kế) | developer | ≈ 321k |
+| Giao diện bản 2 kiểm lần 1 (full E2E, flaky, dấu tiếng Việt, AC-UI-44) | verifier | ≈ 149k |
 
 Ghi chú: vòng sửa nhiều do lỗ hổng zip bomb (size khai báo sai, fallback SheetJS, cộng dồn) và giới hạn tầng SQL; lần sau nên giao verifier fuzz sớm với phần nhạy cảm bảo mật.
 
