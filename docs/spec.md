@@ -992,12 +992,12 @@ Không thuộc Phase 1: `input.refTable`, bảng tham chiếu, template — Phas
 | ~~Q12~~ | Đã chốt 2026-10-27: dùng Monaco, chỉ trong chunk Designer, worker và font self-host, không dùng CDN loader (§5) | — |
 | ~~Q13~~ | Đã chốt 2026-10-27: node `output.preview` có trong bước 3 (§12.1.10) | — |
 | ~~Q14~~ | Đã chốt 2026-10-27: cột thêm của slot `extraColumns: 'keep'` chỉ dùng được trong `code.sql` lúc chạy, Designer cảnh báo (§12.1.9) | — |
-| Q19 | Vòng giao diện bản 2: kiểm bằng ảnh chụp màn hình theo cách nào (ảnh để duyệt tay, hay ảnh chuẩn so pixel tự động)? | Độ ổn định E2E, vòng nâng tooling |
-| Q20 | Vòng giao diện bản 2: Designer (canvas, node, form cấu hình) làm cùng vòng hay tách vòng sau? | Hạn mức, phạm vi |
-| Q21 | Vòng giao diện bản 2: có thêm `@axe-core/playwright` (MPL-2.0) để quét a11y tự động không? | Dependency, độ phủ a11y |
-| Q22 | Vòng giao diện bản 2: tiêu đề trang dạng "câu kết luận" (§25.1) áp dụng tới đâu? | Copy, i18n |
-| Q23 | Vòng giao diện bản 2: bỏ font weight không dùng (500, 800) và đưa CSS vào ngân sách bundle? | Dung lượng tải |
-| Q24 | Vòng giao diện bản 2: card tối và KPI card ở màn Kết quả làm trong vòng này không? | Phạm vi |
+| ~~Q19~~ | Đã chốt 2026-11-03 09:07: ảnh chụp E2E để Harold duyệt tay + kiểm giá trị CSS tự động, không so pixel (§28.6) | — |
+| ~~Q20~~ | Đã chốt 2026-11-03 09:07: Designer làm cùng vòng, chỉ đổi phần khung; chữ canvas/form/Monaco giữ 14px (§28.2) | — |
+| ~~Q21~~ | Đã chốt 2026-11-03 09:07: thêm `@axe-core/playwright` (MPL-2.0, dev dependency) (§28.5) | — |
+| ~~Q22~~ | Đã chốt 2026-11-03 09:07: tiêu đề câu kết luận chỉ ở màn Kết quả (§25.1, §28.3) | — |
+| ~~Q23~~ | Đã chốt 2026-11-03 09:07: bỏ weight 800 (và 500 nếu không dùng), ngân sách thêm CSS gzip +10% (§28.7) | — |
+| ~~Q24~~ | Đã chốt 2026-11-03 09:07: làm KPI card + 1 card tối ở màn Kết quả (§28.3) | — |
 | ~~Q18~~ | Đã chốt 2026-10-30 13:29: canvas Designer, Monaco và bảng xem trước giữ chữ 14px (§25.1) | — |
 | ~~Q17~~ | Đã chốt 2026-10-30 13:24: công thức dùng `,` ngăn đối số và `.` thập phân, không nhận `;` (§12.2) | — |
 | ~~Q16~~ | Đã chốt 2026-10-30 13:18: `transform.formula` chỉ nhận công thức Excel (transpile sang SQL), 41 hàm, không có XLOOKUP/VLOOKUP (§9.1, §12.2) | — |
@@ -1120,7 +1120,7 @@ Font duy nhất `Be Vietnam Pro` (400–700), fallback `Arial, sans-serif`, **se
 | Token | Desktop (≥ 768px) | Mobile (< 768px) | Dùng cho |
 |-------|-------------------|------------------|----------|
 | `display-xl` | 56px / 600 / lh 60px | 36px / lh 40px | Số KPI lớn |
-| `display-lg` | 48px / 600 / lh 52px / ls −0.5px | 32px / lh 36px | Tiêu đề trang; viết như một câu kết luận ("Kỳ 09/2026 có 9 nhân viên lệch công cần xử lý") |
+| `display-lg` | 48px / 600 / lh 52px / ls −0.5px | 32px / lh 36px | Tiêu đề trang. Màn Kết quả viết như một câu kết luận có số động ("Kỳ 09/2026 có 9 nhân viên lệch công cần xử lý"); màn khác giữ tiêu đề mô tả (chốt 2026-11-03 09:07) |
 | `title-md` | 24px / 600 / lh 30px / ls −0.6px | 20px / lh 26px | Tiêu đề section, tiêu đề card |
 | `title-sm` | 20px / 600 / lh 26px / ls −0.3px | 18px | Tiêu đề nhỏ trong card, tiêu đề dialog |
 | `body-lg` | 18px / 400 / lh 27px | 16px / lh 24px | Đoạn dẫn, mô tả dưới tiêu đề trang, chữ trong input |
@@ -1409,7 +1409,7 @@ Breakpoint: mobile < 768px (1 cột, menu trái thu thành nút mở), tablet 76
 
 ## 28. Đổi giao diện theo design language bản 2 — User story & Acceptance criteria
 
-> Phạm vi theo quyết định 2026-10-30 13:26 và 13:29 (§25). Vòng code riêng, ngay sau bước 4 – R1; ngay sau vòng này là vòng nâng tooling (MEMORY 2026-11-03 09:01). Vòng này **chỉ đổi giao diện**: không đổi luồng nghiệp vụ, route, i18n key đang có (chỉ thêm), engine, worker, Supabase. Các điểm còn mở: §22 Q19–Q24.
+> Phạm vi theo quyết định 2026-10-30 13:26 và 13:29 (§25). Vòng code riêng, ngay sau bước 4 – R1; ngay sau vòng này là vòng nâng tooling (MEMORY 2026-11-03 09:01). Vòng này **chỉ đổi giao diện**: không đổi luồng nghiệp vụ, route, i18n key đang có (chỉ thêm), engine, worker, Supabase. Các điểm làm rõ Q19–Q24 đã chốt 2026-11-03 09:07 (MEMORY nhóm "Kỹ thuật & tổ chức").
 
 **US-UI-01** — Là User, tôi muốn giao diện chữ to, rõ, phẳng và nhất quán, để đọc kết quả đối chiếu nhanh, ít mỏi mắt.
 
@@ -1439,11 +1439,11 @@ Breakpoint: mobile < 768px (1 cột, menu trái thu thành nút mở), tablet 76
 | Auth | Đăng nhập, đổi mật khẩu | `features/auth/*` | Nền phẳng, card viền ≤ 440px |
 | User | Danh sách flow | `runner/FlowListPage.tsx` | |
 | User | Chạy flow (tham số, upload, validation report, tiến trình) | `runner/RunPage.tsx`, `runner/components/*` | Vùng kéo thả theo §25.3 |
-| User | Kết quả | `runner/ResultPage.tsx`, `ResultTable.tsx` | KPI card `display-xl`; bảng dữ liệu giữ 14px |
+| User | Kết quả | `runner/ResultPage.tsx`, `ResultTable.tsx` | Tiêu đề câu kết luận, KPI card, 1 card tối (AC-UI-09); bảng dữ liệu giữ 14px |
 | Admin | Users & Groups (kèm dialog) | `admin/AdminUsersPage.tsx` | Bảng quản trị theo thang chung 16px |
 | Admin | Flows | `admin/AdminFlowsPage.tsx` | |
 | Admin | Version & hiệu lực, diff | `admin/versions/*` | Diff JSON là vùng code: 14px |
-| Admin | Designer | `designer/*` (Palette, canvas `nodes.tsx`, ConfigPanel, forms, DataPanel, StatusBar, FormulaEditor, SqlEditor) | Ngoại lệ 14px (§25.1); tiêu đề, nút vẫn theo thang chung |
+| Admin | Designer | `designer/*` (Palette, canvas `nodes.tsx`, ConfigPanel, forms, DataPanel, StatusBar, FormulaEditor, SqlEditor) | Chỉ đổi phần khung: bo góc, viền, nút, tiêu đề, node card (chốt Q20); chữ canvas/form/Monaco giữ 14px |
 
 ### 28.3 Token & component
 
@@ -1457,6 +1457,7 @@ Breakpoint: mobile < 768px (1 cột, menu trái thu thành nút mở), tablet 76
 | AC-UI-06 | Eyebrow trên mỗi tiêu đề trang: chữ in hoa, `letter-spacing` 1px, 14px/600 (13px mobile), nền trong suốt, màu theo ý nghĩa. Status chip, tab: pill 999px. |
 | AC-UI-07 | Menu trái Admin: item cao 44px, radius 6px; item đang chọn nền `#DDF5EF`, chữ `#0F766E` 600, vạch trái 3px `#0F766E`, có `aria-current="page"`. Top bar nền trắng, viền dưới 1px `#E2E8F0`, không shadow. |
 | AC-UI-08 | Trang đăng nhập và đổi mật khẩu: nền phẳng `#F7FAF9`, không gradient, không phần tử trang trí; card rộng tối đa 440px, viền 1px `#E2E8F0`, padding 32px (24px mobile), không shadow. |
+| AC-UI-09 | Màn Kết quả (chốt Q22, Q24): `h1` là câu kết luận có số động qua i18n (có dạng khi không lệch, VD "Kỳ 09/2026 khớp toàn bộ 120 nhân viên"); hàng KPI card (vạch trên 4px: teal khớp, coral lệch, amber chỉ có một bên; số `display-xl` định dạng kiểu Việt Nam); đúng 1 card tối nền `#1F2A44` chữ trắng cho kết luận chính. Số liệu lấy từ kết quả đã có trong bộ nhớ, không chạy lại; kết quả không có `control.compare` → tiêu đề mô tả chung, không KPI. Các màn khác giữ tiêu đề hiện tại. |
 
 ### 28.4 Thang chữ & ngoại lệ mật độ cao
 
@@ -1471,7 +1472,7 @@ Breakpoint: mobile < 768px (1 cột, menu trái thu thành nút mở), tablet 76
 
 | # | Given / When / Then |
 |---|---------------------|
-| AC-UI-20 | Mọi cặp chữ/nền trên các màn §28.2 đạt WCAG AA (≥ 4,5:1 chữ thường, ≥ 3:1 chữ ≥ 24px hoặc ≥ 18,66px đậm); viền control (input, Select, checkbox, nút outline) ≥ 3:1 với nền kề; focus ring nhìn thấy được. Kiểm bằng E2E tính tương phản từ `getComputedStyle` (mở rộng `a11y.spec.ts`) — xem Q21 về axe-core. |
+| AC-UI-20 | Mọi cặp chữ/nền trên các màn §28.2 đạt WCAG AA (≥ 4,5:1 chữ thường, ≥ 3:1 chữ ≥ 24px hoặc ≥ 18,66px đậm); viền control (input, Select, checkbox, nút outline) ≥ 3:1 với nền kề; focus ring nhìn thấy được. Kiểm bằng E2E tính tương phản từ `getComputedStyle` (mở rộng `a11y.spec.ts`) **và** quét `@axe-core/playwright` (chốt Q21, quy tắc WCAG 2.1 A/AA) trên mọi trạng thái của AC-UI-30: 0 vi phạm mức `serious`/`critical`; vi phạm khác liệt kê trong báo cáo. Vùng canvas React Flow được loại khỏi quét chỉ khi lỗi nằm trong thư viện (ghi rõ lý do). |
 | AC-UI-21 | Touch target ≥ 44×44px cho mọi phần tử bấm được ở màn User và dialog (giữ test hiện có, cập nhật kích thước mới). |
 | AC-UI-22 | Toàn bộ E2E a11y, bàn phím (Select, picker, Designer, dialog) hiện có vẫn pass; không thêm `<select>`/picker mặc định; không text UI mới hard-code ngoài i18n. |
 | AC-UI-23 | Zoom 200% (viewport 640px) màn Chạy flow và Kết quả vẫn dùng được, không mất nội dung (WCAG 1.4.4/1.4.10). |
@@ -1480,16 +1481,16 @@ Breakpoint: mobile < 768px (1 cột, menu trái thu thành nút mở), tablet 76
 
 | # | Given / When / Then |
 |---|---------------------|
-| AC-UI-30 | Spec E2E mới `e2e/ui-v2.spec.ts` (Supabase mock, dữ liệu giả `fixtures/payroll-timesheet/`) chụp các trạng thái: Đăng nhập (trống + lỗi), Đổi mật khẩu, Danh sách flow, Chạy flow (chưa upload / validation có lỗi + cảnh báo / đang chạy), Kết quả (Tổng hợp + tab Lệch), Admin Users (bảng + dialog tạo tài khoản), Admin Flows, Version (danh sách + diff), Designer (canvas flow nghiệm thu + panel node formula + xem trước), Select mở, MonthPicker mở, hộp thoại tự đăng xuất; mỗi trạng thái ở 1280×800, màn User thêm 390×844. Cách lưu/so sánh ảnh theo Q19. |
+| AC-UI-30 | Spec E2E mới `e2e/ui-v2.spec.ts` (Supabase mock, dữ liệu giả `fixtures/payroll-timesheet/`) chụp các trạng thái: Đăng nhập (trống + lỗi), Đổi mật khẩu, Danh sách flow, Chạy flow (chưa upload / validation có lỗi + cảnh báo / đang chạy), Kết quả (Tổng hợp + tab Lệch), Admin Users (bảng + dialog tạo tài khoản), Admin Flows, Version (danh sách + diff), Designer (canvas flow nghiệm thu + panel node formula + xem trước), Select mở, MonthPicker mở, hộp thoại tự đăng xuất; mỗi trạng thái ở 1280×800, màn User thêm 390×844. Ảnh ghi vào `test-results/ui-v2/` (không commit) kèm `index.html` liệt kê ảnh theo màn; **không** so pixel tự động (chốt Q19). Mỗi trạng thái đồng thời kiểm giá trị CSS thật theo AC-UI-03..11. |
 | AC-UI-31 | Ảnh chụp sinh trên bản build mới (`CI=1 pnpm test:e2e`), font Be Vietnam Pro đã nạp xong (`document.fonts.ready`), tắt animation/caret; không chứa dữ liệu thật (chỉ fixture giả). |
-| AC-UI-32 | Harold duyệt bộ ảnh trước khi lên `main` (gửi qua file trong repo hoặc trang xem ảnh, theo Q19). |
+| AC-UI-32 | Session chính đưa bộ ảnh lên một trang xem ảnh riêng tư (Artifact) để Harold duyệt trước khi lên `main`; ảnh chỉ chứa dữ liệu giả. |
 
 ### 28.7 Ngân sách & không hồi quy
 
 | # | Given / When / Then |
 |---|---------------------|
 | AC-UI-40 | Entry chunk (gzip) vẫn trong ngân sách hiện có (baseline 200.370 byte, +10%), `pnpm build` tự kiểm. Monaco, React Flow không vào chunk của User. |
-| AC-UI-41 | CSS gzip toàn app không tăng quá 10% so với `main` trước vòng này (đo và ghi trong báo cáo; theo Q23 có thể thêm vào script ngân sách). |
-| AC-UI-42 | Font: chỉ còn các weight thật sự dùng (theo Q23), vẫn self-host, không request ra domain ngoài (`privacy.spec.ts` pass). |
+| AC-UI-41 | `scripts/check-bundle-size.mjs` kiểm thêm tổng CSS gzip: không tăng quá 10% so với baseline đo trên `main` trước vòng này (`a6e36e1`), lưu trong `bundle-budget.json` (chốt Q23); vượt → `pnpm build` fail. |
+| AC-UI-42 | Font: bỏ `@font-face` weight 800; weight 500 bỏ nếu không còn dùng sau vòng này (chốt Q23); vẫn self-host, không request ra domain ngoài (`privacy.spec.ts` pass). |
 | AC-UI-43 | `pnpm lint`, `format:check`, `typecheck`, `test`, `build`, `CI=1 pnpm test:e2e` pass. Test E2E cũ chỉ được sửa ở phần kiểm kích thước/màu/selector do giao diện đổi; không xóa test, không đổi nghiệp vụ được kiểm. |
 | AC-UI-44 | Không đổi hành vi: luồng chạy flow nghiệm thu (§24) cho cùng file kết quả (so sánh nội dung các sheet trước/sau). |
