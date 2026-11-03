@@ -93,7 +93,7 @@ test.describe('Version & validity screen', () => {
     await dialog.getByRole('button', { name: 'Publish' }).click();
     await expect(dialog).toContainText('Nhập ghi chú thay đổi.');
     await expect(note).toHaveAttribute('aria-invalid', 'true');
-    await expect(note).toHaveCSS('border-top-color', 'rgb(249, 115, 98)');
+    await expect(note).toHaveCSS('border-top-color', 'rgb(194, 65, 12)'); // v2 error border #C2410C
     expect(rpcBodies(supabase)).toEqual([]);
   });
 

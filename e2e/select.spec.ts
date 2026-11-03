@@ -27,10 +27,10 @@ test.describe('custom Select', () => {
     await expect(t).toHaveAttribute('aria-haspopup', 'listbox');
     await expect(t).toHaveAttribute('aria-expanded', 'false');
     const box = await t.boundingBox();
-    expect(box!.height).toBeGreaterThanOrEqual(42);
-    expect(box!.height).toBeLessThanOrEqual(46);
-    await expect(t).toHaveCSS('border-top-left-radius', '12px');
-    await expect(t).toHaveCSS('border-top-color', 'rgb(203, 213, 225)');
+    // Design v2 (spec §25.3): 48px, 6px radius, #475569 border.
+    expect(Math.round(box!.height)).toBe(48);
+    await expect(t).toHaveCSS('border-top-left-radius', '6px');
+    await expect(t).toHaveCSS('border-top-color', 'rgb(71, 85, 105)');
 
     await t.click();
     await expect(t).toHaveAttribute('aria-expanded', 'true');
@@ -42,10 +42,10 @@ test.describe('custom Select', () => {
       'hr.nv01',
       'admin',
     ]);
-    // Group header styled as an eyebrow (12px / 700 / uppercase), not the browser's optgroup.
+    // Group header styled as an eyebrow (14px / 600 / uppercase), not the browser's optgroup.
     const header = list.getByText('Tài khoản', { exact: true });
     await expect(header).toHaveCSS('text-transform', 'uppercase');
-    await expect(header).toHaveCSS('font-size', '12px');
+    await expect(header).toHaveCSS('font-size', '14px');
 
     // Mouse: pick a user; the selected option is marked and teal-tinted on reopen.
     await list.getByRole('option', { name: 'hr.nv01' }).click();

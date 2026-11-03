@@ -344,7 +344,7 @@ test.describe('month picker (MEMORY 13:48: custom picker, keyboard operable)', (
     await expect(dialog.locator('[role="gridcell"][tabindex="0"]')).toHaveCount(1);
     await expect(dialog.locator('[role="gridcell"][tabindex="0"]')).toBeFocused();
     await expect(dialog.getByRole('gridcell')).toHaveCount(12);
-    await expect(dialog.getByRole('gridcell').first()).toHaveText('Th 1');
+    await expect(dialog.getByRole('gridcell').first()).toHaveText('Tháng 1'); // full word: the accessible name contains it (WCAG 2.5.3)
 
     // Jump to a known place: End of the row then PageUp/PageDown change only the year.
     await page.keyboard.press('Home');
