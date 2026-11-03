@@ -1111,7 +1111,7 @@ AC-11 … AC-13 được chi tiết hóa ở §26 (AC-B3-33, AC-B3-53, AC-B3-61,
 
 ## 25. Design system (UI)
 
-Toàn bộ UI dùng **một** design language ("bright executive" **bản 2**, chốt 2026-10-30 13:26), áp dụng như nhau cho phần User và Admin. Bản 2 giữ nguyên bộ màu và font của bản 1, đổi sang phong cách **phẳng**: bo góc vừa (12px), viền mảnh thay cho shadow, nút 3 cấp, eyebrow chữ in hoa không nền, thang chữ lớn. Wireframe cũ (bản 1, chỉ tham khảo bố cục): https://claude.ai/artifact/BUfBGjG3F8XyXmctD86QzW.
+Toàn bộ UI dùng **một** design language ("bright executive" **bản 2**, chốt 2026-10-30 13:26), áp dụng như nhau cho phần User và Admin. Bản 2 giữ nguyên bộ màu và font của bản 1, đổi sang phong cách **phẳng**: bo góc vừa (12px), viền mảnh thay cho shadow, nút 3 cấp, eyebrow chữ in hoa không nền, thang chữ lớn. Nguồn tham chiếu cấu trúc: `docs/design-reference.md` (chốt 2026-11-03 10:06: chỉ lấy cấu trúc, giữ màu và font; §25 thắng khi khác nhau). Wireframe cũ (bản 1, chỉ tham khảo bố cục): https://claude.ai/artifact/BUfBGjG3F8XyXmctD86QzW.
 
 ### 25.1 Typography
 

@@ -225,6 +225,8 @@
 
 ## Kỹ thuật & tổ chức
 
+2026-11-03 10:06 - Design language tham chiếu là file `docs/design-reference.md` (Harold gửi): chỉ lấy phần cấu trúc (bo góc, nút, thang chữ, eyebrow, khoảng cách); giữ bộ màu teal/coral/amber/blue và font Be Vietnam Pro theo §25; chữ thường (body) giữ 16px (file dùng 18px).
+
 2026-11-03 09:07 - Vòng giao diện bản 2: kiểm bằng ảnh chụp E2E (~20 trạng thái, dữ liệu giả) gom vào một trang xem ảnh để Harold duyệt tay, kèm kiểm tự động giá trị CSS thật (bo góc, cỡ chữ, tương phản); không so pixel (`toHaveScreenshot`) ở vòng này, cân nhắc lại sau vòng nâng tooling.
 
 2026-11-03 09:07 - Vòng giao diện bản 2 gồm cả Designer nhưng chỉ đổi phần khung (bo góc, viền, nút, tiêu đề); chữ trong canvas, form cấu hình, Monaco giữ 14px.
