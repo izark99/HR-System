@@ -225,6 +225,8 @@
 
 ## Kỹ thuật & tổ chức
 
+2026-11-03 15:18 - Bảng Admin (Users, Nhóm, Flows, Version): mọi dòng cùng chiều cao; mỗi ô 1 dòng, chữ dài cắt "…" và hiện đủ khi rê chuột/focus; nhiều chip trong 1 ô nằm cùng 1 hàng; bảng vừa chiều ngang card ở 1280px (cột Thao tác không che cột khác), cột Thao tác có vạch ngăn bên trái như bảng Flows.
+
 2026-11-03 14:53 - Màn Admin (Users & Groups, Nhóm, Flows, Version): chip trạng thái, menu trái ("Sắp có"), nhãn nút không xuống dòng vỡ bố cục. Cột Thao tác dùng chung cho mọi bảng Admin: 1 nút chữ (`button-text` của `docs/design-reference.md`: không viền, 14,4px/700, hover nền `#F1F5F9`, vùng bấm cao 36px) cho thao tác hay dùng + nút chữ "Thao tác khác ▾" mở menu (bàn phím theo APG menu button) chứa phần còn lại; thao tác nguy hiểm (Khóa, Retire, Hủy draft…) ở cuối menu, chữ coral, giữ hộp xác nhận. Nút hiện sẵn: Users "Sửa"; Nhóm "Sửa"; Flows "Mở trang phiên bản"; Version draft "Mở Designer" (Publish là mục đầu của menu, giống kiểu bảng Flows: chỉ nút chữ, không có nút teal trong bảng); Version published/retired "Xem trong Designer".
 
 2026-11-03 13:28 - Hoạt ảnh loading dạng khung xương (skeleton): khối `#F1F5F9` theo bố cục sắp hiện, vệt sáng lướt chậm (~1,5 giây/lượt), chỉ hiện khi chờ quá ~200ms; `prefers-reduced-motion` → khối tĩnh; trình đọc màn hình vẫn đọc "Đang tải…". Áp cho mọi chỗ đang hiện "Đang tải…" và lúc chuyển trang chờ tải code (VD Designer); thanh % tải bộ xử lý dữ liệu giữ nguyên. Làm gộp trong vòng sửa giao diện bản 2 đang chạy.
