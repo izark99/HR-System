@@ -544,7 +544,7 @@ export function AdminFlowsPage() {
                 </thead>
                 <tbody>
                   {data.map((f) => (
-                    <tr key={f.id}>
+                    <tr key={f.id} className="bg-card">
                       <th scope="row" className={cx(tdClass, 'text-left font-semibold text-ink')}>
                         {f.name}
                         {f.isArchived && (

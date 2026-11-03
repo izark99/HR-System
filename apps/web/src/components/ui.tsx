@@ -86,7 +86,7 @@ export const labelClass = 'text-label text-ink';
 
 /** Table header cell of an admin/user table (§25.3: `caption` 600 #475569 on #F1F5F9). */
 export const thClass =
-  'border-b border-line bg-neutral px-4 py-3 text-left text-caption font-semibold text-muted';
+  'border-b border-line bg-neutral px-4 py-3 text-left text-caption font-semibold whitespace-nowrap text-muted';
 
 /** Body cell of a table (12px 16px padding; type size and colour come from the `<table>`). */
 export const tdClass = 'border-b border-line px-4 py-3 align-top';

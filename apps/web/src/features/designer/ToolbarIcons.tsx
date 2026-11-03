@@ -83,7 +83,7 @@ export function IconButton({
       <Button
         size="sm"
         aria-label={label}
-        className={cx('w-control-sm px-0', className)}
+        className={cx('w-control-sm px-0!', className)}
         {...props}
       >
         {icon}

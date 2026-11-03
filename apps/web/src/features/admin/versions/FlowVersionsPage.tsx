@@ -331,7 +331,7 @@ export function FlowVersionsPage() {
               {versions.map((v) => {
                 const isCurrent = current?.id === v.id;
                 return (
-                  <tr key={v.id} className={cx(isCurrent && 'bg-teal-tint-soft')}>
+                  <tr key={v.id} className={isCurrent ? 'bg-teal-tint-soft' : 'bg-card'}>
                     <th
                       scope="row"
                       className={cx(tdClass, 'text-left font-semibold whitespace-nowrap text-ink')}

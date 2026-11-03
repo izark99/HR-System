@@ -373,7 +373,11 @@ export async function rowActionsChecks(table: Locator): Promise<void> {
         const menu = box?.querySelector('[data-menu-button]');
         const buttons = box ? Array.from(box.querySelectorAll('a, button')) : [];
         const tops = buttons.map((b) => Math.round(b.getBoundingClientRect().top));
+        // The action cell is pinned (sticky) inside the scrolling region: always fully in view.
+        const region = (t.closest('[role="region"]') ?? t).getBoundingClientRect();
+        const cell = box?.getBoundingClientRect();
         return {
+          inView: !!cell && cell.left >= region.left - 1 && cell.right <= region.right + 1,
           has: !!box && !!menu,
           menuLabel: menu?.getAttribute('aria-label') ?? '',
           menuRight: menu ? Math.round(menu.getBoundingClientRect().right) : -1,
@@ -400,6 +404,7 @@ export async function rowActionsChecks(table: Locator): Promise<void> {
     expect(c.has, 'row has the shared action cell').toBe(true);
     expect(c.menuLabel).toMatch(/^Thao tác khác cho .+/);
     expect(c.oneLine, `actions on one line (${c.menuLabel})`).toBe(true);
+    expect(c.inView, `actions in view without scrolling (${c.menuLabel})`).toBe(true);
     for (const h of c.heights) expect(h, `small button height (${c.menuLabel})`).toBe(36);
   }
   const rights = new Set(report.cells.map((c) => c.menuRight));
@@ -484,6 +489,7 @@ export async function designerToolbarChecks(page: Page): Promise<void> {
     await expect(b).toHaveCount(1);
     expect((await b.textContent())?.trim(), `${name}: icon only`).toBe('');
     expect(Math.round((await style(b)).width), `${name}: square`).toBe(36);
+    expect(Math.round((await style(b.locator('svg'))).width), `${name}: icon drawn`).toBe(18);
     await b.locator('..').hover();
     await expect(page.locator('[data-tooltip]')).toContainText(name);
   }

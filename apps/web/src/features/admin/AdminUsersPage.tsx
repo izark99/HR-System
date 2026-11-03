@@ -570,7 +570,10 @@ function UsersTable({
         <tbody>
           {data.users.map((u) => {
             return (
-              <tr key={u.id} className={cx(u.isActive && u.mustChangePassword && 'bg-amber-tint')}>
+              <tr
+                key={u.id}
+                className={u.isActive && u.mustChangePassword ? 'bg-amber-tint' : 'bg-card'}
+              >
                 <th scope="row" className={cx(tdClass, 'text-left font-semibold text-ink')}>
                   {u.username}
                 </th>
@@ -742,7 +745,7 @@ function GroupsTable({
         </thead>
         <tbody>
           {data.groups.map((g) => (
-            <tr key={g.id}>
+            <tr key={g.id} className="bg-card">
               <th scope="row" className={cx(tdClass, 'text-left font-semibold text-ink')}>
                 {g.name}
               </th>
