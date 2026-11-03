@@ -225,6 +225,8 @@
 
 ## Kỹ thuật & tổ chức
 
+2026-11-03 09:01 - Dependabot: merge bản vá/bản nhỏ khi CI xanh; bản major của tooling (vite 8 cùng @vitejs/plugin-react 6, vitest 5, @playwright/test mới — cần khớp Chromium cài sẵn) gom vào một vòng "nâng tooling" riêng ngay sau vòng đổi giao diện, chạy đủ E2E; các PR #9, #11, #13 để mở tới lúc đó. Bỏ qua major của `@types/node` (runtime Node 22) và `apache-arrow` (theo DuckDB-WASM).
+
 2026-10-30 23:29 - Giải nén entry .xlsx: đường đồng bộ dùng `fflate` (MIT, giải nén theo luồng, dừng sớm được) thay bộ giải mã DEFLATE tự viết; đường bất đồng bộ (worker) giữ bộ giải nén có sẵn của trình duyệt (`DecompressionStream`) kèm đếm byte và dừng sớm.
 
 ~~2026-10-30 22:59 - Giải nén entry .xlsx (đường đồng bộ và bất đồng bộ có giới hạn) dùng thư viện `fflate` (MIT, giải nén theo luồng, dừng sớm được), không dùng bộ giải mã DEFLATE tự viết.~~ → thay bởi 2026-10-30 23:29

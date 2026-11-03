@@ -1,6 +1,6 @@
 # HANDOFF — Trạng thái dự án để mở session mới
 
-> Cập nhật: 2026-10-31. Đọc file này sau `CLAUDE.md` và `docs/MEMORY.md`.
+> Cập nhật: 2026-11-03. Đọc file này sau `CLAUDE.md` và `docs/MEMORY.md`.
 
 ## 1. Đã xong
 
@@ -46,6 +46,7 @@
 ## 5. Bước tiếp theo
 
 - **Đổi giao diện theo design language bản 2** (MEMORY 2026-10-30 13:26, 13:29; spec §25; `.claude/rules/design.md`) — vòng code riêng, ngay sau `transform.formula`.
+- Ngay sau vòng giao diện: vòng **nâng tooling** (MEMORY 2026-11-03): PR dependabot `izark99/HR-System#11` (vite 8, nâng cùng `@vitejs/plugin-react` 6 — bỏ luật ignore trong `.github/dependabot.yml`), `izark99/HR-System#13` (vitest 5, CI đang đỏ), `izark99/HR-System#9` (@playwright/test 1.64 — kiểm khớp Chromium cài sẵn `/opt/pw-browsers`); chạy đủ E2E. PR cũ thì comment `@dependabot rebase` trước.
 - Sau đó: HANDOFF §4 mục #3 (nối cạnh bằng bàn phím) và #5 (tối ưu hiệu năng), rồi các mục Phase 2 trong spec §21 (`code.python`/Pyodide, template Excel, bảng tham chiếu có effective date…) — hỏi Harold thứ tự.
 
 ## 6. Token theo vòng (để so sánh hiệu quả)
