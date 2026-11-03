@@ -7,8 +7,10 @@ import {
   useRef,
   useState,
   type KeyboardEvent,
+  type ReactNode,
 } from 'react';
 import { menuKeyTarget } from './menu-logic';
+import { Tooltip } from './Tooltip';
 import { buttonClass, cx, floatClass } from './ui';
 
 export interface MenuItem {
@@ -59,10 +61,13 @@ export function MenuButton({
   label,
   ariaLabel,
   items,
+  icon,
 }: {
   label: string;
   ariaLabel: string;
   items: MenuItem[];
+  /** Icon-only trigger (AC-UI-58): `label` becomes its tooltip. */
+  icon?: ReactNode;
 }) {
   const id = useId();
   const buttonRef = useRef<HTMLButtonElement>(null);
@@ -158,22 +163,28 @@ export function MenuButton({
 
   return (
     <span className="inline-flex">
-      <button
-        ref={buttonRef}
-        type="button"
-        id={`${id}-button`}
-        aria-haspopup="menu"
-        aria-expanded={open}
-        aria-controls={open ? `${id}-menu` : undefined}
-        aria-label={ariaLabel}
-        data-menu-button
-        onClick={() => (open ? close(false) : openAt(0))}
-        onKeyDown={onButtonKey}
-        className={cx(buttonClass('text', 'sm'), 'gap-1')}
-      >
-        {label}
-        <ChevronDownIcon />
-      </button>
+      <Tooltip text={icon && !open ? label : null} className="inline-flex">
+        <button
+          ref={buttonRef}
+          type="button"
+          id={`${id}-button`}
+          aria-haspopup="menu"
+          aria-expanded={open}
+          aria-controls={open ? `${id}-menu` : undefined}
+          aria-label={ariaLabel}
+          data-menu-button
+          onClick={() => (open ? close(false) : openAt(0))}
+          onKeyDown={onButtonKey}
+          className={cx(buttonClass('text', 'sm'), icon ? 'w-control-sm px-0!' : 'gap-1')}
+        >
+          {icon ?? (
+            <>
+              {label}
+              <ChevronDownIcon />
+            </>
+          )}
+        </button>
+      </Tooltip>
       {open && (
         <div
           ref={menuRef}

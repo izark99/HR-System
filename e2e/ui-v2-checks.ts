@@ -359,8 +359,8 @@ export async function pillChecks(pills: Locator): Promise<void> {
 }
 
 /**
- * Action column of an Admin table (AC-UI-54): every row has the same layout (visible small
- * button(s) + "Thao tác khác" menu button) on ONE line, the menu buttons line up in a column,
+ * Action column of an Admin table (AC-UI-54/58): every row has the same layout (visible icon
+ * button + "⋯" menu button) on ONE line, the menu buttons line up in a column,
  * small buttons are 36px; chips and buttons do not wrap.
  */
 export async function rowActionsChecks(table: Locator): Promise<void> {
@@ -383,19 +383,19 @@ export async function rowActionsChecks(table: Locator): Promise<void> {
           menuRight: menu ? Math.round(menu.getBoundingClientRect().right) : -1,
           oneLine: tops.every((y) => Math.abs(y - tops[0]!) <= 1),
           heights: buttons.map((b) => Math.round(b.getBoundingClientRect().height)),
-          // Text buttons (§25.3, 2026-11-03 13:24): no border, transparent, ink 14.4px/700;
-          // only "Publish" on a draft row stays a (teal) primary button.
+          // Icon buttons (AC-UI-58): 36x36, no border, ink icon, named by aria-label, an SVG.
           looks: buttons.map((b) => {
             const cs = getComputedStyle(b);
+            const r = b.getBoundingClientRect();
             return {
-              name: b.getAttribute('aria-label') ?? b.textContent?.trim() ?? '',
-              primary: cs.backgroundColor === 'rgb(15, 118, 110)',
-              text:
+              name: b.getAttribute('aria-label') ?? '',
+              icon:
+                Math.round(r.width) === 36 &&
+                Math.round(r.height) === 36 &&
                 cs.borderTopWidth === '0px' &&
-                cs.backgroundColor === 'rgba(0, 0, 0, 0)' &&
                 cs.color === 'rgb(31, 42, 68)' &&
-                cs.fontSize === '14.4px' &&
-                cs.fontWeight === '700',
+                !!b.querySelector('svg') &&
+                (b.textContent ?? '').trim() === '',
             };
           }),
         };
@@ -422,8 +422,8 @@ export async function rowActionsChecks(table: Locator): Promise<void> {
     expect(c.inView, `actions in view without scrolling (${c.menuLabel})`).toBe(true);
     for (const h of c.heights) expect(h, `small button height (${c.menuLabel})`).toBe(36);
     for (const l of c.looks) {
-      if (l.primary) expect(l.name, 'only Publish is a primary row action').toMatch(/^Publish /);
-      else expect(l.text, `text button: ${l.name}`).toBe(true);
+      expect(l.name, 'icon action has an accessible name').not.toBe('');
+      expect(l.icon, `icon button: ${l.name}`).toBe(true);
     }
   }
   const rights = new Set(report.cells.map((c) => c.menuRight));
@@ -556,3 +556,69 @@ export async function paletteChecks(page: Page): Promise<void> {
 }
 
 export { style };
+
+/**
+ * Admin table rows (AC-UI-57): every body row has the same height (within 1px), every cell
+ * holds ONE line of text (text-node line boxes share one top; screen-reader-only text is
+ * ignored), the action column has its 1px #E2E8F0 separator (`::before`) in the header and in
+ * every row, and it does not cover the column before it. `noScroll`: the table fits its region.
+ */
+export async function tableRowChecks(table: Locator, opts: { noScroll?: boolean } = {}) {
+  const r = await table.evaluate((t) => {
+    const rows = Array.from(t.querySelectorAll('tbody tr'));
+    const lines = (cell: Element) => {
+      const tops = new Set<number>();
+      const walker = document.createTreeWalker(cell, NodeFilter.SHOW_TEXT);
+      const range = document.createRange();
+      for (let n = walker.nextNode(); n; n = walker.nextNode()) {
+        if (!n.textContent?.trim()) continue;
+        if (n.parentElement?.closest('.sr-only')) continue; // read by screen readers only
+        range.selectNodeContents(n);
+        for (const rect of Array.from(range.getClientRects())) {
+          if (rect.width <= 1 || rect.height <= 1) continue;
+          tops.add(Math.round(rect.top + rect.height / 2));
+        }
+      }
+      // Items on one line can differ a few px in centre (chip vs text): bucket by 8px.
+      const sorted = [...tops].sort((a, b) => a - b);
+      return sorted.filter((y, i) => i === 0 || y - sorted[i - 1]! > 8).length;
+    };
+    const sep = (el: Element | null) => {
+      if (!el) return 'missing';
+      const cs = getComputedStyle(el, '::before');
+      return `${cs.width} ${cs.backgroundColor}`;
+    };
+    const region = t.closest('[role="region"]');
+    return {
+      heights: rows.map((row) => Math.round(row.getBoundingClientRect().height)),
+      multi: rows.flatMap((row, i) =>
+        Array.from(row.children)
+          .map((c, j) => ({ j, n: lines(c), text: c.textContent?.trim().slice(0, 30) }))
+          .filter((c) => c.n > 1)
+          .map((c) => `row ${i + 1} col ${c.j + 1} "${c.text}": ${c.n} lines`),
+      ),
+      seps: [
+        sep(t.querySelector('thead tr')?.lastElementChild ?? null),
+        ...rows.map((row) => sep(row.lastElementChild)),
+      ],
+      covered: rows.flatMap((row, i) => {
+        const cells = Array.from(row.children);
+        const last = cells.at(-1)!.getBoundingClientRect();
+        const prev = cells.at(-2)!.getBoundingClientRect();
+        return last.left < prev.right - 1 ? [`row ${i + 1}`] : [];
+      }),
+      scroll: region ? region.scrollWidth - region.clientWidth : 0,
+    };
+  });
+  expect(r.heights.length, 'rows').toBeGreaterThan(0);
+  expect(
+    Math.max(...r.heights) - Math.min(...r.heights),
+    `row heights ${r.heights.join(', ')}`,
+  ).toBeLessThanOrEqual(1);
+  expect(r.multi, 'cells on more than one line').toEqual([]);
+  for (const s of r.seps) expect(s, 'action column separator').toBe(`1px ${C.line}`);
+  if (opts.noScroll) {
+    expect(r.scroll, 'table scrolls horizontally').toBeLessThanOrEqual(0);
+    expect(r.covered, 'action column covers a column').toEqual([]);
+  }
+}

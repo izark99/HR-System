@@ -1,7 +1,14 @@
 import { useId, useRef, useState, type FormEvent, type KeyboardEvent, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Select } from '../../components/Select';
-import { RowActions, rowActionsCellClass, rowActionsHeadClass } from '../../components/RowActions';
+import { PencilIcon } from '../../components/icons';
+import {
+  RowActions,
+  rowActionsCellClass,
+  rowActionsHeadClass,
+  RowIcon,
+  rowIconClass,
+} from '../../components/RowActions';
 import {
   Button,
   Callout,
@@ -12,8 +19,9 @@ import {
   inputClass,
   labelClass,
   PageHeader,
-  tdClass,
-  thClass,
+  CellText,
+  tdLineClass,
+  thLineClass,
 } from '../../components/ui';
 import type { Role } from '../../lib/database.types';
 import { signOutAndReload, useAuth, useAuthService } from '../auth/auth-context';
@@ -541,23 +549,31 @@ function UsersTable({
       tabIndex={0}
       aria-label={t('admin.users.caption')}
     >
-      <table className="w-full min-w-155 border-collapse text-body text-ink-soft">
+      <table className="w-full min-w-215 table-fixed border-collapse text-body text-ink-soft">
         <caption className="sr-only">{t('admin.users.caption')}</caption>
+        <colgroup>
+          <col className="w-44" />
+          <col />
+          <col className="w-26" />
+          <col />
+          <col className="w-54" />
+          <col className="w-30" />
+        </colgroup>
         <thead>
           <tr>
-            <th scope="col" className={thClass}>
+            <th scope="col" className={thLineClass}>
               {t('admin.users.username')}
             </th>
-            <th scope="col" className={thClass}>
+            <th scope="col" className={thLineClass}>
               {t('admin.users.fullName')}
             </th>
-            <th scope="col" className={thClass}>
+            <th scope="col" className={thLineClass}>
               {t('admin.users.role')}
             </th>
-            <th scope="col" className={thClass}>
+            <th scope="col" className={thLineClass}>
               {t('admin.users.groups')}
             </th>
-            <th scope="col" className={thClass}>
+            <th scope="col" className={thLineClass}>
               {t('admin.users.status')}
             </th>
             <th scope="col" className={rowActionsHeadClass}>
@@ -572,36 +588,44 @@ function UsersTable({
                 key={u.id}
                 className={u.isActive && u.mustChangePassword ? 'bg-amber-tint' : 'bg-card'}
               >
-                <th scope="row" className={cx(tdClass, 'text-left font-semibold text-ink')}>
-                  {u.username}
+                <th scope="row" className={cx(tdLineClass, 'text-left font-semibold text-ink')}>
+                  <CellText text={u.username} />
                 </th>
-                <td className={cx(tdClass, 'min-w-40')}>{u.fullName || '-'}</td>
-                <td className={tdClass}>
+                <td className={tdLineClass}>
+                  <CellText text={u.fullName || '-'} />
+                </td>
+                <td className={tdLineClass}>
                   <Chip tone={u.role === 'admin' ? 'blue' : 'neutral'}>
                     {t(`userMenu.role.${u.role}`)}
                   </Chip>
                 </td>
-                <td className={tdClass}>
-                  {u.groupIds
-                    .map((id) => groupName.get(id))
-                    .filter(Boolean)
-                    .join(', ') || '-'}
+                <td className={tdLineClass}>
+                  <CellText
+                    text={
+                      u.groupIds
+                        .map((id) => groupName.get(id))
+                        .filter(Boolean)
+                        .join(', ') || '-'
+                    }
+                  />
                 </td>
-                <td className={tdClass}>
+                <td className={tdLineClass}>
                   <StatusChip user={u} />
                 </td>
                 <td className={rowActionsCellClass}>
                   <RowActions
                     rowName={u.username}
                     visible={
-                      <Button
-                        variant="text"
-                        size="sm"
-                        aria-label={t('admin.users.editNamed', { username: u.username })}
-                        onClick={() => onEdit(u)}
-                      >
-                        {t('admin.users.edit')}
-                      </Button>
+                      <RowIcon label={t('admin.users.edit')}>
+                        <button
+                          type="button"
+                          className={rowIconClass}
+                          aria-label={t('admin.users.editNamed', { username: u.username })}
+                          onClick={() => onEdit(u)}
+                        >
+                          <PencilIcon />
+                        </button>
+                      </RowIcon>
                     }
                     items={[
                       {
@@ -724,17 +748,23 @@ function GroupsTable({
       tabIndex={0}
       aria-label={t('admin.groups.caption')}
     >
-      <table className="w-full min-w-120 border-collapse text-body text-ink-soft">
+      <table className="w-full min-w-200 table-fixed border-collapse text-body text-ink-soft">
         <caption className="sr-only">{t('admin.groups.caption')}</caption>
+        <colgroup>
+          <col className="w-72" />
+          <col />
+          <col className="w-32" />
+          <col className="w-30" />
+        </colgroup>
         <thead>
           <tr>
-            <th scope="col" className={thClass}>
+            <th scope="col" className={thLineClass}>
               {t('admin.groups.name')}
             </th>
-            <th scope="col" className={thClass}>
+            <th scope="col" className={thLineClass}>
               {t('admin.groups.description')}
             </th>
-            <th scope="col" className={thClass}>
+            <th scope="col" className={thLineClass}>
               {t('admin.groups.members')}
             </th>
             <th scope="col" className={rowActionsHeadClass}>
@@ -745,23 +775,27 @@ function GroupsTable({
         <tbody>
           {data.groups.map((g) => (
             <tr key={g.id} className="bg-card">
-              <th scope="row" className={cx(tdClass, 'text-left font-semibold text-ink')}>
-                {g.name}
+              <th scope="row" className={cx(tdLineClass, 'text-left font-semibold text-ink')}>
+                <CellText text={g.name} />
               </th>
-              <td className={tdClass}>{g.description || '-'}</td>
-              <td className={tdClass}>{counts.get(g.id) ?? 0}</td>
+              <td className={tdLineClass}>
+                <CellText text={g.description || '-'} />
+              </td>
+              <td className={tdLineClass}>{counts.get(g.id) ?? 0}</td>
               <td className={rowActionsCellClass}>
                 <RowActions
                   rowName={g.name}
                   visible={
-                    <Button
-                      variant="text"
-                      size="sm"
-                      aria-label={t('admin.groups.editNamed', { name: g.name })}
-                      onClick={() => onEdit(g)}
-                    >
-                      {t('admin.users.edit')}
-                    </Button>
+                    <RowIcon label={t('admin.users.edit')}>
+                      <button
+                        type="button"
+                        className={rowIconClass}
+                        aria-label={t('admin.groups.editNamed', { name: g.name })}
+                        onClick={() => onEdit(g)}
+                      >
+                        <PencilIcon />
+                      </button>
+                    </RowIcon>
                   }
                   items={[
                     {

@@ -42,6 +42,7 @@ import {
   pillChecks,
   primaryChecks,
   rowActionsChecks,
+  tableRowChecks,
   rowMenuChecks,
   shot,
   style,
@@ -288,6 +289,7 @@ test.describe('admin screens 1280x800', () => {
     // AC-UI-54: shared action column, one line, aligned; menu by keyboard; left menu "Sắp có".
     const users = page.getByRole('table', { name: 'Danh sách tài khoản' });
     await rowActionsChecks(users);
+    await tableRowChecks(users, { noScroll: true });
     // AC-UI-55: full width, no horizontal scroll in the table region at 1280x800.
     const noScroll = (t: typeof users) =>
       t.evaluate((el) => {
@@ -308,6 +310,7 @@ test.describe('admin screens 1280x800', () => {
     const groups = page.getByRole('table', { name: 'Danh sách nhóm' });
     await expect(groups).toBeVisible();
     await rowActionsChecks(groups);
+    await tableRowChecks(groups, { noScroll: true });
     expect(await noScroll(groups)).toBeLessThanOrEqual(0);
     await commonChecks(page);
     await axe(page, 'admin-groups 1280x800');
@@ -363,6 +366,7 @@ test.describe('admin screens 1280x800', () => {
     await cardChecks(page.locator('main [data-card]'));
     await adminTableChecks(page.locator('main table').first());
     await rowActionsChecks(page.locator('main table').first());
+    await tableRowChecks(page.locator('main table').first(), { noScroll: true });
     await axe(page, 'admin-flows 1280x800');
     await shot(page, '09-admin-flows', 'list');
     await rowMenuChecks(page, page.locator('main tbody tr').first());
@@ -381,6 +385,7 @@ test.describe('admin screens 1280x800', () => {
     const table = page.getByRole('table', { name: 'Danh sách phiên bản' });
     await adminTableChecks(table);
     await rowActionsChecks(table);
+    await tableRowChecks(table, { noScroll: true });
     // Draft row: visible "Mở Designer" only (same pattern as the Flows table), "Publish" first in
     // the menu; published row: "Xem trong Designer".
     const draft = table.getByRole('row', { name: /^v2/ });
@@ -518,6 +523,7 @@ test.describe('admin screens at 1024px: no horizontal page scroll (AC-UI-12)', (
       await expect(page.locator('main table').first()).toBeVisible();
       await commonChecks(page);
       await rowActionsChecks(page.locator('main table').first());
+      await tableRowChecks(page.locator('main table').first());
     }
     await shot(page, '10-versions', 'list-1024');
   });

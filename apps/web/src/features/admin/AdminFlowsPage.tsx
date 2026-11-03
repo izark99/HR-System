@@ -5,10 +5,17 @@ import { useRef, useState, type FormEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, useNavigate } from '@tanstack/react-router';
 import { DatePicker } from '../../components/DatePicker';
-import { RowActions, rowActionsCellClass, rowActionsHeadClass } from '../../components/RowActions';
+import { Tooltip } from '../../components/Tooltip';
+import { LayersIcon } from '../../components/icons';
+import {
+  RowActions,
+  rowActionsCellClass,
+  rowActionsHeadClass,
+  RowIcon,
+  rowIconClass,
+} from '../../components/RowActions';
 import {
   Button,
-  buttonClass,
   Callout,
   Card,
   Chip,
@@ -16,9 +23,10 @@ import {
   inputClass,
   labelClass,
   PageHeader,
-  tdClass,
+  CellText,
+  tdLineClass,
   textareaClass,
-  thClass,
+  thLineClass,
   type Tone,
 } from '../../components/ui';
 import type { Json, VersionStatus } from '../../lib/database.types';
@@ -107,28 +115,51 @@ async function readFlowFile(file: File, t: TFunction): Promise<ReadResult> {
   }
 }
 
+/**
+ * Versions of a flow on ONE line (AC-UI-57): the two newest versions with their status chips,
+ * then "+N" for the others. The full list with effective ranges is in the tooltip and is read by
+ * screen readers (sr-only text); the cell is focusable when something is hidden.
+ */
 function VersionList({ versions }: { versions: AdminFlowVersion[] }) {
   const { t } = useTranslation();
   if (versions.length === 0) return <span className="text-muted">-</span>;
+  const describe = (v: AdminFlowVersion) => {
+    const range = v.effectiveFrom
+      ? v.effectiveTo
+        ? t('admin.flows.rangeTo', {
+            from: formatDate(v.effectiveFrom),
+            to: formatDate(v.effectiveTo),
+          })
+        : t('admin.flows.rangeOpen', { from: formatDate(v.effectiveFrom) })
+      : '';
+    return `v${v.versionNo} ${t(`admin.flows.status.${v.status}`)}${range ? ` ${range}` : ''}`;
+  };
+  const full = versions.map(describe).join('; ');
+  const shown = versions.slice(0, 2);
+  const rest = versions.length - shown.length;
+  const hidden = rest > 0 || versions.some((v) => v.effectiveFrom);
   return (
-    <ul className="m-0 flex list-none flex-col gap-1 p-0">
-      {versions.map((v) => (
-        <li key={v.id} className="flex flex-wrap items-center gap-2">
-          <span className="font-semibold">v{v.versionNo}</span>
-          <Chip tone={STATUS_TONE[v.status]}>{t(`admin.flows.status.${v.status}`)}</Chip>
-          {v.effectiveFrom && (
-            <span className="text-caption text-muted">
-              {v.effectiveTo
-                ? t('admin.flows.rangeTo', {
-                    from: formatDate(v.effectiveFrom),
-                    to: formatDate(v.effectiveTo),
-                  })
-                : t('admin.flows.rangeOpen', { from: formatDate(v.effectiveFrom) })}
-            </span>
-          )}
-        </li>
-      ))}
-    </ul>
+    <Tooltip text={hidden ? full : null} className="block">
+      <span
+        tabIndex={hidden ? 0 : undefined}
+        data-version-summary
+        className="flex items-center gap-2 whitespace-nowrap"
+      >
+        <span className="sr-only">{full}</span>
+        {shown.map((v, i) => (
+          <span key={v.id} aria-hidden className="flex items-center gap-1.5">
+            {i > 0 && <span className="text-muted">·</span>}
+            <span className="font-semibold">v{v.versionNo}</span>
+            <Chip tone={STATUS_TONE[v.status]}>{t(`admin.flows.status.${v.status}`)}</Chip>
+          </span>
+        ))}
+        {rest > 0 && (
+          <span aria-hidden className="text-caption font-semibold text-muted">
+            +{rest}
+          </span>
+        )}
+      </span>
+    </Tooltip>
   );
 }
 
@@ -527,19 +558,26 @@ export function AdminFlowsPage() {
               tabIndex={0}
               aria-label={t('admin.flows.tableLabel')}
             >
-              <table className="w-full min-w-160 border-collapse text-body text-ink-soft">
+              <table className="w-full min-w-215 table-fixed border-collapse text-body text-ink-soft">
+                <colgroup>
+                  <col />
+                  <col className="w-48" />
+                  <col className="w-36" />
+                  <col className="w-64" />
+                  <col className="w-30" />
+                </colgroup>
                 <thead>
                   <tr>
-                    <th scope="col" className={thClass}>
+                    <th scope="col" className={thLineClass}>
                       {t('admin.flows.name')}
                     </th>
-                    <th scope="col" className={thClass}>
+                    <th scope="col" className={thLineClass}>
                       {t('admin.flows.code')}
                     </th>
-                    <th scope="col" className={thClass}>
+                    <th scope="col" className={thLineClass}>
                       {t('admin.flows.category')}
                     </th>
-                    <th scope="col" className={thClass}>
+                    <th scope="col" className={thLineClass}>
                       {t('admin.flows.versions')}
                     </th>
                     <th scope="col" className={rowActionsHeadClass}>
@@ -550,34 +588,42 @@ export function AdminFlowsPage() {
                 <tbody>
                   {data.map((f) => (
                     <tr key={f.id} className="bg-card">
-                      <th scope="row" className={cx(tdClass, 'text-left font-semibold text-ink')}>
-                        {f.name}
-                        {f.isArchived && (
-                          <span className="ml-2">
-                            <Chip tone="neutral">{t('admin.flows.archived')}</Chip>
-                          </span>
-                        )}
+                      <th
+                        scope="row"
+                        className={cx(tdLineClass, 'text-left font-semibold text-ink')}
+                      >
+                        <span className="flex min-w-0 items-center gap-2">
+                          <CellText text={f.name} />
+                          {f.isArchived && (
+                            <span className="shrink-0">
+                              <Chip tone="neutral">{t('admin.flows.archived')}</Chip>
+                            </span>
+                          )}
+                        </span>
                       </th>
-                      <td className={cx(tdClass, 'font-mono')}>{f.code}</td>
-                      <td className={tdClass}>{f.category || '-'}</td>
-                      <td className={tdClass}>
+                      <td className={tdLineClass}>
+                        <CellText text={f.code} className="font-mono" />
+                      </td>
+                      <td className={tdLineClass}>
+                        <CellText text={f.category || '-'} />
+                      </td>
+                      <td className={tdLineClass}>
                         <VersionList versions={f.versions} />
                       </td>
                       <td className={rowActionsCellClass}>
                         <RowActions
                           rowName={f.name}
                           visible={
-                            <Link
-                              to="/admin/flows/$flowCode/versions"
-                              params={{ flowCode: f.code }}
-                              aria-label={t('admin.flows.openVersionsFor', { name: f.name })}
-                              className={cx(
-                                buttonClass('text', 'sm'),
-                                'no-underline hover:text-ink',
-                              )}
-                            >
-                              {t('admin.flows.openVersions')}
-                            </Link>
+                            <RowIcon label={t('admin.flows.openVersions')}>
+                              <Link
+                                to="/admin/flows/$flowCode/versions"
+                                params={{ flowCode: f.code }}
+                                aria-label={t('admin.flows.openVersionsFor', { name: f.name })}
+                                className={cx(rowIconClass, 'hover:text-ink')}
+                              >
+                                <LayersIcon />
+                              </Link>
+                            </RowIcon>
                           }
                           items={[
                             {

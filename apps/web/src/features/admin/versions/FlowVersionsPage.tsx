@@ -3,25 +3,28 @@ import { useCallback, useEffect, useId, useMemo, useState, type FormEvent } from
 import { useTranslation } from 'react-i18next';
 import { DatePicker } from '../../../components/DatePicker';
 import type { MenuItem } from '../../../components/Menu';
+import { EyeIcon, PencilIcon } from '../../../components/icons';
 import {
   RowActions,
   rowActionsCellClass,
   rowActionsHeadClass,
+  RowIcon,
+  rowIconClass,
 } from '../../../components/RowActions';
 import { Select } from '../../../components/Select';
 import {
   ArrowLeftIcon,
   Button,
-  buttonClass,
   Callout,
   Card,
   Chip,
   cx,
   labelClass,
   PageHeader,
-  tdClass,
+  tdLineClass,
+  CellText,
   textareaClass,
-  thClass,
+  thLineClass,
   type Tone,
 } from '../../../components/ui';
 import type { Json, VersionStatus } from '../../../lib/database.types';
@@ -326,8 +329,16 @@ export function FlowVersionsPage() {
           tabIndex={0}
           aria-label={t('admin.versions.tableLabel')}
         >
-          <table className="w-full min-w-200 border-collapse text-body text-ink-soft">
+          <table className="w-full min-w-215 table-fixed border-collapse text-body text-ink-soft">
             <caption className="sr-only">{t('admin.versions.caption')}</caption>
+            <colgroup>
+              <col className="w-26" />
+              <col className="w-60" />
+              <col className="w-44" />
+              <col />
+              <col className="w-40" />
+              <col className="w-30" />
+            </colgroup>
             <thead>
               <tr>
                 {(['version', 'status', 'range', 'note', 'published', 'actions'] as const).map(
@@ -335,7 +346,7 @@ export function FlowVersionsPage() {
                     <th
                       key={c}
                       scope="col"
-                      className={c === 'actions' ? rowActionsHeadClass : thClass}
+                      className={c === 'actions' ? rowActionsHeadClass : thLineClass}
                     >
                       {t(`admin.versions.col.${c}`)}
                     </th>
@@ -348,68 +359,66 @@ export function FlowVersionsPage() {
                 const isCurrent = current?.id === v.id;
                 return (
                   <tr key={v.id} className={isCurrent ? 'bg-teal-tint-soft' : 'bg-card'}>
-                    <th
-                      scope="row"
-                      className={cx(tdClass, 'text-left font-semibold whitespace-nowrap text-ink')}
-                    >
+                    <th scope="row" className={cx(tdLineClass, 'text-left font-semibold text-ink')}>
                       v{v.versionNo}
                     </th>
-                    <td className={tdClass}>
-                      <span className="flex flex-wrap gap-1.5">
+                    <td className={tdLineClass}>
+                      <span className="flex gap-1.5">
                         <Chip tone={VERSION_STATUS_TONE[v.status]}>
                           {t(`admin.flows.status.${v.status}`)}
                         </Chip>
                         {isCurrent && <Chip tone="teal">{t('admin.versions.current')}</Chip>}
                       </span>
                     </td>
-                    <td className={cx(tdClass, 'min-w-44')}>
-                      {rangeText(t, v.effectiveFrom, v.effectiveTo)}
+                    <td className={tdLineClass}>
+                      <CellText text={rangeText(t, v.effectiveFrom, v.effectiveTo)} />
                     </td>
-                    <td
-                      className={cx(tdClass, 'max-w-80 min-w-56 break-words whitespace-pre-line')}
-                    >
-                      {v.changeNote || '-'}
+                    <td className={tdLineClass}>
+                      <CellText text={v.changeNote || '-'} />
                     </td>
-                    <td className={cx(tdClass, 'min-w-44 text-caption')}>
-                      {v.publishedAt
-                        ? v.publishedBy
-                          ? t('admin.versions.publishedBy', {
-                              user: v.publishedBy,
-                              time: formatDateTime(v.publishedAt),
-                            })
-                          : formatDateTime(v.publishedAt)
-                        : '-'}
+                    <td className={tdLineClass}>
+                      <CellText
+                        className="text-caption"
+                        text={
+                          v.publishedAt
+                            ? v.publishedBy
+                              ? t('admin.versions.publishedBy', {
+                                  user: v.publishedBy,
+                                  time: formatDateTime(v.publishedAt),
+                                })
+                              : formatDateTime(v.publishedAt)
+                            : '-'
+                        }
+                      />
                     </td>
                     <td className={rowActionsCellClass}>
                       <RowActions
                         rowName={`v${v.versionNo}`}
                         visible={
                           v.status === 'draft' ? (
-                            <Link
-                              to="/admin/flows/$flowCode/designer"
-                              params={{ flowCode }}
-                              search={{}}
-                              aria-label={action(t('admin.versions.openDesigner'), v)}
-                              className={cx(
-                                buttonClass('text', 'sm'),
-                                'no-underline hover:text-ink',
-                              )}
-                            >
-                              {t('admin.versions.openDesigner')}
-                            </Link>
+                            <RowIcon label={t('admin.versions.openDesigner')}>
+                              <Link
+                                to="/admin/flows/$flowCode/designer"
+                                params={{ flowCode }}
+                                search={{}}
+                                aria-label={action(t('admin.versions.openDesigner'), v)}
+                                className={cx(rowIconClass, 'hover:text-ink')}
+                              >
+                                <PencilIcon />
+                              </Link>
+                            </RowIcon>
                           ) : (
-                            <Link
-                              to="/admin/flows/$flowCode/designer"
-                              params={{ flowCode }}
-                              search={{ version: v.id }}
-                              aria-label={action(t('admin.versions.viewInDesigner'), v)}
-                              className={cx(
-                                buttonClass('text', 'sm'),
-                                'no-underline hover:text-ink',
-                              )}
-                            >
-                              {t('admin.versions.viewInDesigner')}
-                            </Link>
+                            <RowIcon label={t('admin.versions.viewInDesigner')}>
+                              <Link
+                                to="/admin/flows/$flowCode/designer"
+                                params={{ flowCode }}
+                                search={{ version: v.id }}
+                                aria-label={action(t('admin.versions.viewInDesigner'), v)}
+                                className={cx(rowIconClass, 'hover:text-ink')}
+                              >
+                                <EyeIcon />
+                              </Link>
+                            </RowIcon>
                           )
                         }
                         items={versionMenu(v)}
