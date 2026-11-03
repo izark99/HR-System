@@ -59,6 +59,7 @@ function KpiCard({ label, value, tone }: { label: string; value: number; tone: T
     <div
       className={cx(cardClass, 'flex flex-col gap-2 border-t-4 p-6', bar[tone])}
       data-testid="kpi"
+      data-card
     >
       <dt className="text-body font-semibold text-ink-soft">{label}</dt>
       <dd className={cx('m-0 text-display-xl', toneText[tone])}>{formatInteger(value)}</dd>
@@ -305,7 +306,10 @@ export function ResultPage() {
   const summary = state.code === flowCode ? state.run.summary : null;
   if (!summary) {
     return (
-      <main id="main" className="mx-auto flex w-full max-w-320 flex-col gap-6 px-4 pt-8 pb-12">
+      <main
+        id="main"
+        className="mx-auto flex w-full max-w-320 flex-col gap-6 px-4 pt-8 pb-12 md:px-8"
+      >
         <BackToFlows />
         <Callout tone="amber" label={t('result.noteLabel')} role="status">
           {t('result.noSession')}
@@ -348,7 +352,10 @@ export function ResultPage() {
   };
 
   return (
-    <main id="main" className="mx-auto flex w-full max-w-320 flex-col gap-6 px-4 pt-8 pb-12">
+    <main
+      id="main"
+      className="mx-auto flex w-full max-w-320 flex-col gap-6 px-4 pt-8 pb-12 md:px-8"
+    >
       <BackToFlows />
       <PageHeader
         eyebrow={eyebrow}

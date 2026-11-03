@@ -153,7 +153,10 @@ export function RunPage() {
   const busy = state.run.status === 'running' || state.run.status === 'cancelling';
 
   return (
-    <main id="main" className="mx-auto flex w-full max-w-320 flex-col gap-6 px-4 pt-8 pb-12">
+    <main
+      id="main"
+      className="mx-auto flex w-full max-w-320 flex-col gap-6 px-4 pt-8 pb-12 md:px-8"
+    >
       <BackToFlows />
 
       {state.load === 'loading' && <p className="m-0 text-muted">{t('common.loading')}</p>}

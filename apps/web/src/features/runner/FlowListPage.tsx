@@ -59,7 +59,12 @@ function RecentRuns({ runs, failed }: { runs: RecentRun[] | null; failed: boolea
         </p>
       )}
       {runs !== null && runs.length > 0 && (
-        <div className="overflow-x-auto">
+        <div
+          className="overflow-x-auto"
+          role="region"
+          tabIndex={0}
+          aria-label={t('recent.tableLabel')}
+        >
           <table className="w-full min-w-160 border-collapse text-body text-ink-soft">
             <thead>
               <tr>
@@ -216,7 +221,10 @@ export function FlowListPage() {
         <ul className="m-0 grid list-none grid-cols-1 gap-5 p-0 sm:grid-cols-2 xl:grid-cols-3">
           {visible.map((f) => (
             <li key={f.code} className="flex">
-              <article className={cx(cardClass, 'flex w-full min-w-0 flex-col gap-3 p-6')}>
+              <article
+                data-card
+                className={cx(cardClass, 'flex w-full min-w-0 flex-col gap-3 p-6')}
+              >
                 <Eyebrow>{f.category}</Eyebrow>
                 <h2 className="m-0 text-title-md break-words text-ink">{f.name}</h2>
                 <p className="m-0 text-body text-muted">{f.description}</p>

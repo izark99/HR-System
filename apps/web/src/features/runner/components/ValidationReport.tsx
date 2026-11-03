@@ -90,7 +90,12 @@ export function ValidationReport({
       )}
 
       {shown.length > 0 && (
-        <div className="overflow-x-auto">
+        <div
+          className="overflow-x-auto"
+          role="region"
+          tabIndex={0}
+          aria-label={t('report.tableLabel')}
+        >
           <table className="w-full min-w-180 border-collapse text-body text-ink-soft">
             <thead>
               <tr>

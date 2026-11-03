@@ -97,7 +97,6 @@ export function MonthPicker({ id, labelId, value, onChange, required, disabled }
         aria-haspopup="dialog"
         aria-expanded={open}
         aria-labelledby={`${labelId} ${valueId}`}
-        aria-required={required || undefined}
         onClick={toggle}
         className={triggerClass}
       >

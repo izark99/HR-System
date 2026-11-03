@@ -55,15 +55,17 @@ export function UserMenu({ user }: { user: SessionUser }) {
         onClick={() => setOpen((v) => !v)}
         className="flex min-h-target items-center gap-2.5 rounded-card px-2 text-body hover:bg-neutral"
       >
+        {/* Initials are drawn by CSS (not text) so the button's visible text is only the username,
+            which its accessible name contains (WCAG 2.5.3). */}
         <span
           aria-hidden
+          data-initials={initials(user)}
           className={cx(
             'flex size-9 items-center justify-center rounded-full text-caption font-semibold',
+            'before:content-[attr(data-initials)]',
             admin ? 'bg-blue-tint text-blue-text' : 'bg-teal-tint text-teal-strong',
           )}
-        >
-          {initials(user)}
-        </span>
+        />
         <span className="font-semibold text-ink-soft max-sm:sr-only">{user.username}</span>
       </button>
       {open && (

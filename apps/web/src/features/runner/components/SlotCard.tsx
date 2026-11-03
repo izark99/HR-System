@@ -89,9 +89,13 @@ export function SlotCard({
         onDragLeave={() => setDragging(false)}
         onDrop={onDrop}
         className={cx(
-          'rounded-card border-2 border-dashed border-drop-border bg-drop-bg p-5 text-center text-body text-ink-soft',
-          dragging && 'border-teal-strong bg-teal-tint',
-          disabled && 'opacity-60',
+          'rounded-card border-2 border-dashed p-5 text-center text-body',
+          // Disabled (run in progress): muted colours instead of opacity, so text keeps AA contrast.
+          disabled
+            ? 'border-line-input bg-neutral text-muted'
+            : dragging
+              ? 'border-teal-strong bg-teal-tint text-ink-soft'
+              : 'border-drop-border bg-drop-bg text-ink-soft',
         )}
       >
         {dragging ? (
@@ -103,7 +107,7 @@ export function SlotCard({
               type="button"
               disabled={disabled}
               onClick={() => inputRef.current?.click()}
-              className="min-h-target rounded-card px-2 font-semibold text-teal-strong underline hover:text-teal-hover disabled:cursor-not-allowed"
+              className="min-h-target rounded-card px-2 font-semibold text-teal-strong underline hover:text-teal-hover disabled:cursor-not-allowed disabled:text-muted"
             >
               {t('slot.choose')}
             </button>

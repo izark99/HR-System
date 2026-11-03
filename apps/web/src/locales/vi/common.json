@@ -50,7 +50,8 @@
       "succeeded": "Thành công",
       "failed": "Lỗi",
       "cancelled": "Đã hủy"
-    }
+    },
+    "tableLabel": "Bảng các lần chạy"
   },
   "run": {
     "back": "Danh sách flow",
@@ -167,7 +168,8 @@
     "severity": {
       "error": "Lỗi",
       "warning": "Cảnh báo"
-    }
+    },
+    "tableLabel": "Chi tiết lỗi và cảnh báo"
   },
   "result": {
     "eyebrow": "Chạy xong · {{rows}} dòng · {{seconds}} giây",
@@ -226,7 +228,7 @@
     "chooseMonth": "Chọn tháng",
     "chooseDate": "Chọn ngày",
     "monthValue": "Tháng {{month}}/{{year}}",
-    "monthShort": "Th {{month}}",
+    "monthShort": "Tháng {{month}}",
     "monthCell": "Tháng {{month}} năm {{year}}",
     "monthYear": "Tháng {{month}} năm {{year}}",
     "dayCell": "Ngày {{day}} tháng {{month}} năm {{year}}",
@@ -394,7 +396,7 @@
       "status": "Trạng thái",
       "actions": "Thao tác",
       "edit": "Sửa",
-      "reset": "Reset MK",
+      "reset": "Reset mật khẩu",
       "lock": "Khóa",
       "unlock": "Mở khóa",
       "editNamed": "Sửa tài khoản {{username}}",
@@ -510,7 +512,8 @@
         "creating": "Đang tạo...",
         "duplicate": "Mã flow này đã có. Hãy chọn mã khác.",
         "intro": "Tạo flow cùng bản nháp v1 trống; sau đó dựng flow trong Designer và publish ở màn Phiên bản."
-      }
+      },
+      "tableLabel": "Bảng flow"
     },
     "import": {
       "button": "Nhập flow JSON",
@@ -667,7 +670,8 @@
         "before": "v{{version}} (cũ)",
         "after": "v{{version}} (mới)"
       },
-      "viewInDesigner": "Xem trong Designer"
+      "viewInDesigner": "Xem trong Designer",
+      "tableLabel": "Bảng phiên bản"
     }
   },
   "idle": {

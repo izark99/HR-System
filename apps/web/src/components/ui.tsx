@@ -146,7 +146,7 @@ export function Card({
   'aria-label'?: string;
 }) {
   return (
-    <As className={cx(cardClass, 'p-6', className)} {...rest}>
+    <As data-card className={cx(cardClass, 'p-6', className)} {...rest}>
       {children}
     </As>
   );
@@ -164,6 +164,7 @@ export function Eyebrow({ tone = 'teal', children }: { tone?: Tone; children: Re
 export function Chip({ tone, children }: { tone: Tone; children: ReactNode }) {
   return (
     <span
+      data-chip
       className={cx(
         'inline-flex items-center rounded-pill px-3 py-1 text-caption font-semibold',
         toneText[tone],
