@@ -6,7 +6,7 @@
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { ADMIN, expect, test, type Locator, type Page } from './fixtures';
-import { chooseOption, fixtures, pickDate, pickMonth } from './helpers';
+import { chooseOption, fixtures, pickDate, pickMonth, rowAction } from './helpers';
 
 test.use({ signedInAs: ADMIN, viewport: { width: 1440, height: 900 } });
 
@@ -245,7 +245,10 @@ test('AC-B3-33: build the acceptance flow in the Designer, save, reload, publish
 
   // Publish v1 on the Version screen (full engine check passes).
   await page.getByRole('link', { name: 'Về màn Phiên bản' }).click();
-  await page.getByRole('button', { name: 'Publish v1' }).click();
+  await rowAction(
+    page.getByRole('table', { name: 'Danh sách phiên bản' }).getByRole('row', { name: /^v1\b/ }),
+    'Publish v1',
+  );
   const dialog = page.getByRole('dialog', { name: 'Publish v1' });
   await pickDate(page, dialog.locator('#publish-from'), '2026-01-01');
   await dialog.getByLabel(/^Ghi chú thay đổi/).fill('Dựng bằng Designer');

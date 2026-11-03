@@ -14,6 +14,7 @@ import {
   periodButton,
   pickMonth,
   reportCard,
+  rowMenuItem,
   runButton,
   runToResult,
   timesheet,
@@ -380,10 +381,13 @@ test.describe('admin screens 1280x800', () => {
     const table = page.getByRole('table', { name: 'Danh sách phiên bản' });
     await adminTableChecks(table);
     await rowActionsChecks(table);
-    // Draft row: visible "Mở Designer" + "Publish" (primary); published row: "Xem trong Designer".
+    // Draft row: visible "Mở Designer" only (same pattern as the Flows table), "Publish" first in
+    // the menu; published row: "Xem trong Designer".
     const draft = table.getByRole('row', { name: /^v2/ });
     await expect(draft.getByRole('link', { name: 'Mở Designer v2' })).toBeVisible();
-    await primaryChecks(draft.getByRole('button', { name: 'Publish v2' }));
+    await expect(draft.getByRole('button', { name: 'Publish v2' })).toHaveCount(0);
+    await expect(await rowMenuItem(draft, 'Publish v2')).toBeVisible();
+    await page.keyboard.press('Escape');
     await expect(
       table.getByRole('row', { name: /^v1/ }).getByRole('link', { name: 'Xem trong Designer v1' }),
     ).toBeVisible();

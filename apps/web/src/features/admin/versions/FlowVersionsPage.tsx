@@ -244,6 +244,14 @@ export function FlowVersionsPage() {
       danger,
     });
     const items: MenuItem[] = [];
+    if (v.status === 'draft') {
+      items.push(
+        item('publish', t('admin.versions.publish'), () => {
+          setMessage(null);
+          setDialog({ kind: 'publish', version: v });
+        }),
+      );
+    }
     if (v.status !== 'draft') {
       items.push(item('clone', t('admin.versions.clone'), () => void cloneFrom(v)));
     }
@@ -377,31 +385,18 @@ export function FlowVersionsPage() {
                         rowName={`v${v.versionNo}`}
                         visible={
                           v.status === 'draft' ? (
-                            <>
-                              <Link
-                                to="/admin/flows/$flowCode/designer"
-                                params={{ flowCode }}
-                                search={{}}
-                                aria-label={action(t('admin.versions.openDesigner'), v)}
-                                className={cx(
-                                  buttonClass('text', 'sm'),
-                                  'no-underline hover:text-ink',
-                                )}
-                              >
-                                {t('admin.versions.openDesigner')}
-                              </Link>
-                              <Button
-                                variant="primary"
-                                size="sm"
-                                aria-label={action(t('admin.versions.publish'), v)}
-                                onClick={() => {
-                                  setMessage(null);
-                                  setDialog({ kind: 'publish', version: v });
-                                }}
-                              >
-                                {t('admin.versions.publish')}
-                              </Button>
-                            </>
+                            <Link
+                              to="/admin/flows/$flowCode/designer"
+                              params={{ flowCode }}
+                              search={{}}
+                              aria-label={action(t('admin.versions.openDesigner'), v)}
+                              className={cx(
+                                buttonClass('text', 'sm'),
+                                'no-underline hover:text-ink',
+                              )}
+                            >
+                              {t('admin.versions.openDesigner')}
+                            </Link>
                           ) : (
                             <Link
                               to="/admin/flows/$flowCode/designer"

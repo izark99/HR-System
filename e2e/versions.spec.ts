@@ -40,7 +40,7 @@ const rpcBodies = (supabase: SupabaseMock) =>
   supabase.bodiesOf('/rest/v1/rpc/admin_publish_flow_draft');
 
 async function openPublish(page: Page) {
-  await page.getByRole('button', { name: 'Publish v2' }).click();
+  await rowAction(row(page, 2), 'Publish v2');
   await expect(publishDialog(page).getByLabel(/^Ghi chú thay đổi/)).toBeVisible();
 }
 
@@ -71,9 +71,12 @@ test.describe('Version & validity screen', () => {
     await expect(v2).toContainText('Chưa đặt ngày');
     await expect(v2).not.toContainText('Đang áp dụng');
     // Actions by status (spec §14.4).
-    // Visible: draft "Mở Designer" + "Publish"; the rest sits in the row menu (AC-UI-54).
-    await expect(v2.getByRole('button', { name: 'Publish v2' })).toBeVisible();
-    await expect(await rowMenuItem(v2, 'Hủy draft v2')).toBeVisible();
+    // Visible: draft "Mở Designer" only, like the Flows table; "Publish" heads the row menu
+    // (AC-UI-54, 2026-11-03); the rest sits in the menu too.
+    await expect(v2.getByRole('button', { name: 'Publish v2' })).toHaveCount(0);
+    await expect(await rowMenuItem(v2, 'Publish v2')).toBeVisible();
+    await expect(v2.getByRole('menuitem').first()).toHaveAccessibleName('Publish v2');
+    await expect(v2.getByRole('menuitem', { name: 'Hủy draft v2' })).toBeVisible();
     await expect(v2.getByRole('menuitem', { name: /Retire/ })).toHaveCount(0);
     await page.keyboard.press('Escape');
     await expect(await rowMenuItem(v1, 'Retire v1')).toBeVisible();
@@ -191,7 +194,7 @@ test.describe('Version & validity screen', () => {
     ];
     setup(supabase, { draft: broken });
     await page.goto(URL);
-    await page.getByRole('button', { name: 'Publish v2' }).click();
+    await rowAction(row(page, 2), 'Publish v2');
     const dialog = publishDialog(page);
     await expect(dialog.getByRole('alert')).toContainText('Chưa publish được:');
     await expect(dialog.getByRole('listitem').first()).toBeVisible();

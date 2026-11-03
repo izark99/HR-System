@@ -199,7 +199,11 @@ export function MenuButton({
                 aria-label={item.ariaLabel}
                 aria-disabled={item.disabled || undefined}
                 onClick={() => choose(item)}
-                onMouseEnter={() => setActive(i)}
+                // Only a real pointer move takes focus: a menu opening under a resting pointer
+                // (fake "enter" from layout) must not steal it from the keyboard's first item.
+                onPointerMove={(e) => {
+                  if ((e.movementX !== 0 || e.movementY !== 0) && active !== i) setActive(i);
+                }}
                 className={cx(
                   'flex min-h-target w-full items-center rounded-input px-3 text-left text-body whitespace-nowrap',
                   'focus:bg-neutral focus:outline-none hover:bg-neutral',
