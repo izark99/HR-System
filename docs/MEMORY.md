@@ -225,9 +225,11 @@
 
 ## Kỹ thuật & tổ chức
 
+2026-11-03 16:06 - Bảng Admin (Users, Nhóm, Flows, Version): mọi dòng cùng chiều cao, mỗi ô 1 dòng nhưng hiện đủ chữ (không cắt "…"); bảng rộng hơn card thì kéo ngang trong card; cột Thao tác cố định ở mép phải (có vạch ngăn trái), các cột còn lại cuộn. Nhiều chip trong 1 ô nằm cùng 1 hàng.
+
 2026-11-03 15:32 - Cột Thao tác của mọi bảng Admin dùng nút biểu tượng cho gọn: 1 nút biểu tượng cho thao tác hay dùng (Users/Nhóm "Sửa" = bút chì; Flows "Mở trang phiên bản" = biểu tượng danh sách phiên bản; Version draft "Mở Designer" = bút chì; Version published/retired "Xem trong Designer" = con mắt) + nút "⋯" mở menu "Thao tác khác" (menu giữ chữ; Publish là mục đầu menu của dòng draft; thao tác nguy hiểm cuối menu, chữ coral, giữ hộp xác nhận). Nút biểu tượng 36px, SVG inline, có `aria-label` nêu tên dòng + tooltip chữ; bàn phím theo APG menu button.
 
-2026-11-03 15:18 - Bảng Admin (Users, Nhóm, Flows, Version): mọi dòng cùng chiều cao; mỗi ô 1 dòng, chữ dài cắt "…" và hiện đủ khi rê chuột/focus; nhiều chip trong 1 ô nằm cùng 1 hàng; bảng vừa chiều ngang card ở 1280px (cột Thao tác không che cột khác), cột Thao tác có vạch ngăn bên trái như bảng Flows.
+~~2026-11-03 15:18 - Bảng Admin (Users, Nhóm, Flows, Version): mọi dòng cùng chiều cao; mỗi ô 1 dòng, chữ dài cắt "…" và hiện đủ khi rê chuột/focus; nhiều chip trong 1 ô nằm cùng 1 hàng; bảng vừa chiều ngang card ở 1280px (cột Thao tác không che cột khác), cột Thao tác có vạch ngăn bên trái như bảng Flows.~~ → thay bởi 2026-11-03 16:06
 
 ~~2026-11-03 14:53 - Màn Admin (Users & Groups, Nhóm, Flows, Version): chip trạng thái, menu trái ("Sắp có"), nhãn nút không xuống dòng vỡ bố cục. Cột Thao tác dùng chung cho mọi bảng Admin: 1 nút chữ (`button-text` của `docs/design-reference.md`: không viền, 14,4px/700, hover nền `#F1F5F9`, vùng bấm cao 36px) cho thao tác hay dùng + nút chữ "Thao tác khác ▾" mở menu (bàn phím theo APG menu button) chứa phần còn lại; thao tác nguy hiểm (Khóa, Retire, Hủy draft…) ở cuối menu, chữ coral, giữ hộp xác nhận. Nút hiện sẵn: Users "Sửa"; Nhóm "Sửa"; Flows "Mở trang phiên bản"; Version draft "Mở Designer" (Publish là mục đầu của menu, giống kiểu bảng Flows: chỉ nút chữ, không có nút teal trong bảng); Version published/retired "Xem trong Designer".~~ → thay bởi 2026-11-03 15:32
 
