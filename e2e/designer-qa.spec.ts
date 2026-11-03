@@ -670,7 +670,8 @@ test.describe('graph operations in the canvas', () => {
     expect(await page.locator('.react-flow__edge').count()).toBeLessThan(edgesBefore);
     await page.keyboard.press('Control+Z');
     await expect(canvasNode(page, 'cmp')).toBeVisible();
-    expect(await page.locator('.react-flow__edge').count()).toBe(edgesBefore);
+    // Edges render a frame after their node: wait (the bare count raced once in the full run).
+    await expect(page.locator('.react-flow__edge')).toHaveCount(edgesBefore);
     const after = await canvasNode(page, 'cmp').boundingBox();
     expect(Math.abs(after!.x - before!.x)).toBeLessThan(2);
     expect(Math.abs(after!.y - before!.y)).toBeLessThan(2);
