@@ -14,3 +14,12 @@ updates:
       interval: weekly
     ignore:
       - dependency-name: xlsx
+      # Node runs 22 on CI and Cloudflare Pages: newer @types/node would allow APIs Node 22 lacks.
+      - dependency-name: '@types/node'
+        update-types: ['version-update:semver-major']
+      # Pinned to the major that @duckdb/duckdb-wasm depends on; upgrade together with DuckDB-WASM.
+      - dependency-name: apache-arrow
+        update-types: ['version-update:semver-major']
+      # Next major needs Vite 8; upgrade together with Vite.
+      - dependency-name: '@vitejs/plugin-react'
+        update-types: ['version-update:semver-major']

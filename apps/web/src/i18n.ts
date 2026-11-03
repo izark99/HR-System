@@ -16,8 +16,6 @@ void i18next.use(initReactI18next).init({
   fallbackLng: 'vi',
   ns: ['common', 'engine'],
   defaultNS: 'common',
-  // No console output from the library (spec §17: nothing logged in production).
-  showSupportNotice: false,
   // React already escapes output.
   interpolation: { escapeValue: false },
 });
