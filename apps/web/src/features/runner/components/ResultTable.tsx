@@ -155,7 +155,7 @@ export function ResultTable({
 
   if (total === 0) {
     return (
-      <p className="m-0 px-5 pb-5 text-label text-muted">
+      <p className="m-0 px-5 pb-5 text-body text-muted">
         {search.trim() ? t('result.noMatch') : t('result.empty')}
       </p>
     );
@@ -169,15 +169,16 @@ export function ResultTable({
         role="region"
         aria-label={label}
         tabIndex={0}
-        className="max-h-140 overflow-auto rounded-control border border-line"
+        className="max-h-140 overflow-auto rounded-card border border-line"
       >
         <table
-          className="grid border-collapse text-label text-body"
+          // Data preview keeps the high-density 14px type (MEMORY 2026-10-30 13:29).
+          className="grid border-collapse text-dense text-ink-soft"
           style={{ width: Math.max(totalWidth, 0), minWidth: '100%' }}
           aria-rowcount={(total ?? 0) + 1}
           aria-colcount={sheet.columns.length}
         >
-          <thead className="sticky top-0 z-10 grid bg-page">
+          <thead className="sticky top-0 z-10 grid bg-neutral">
             {table.getHeaderGroups().map((hg) => (
               <tr key={hg.id} aria-rowindex={1} className="flex w-full border-b border-line">
                 {hg.headers.map((h, ci) => {
@@ -193,7 +194,7 @@ export function ResultTable({
                       }
                       style={{ width: h.getSize() }}
                       className={cx(
-                        'flex shrink-0 items-center px-2 py-0 font-semibold text-muted',
+                        'flex shrink-0 items-center px-2 py-0 text-dense-head text-muted',
                         isNumericType(col.type) ? 'justify-end text-right' : 'text-left',
                       )}
                     >
@@ -210,7 +211,7 @@ export function ResultTable({
                             )
                           }
                           title={t('result.sortHint')}
-                          className="flex min-h-target items-center gap-1 rounded-control px-1 font-semibold text-muted hover:bg-card"
+                          className="flex min-h-target items-center gap-1 rounded-input px-1 font-semibold text-muted hover:bg-card"
                         >
                           {header}
                           {dir && (
@@ -255,9 +256,9 @@ export function ResultTable({
                         style={{ width: cell.column.getSize() }}
                         title={text}
                         className={cx(
-                          'flex shrink-0 items-center truncate px-2',
+                          'flex shrink-0 items-center truncate px-3',
                           isNumericType(col.type) && 'justify-end text-right tabular-nums',
-                          hot && 'bg-coral-tint font-bold text-coral-text',
+                          hot && 'bg-coral-tint font-semibold text-coral-text',
                         )}
                       >
                         <span className="truncate">{text}</span>
@@ -271,7 +272,7 @@ export function ResultTable({
         </table>
       </div>
       {total !== null && (
-        <p className="m-0 text-small text-muted" aria-live="polite">
+        <p className="m-0 text-caption text-muted" aria-live="polite">
           {t('result.showing', { count: total })}
         </p>
       )}

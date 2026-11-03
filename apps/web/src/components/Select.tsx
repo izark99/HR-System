@@ -18,7 +18,7 @@ import {
   type SelectGroup,
   type SelectOption,
 } from './select-logic';
-import { CheckIcon, cx } from './ui';
+import { CheckIcon, cx, floatClass, inputClass } from './ui';
 
 export type { SelectGroup, SelectOption } from './select-logic';
 
@@ -38,6 +38,8 @@ export interface SelectProps {
   invalid?: boolean;
   /** Extra classes for the trigger (width). */
   className?: string;
+  /** Designer side form: 14px text, 42px trigger (MEMORY 2026-10-30 13:29). */
+  dense?: boolean;
 }
 
 const TYPEAHEAD_RESET_MS = 700;
@@ -86,6 +88,7 @@ export function Select({
   required,
   invalid,
   className,
+  dense = false,
 }: SelectProps) {
   const { t } = useTranslation();
   const rootRef = useRef<HTMLDivElement>(null);
@@ -259,9 +262,11 @@ export function Select({
           if (open && next && !rootRef.current?.contains(next)) close(false);
         }}
         className={cx(
-          'inline-flex h-target min-w-48 items-center justify-between gap-3 rounded-control border bg-card px-3.5 text-left text-label text-ink',
-          'hover:border-teal-strong disabled:cursor-not-allowed disabled:bg-neutral disabled:text-muted',
-          invalid ? 'border-2 border-coral' : 'border-line-input',
+          'inline-flex min-w-48 items-center justify-between gap-3 rounded-input border bg-card text-left text-ink',
+          dense ? 'h-10.5 px-3 text-dense' : 'h-control px-3.5 text-body-lg',
+          'hover:border-teal-strong focus-visible:border-teal-strong focus-visible:ring-3 focus-visible:ring-teal-tint focus-visible:outline-none',
+          'disabled:cursor-not-allowed disabled:bg-neutral disabled:text-muted',
+          invalid ? 'border-coral-text' : 'border-line-input',
           className,
         )}
       >
@@ -279,7 +284,10 @@ export function Select({
             minWidth: `min(${PANEL_MIN_WIDTH}px, calc(100vw - 24px))`,
             maxWidth: 'calc(100vw - 24px)',
           }}
-          className="absolute top-full z-50 mt-1.5 flex w-full flex-col gap-1.5 rounded-tile bg-card p-2 shadow-card"
+          className={cx(
+            floatClass,
+            'absolute top-full z-50 mt-1.5 flex w-full flex-col gap-1.5 p-2',
+          )}
           onBlur={(e) => {
             const next = e.relatedTarget as Node | null;
             if (next && !rootRef.current?.contains(next)) close(false);
@@ -302,12 +310,12 @@ export function Select({
                 setActive(0);
               }}
               onKeyDown={onKeyDown}
-              className="h-10.5 rounded-control border border-line-input bg-card px-3 text-label"
+              className={cx(inputClass, 'h-10.5 text-body')}
             />
           )}
           {/* Outside the listbox: a listbox may only contain options and groups. */}
           {shownFlat.length === 0 && (
-            <p role="status" className="m-0 px-3 py-2.5 text-small text-muted">
+            <p role="status" className="m-0 px-3 py-2.5 text-caption text-muted">
               {t('select.noResults')}
             </p>
           )}
@@ -335,8 +343,9 @@ export function Select({
                     onMouseDown={(e) => e.preventDefault()} // keep focus on the trigger
                     onClick={() => choose(i)}
                     className={cx(
-                      'flex min-h-target cursor-pointer items-center justify-between gap-3 rounded-control px-3 text-label',
-                      isSelected ? 'bg-teal-tint font-semibold text-teal-strong' : 'text-body',
+                      'flex min-h-target cursor-pointer items-center justify-between gap-3 rounded-input px-3',
+                      dense ? 'text-dense' : 'text-body',
+                      isSelected ? 'bg-teal-tint font-semibold text-teal-strong' : 'text-ink-soft',
                       i === active && !isSelected && 'bg-neutral',
                       i === active && 'ring-2 ring-teal-strong ring-inset',
                     )}

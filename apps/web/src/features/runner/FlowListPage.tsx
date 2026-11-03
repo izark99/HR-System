@@ -1,7 +1,21 @@
 import { Link } from '@tanstack/react-router';
 import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { buttonClass, Card, Chip, cx, PageHeader, type Tone } from '../../components/ui';
+import {
+  buttonClass,
+  Card,
+  cardClass,
+  Chip,
+  cx,
+  Eyebrow,
+  inputClass,
+  navItemClass,
+  PageHeader,
+  pillClass,
+  tdClass,
+  thClass,
+  type Tone,
+} from '../../components/ui';
 import { formatMonth } from '../../lib/format';
 import { todayIso } from './as-of';
 import type { FlowSummary, RecentRun } from './flow-source';
@@ -33,47 +47,49 @@ function paramText(p: RecentRun['params'][number]): string {
 function RecentRuns({ runs, failed }: { runs: RecentRun[] | null; failed: boolean }) {
   const { t } = useTranslation();
   return (
-    <Card aria-labelledby="recent-runs" className="flex flex-col gap-3.5">
-      <h2 id="recent-runs" className="m-0 text-section text-ink">
+    <Card aria-labelledby="recent-runs" className="flex flex-col gap-4">
+      <h2 id="recent-runs" className="m-0 text-title-md text-ink">
         {t('recent.title')}
       </h2>
       {failed && <p className="m-0 text-coral-text">{t('recent.loadError')}</p>}
       {!failed && runs === null && <p className="m-0 text-muted">{t('common.loading')}</p>}
       {runs !== null && runs.length === 0 && (
-        <p className="m-0 rounded-callout bg-neutral px-4 py-6 text-center text-label text-muted">
+        <p className="m-0 rounded-card bg-neutral px-4 py-6 text-center text-body text-muted">
           {t('recent.empty')}
         </p>
       )}
       {runs !== null && runs.length > 0 && (
         <div className="overflow-x-auto">
-          <table className="w-full min-w-160 border-collapse text-label text-body">
+          <table className="w-full min-w-160 border-collapse text-body text-ink-soft">
             <thead>
-              <tr className="border-b border-line text-left text-muted">
-                <th scope="col" className="px-2 py-2.5 font-semibold">
+              <tr>
+                <th scope="col" className={thClass}>
                   {t('recent.col.time')}
                 </th>
-                <th scope="col" className="px-2 py-2.5 font-semibold">
+                <th scope="col" className={thClass}>
                   {t('recent.col.flow')}
                 </th>
-                <th scope="col" className="px-2 py-2.5 font-semibold">
+                <th scope="col" className={thClass}>
                   {t('recent.col.params')}
                 </th>
-                <th scope="col" className="px-2 py-2.5 font-semibold">
+                <th scope="col" className={thClass}>
                   {t('recent.col.version')}
                 </th>
-                <th scope="col" className="px-2 py-2.5 font-semibold">
+                <th scope="col" className={thClass}>
                   {t('recent.col.status')}
                 </th>
               </tr>
             </thead>
             <tbody>
               {runs.map((r) => (
-                <tr key={r.id} className="border-b border-line last:border-b-0">
-                  <td className="px-2 py-3 whitespace-nowrap">{formatDateTime(r.createdAt)}</td>
-                  <td className="px-2 py-3">{r.flowName}</td>
-                  <td className="px-2 py-3">{r.params.map(paramText).join(', ') || '-'}</td>
-                  <td className="px-2 py-3">v{r.versionNo}</td>
-                  <td className="px-2 py-3">
+                <tr key={r.id}>
+                  <td className={cx(tdClass, 'whitespace-nowrap')}>
+                    {formatDateTime(r.createdAt)}
+                  </td>
+                  <td className={tdClass}>{r.flowName}</td>
+                  <td className={tdClass}>{r.params.map(paramText).join(', ') || '-'}</td>
+                  <td className={tdClass}>v{r.versionNo}</td>
+                  <td className={tdClass}>
                     <Chip tone={STATUS_TONE[r.status]}>{t(`recent.status.${r.status}`)}</Chip>
                   </td>
                 </tr>
@@ -82,7 +98,7 @@ function RecentRuns({ runs, failed }: { runs: RecentRun[] | null; failed: boolea
           </table>
         </div>
       )}
-      <p className="m-0 text-small text-muted">{t('recent.note')}</p>
+      <p className="m-0 text-caption text-muted">{t('recent.note')}</p>
     </Card>
   );
 }
@@ -133,19 +149,12 @@ export function FlowListPage() {
     <div className="flex flex-wrap">
       <nav
         aria-label={t('nav.label')}
-        className="flex max-w-60 flex-[1_1_200px] flex-col gap-1.5 px-3.5 py-5"
+        className="flex max-w-64 flex-[1_1_220px] flex-col gap-1.5 px-3.5 py-6"
       >
-        <Link
-          to="/"
-          aria-current="page"
-          className="flex min-h-target items-center rounded-control bg-teal-tint px-3.5 text-label font-bold text-teal-strong no-underline"
-        >
+        <Link to="/" aria-current="page" className={navItemClass(true)}>
           {t('nav.runFlows')}
         </Link>
-        <Link
-          to="/change-password"
-          className="flex min-h-target items-center rounded-control px-3.5 text-label font-medium text-body no-underline hover:bg-teal-tint hover:text-teal-strong"
-        >
+        <Link to="/change-password" className={navItemClass(false)}>
           {t('nav.changePassword')}
         </Link>
       </nav>
@@ -160,7 +169,7 @@ export function FlowListPage() {
           subtitle={t('flows.subtitle')}
           actions={
             <div className="flex flex-col gap-1.5">
-              <label htmlFor="flow-search" className="text-small font-semibold text-body">
+              <label htmlFor="flow-search" className="text-label text-ink">
                 {t('flows.searchLabel')}
               </label>
               <input
@@ -169,7 +178,7 @@ export function FlowListPage() {
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
                 placeholder={t('flows.searchPlaceholder')}
-                className="h-target w-70 max-w-full rounded-control border border-line-input bg-card px-3.5 text-label"
+                className={cx(inputClass, 'w-80 max-w-full')}
               />
             </div>
           }
@@ -189,12 +198,7 @@ export function FlowListPage() {
                   type="button"
                   aria-pressed={active}
                   onClick={() => setCategory(c)}
-                  className={cx(
-                    'min-h-target rounded-full px-4 text-small',
-                    active
-                      ? 'bg-teal-strong font-bold text-white'
-                      : 'border border-line-input bg-card font-semibold text-body hover:bg-page',
-                  )}
+                  className={pillClass(active)}
                 >
                   {c ?? t('flows.allCategories')}
                 </button>
@@ -212,13 +216,11 @@ export function FlowListPage() {
         <ul className="m-0 grid list-none grid-cols-1 gap-5 p-0 sm:grid-cols-2 xl:grid-cols-3">
           {visible.map((f) => (
             <li key={f.code} className="flex">
-              <article className="flex w-full flex-col gap-3 rounded-card border-t-[6px] border-teal bg-card p-6 shadow-card">
-                <span className="self-start rounded-full bg-teal-tint-soft px-2.5 py-1 text-[11px] font-bold tracking-[0.06em] text-teal-strong uppercase">
-                  {f.category}
-                </span>
-                <h2 className="m-0 text-section text-ink">{f.name}</h2>
-                <p className="m-0 text-label text-muted">{f.description}</p>
-                <p className="m-0 text-small text-muted">
+              <article className={cx(cardClass, 'flex w-full min-w-0 flex-col gap-3 p-6')}>
+                <Eyebrow>{f.category}</Eyebrow>
+                <h2 className="m-0 text-title-md break-words text-ink">{f.name}</h2>
+                <p className="m-0 text-body text-muted">{f.description}</p>
+                <p className="m-0 text-caption text-muted">
                   {t('flows.inputs', { count: f.inputCount })}
                   {f.versionLabel ? ` · ${t('flows.version', { version: f.versionLabel })}` : ''}
                 </p>
@@ -226,7 +228,7 @@ export function FlowListPage() {
                   to="/run/$flowCode"
                   params={{ flowCode: f.code }}
                   aria-label={t('flows.runNamed', { name: f.name })}
-                  className={cx(buttonClass.primary, 'mt-auto no-underline hover:text-white')}
+                  className={cx(buttonClass('primary'), 'mt-auto no-underline hover:text-white')}
                 >
                   {t('flows.run')}
                 </Link>

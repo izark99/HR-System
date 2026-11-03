@@ -28,7 +28,7 @@ function SideBySide({
   const cell = (line: SideBySideRow['left'], side: 'left' | 'right') => (
     <td
       className={cx(
-        'w-1/2 px-2 py-0.5 align-top font-mono text-small whitespace-pre-wrap break-all',
+        'w-1/2 px-3 py-0.5 align-top font-mono text-code whitespace-pre-wrap break-all',
         side === 'left' && 'border-r border-line',
         line?.change === 'removed' && 'bg-coral-tint text-coral-text',
         line?.change === 'added' && 'bg-teal-tint text-teal-strong',
@@ -46,14 +46,14 @@ function SideBySide({
     </td>
   );
   return (
-    <div className="overflow-x-auto rounded-callout border border-line">
+    <div className="overflow-x-auto rounded-card border border-line">
       <table className="w-full min-w-160 border-collapse">
         <thead>
-          <tr className="border-b border-line text-left text-small text-muted">
-            <th scope="col" className="px-2 py-1.5 font-semibold">
+          <tr className="border-b border-line bg-neutral text-left text-muted">
+            <th scope="col" className="px-3 py-2 text-dense-head">
               {before}
             </th>
-            <th scope="col" className="px-2 py-1.5 font-semibold">
+            <th scope="col" className="px-3 py-2 text-dense-head">
               {after}
             </th>
           </tr>
@@ -86,7 +86,7 @@ function ItemList({
   if (items.length === 0) return null;
   return (
     <section className="flex flex-col gap-2.5">
-      <h3 className="m-0 text-label font-bold text-ink">
+      <h3 className="m-0 text-title-sm text-ink">
         {title} ({items.length})
       </h3>
       <ul className="m-0 flex list-none flex-col gap-3 p-0">
@@ -94,11 +94,11 @@ function ItemList({
           <li key={`${item.kind}-${item.key}`} className="flex flex-col gap-2">
             <div className="flex flex-wrap items-center gap-2">
               <Chip tone={KIND_TONE[item.kind]}>{t(`admin.versions.diff.${item.kind}`)}</Chip>
-              <span className="font-mono text-small font-semibold">{item.key}</span>
-              {item.type && <span className="text-small text-muted">{item.type}</span>}
-              {item.label && <span className="text-label">{item.label}</span>}
+              <span className="font-mono text-caption font-semibold">{item.key}</span>
+              {item.type && <span className="text-caption text-muted">{item.type}</span>}
+              {item.label && <span className="text-body">{item.label}</span>}
               {item.fields && item.fields.length > 0 && (
-                <span className="text-small text-muted">
+                <span className="text-caption text-muted">
                   {t('admin.versions.diff.fields', {
                     fields: item.fields.map((f) => t(`admin.versions.diff.field.${f}`)).join(', '),
                   })}
@@ -143,14 +143,14 @@ export function DiffView({
       />
       {diff.edges.length > 0 && (
         <section className="flex flex-col gap-2.5">
-          <h3 className="m-0 text-label font-bold text-ink">
+          <h3 className="m-0 text-title-sm text-ink">
             {t('admin.versions.diff.edges')} ({diff.edges.length})
           </h3>
           <ul className="m-0 flex list-none flex-col gap-1.5 p-0">
             {diff.edges.map((e) => (
               <li key={`${e.kind}-${edgeText(e)}`} className="flex flex-wrap items-center gap-2">
                 <Chip tone={KIND_TONE[e.kind]}>{t(`admin.versions.diff.${e.kind}`)}</Chip>
-                <span className="font-mono text-small">{edgeText(e)}</span>
+                <span className="font-mono text-caption">{edgeText(e)}</span>
               </li>
             ))}
           </ul>
@@ -169,7 +169,7 @@ export function DiffView({
         after={right}
       />
       {diff.other.length > 0 && (
-        <p className="m-0 text-label">
+        <p className="m-0 text-body">
           {t('admin.versions.diff.other')}:{' '}
           <span className="font-mono">{diff.other.join(', ')}</span>
         </p>

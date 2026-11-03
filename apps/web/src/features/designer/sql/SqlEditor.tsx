@@ -103,8 +103,8 @@ export default function SqlEditor({
       data-testid="sql-editor"
       aria-describedby={describedBy}
       className={
-        'h-65 w-full overflow-hidden rounded-control border bg-card ' +
-        (invalid ? 'border-2 border-coral' : 'border-line-input')
+        'h-65 w-full overflow-hidden rounded-input border bg-card ' +
+        (invalid ? 'border-2 border-coral-text' : 'border-line-input')
       }
     />
   );

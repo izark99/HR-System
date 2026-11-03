@@ -7,7 +7,7 @@ import {
   type ReactNode,
   type RefObject,
 } from 'react';
-import { cx } from './ui';
+import { cx, floatClass } from './ui';
 
 /**
  * Building blocks shared by MonthPicker and DatePicker: the input-like trigger button, the
@@ -41,28 +41,31 @@ export function ChevronIcon({ dir, className }: { dir: 'left' | 'right'; classNa
   );
 }
 
+/** Trigger looks like an input (§25.3): 48px, 6px radius, #475569 border, `body-lg`. */
 export const triggerClass =
-  'inline-flex h-target min-w-48 items-center justify-between gap-3 rounded-control border ' +
-  'border-line-input bg-card px-3.5 text-left text-label text-ink hover:border-teal-strong ' +
+  'inline-flex h-control min-w-48 items-center justify-between gap-3 rounded-input border ' +
+  'border-line-input bg-card px-3.5 text-left text-body-lg text-ink hover:border-teal-strong ' +
+  'focus-visible:border-teal-strong focus-visible:ring-3 focus-visible:ring-teal-tint ' +
+  'focus-visible:outline-none aria-invalid:border-coral-text ' +
   'disabled:cursor-not-allowed disabled:bg-neutral disabled:text-muted';
 
 export const navButtonClass =
-  'inline-flex size-target items-center justify-center rounded-control text-ink hover:bg-teal-tint hover:text-teal-strong';
+  'inline-flex size-target items-center justify-center rounded-card text-ink hover:bg-teal-tint hover:text-teal-strong';
 
 export const footerButtonClass =
-  'inline-flex min-h-target items-center rounded-control px-3 text-label font-semibold text-teal-strong hover:bg-teal-tint';
+  'inline-flex min-h-target items-center rounded-card px-4 text-button-sm text-teal-strong hover:bg-teal-tint';
 
 export const cellBaseClass =
-  'flex min-h-target min-w-target items-center justify-center rounded-control text-label';
+  'flex min-h-target min-w-target items-center justify-center rounded-input text-body';
 
 export function cellClass(selected: boolean, current: boolean): string {
   return cx(
     cellBaseClass,
     selected
-      ? 'bg-teal-strong font-bold text-white'
+      ? 'bg-teal-strong font-semibold text-white'
       : cx(
-          'text-body hover:bg-teal-tint hover:text-teal-strong',
-          current && 'font-bold text-teal-strong ring-2 ring-teal ring-inset',
+          'text-ink-soft hover:bg-teal-tint hover:text-teal-strong',
+          current && 'font-semibold text-teal-strong ring-2 ring-teal ring-inset',
         ),
   );
 }
@@ -143,7 +146,7 @@ export function PickerPanel({
         left: shift,
         width: `min(${PANEL_MAX_WIDTH}px, calc(100vw - ${VIEWPORT_MARGIN * 2}px))`,
       }}
-      className="absolute top-full z-40 mt-2 flex flex-col gap-2 rounded-card bg-card p-3 shadow-card"
+      className={cx(floatClass, 'absolute top-full z-40 mt-2 flex flex-col gap-2 p-3')}
       onKeyDown={(e) => {
         if (e.key === 'Escape') {
           // preventDefault: inside a modal <dialog> the browser would otherwise turn this Escape

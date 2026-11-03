@@ -5,11 +5,16 @@ import { CloseIcon, cx } from '../../../components/ui';
 import type { ColumnInfo } from '../../../engine/protocol';
 import type { DesignIssue } from '../../../engine/design';
 
-/** Form building blocks of the Designer panels (spec §25.3: inputs 42-46px, radius 12px). */
+/**
+ * Form building blocks of the Designer panels: v2 frame (6px radius, #475569 border, teal focus
+ * ring) with the high-density 14px text kept beside the canvas (MEMORY 2026-10-30 13:29).
+ */
 
 export const inputClass =
-  'h-10.5 w-full min-w-0 rounded-control border bg-card px-3 text-label text-ink disabled:bg-neutral disabled:text-muted';
-export const labelClass = 'text-small font-semibold text-body';
+  'h-10.5 w-full min-w-0 rounded-input border bg-card px-3 text-dense text-ink ' +
+  'focus:border-teal-strong focus:ring-3 focus:ring-teal-tint focus:outline-none ' +
+  'disabled:bg-neutral disabled:text-muted';
+export const labelClass = 'text-dense font-semibold text-ink';
 
 /** Issues whose path is `path` or below it. */
 export function issuesAt(issues: readonly DesignIssue[], path: string): DesignIssue[] {
@@ -21,7 +26,7 @@ export function issuesAt(issues: readonly DesignIssue[], path: string): DesignIs
 export function FieldErrors({ id, issues }: { id: string; issues: readonly DesignIssue[] }) {
   if (issues.length === 0) return null;
   return (
-    <ul id={id} className="m-0 flex list-none flex-col gap-0.5 p-0 text-small text-coral-text">
+    <ul id={id} className="m-0 flex list-none flex-col gap-0.5 p-0 text-caption text-coral-text">
       {issues.map((i, k) => (
         <li key={k}>{i.text}</li>
       ))}
@@ -59,7 +64,7 @@ export function Field({
       )}
       {children(describedBy || undefined, invalid)}
       {hint && (
-        <p id={hintId} className="m-0 text-small text-muted">
+        <p id={hintId} className="m-0 text-caption text-muted">
           {hint}
         </p>
       )}
@@ -105,7 +110,7 @@ export function TextField({
           className={cx(
             inputClass,
             mono && 'font-mono',
-            invalid ? 'border-2 border-coral' : 'border-line-input',
+            invalid ? 'border-2 border-coral-text' : 'border-line-input',
           )}
         />
       )}
@@ -165,7 +170,7 @@ export function NumberField({
               onChange(n);
             }
           }}
-          className={cx(inputClass, invalid ? 'border-2 border-coral' : 'border-line-input')}
+          className={cx(inputClass, invalid ? 'border-2 border-coral-text' : 'border-line-input')}
         />
       )}
     </Field>
@@ -194,7 +199,7 @@ export function CheckField({
     <div className="flex flex-col gap-1">
       <label
         htmlFor={id}
-        className="flex min-h-target cursor-pointer items-center gap-2.5 text-label text-body"
+        className="flex min-h-target cursor-pointer items-center gap-2.5 text-dense text-ink-soft"
       >
         <input
           id={id}
@@ -211,7 +216,7 @@ export function CheckField({
         {label}
       </label>
       {hint && (
-        <p id={hintId} className="m-0 text-small text-muted">
+        <p id={hintId} className="m-0 text-caption text-muted">
           {hint}
         </p>
       )}
@@ -246,6 +251,7 @@ export function SelectField({
     <Field label={label} htmlFor={id} hint={hint} issues={issues} className={className}>
       {(_describedBy, invalid) => (
         <Select
+          dense
           id={id}
           value={value}
           onChange={onChange}
@@ -312,8 +318,8 @@ export function LinesField({
             onChange(lines);
           }}
           className={cx(
-            'w-full rounded-control border bg-card px-3 py-2 text-label text-ink disabled:bg-neutral',
-            invalid ? 'border-2 border-coral' : 'border-line-input',
+            'w-full rounded-input border bg-card px-3 py-2 text-dense text-ink disabled:bg-neutral',
+            invalid ? 'border-2 border-coral-text' : 'border-line-input',
           )}
         />
       )}
@@ -410,8 +416,8 @@ export function ColumnListField({
                   <li key={`${key}-${i}`} className="flex flex-col gap-0.5">
                     <span
                       className={cx(
-                        'flex min-h-target items-center justify-between gap-2 rounded-control border bg-card pl-3 text-label',
-                        errs.length > 0 ? 'border-2 border-coral' : 'border-line',
+                        'flex min-h-target items-center justify-between gap-2 rounded-input border bg-card pl-3 text-dense',
+                        errs.length > 0 ? 'border-2 border-coral-text' : 'border-line',
                       )}
                     >
                       <span className="min-w-0 truncate">{title(key)}</span>
@@ -420,14 +426,14 @@ export function ColumnListField({
                           type="button"
                           aria-label={t('form.removeItem', { item: title(key) })}
                           onClick={() => onChange(value.filter((_, k) => k !== i))}
-                          className="inline-flex size-target shrink-0 items-center justify-center rounded-control hover:bg-page"
+                          className="inline-flex size-target shrink-0 items-center justify-center rounded-card hover:bg-page"
                         >
                           <CloseIcon />
                         </button>
                       )}
                     </span>
                     {errs.map((e, k) => (
-                      <span key={k} className="text-small text-coral-text">
+                      <span key={k} className="text-caption text-coral-text">
                         {e.text}
                       </span>
                     ))}
@@ -442,6 +448,7 @@ export function ColumnListField({
                 {t('form.addColumnTo', { field: typeof label === 'string' ? label : '' })}
               </label>
               <Select
+                dense
                 id={addId}
                 value=""
                 onChange={(v) => v && onChange([...value, v])}
@@ -498,10 +505,10 @@ export function ListEditor<T>({
           key={i}
           role="group"
           aria-label={itemLabel(i)}
-          className="flex flex-col gap-2 rounded-tile border border-line bg-page p-3"
+          className="flex flex-col gap-2 rounded-card border border-line bg-page p-3"
         >
           <div className="flex items-center justify-between gap-2">
-            <span className="text-small font-bold text-ink">{itemLabel(i)}</span>
+            <span className="text-caption font-semibold text-ink">{itemLabel(i)}</span>
             {!disabled && (
               <span className="flex gap-1">
                 <button
@@ -509,7 +516,7 @@ export function ListEditor<T>({
                   disabled={i === 0}
                   aria-label={t('form.moveUp', { item: itemLabel(i) })}
                   onClick={() => move(i, i - 1)}
-                  className="inline-flex size-target items-center justify-center rounded-control text-label hover:bg-card disabled:text-line-input"
+                  className="inline-flex size-target items-center justify-center rounded-card text-dense hover:bg-card disabled:text-line-input"
                 >
                   {t('form.up')}
                 </button>
@@ -518,7 +525,7 @@ export function ListEditor<T>({
                   disabled={i === items.length - 1}
                   aria-label={t('form.moveDown', { item: itemLabel(i) })}
                   onClick={() => move(i, i + 1)}
-                  className="inline-flex size-target items-center justify-center rounded-control text-label hover:bg-card disabled:text-line-input"
+                  className="inline-flex size-target items-center justify-center rounded-card text-dense hover:bg-card disabled:text-line-input"
                 >
                   {t('form.down')}
                 </button>
@@ -526,7 +533,7 @@ export function ListEditor<T>({
                   type="button"
                   aria-label={t('form.removeItem', { item: itemLabel(i) })}
                   onClick={() => onChange(items.filter((_, k) => k !== i))}
-                  className="inline-flex size-target items-center justify-center rounded-control hover:bg-card"
+                  className="inline-flex size-target items-center justify-center rounded-card hover:bg-card"
                 >
                   <CloseIcon />
                 </button>
@@ -540,7 +547,7 @@ export function ListEditor<T>({
         <button
           type="button"
           onClick={() => onChange([...items, create()])}
-          className="min-h-target self-start rounded-control border border-dashed border-line-input bg-card px-3.5 text-small font-semibold text-teal-strong hover:bg-teal-tint-soft"
+          className="min-h-target self-start rounded-input border border-dashed border-line-input bg-card px-3.5 text-caption font-semibold text-teal-strong hover:bg-teal-tint-soft"
         >
           {addLabel}
         </button>

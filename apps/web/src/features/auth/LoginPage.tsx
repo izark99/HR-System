@@ -57,8 +57,8 @@ export function LoginPage() {
   return (
     <AuthLayout>
       <form className={authCardClass} onSubmit={(e) => void submit(e)} noValidate>
-        <h1 className="m-0 text-2xl font-bold tracking-[-0.5px]">{t('auth.login.title')}</h1>
-        <p className="m-0 text-label text-muted">{t('auth.login.note')}</p>
+        <h1 className="m-0 text-display-lg text-ink">{t('auth.login.title')}</h1>
+        <p className="m-0 text-body-lg text-muted">{t('auth.login.note')}</p>
 
         {reason && !error && (
           <Callout
@@ -76,7 +76,7 @@ export function LoginPage() {
         )}
 
         <div className="flex flex-col gap-1.5">
-          <label htmlFor="login-username" className="text-label font-semibold text-body">
+          <label htmlFor="login-username" className="text-label text-ink">
             {t('auth.login.username')}
           </label>
           <input
@@ -93,7 +93,7 @@ export function LoginPage() {
           />
         </div>
         <div className="flex flex-col gap-1.5">
-          <label htmlFor="login-password" className="text-label font-semibold text-body">
+          <label htmlFor="login-password" className="text-label text-ink">
             {t('auth.login.password')}
           </label>
           <input
@@ -107,14 +107,14 @@ export function LoginPage() {
             className={authInputClass}
           />
         </div>
-        <Button type="submit" variant="primary" disabled={busy} className="h-11.5 text-copy">
+        <Button type="submit" variant="primary" disabled={busy}>
           {busy ? t('auth.login.submitting') : t('auth.login.submit')}
         </Button>
         <Callout
           tone="teal"
           label={t('run.safety.label')}
           icon={<LockIcon className="mt-0.5 shrink-0 text-teal-strong" />}
-          className="text-small"
+          size="caption"
         >
           {t('auth.login.safety')}
         </Callout>

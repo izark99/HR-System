@@ -1,7 +1,7 @@
 import { Link } from '@tanstack/react-router';
 import { useEffect, useId, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { cx } from '../components/ui';
+import { cx, floatClass } from '../components/ui';
 import { signOutAndReload, useAuthService } from '../features/auth/auth-context';
 import type { SessionUser } from '../features/auth/guard';
 
@@ -13,7 +13,7 @@ function initials(user: SessionUser): string {
 }
 
 const itemClass =
-  'flex min-h-target w-full items-center rounded-control px-3.5 text-left text-label font-medium text-body no-underline hover:bg-teal-tint hover:text-teal-strong';
+  'flex min-h-target w-full items-center rounded-input px-3.5 text-left text-body text-ink-soft no-underline hover:bg-teal-tint hover:text-teal-strong';
 
 /** Disclosure menu (button + list of links), closes on Escape / outside click / navigation. */
 export function UserMenu({ user }: { user: SessionUser }) {
@@ -53,27 +53,29 @@ export function UserMenu({ user }: { user: SessionUser }) {
         aria-controls={panelId}
         aria-label={t('userMenu.open', { name: user.username })}
         onClick={() => setOpen((v) => !v)}
-        className="flex min-h-target items-center gap-2.5 rounded-control px-2 text-label hover:bg-page"
+        className="flex min-h-target items-center gap-2.5 rounded-card px-2 text-body hover:bg-neutral"
       >
         <span
           aria-hidden
           className={cx(
-            'flex size-9 items-center justify-center rounded-full text-small font-bold',
+            'flex size-9 items-center justify-center rounded-full text-caption font-semibold',
             admin ? 'bg-blue-tint text-blue-text' : 'bg-teal-tint text-teal-strong',
           )}
         >
           {initials(user)}
         </span>
-        <span className="font-semibold text-body max-sm:sr-only">{user.username}</span>
+        <span className="font-semibold text-ink-soft max-sm:sr-only">{user.username}</span>
       </button>
       {open && (
         <div
           id={panelId}
-          className="absolute right-0 z-40 mt-2 flex w-60 flex-col gap-1 rounded-tile bg-card p-2 shadow-card"
+          className={cx(floatClass, 'absolute right-0 z-40 mt-2 flex w-60 flex-col gap-1 p-2')}
         >
-          <p className="m-0 px-3.5 py-2 text-small text-muted">
+          <p className="m-0 px-3.5 py-2 text-caption text-muted">
             {user.fullName || user.username}
-            <span className="block font-semibold text-body">{t(`userMenu.role.${user.role}`)}</span>
+            <span className="block font-semibold text-ink-soft">
+              {t(`userMenu.role.${user.role}`)}
+            </span>
           </p>
           <ul className="m-0 flex list-none flex-col gap-1 p-0">
             <li>

@@ -2,5 +2,8 @@
   "baselineCommit": "d079f6b",
   "measuredWith": "node scripts/check-bundle-size.mjs --measure (zlib gzip level 9)",
   "entryGzipBytes": 200370,
-  "maxGrowth": 0.1
+  "maxGrowth": 0.1,
+  "cssBaselineCommit": "a6e36e1",
+  "cssGzipBytes": 37704,
+  "cssMeasuredWith": "node scripts/check-bundle-size.mjs --measure (sum of dist/assets/*.css, zlib gzip level 9)"
 }

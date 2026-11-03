@@ -171,10 +171,12 @@
   },
   "result": {
     "eyebrow": "Chạy xong · {{rows}} dòng · {{seconds}} giây",
-    "titleMismatched": "Kỳ {{period}} có {{count}} nhân viên lệch cần xử lý",
-    "titleMismatchedNoPeriod": "Có {{count}} nhân viên lệch cần xử lý",
+    "titleMismatched": "Kỳ {{period}} có {{count, number}} nhân viên lệch cần xử lý",
+    "titleMismatchedNoPeriod": "Có {{count, number}} nhân viên lệch cần xử lý",
     "titleMatched": "Kỳ {{period}}: tất cả nhân viên đều khớp",
     "titleMatchedNoPeriod": "Tất cả nhân viên đều khớp",
+    "titleMatchedCount": "Kỳ {{period}} khớp toàn bộ {{count, number}} nhân viên",
+    "titleMatchedCountNoPeriod": "Khớp toàn bộ {{count, number}} nhân viên",
     "titleGeneric": "Flow đã chạy xong",
     "thresholds": "Ngưỡng: {{list}}",
     "rerun": "Chạy lại",
@@ -207,7 +209,14 @@
     "warningsLabel": "Cảnh báo:",
     "search": "Tìm trong bảng",
     "sortHint": "Bấm để sắp xếp tăng dần, giảm dần hoặc bỏ sắp xếp",
-    "noMatch": "Không có dòng nào khớp từ khóa tìm kiếm."
+    "noMatch": "Không có dòng nào khớp từ khóa tìm kiếm.",
+    "conclusion": {
+      "label": "Kết luận",
+      "actionTitle": "Cần xử lý {{count, number}} nhân viên",
+      "actionText": "{{mismatched}} nhân viên lệch vượt ngưỡng, {{onlyLeft}} chỉ có trong {{left}}, {{onlyRight}} chỉ có trong {{right}}. Xem chi tiết ở các sheet bên dưới, rồi tải file Excel để lưu lại.",
+      "okTitle": "Không có gì cần xử lý",
+      "okText": "{{matched}} nhân viên có ở cả {{left}} và {{right}}, mọi chênh lệch đều nằm trong ngưỡng."
+    }
   },
   "config": {
     "title": "Ứng dụng chưa được cấu hình",

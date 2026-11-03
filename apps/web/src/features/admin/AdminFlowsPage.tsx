@@ -12,7 +12,12 @@ import {
   Card,
   Chip,
   cx,
+  inputClass,
+  labelClass,
   PageHeader,
+  tdClass,
+  textareaClass,
+  thClass,
   type Tone,
 } from '../../components/ui';
 import type { Json, VersionStatus } from '../../lib/database.types';
@@ -36,9 +41,6 @@ const STATUS_TONE: Record<VersionStatus, Tone> = {
   draft: 'blue',
   retired: 'neutral',
 };
-
-const inputClass = 'h-10.5 rounded-control border border-line-input bg-card px-3 text-label';
-const labelClass = 'text-small font-semibold text-body';
 
 function loadFlows(api: AdminApi): Promise<AdminFlow[]> {
   return api.listFlows();
@@ -113,7 +115,7 @@ function VersionList({ versions }: { versions: AdminFlowVersion[] }) {
           <span className="font-semibold">v{v.versionNo}</span>
           <Chip tone={STATUS_TONE[v.status]}>{t(`admin.flows.status.${v.status}`)}</Chip>
           {v.effectiveFrom && (
-            <span className="text-small text-muted">
+            <span className="text-caption text-muted">
               {v.effectiveTo
                 ? t('admin.flows.rangeTo', {
                     from: formatDate(v.effectiveFrom),
@@ -219,7 +221,7 @@ function ImportForm({
 
   return (
     <form onSubmit={(e) => void submit(e)} noValidate className="flex flex-col gap-3.5">
-      <p className="m-0 text-small text-muted">
+      <p className="m-0 text-caption text-muted">
         {t('admin.import.file', { name: candidate.fileName })}
       </p>
       {candidate.notices.length > 0 && (
@@ -228,7 +230,7 @@ function ImportForm({
         </Callout>
       )}
       {field('import-code', t('admin.import.code'), code, setCode, true)}
-      <p className="-mt-2 m-0 text-small text-muted">{t('admin.import.codeHint')}</p>
+      <p className="-mt-2 m-0 text-caption text-muted">{t('admin.import.codeHint')}</p>
       {existing ? (
         <Callout tone="blue" label={t('admin.import.existingLabel')}>
           {t('admin.import.existing', { name: existing.name })}
@@ -264,9 +266,9 @@ function ImportForm({
           />
         </div>
       </div>
-      <p className="-mt-2 m-0 text-small text-muted">{t('admin.import.rangeHint')}</p>
+      <p className="-mt-2 m-0 text-caption text-muted">{t('admin.import.rangeHint')}</p>
       {openVersion && (
-        <label className="flex min-h-target items-center gap-2.5 text-label text-body">
+        <label className="flex min-h-target items-center gap-2.5 text-body text-ink-soft">
           <input
             type="checkbox"
             className="size-4.5 accent-teal-strong"
@@ -363,7 +365,7 @@ function CreateFlowForm({ onCreated }: { onCreated: (code: string) => void }) {
           rows={3}
           value={value}
           onChange={(e) => set(e.target.value)}
-          className="rounded-control border border-line-input bg-card px-3 py-2 text-label"
+          className={textareaClass}
         />
       ) : (
         <input
@@ -373,17 +375,13 @@ function CreateFlowForm({ onCreated }: { onCreated: (code: string) => void }) {
           aria-invalid={opts.invalid ? true : undefined}
           aria-describedby={opts.hint || opts.invalid ? `${id}-desc` : undefined}
           onChange={(e) => set(e.target.value)}
-          className={cx(
-            inputClass,
-            opts.mono && 'font-mono',
-            opts.invalid ? 'border-2 border-coral' : '',
-          )}
+          className={cx(inputClass, opts.mono && 'font-mono')}
         />
       )}
       {(opts.hint || opts.invalid) && (
         <p
           id={`${id}-desc`}
-          className={cx('m-0 text-small', opts.invalid ? 'text-coral-text' : 'text-muted')}
+          className={cx('m-0 text-caption', opts.invalid ? 'text-coral-text' : 'text-muted')}
         >
           {opts.invalid || opts.hint}
         </p>
@@ -393,7 +391,7 @@ function CreateFlowForm({ onCreated }: { onCreated: (code: string) => void }) {
 
   return (
     <form onSubmit={(e) => void submit(e)} noValidate className="flex flex-col gap-3.5">
-      <p className="m-0 text-small text-muted">{t('admin.flows.create.intro')}</p>
+      <p className="m-0 text-caption text-muted">{t('admin.flows.create.intro')}</p>
       {field('new-flow-code', t('admin.flows.create.code'), code, (v) => setCode(v.trim()), {
         mono: true,
         hint: t('admin.flows.create.codeHint'),
@@ -492,7 +490,7 @@ export function AdminFlowsPage() {
           {readError.problems && readError.problems.length > 0 && (
             <ul className="mt-2 mb-0 pl-5">
               {readError.problems.slice(0, 20).map((p, i) => (
-                <li key={i} className="font-mono text-small">
+                <li key={i} className="font-mono text-caption">
                   {p}
                 </li>
               ))}
@@ -508,40 +506,40 @@ export function AdminFlowsPage() {
       {!data && !error && <p className="m-0 text-muted">{t('common.loading')}</p>}
 
       {data && (
-        <Card aria-labelledby="flows-title" className="flex flex-col gap-3.5">
-          <h2 id="flows-title" className="m-0 text-section">
+        <Card aria-labelledby="flows-title" className="flex flex-col gap-4">
+          <h2 id="flows-title" className="m-0 text-title-md text-ink">
             {t('admin.flows.listTitle', { count: data.length })}
           </h2>
           {data.length === 0 ? (
-            <p className="m-0 rounded-callout bg-neutral px-4 py-6 text-center text-label text-muted">
+            <p className="m-0 rounded-card bg-neutral px-4 py-6 text-center text-body text-muted">
               {t('admin.flows.empty')}
             </p>
           ) : (
             <div className="overflow-x-auto">
-              <table className="w-full min-w-160 border-collapse text-label text-body">
+              <table className="w-full min-w-160 border-collapse text-body text-ink-soft">
                 <thead>
-                  <tr className="border-b border-line text-left text-muted">
-                    <th scope="col" className="px-2 py-2.5 font-semibold">
+                  <tr>
+                    <th scope="col" className={thClass}>
                       {t('admin.flows.name')}
                     </th>
-                    <th scope="col" className="px-2 py-2.5 font-semibold">
+                    <th scope="col" className={thClass}>
                       {t('admin.flows.code')}
                     </th>
-                    <th scope="col" className="px-2 py-2.5 font-semibold">
+                    <th scope="col" className={thClass}>
                       {t('admin.flows.category')}
                     </th>
-                    <th scope="col" className="px-2 py-2.5 font-semibold">
+                    <th scope="col" className={thClass}>
                       {t('admin.flows.versions')}
                     </th>
-                    <th scope="col" className="px-2 py-2.5 font-semibold">
+                    <th scope="col" className={thClass}>
                       {t('admin.flows.actions')}
                     </th>
                   </tr>
                 </thead>
                 <tbody>
                   {data.map((f) => (
-                    <tr key={f.id} className={cx('border-b border-line align-top last:border-b-0')}>
-                      <th scope="row" className="px-2 py-3 text-left font-semibold">
+                    <tr key={f.id}>
+                      <th scope="row" className={cx(tdClass, 'text-left font-semibold text-ink')}>
                         {f.name}
                         {f.isArchived && (
                           <span className="ml-2">
@@ -549,19 +547,19 @@ export function AdminFlowsPage() {
                           </span>
                         )}
                       </th>
-                      <td className="px-2 py-3 font-mono text-small">{f.code}</td>
-                      <td className="px-2 py-3">{f.category || '-'}</td>
-                      <td className="px-2 py-3">
+                      <td className={cx(tdClass, 'font-mono')}>{f.code}</td>
+                      <td className={tdClass}>{f.category || '-'}</td>
+                      <td className={tdClass}>
                         <VersionList versions={f.versions} />
                       </td>
-                      <td className="px-2 py-3">
+                      <td className={cx(tdClass, 'whitespace-nowrap')}>
                         <Link
                           to="/admin/flows/$flowCode/versions"
                           params={{ flowCode: f.code }}
                           aria-label={t('admin.flows.manageVersionsFor', { name: f.name })}
                           className={cx(
-                            buttonClass.secondary,
-                            'min-h-target px-3.5 text-small no-underline',
+                            buttonClass('outline', 'sm'),
+                            'no-underline hover:text-ink',
                           )}
                         >
                           {t('admin.flows.manageVersions')}
@@ -572,8 +570,8 @@ export function AdminFlowsPage() {
                           search={{}}
                           aria-label={t('admin.flows.openDesignerFor', { name: f.name })}
                           className={cx(
-                            buttonClass.secondary,
-                            'ml-2 min-h-target px-3.5 text-small no-underline',
+                            buttonClass('outline', 'sm'),
+                            'ml-2 no-underline hover:text-ink',
                           )}
                         >
                           {t('admin.flows.openDesigner')}
@@ -585,7 +583,7 @@ export function AdminFlowsPage() {
               </table>
             </div>
           )}
-          <p className="m-0 text-small text-muted">{t('admin.flows.note')}</p>
+          <p className="m-0 text-caption text-muted">{t('admin.flows.note')}</p>
         </Card>
       )}
 

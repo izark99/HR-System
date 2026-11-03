@@ -67,7 +67,7 @@ export function SlotCard({
   return (
     <Card aria-labelledby={headingId} className="flex flex-col gap-3.5">
       <div className="flex flex-wrap items-baseline justify-between gap-2">
-        <h2 id={headingId} className="m-0 text-section text-ink">
+        <h2 id={headingId} className="m-0 text-title-md text-ink">
           {slot.label}
           {slot.required && (
             <>
@@ -76,7 +76,7 @@ export function SlotCard({
             </>
           )}
         </h2>
-        <span className="text-small text-muted">
+        <span className="text-caption text-muted">
           {t(multiple ? 'slot.multiple' : 'slot.single', { accept: slot.accept.join(' ') })}
         </span>
       </div>
@@ -89,7 +89,7 @@ export function SlotCard({
         onDragLeave={() => setDragging(false)}
         onDrop={onDrop}
         className={cx(
-          'rounded-tile border-2 border-dashed border-drop-border bg-drop-bg p-5 text-center text-label text-body',
+          'rounded-card border-2 border-dashed border-drop-border bg-drop-bg p-5 text-center text-body text-ink-soft',
           dragging && 'border-teal-strong bg-teal-tint',
           disabled && 'opacity-60',
         )}
@@ -103,7 +103,7 @@ export function SlotCard({
               type="button"
               disabled={disabled}
               onClick={() => inputRef.current?.click()}
-              className="min-h-target rounded-control px-2 font-semibold text-teal-strong underline hover:text-teal-hover disabled:cursor-not-allowed"
+              className="min-h-target rounded-card px-2 font-semibold text-teal-strong underline hover:text-teal-hover disabled:cursor-not-allowed"
             >
               {t('slot.choose')}
             </button>
@@ -131,7 +131,7 @@ export function SlotCard({
         <ul
           aria-label={t('slot.files', { slot: slot.label })}
           aria-live="polite"
-          className="m-0 flex list-none flex-col gap-2 p-0 text-label"
+          className="m-0 flex list-none flex-col gap-2 p-0 text-body"
         >
           {state.files.map((f) => {
             const s = status(f.file.name);
@@ -139,7 +139,7 @@ export function SlotCard({
               <li
                 key={f.id}
                 className={cx(
-                  'flex items-center justify-between gap-2 rounded-control py-1 pr-1 pl-3.5',
+                  'flex items-center justify-between gap-2 rounded-card py-1 pr-1 pl-3.5',
                   s && s.tone !== 'teal' && s.tone !== 'neutral' ? toneTint[s.tone] : 'bg-page',
                 )}
               >
@@ -147,7 +147,7 @@ export function SlotCard({
                 <span className="flex shrink-0 items-center gap-1">
                   {s && (
                     <span
-                      className={cx('flex items-center gap-1 font-bold', toneText[s.tone])}
+                      className={cx('flex items-center gap-1 font-semibold', toneText[s.tone])}
                       data-testid="file-status"
                     >
                       {s.text}
@@ -159,7 +159,7 @@ export function SlotCard({
                     disabled={disabled}
                     onClick={() => onRemove(f.id)}
                     aria-label={t('slot.remove', { name: f.file.name })}
-                    className="flex size-target items-center justify-center rounded-control text-muted hover:bg-neutral hover:text-ink disabled:cursor-not-allowed"
+                    className="flex size-target items-center justify-center rounded-card text-muted hover:bg-neutral hover:text-ink disabled:cursor-not-allowed"
                   >
                     <CloseIcon />
                   </button>

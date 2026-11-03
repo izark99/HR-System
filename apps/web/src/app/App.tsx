@@ -12,8 +12,8 @@ function ConfigError() {
   const { t } = useTranslation();
   return (
     <main id="main" className="mx-auto flex max-w-160 flex-col gap-3 px-4 py-16 font-sans text-ink">
-      <h1 className="m-0 text-page-title">{t('config.title')}</h1>
-      <p className="m-0 text-copy text-muted">{t('config.text')}</p>
+      <h1 className="m-0 text-display-lg">{t('config.title')}</h1>
+      <p className="m-0 text-body-lg text-muted">{t('config.text')}</p>
     </main>
   );
 }

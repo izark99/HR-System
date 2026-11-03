@@ -107,7 +107,7 @@ export function DatePicker({ id, labelId, value, onChange, required, disabled }:
             >
               <ChevronIcon dir="left" />
             </button>
-            <span id={titleId} aria-live="polite" className="text-section text-ink">
+            <span id={titleId} aria-live="polite" className="text-title-sm text-ink">
               {t('picker.monthYear', { month: active.month, year: active.year })}
             </span>
             <button
@@ -127,7 +127,7 @@ export function DatePicker({ id, labelId, value, onChange, required, disabled }:
                   key={w}
                   role="columnheader"
                   aria-label={t(`picker.weekdayLong.${w}`)}
-                  className="py-1 text-center text-small font-semibold text-muted"
+                  className="py-1 text-center text-caption font-semibold text-muted"
                 >
                   {t(`picker.weekday.${w}`)}
                 </span>

@@ -32,7 +32,7 @@ export function Palette({ onAdd, disabled }: { onAdd: (type: string) => void; di
       aria-label={t('palette.title')}
       className="flex h-full flex-col gap-3 overflow-y-auto p-3.5"
     >
-      <h2 className="m-0 text-label font-bold text-ink">{t('palette.title')}</h2>
+      <h2 className="m-0 text-dense font-semibold text-ink">{t('palette.title')}</h2>
       <label htmlFor={searchId} className="sr-only">
         {t('palette.search')}
       </label>
@@ -42,7 +42,7 @@ export function Palette({ onAdd, disabled }: { onAdd: (type: string) => void; di
         value={query}
         placeholder={t('palette.search')}
         onChange={(e) => setQuery(e.target.value)}
-        className="h-10.5 shrink-0 rounded-control border border-line-input bg-card px-3 text-label"
+        className="h-10.5 shrink-0 rounded-input border border-line-input bg-card px-3 text-dense"
       />
       {NODE_GROUPS.map((group) => {
         const items = NODE_TYPES.filter((s) => s.group === group && match(s.type));
@@ -67,16 +67,16 @@ export function Palette({ onAdd, disabled }: { onAdd: (type: string) => void; di
                     onClick={() => onAdd(s.type)}
                     title={t('palette.addHint')}
                     className={cx(
-                      'flex min-h-target w-full items-stretch gap-2.5 overflow-hidden rounded-control border border-line bg-card text-left',
+                      'flex min-h-target w-full items-stretch gap-2.5 overflow-hidden rounded-card border border-line bg-card text-left',
                       'hover:border-teal-strong disabled:cursor-not-allowed disabled:text-muted',
                     )}
                   >
                     <span aria-hidden className={cx('w-1.5 shrink-0', GROUP_BAR[s.group])} />
                     <span className="flex min-w-0 flex-col py-1.5 pr-2">
-                      <span className="text-label font-semibold text-ink">
+                      <span className="text-dense font-semibold text-ink">
                         {t(`types.node.${typeKey(s.type)}`)}
                       </span>
-                      <span className="text-small text-muted">
+                      <span className="text-caption text-muted">
                         {t(`palette.desc.${typeKey(s.type)}`)}
                       </span>
                     </span>

@@ -1,6 +1,7 @@
 /*
  * Designer canvas (spec §25.3 "Node trên canvas"). React Flow's own stylesheet is imported next to
- * this file; only theme colours from index.css are used here.
+ * this file; only theme tokens from index.css are used here (design v2: flat, 1px borders,
+ * 12px radius; the node tooltip is a floating layer with the level-2 shadow).
  */
 
 .hr-designer .react-flow {
@@ -9,7 +10,7 @@
   --xy-connectionline-stroke-default: var(--color-teal-strong);
   --xy-background-pattern-dots-color-default: var(--color-line-input);
   --xy-node-boxshadow-selected-default: none;
-  --xy-node-border-radius-default: 16px;
+  --xy-node-border-radius-default: var(--radius-card);
   background: var(--color-page);
   font-family: var(--font-sans);
 }
@@ -17,7 +18,7 @@
 /* Cards draw their own border/ring; the wrapper of a custom node stays transparent. */
 .hr-designer .react-flow__node-flow,
 .hr-designer .react-flow__node-note {
-  border-radius: 16px;
+  border-radius: var(--radius-card);
 }
 
 .hr-designer .react-flow__node:focus-visible {
@@ -53,12 +54,13 @@
   top: calc(100% + 8px);
   z-index: 10;
   width: 300px;
-  padding: 10px 12px;
-  border-radius: 14px;
+  padding: 8px 12px;
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-card);
   background: var(--color-card);
-  box-shadow: var(--shadow-card);
-  font-size: 13px;
-  line-height: 1.4;
+  box-shadow: var(--shadow-float);
+  font-size: var(--text-dense);
+  line-height: var(--text-dense--line-height);
   pointer-events: none;
 }
 
@@ -74,15 +76,17 @@
 }
 
 .hr-designer .react-flow__minimap {
-  border-radius: 12px;
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-card);
   overflow: hidden;
-  box-shadow: var(--shadow-soft);
+  box-shadow: none;
 }
 
 .hr-designer .react-flow__controls {
-  border-radius: 12px;
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-card);
   overflow: hidden;
-  box-shadow: var(--shadow-soft);
+  box-shadow: none;
 }
 
 .hr-designer .react-flow__controls-button {

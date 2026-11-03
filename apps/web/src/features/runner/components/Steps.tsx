@@ -19,8 +19,10 @@ export function Steps({ current }: { current: number }) {
             key={step}
             aria-current={active ? 'step' : undefined}
             className={cx(
-              'flex items-center gap-2.5 rounded-tile bg-card p-3.5 text-label',
-              active ? 'font-bold text-ink ring-2 ring-teal-strong' : 'shadow-soft',
+              'flex items-center gap-3 rounded-card border bg-card p-4 text-body',
+              active
+                ? 'border-teal-strong font-semibold text-ink ring-1 ring-teal-strong'
+                : 'border-line',
               done && 'font-semibold text-teal-strong',
               !done && !active && 'text-muted',
             )}
@@ -28,7 +30,7 @@ export function Steps({ current }: { current: number }) {
             <span
               aria-hidden
               className={cx(
-                'flex size-7 shrink-0 items-center justify-center rounded-full text-small font-extrabold',
+                'flex size-8 shrink-0 items-center justify-center rounded-full text-caption font-semibold',
                 done && 'bg-teal-strong text-white',
                 active && 'bg-teal-strong text-white',
                 !done && !active && 'bg-neutral text-muted',

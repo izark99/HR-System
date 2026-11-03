@@ -145,7 +145,7 @@ export function DataPanel({
         {t('data.safe')}
       </Callout>
       <div className="grid grid-cols-[repeat(auto-fill,minmax(300px,1fr))] gap-3">
-        {slots.length === 0 && <p className="m-0 text-small text-muted">{t('data.noSlots')}</p>}
+        {slots.length === 0 && <p className="m-0 text-caption text-muted">{t('data.noSlots')}</p>}
         {slots.map((slot) => (
           <SampleCard
             key={String(slot.key)}
@@ -172,7 +172,7 @@ export function DataPanel({
               : t('data.pickNode')}
         </Button>
         {outcome?.ok && (
-          <span className="text-small text-muted">
+          <span className="text-caption text-muted">
             {t('data.ran', { count: outcome.ran.length })}
           </span>
         )}
@@ -192,7 +192,7 @@ export function DataPanel({
           </Callout>
         ))}
       {outcome?.ok && tables.length === 0 && (
-        <p className="m-0 text-small text-muted">{t('data.noTables')}</p>
+        <p className="m-0 text-caption text-muted">{t('data.noTables')}</p>
       )}
       {current && (
         <section aria-label={t('data.resultLabel')} className="flex flex-col gap-2">
@@ -210,9 +210,9 @@ export function DataPanel({
                   aria-selected={x === current}
                   onClick={() => setTab(i)}
                   className={cx(
-                    'min-h-target rounded-full px-4 text-label',
+                    'min-h-target rounded-pill px-4 text-dense',
                     x === current
-                      ? 'bg-teal-tint font-bold text-teal-strong'
+                      ? 'bg-teal-tint font-semibold text-teal-strong'
                       : 'font-semibold text-muted hover:bg-page',
                   )}
                 >
@@ -221,7 +221,7 @@ export function DataPanel({
               ))}
             </div>
           )}
-          <p className="m-0 text-small text-muted" aria-live="polite">
+          <p className="m-0 text-caption text-muted" aria-live="polite">
             {t('data.shown', {
               shown: formatInteger(current.rows.length),
               total: formatInteger(current.total),
@@ -231,9 +231,9 @@ export function DataPanel({
             role="region"
             aria-label={current.name}
             tabIndex={0}
-            className="max-h-72 overflow-auto rounded-control border border-line"
+            className="max-h-72 overflow-auto rounded-card border border-line"
           >
-            <table className="w-max min-w-full border-collapse text-small text-body">
+            <table className="w-max min-w-full border-collapse text-caption text-ink-soft">
               <thead className="sticky top-0 bg-page">
                 <tr>
                   {current.columns.map((c) => (
@@ -299,8 +299,8 @@ function SampleCard({
       )
     : [];
   return (
-    <div className="flex flex-col gap-2 rounded-tile border border-line bg-page p-3">
-      <label htmlFor={id} className="text-label font-semibold text-ink">
+    <div className="flex flex-col gap-2 rounded-card border border-line bg-page p-3">
+      <label htmlFor={id} className="text-dense font-semibold text-ink">
         {t('data.sampleFor', { slot: label })}
       </label>
       <input
@@ -309,9 +309,9 @@ function SampleCard({
         accept=".xlsx,.xls"
         multiple={multiple}
         onChange={(e) => onPick(e.target.files)}
-        className="text-small"
+        className="text-caption"
       />
-      {state?.busy && <p className="m-0 text-small text-muted">{t('data.checking')}</p>}
+      {state?.busy && <p className="m-0 text-caption text-muted">{t('data.checking')}</p>}
       {v && (
         <div className="flex flex-wrap items-center gap-1.5" role="status">
           <Chip tone="neutral">{t('data.rows', { count: v.rowCount })}</Chip>
@@ -324,7 +324,7 @@ function SampleCard({
         </div>
       )}
       {issues.length > 0 && (
-        <ul className="m-0 flex max-h-32 list-none flex-col gap-1 overflow-y-auto p-0 text-small">
+        <ul className="m-0 flex max-h-32 list-none flex-col gap-1 overflow-y-auto p-0 text-caption">
           {issues.slice(0, MAX_ISSUES).map((i, k) => (
             <li key={k} className={i.severity === 'error' ? 'text-coral-text' : 'text-amber-text'}>
               {formatIssue(i, te)}

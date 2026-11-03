@@ -36,7 +36,7 @@ const objs = (v: unknown): Obj[] =>
 const TYPES = ['string', 'integer', 'decimal', 'boolean', 'date'] as const;
 
 const toggleClass =
-  'min-h-target self-start rounded-control border border-line-input bg-card px-3.5 text-small font-semibold text-ink hover:bg-page';
+  'min-h-target self-start rounded-input border border-line-input bg-card px-3.5 text-caption font-semibold text-ink hover:bg-page';
 
 /** `transform.formula` form (spec §12.2 "Designer", AC-B4-40…45). */
 export function FormulaForm(p: NodeFormProps) {
@@ -249,7 +249,7 @@ function FormulaColumn({
               value={toDisplay(str(col.formula), refs)}
               disabled={readOnly}
               onChange={(e) => onPatch({ formula: toStored(e.target.value, refs) }, 'formula')}
-              className="w-full rounded-control border border-line-input bg-card p-2 font-mono text-label"
+              className="w-full rounded-input border border-line-input bg-card p-2 font-mono text-dense"
             />
           }
         >
@@ -268,7 +268,7 @@ function FormulaColumn({
             testId={`formula-editor-${index}`}
           />
         </Suspense>
-        <p id={`${editorId}-hint`} className="m-0 text-small text-muted">
+        <p id={`${editorId}-hint`} className="m-0 text-caption text-muted">
           {t('node.formula.editorHint')}
         </p>
         <FieldErrors id={`${editorId}-errors`} issues={formulaIssues} />
@@ -310,11 +310,11 @@ function GeneratedSql({
   params: FormulaParamDef[];
   t: T;
 }) {
-  if (!input) return <p className="m-0 text-small text-muted">{t('node.formula.sqlNoInput')}</p>;
+  if (!input) return <p className="m-0 text-caption text-muted">{t('node.formula.sqlNoInput')}</p>;
   const r = generatedSql(input, items, params);
   if ('error' in r) {
     return (
-      <p className="m-0 text-small text-coral-text">
+      <p className="m-0 text-caption text-coral-text">
         {t('node.formula.sqlError', { n: r.index + 1 })}
       </p>
     );
@@ -324,11 +324,11 @@ function GeneratedSql({
       <pre
         data-testid="formula-sql"
         tabIndex={0}
-        className="m-0 max-h-80 overflow-auto rounded-control border border-line bg-page p-3 font-mono text-small whitespace-pre-wrap text-ink"
+        className="m-0 max-h-80 overflow-auto rounded-card border border-line bg-page p-3 font-mono text-caption whitespace-pre-wrap text-ink"
       >
         {r.sql}
       </pre>
-      <p className="m-0 text-small text-muted">{t('node.formula.sqlHint')}</p>
+      <p className="m-0 text-caption text-muted">{t('node.formula.sqlHint')}</p>
     </>
   );
 }
@@ -347,7 +347,7 @@ function FunctionTable({ id, t }: { id: string; t: T }) {
         <table
           key={g}
           data-testid={`formula-fn-${g}`}
-          className="w-full border-collapse text-small"
+          className="w-full border-collapse text-caption"
         >
           <caption className="pb-1 text-left font-semibold text-ink">
             {t(`node.formula.groups.${g}`)}
@@ -368,7 +368,7 @@ function FunctionTable({ id, t }: { id: string; t: T }) {
                 <td className="py-1.5 pr-2 font-mono break-words text-ink">
                   {t(`formula.fn.${f.name}.syntax`)}
                 </td>
-                <td className="py-1.5 text-body">
+                <td className="py-1.5 text-ink-soft">
                   {t(`formula.fn.${f.name}.desc`)}
                   <br />
                   <span className="text-muted">

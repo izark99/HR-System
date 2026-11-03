@@ -3,5 +3,16 @@
     "title": "HR Data Flow Platform",
     "tagline": "Process Excel files right in your browser — your data never leaves your machine.",
     "status": "Under construction (Phase 1)"
+  },
+  "result": {
+    "titleMatchedCount": "Period {{period}}: all {{count, number}} employees match",
+    "titleMatchedCountNoPeriod": "All {{count, number}} employees match",
+    "conclusion": {
+      "label": "Conclusion",
+      "actionTitle": "{{count, number}} employees need attention",
+      "actionText": "{{mismatched}} differ beyond tolerance, {{onlyLeft}} only in {{left}}, {{onlyRight}} only in {{right}}. See the sheets below for details, then download the Excel file.",
+      "okTitle": "Nothing needs attention",
+      "okText": "{{matched}} employees are in both {{left}} and {{right}}, every difference is within tolerance."
+    }
   }
 }

@@ -362,7 +362,7 @@ function SelectForm(p: NodeFormProps) {
       {!ro && input && (
         <button
           type="button"
-          className="min-h-target self-start rounded-control border border-line-input bg-card px-3.5 text-small font-semibold text-ink hover:bg-page"
+          className="min-h-target self-start rounded-input border border-line-input bg-card px-3.5 text-caption font-semibold text-ink hover:bg-page"
           onClick={() => set({ columns: input.map((x) => ({ from: x.key })) }, 'columns')}
         >
           {t('node.select.all')}
@@ -627,7 +627,7 @@ function SortForm(p: NodeFormProps) {
           </>
         )}
       />
-      <p className="m-0 text-small text-muted">{t('node.sort.hint')}</p>
+      <p className="m-0 text-caption text-muted">{t('node.sort.hint')}</p>
     </Section>
   );
 }
@@ -900,7 +900,7 @@ function GroupByForm(p: NodeFormProps) {
           );
         }}
       />
-      <p className="m-0 text-small text-muted">{t('node.groupBy.hint')}</p>
+      <p className="m-0 text-caption text-muted">{t('node.groupBy.hint')}</p>
     </Section>
   );
 }
@@ -937,7 +937,7 @@ function DedupeForm(p: NodeFormProps) {
         hint={t('node.join.normalizeKeysHint')}
         disabled={ro}
       />
-      <p className="m-0 text-small text-muted">{t('node.dedupe.hint')}</p>
+      <p className="m-0 text-caption text-muted">{t('node.dedupe.hint')}</p>
     </Section>
   );
 }
@@ -1000,7 +1000,7 @@ function CodeSqlForm(p: NodeFormProps) {
         )}
       />
       <div className="flex flex-col gap-1.5">
-        <span id={`${sqlId}-label`} className="text-small font-semibold text-body">
+        <span id={`${sqlId}-label`} className="text-caption font-semibold text-ink-soft">
           {t('node.sql.sql')}
         </span>
         <Suspense
@@ -1013,7 +1013,7 @@ function CodeSqlForm(p: NodeFormProps) {
               disabled={ro}
               aria-labelledby={`${sqlId}-label`}
               onChange={(e) => set({ sql: e.target.value }, 'sql')}
-              className="w-full rounded-control border border-line-input bg-card px-3 py-2 font-mono text-small text-ink"
+              className="w-full rounded-input border border-line-input bg-card px-3 py-2 font-mono text-caption text-ink"
             />
           }
         >
@@ -1027,7 +1027,7 @@ function CodeSqlForm(p: NodeFormProps) {
             completion={completion}
           />
         </Suspense>
-        <p id={`${sqlId}-hint`} className="m-0 text-small text-muted">
+        <p id={`${sqlId}-hint`} className="m-0 text-caption text-muted">
           {t('node.sql.editorHint')}
         </p>
         <FieldErrors id={`${sqlId}-errors`} issues={sqlIssues} />

@@ -64,7 +64,7 @@ function FlowCardImpl({ data, selected }: NodeProps<FlowCardNode>) {
   return (
     <div
       className={cx(
-        'relative w-65 rounded-tile bg-card shadow-card',
+        'relative w-65 rounded-card bg-card',
         hasError
           ? 'border-2 border-coral'
           : hasWarning
@@ -73,24 +73,24 @@ function FlowCardImpl({ data, selected }: NodeProps<FlowCardNode>) {
         selected && 'ring-3 ring-teal-strong ring-offset-2',
       )}
     >
-      <div className={cx('h-2 rounded-t-[14px]', GROUP_BAR[data.group])} aria-hidden />
+      <div className={cx('h-1 rounded-t-card', GROUP_BAR[data.group])} aria-hidden />
       <div className="flex items-start justify-between gap-2 px-3.5 pt-2.5">
         <div className="min-w-0">
-          <p className="m-0 truncate text-label font-bold text-ink">{data.label}</p>
-          <p className="m-0 truncate text-small text-muted">{data.typeLabel}</p>
+          <p className="m-0 truncate text-dense font-semibold text-ink">{data.label}</p>
+          <p className="m-0 truncate text-caption text-muted">{data.typeLabel}</p>
         </div>
         {(hasError || hasWarning) && <ErrorBadge tone={hasError ? 'coral' : 'amber'} />}
       </div>
       {(data.rowErrors ?? 0) > 0 && (
         <p
-          className="m-0 mx-3.5 mt-1 inline-block rounded-control bg-amber-tint px-2 py-0.5 text-small font-semibold text-amber-text"
+          className="m-0 mx-3.5 mt-1 inline-block rounded-input bg-amber-tint px-2 py-0.5 text-caption font-semibold text-amber-text"
           aria-label={t('canvas.rowErrorsAria', { count: data.rowErrors })}
           data-testid="node-row-errors"
         >
           {t('canvas.rowErrors', { count: data.rowErrors })}
         </p>
       )}
-      <p className="m-0 px-3.5 pt-1 text-small text-muted">
+      <p className="m-0 px-3.5 pt-1 text-caption text-muted">
         {data.status === 'checking'
           ? t('canvas.checking')
           : data.status === 'blocked'
@@ -106,8 +106,8 @@ function FlowCardImpl({ data, selected }: NodeProps<FlowCardNode>) {
           const input = data.inputs[i];
           const output = data.outputs[i];
           return (
-            <div key={i} className="relative flex h-6.5 items-center justify-between text-small">
-              <span className="relative pl-3.5 text-body">
+            <div key={i} className="relative flex h-6.5 items-center justify-between text-caption">
+              <span className="relative pl-3.5 text-ink-soft">
                 {input && (
                   <>
                     <Handle
@@ -128,7 +128,7 @@ function FlowCardImpl({ data, selected }: NodeProps<FlowCardNode>) {
                   </>
                 )}
               </span>
-              <span className="relative pr-3.5 text-right text-body">
+              <span className="relative pr-3.5 text-right text-ink-soft">
                 {output && (
                   <>
                     {output.name}
@@ -180,7 +180,7 @@ function NoteCardImpl({ data, selected }: NodeProps<NoteCardNode>) {
   return (
     <div
       className={cx(
-        'w-55 min-h-20 rounded-tile border border-amber bg-amber-tint px-3.5 py-3 text-label whitespace-pre-wrap text-body shadow-soft',
+        'w-55 min-h-20 rounded-card border border-amber bg-amber-tint px-3.5 py-3 text-dense whitespace-pre-wrap text-ink',
         selected && 'ring-3 ring-teal-strong ring-offset-2',
       )}
     >

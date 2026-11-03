@@ -12,22 +12,22 @@ export function AppShell() {
     <div className="min-h-screen bg-page font-sans text-ink">
       <a
         href="#main"
-        className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-50 focus:rounded-control focus:bg-card focus:px-4 focus:py-3 focus:shadow-card"
+        className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-50 focus:rounded-card focus:border focus:border-line focus:bg-card focus:px-4 focus:py-3 focus:shadow-float"
       >
         {t('app.skipToContent')}
       </a>
-      <header className="flex h-16 items-center justify-between gap-3 bg-card px-6 shadow-header max-sm:px-3">
+      <header className="flex h-16 items-center justify-between gap-3 border-b border-line bg-card px-6 max-sm:px-3">
         <div className="flex items-center gap-3">
           <Link
             to="/"
             aria-label={t('app.home')}
-            className="flex min-h-target items-center gap-2.5 text-lg font-extrabold tracking-[-0.3px] text-ink no-underline hover:text-ink"
+            className="flex min-h-target items-center gap-2.5 text-title-sm text-ink no-underline hover:text-ink"
           >
             <img src="/favicon.svg" alt="" aria-hidden width={32} height={32} className="size-8" />
             <span className="max-sm:sr-only">{t('app.name')}</span>
           </Link>
           {inAdmin && (
-            <span className="rounded-full bg-blue-tint px-2.5 py-1 text-[11px] font-bold tracking-[0.06em] text-blue-text uppercase">
+            <span className="rounded-pill bg-blue-tint px-3 py-1 text-caption font-semibold text-blue-text">
               {t('admin.badge')}
             </span>
           )}

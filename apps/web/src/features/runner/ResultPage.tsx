@@ -6,12 +6,15 @@ import {
   Button,
   buttonClass,
   Callout,
+  cardClass,
   cx,
   DownloadIcon,
+  inputClass,
+  labelClass,
   PageHeader,
+  type Tone,
   toneText,
   toneTint,
-  type Tone,
 } from '../../components/ui';
 import type {
   FilterOption,
@@ -43,22 +46,56 @@ function periodOf(state: SessionState, params: ParamValues): string | null {
   return def?.type === 'month' ? formatMonth(v) : v;
 }
 
+/** KPI card (§25.3): card + 4px top bar by meaning, number in `display-xl` (Vietnamese format). */
 function KpiCard({ label, value, tone }: { label: string; value: number; tone: Tone }) {
-  const border: Record<Tone, string> = {
-    teal: 'border-teal',
-    coral: 'border-coral',
-    amber: 'border-amber',
-    blue: 'border-blue',
-    neutral: 'border-line-input',
+  const bar: Record<Tone, string> = {
+    teal: 'border-t-teal',
+    coral: 'border-t-coral',
+    amber: 'border-t-amber',
+    blue: 'border-t-blue',
+    neutral: 'border-t-line-input',
   };
   return (
     <div
-      className={cx('rounded-card border-t-8 bg-card px-5.5 py-5 shadow-card', border[tone])}
+      className={cx(cardClass, 'flex flex-col gap-2 border-t-4 p-6', bar[tone])}
       data-testid="kpi"
     >
-      <dt className="text-small font-semibold text-muted">{label}</dt>
-      <dd className={cx('m-0 text-kpi', toneText[tone])}>{formatInteger(value)}</dd>
+      <dt className="text-body font-semibold text-ink-soft">{label}</dt>
+      <dd className={cx('m-0 text-display-xl', toneText[tone])}>{formatInteger(value)}</dd>
     </div>
+  );
+}
+
+/**
+ * The one dark card of the Result screen (AC-UI-09): the main conclusion of the comparison, from
+ * the counts already in memory.
+ */
+function ConclusionCard({ cmp }: { cmp: NonNullable<RunSummary['compare']> }) {
+  const { t } = useTranslation();
+  const pending = cmp.mismatched + cmp.onlyLeft + cmp.onlyRight;
+  const sides = { left: cmp.sideLabels.left, right: cmp.sideLabels.right };
+  return (
+    <section
+      aria-labelledby="conclusion-title"
+      data-testid="conclusion"
+      className="flex flex-col gap-2 rounded-card bg-ink p-6 text-white"
+    >
+      <h2 id="conclusion-title" className="m-0 text-title-md text-white">
+        {pending > 0
+          ? t('result.conclusion.actionTitle', { count: pending })
+          : t('result.conclusion.okTitle')}
+      </h2>
+      <p className="m-0 text-body-lg text-white">
+        {pending > 0
+          ? t('result.conclusion.actionText', {
+              ...sides,
+              mismatched: formatInteger(cmp.mismatched),
+              onlyLeft: formatInteger(cmp.onlyLeft),
+              onlyRight: formatInteger(cmp.onlyRight),
+            })
+          : t('result.conclusion.okText', { ...sides, matched: formatInteger(cmp.matched) })}
+      </p>
+    </section>
   );
 }
 
@@ -83,7 +120,7 @@ function Filters({
         const id = `filter-${o.column}`;
         return (
           <div key={o.column} className="flex flex-col gap-1">
-            <label htmlFor={id} className="text-small font-semibold text-body">
+            <label htmlFor={id} className={labelClass}>
               {o.title}
             </label>
             <Select
@@ -146,7 +183,7 @@ function SheetPanel({ sheet, tabId }: { sheet: SheetInfo; tabId: string }) {
           onChange={(column, value) => setValues((v) => ({ ...v, [column]: value }))}
         />
         <div className={cx('flex flex-col gap-1', options.length === 0 && 'pt-3.5 pl-5')}>
-          <label htmlFor={searchId} className="text-small font-semibold text-body">
+          <label htmlFor={searchId} className={labelClass}>
             {t('result.search')}
           </label>
           <input
@@ -154,7 +191,7 @@ function SheetPanel({ sheet, tabId }: { sheet: SheetInfo; tabId: string }) {
             type="search"
             value={text}
             onChange={(e) => setText(e.target.value)}
-            className="h-target w-60 rounded-control border border-line-input bg-card px-3 text-label"
+            className={cx(inputClass, 'w-60 max-w-full')}
           />
         </div>
       </div>
@@ -212,12 +249,12 @@ function SheetTabs({ summary }: { summary: RunSummary }) {
   };
 
   return (
-    <section className="flex flex-col overflow-hidden rounded-card bg-card shadow-card">
+    <section className={cx(cardClass, 'flex flex-col overflow-hidden')}>
       <div
         role="tablist"
         aria-label={t('result.tabsLabel')}
         onKeyDown={onKey}
-        className="flex flex-wrap gap-1.5 border-b border-line px-4 py-3"
+        className="flex flex-wrap gap-2 border-b border-line px-4 py-3"
       >
         {summary.sheets.map((s) => {
           const active = s.id === current.id;
@@ -234,17 +271,15 @@ function SheetTabs({ summary }: { summary: RunSummary }) {
               tabIndex={active ? 0 : -1}
               onClick={() => setSelected(s.id)}
               className={cx(
-                'min-h-target rounded-full px-4 text-label',
-                active
-                  ? cx('font-bold', toneTint[tone], toneText[tone])
-                  : 'font-semibold text-muted hover:bg-page',
+                'min-h-target rounded-pill px-4 text-body font-semibold',
+                active ? cx(toneTint[tone], toneText[tone]) : 'text-muted hover:bg-neutral',
               )}
             >
               {s.role === 'summary'
                 ? s.name
                 : t('result.tabCount', { name: s.name, count: s.totalRows ?? s.rowCount })}
               {s.kind === 'preview' && (
-                <span className="ml-2 rounded-full bg-neutral px-2 py-0.5 text-xs font-bold text-muted">
+                <span className="ml-2 rounded-pill bg-neutral px-2 py-0.5 text-caption font-semibold text-muted">
                   {t('result.viewOnly')}
                 </span>
               )}
@@ -270,7 +305,7 @@ export function ResultPage() {
   const summary = state.code === flowCode ? state.run.summary : null;
   if (!summary) {
     return (
-      <main id="main" className="mx-auto flex max-w-280 flex-col gap-5.5 px-4 pt-7 pb-12">
+      <main id="main" className="mx-auto flex w-full max-w-320 flex-col gap-6 px-4 pt-8 pb-12">
         <BackToFlows />
         <Callout tone="amber" label={t('result.noteLabel')} role="status">
           {t('result.noSession')}
@@ -278,7 +313,7 @@ export function ResultPage() {
         <Link
           to="/run/$flowCode"
           params={{ flowCode }}
-          className={cx(buttonClass.primary, 'self-start no-underline hover:text-white')}
+          className={cx(buttonClass('primary'), 'self-start no-underline hover:text-white')}
         >
           {t('result.goRun')}
         </Link>
@@ -294,8 +329,8 @@ export function ResultPage() {
         ? t('result.titleMismatched', { period, count: cmp.mismatched })
         : t('result.titleMismatchedNoPeriod', { count: cmp.mismatched })
       : period
-        ? t('result.titleMatched', { period })
-        : t('result.titleMatchedNoPeriod')
+        ? t('result.titleMatchedCount', { period, count: cmp.matched })
+        : t('result.titleMatchedCountNoPeriod', { count: cmp.matched })
     : t('result.titleGeneric');
   const eyebrow = t('result.eyebrow', {
     rows: summary.inputs.map((i) => formatInteger(i.rows)).join(' + '),
@@ -313,7 +348,7 @@ export function ResultPage() {
   };
 
   return (
-    <main id="main" className="mx-auto flex max-w-280 flex-col gap-5.5 px-4 pt-7 pb-12">
+    <main id="main" className="mx-auto flex w-full max-w-320 flex-col gap-6 px-4 pt-8 pb-12">
       <BackToFlows />
       <PageHeader
         eyebrow={eyebrow}
@@ -368,6 +403,7 @@ export function ResultPage() {
           />
         </dl>
       )}
+      {cmp && <ConclusionCard cmp={cmp} />}
 
       {summary.warnings.length > 0 && (
         <Callout tone="amber" label={t('result.warningsLabel')} role="status">

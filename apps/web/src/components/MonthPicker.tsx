@@ -118,7 +118,7 @@ export function MonthPicker({ id, labelId, value, onChange, required, disabled }
             >
               <ChevronIcon dir="left" />
             </button>
-            <span id={yearId} aria-live="polite" className="text-section text-ink">
+            <span id={yearId} aria-live="polite" className="text-title-sm text-ink">
               {active.year}
             </span>
             <button

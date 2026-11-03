@@ -1,6 +1,6 @@
 import { useEffect, useId, useRef, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
-import { CloseIcon } from '../../components/ui';
+import { CloseIcon, cx, floatClass } from '../../components/ui';
 
 /**
  * Modal dialog on the native <dialog> element: focus trap, Escape and inert background come
@@ -33,19 +33,22 @@ export function Dialog({
       ref={ref}
       aria-labelledby={titleId}
       onClose={onClose}
-      className="m-auto w-[min(520px,calc(100vw-24px))] rounded-card border-0 bg-card p-0 text-ink shadow-card backdrop:bg-ink/40"
+      className={cx(
+        floatClass,
+        'm-auto w-[min(520px,calc(100vw-24px))] p-0 text-ink backdrop:bg-ink/40',
+      )}
     >
       {open && (
         <div className="flex flex-col gap-4 p-6 max-sm:p-4">
           <div className="flex items-start justify-between gap-3">
-            <h2 id={titleId} className="m-0 text-section text-ink">
+            <h2 id={titleId} className="m-0 text-title-sm text-ink">
               {title}
             </h2>
             <button
               type="button"
               aria-label={t('admin.dialog.close')}
               onClick={onClose}
-              className="inline-flex size-target shrink-0 items-center justify-center rounded-control hover:bg-page"
+              className="inline-flex size-target shrink-0 items-center justify-center rounded-card hover:bg-neutral"
             >
               <CloseIcon />
             </button>

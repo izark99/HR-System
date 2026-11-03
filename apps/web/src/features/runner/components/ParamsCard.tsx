@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { DatePicker } from '../../../components/DatePicker';
 import { MonthPicker } from '../../../components/MonthPicker';
 import { Select } from '../../../components/Select';
-import { Card } from '../../../components/ui';
+import { Card, inputClass, labelClass } from '../../../components/ui';
 import type { ParamValues } from '../../../engine/protocol';
 
 const INPUT_TYPE: Partial<Record<FlowParam['type'], string>> = {
@@ -37,7 +37,7 @@ export function ParamsCard({
         const options = Array.isArray(p.options) ? p.options : null;
         return (
           <div key={p.key} className="flex flex-col gap-1.5">
-            <label id={labelId} htmlFor={id} className="text-label font-semibold text-body">
+            <label id={labelId} htmlFor={id} className={labelClass}>
               {p.label}
               {p.required && (
                 <>
@@ -84,7 +84,7 @@ export function ParamsCard({
                 required={p.required}
                 disabled={disabled}
                 onChange={(e) => onChange(p.key, e.target.value)}
-                className="h-target rounded-control border border-line-input bg-card px-3.5 text-label"
+                className={inputClass}
               />
             )}
           </div>

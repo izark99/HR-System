@@ -65,10 +65,10 @@ function Tabs({ tab, onTab }: { tab: Tab; onTab: (t: Tab) => void }) {
           onClick={() => onTab(x)}
           onKeyDown={(e) => onKeyDown(e, i)}
           className={cx(
-            'min-h-target rounded-full px-4 text-label',
+            'min-h-target rounded-pill px-4 text-dense',
             tab === x
-              ? 'bg-teal-tint font-bold text-teal-strong'
-              : 'font-semibold text-body hover:bg-page',
+              ? 'bg-teal-tint font-semibold text-teal-strong'
+              : 'font-semibold text-ink-soft hover:bg-page',
           )}
         >
           {t(`panel.tabs.${x}`)}
@@ -124,14 +124,15 @@ function SlotsTab({
   };
   return (
     <div className="flex flex-col gap-3.5">
-      <p className="m-0 text-small text-muted">{t('slot.intro')}</p>
+      <p className="m-0 text-caption text-muted">{t('slot.intro')}</p>
       <div className="flex flex-wrap items-end gap-2">
         {slots.length > 0 && (
           <div className="flex min-w-0 flex-1 flex-col gap-1.5">
-            <label htmlFor={pickId} className="text-small font-semibold text-body">
+            <label htmlFor={pickId} className="text-caption font-semibold text-ink-soft">
               {t('slot.pick')}
             </label>
             <Select
+              dense
               id={pickId}
               value={String(current)}
               onChange={(v) => setIndex(Number(v))}
@@ -146,12 +147,12 @@ function SlotsTab({
           </div>
         )}
         {!readOnly && (
-          <Button onClick={add} className="text-small">
+          <Button size="sm" onClick={add}>
             {t('slot.add')}
           </Button>
         )}
       </div>
-      {slots.length === 0 && <p className="m-0 text-label text-muted">{t('slot.empty')}</p>}
+      {slots.length === 0 && <p className="m-0 text-dense text-muted">{t('slot.empty')}</p>}
       {slot && (
         <>
           <SlotForm
@@ -170,7 +171,8 @@ function SlotsTab({
           />
           {!readOnly && (
             <Button
-              className="self-start text-small"
+              size="sm"
+              className="self-start"
               onClick={() => {
                 onSlots(
                   slots.filter((_, i) => i !== current),
@@ -197,10 +199,10 @@ export function ConfigPanel(p: ConfigPanelProps) {
     const id = `note-${p.note.id}`;
     return (
       <section aria-labelledby={`${id}-title`} className="flex flex-col gap-3.5">
-        <h2 id={`${id}-title`} className="m-0 text-section">
+        <h2 id={`${id}-title`} className="m-0 text-title-sm">
           {t('panel.note')}
         </h2>
-        <label htmlFor={id} className="text-small font-semibold text-body">
+        <label htmlFor={id} className="text-caption font-semibold text-ink-soft">
           {t('panel.noteText')}
         </label>
         <textarea
@@ -209,11 +211,11 @@ export function ConfigPanel(p: ConfigPanelProps) {
           value={p.note.text}
           disabled={p.readOnly}
           onChange={(e) => p.onNote(p.note!.id, e.target.value)}
-          className="w-full rounded-control border border-line-input bg-card px-3 py-2 text-label"
+          className="w-full rounded-input border border-line-input bg-card px-3 py-2 text-dense"
         />
-        <p className="m-0 text-small text-muted">{t('panel.noteHint')}</p>
+        <p className="m-0 text-caption text-muted">{t('panel.noteHint')}</p>
         {!p.readOnly && (
-          <Button className="self-start text-small" onClick={p.onDeleteSelection}>
+          <Button variant="danger" size="sm" className="self-start" onClick={p.onDeleteSelection}>
             {t('panel.deleteNote')}
           </Button>
         )}
@@ -230,10 +232,10 @@ export function ConfigPanel(p: ConfigPanelProps) {
     return (
       <section aria-labelledby="node-panel-title" className="flex flex-col gap-3.5">
         <div className="flex flex-col gap-0.5">
-          <h2 id="node-panel-title" className="m-0 text-section">
+          <h2 id="node-panel-title" className="m-0 text-title-sm">
             {node.label || node.id}
           </h2>
-          <p className="m-0 text-small text-muted">
+          <p className="m-0 text-caption text-muted">
             {t(`types.node.${typeKey(node.type)}`)} · <span className="font-mono">{node.id}</span>
           </p>
         </div>
@@ -272,7 +274,7 @@ export function ConfigPanel(p: ConfigPanelProps) {
           onConfig={(config, mk, renames) => p.onNodeConfig(node.id, config, mk, renames)}
         />
         {!p.readOnly && (
-          <Button className="self-start text-small" onClick={p.onDeleteSelection}>
+          <Button variant="danger" size="sm" className="self-start" onClick={p.onDeleteSelection}>
             {t('panel.deleteNode')}
           </Button>
         )}

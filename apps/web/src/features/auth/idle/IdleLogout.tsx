@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Button, Callout } from '../../../components/ui';
+import { Button, Callout, cx, floatClass } from '../../../components/ui';
 import { browserSessionStorage, clearStoredSession } from '../../../lib/supabase';
 import { disposeAllEngines } from '../../runner/engine-client';
 import { useAuthService } from '../auth-context';
@@ -124,15 +124,18 @@ function IdleWarningDialog({
       aria-describedby="idle-text"
       // Escape must not dismiss it: only the button extends the session (spec §6.1).
       onCancel={(e) => e.preventDefault()}
-      className="m-auto w-[min(480px,calc(100vw-24px))] rounded-card border-0 bg-card p-0 text-ink shadow-card backdrop:bg-ink/40"
+      className={cx(
+        floatClass,
+        'm-auto w-[min(480px,calc(100vw-24px))] p-0 text-ink backdrop:bg-ink/40',
+      )}
     >
       <div className="flex flex-col gap-4 p-6 max-sm:p-4">
-        <h2 id="idle-title" className="m-0 text-section text-ink">
+        <h2 id="idle-title" className="m-0 text-title-sm text-ink">
           {children}
         </h2>
-        <p id="idle-text" className="m-0 text-copy text-body">
+        <p id="idle-text" className="m-0 text-body-lg text-ink-soft">
           {t('idle.text')}{' '}
-          <b className="font-bold text-amber-text" aria-live="off">
+          <b className="font-semibold text-amber-text" aria-live="off">
             {formatCountdown(deadline - now)}
           </b>
         </p>

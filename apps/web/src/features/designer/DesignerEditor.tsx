@@ -605,7 +605,6 @@ export function DesignerEditor(props: DesignerEditorProps) {
       ? (doc.notes.find((n) => n.id === selection.notes[0]) ?? null)
       : null;
   const hasSelection = selection.nodes.length + selection.notes.length + selection.edges.length > 0;
-  const toolButton = 'min-h-target px-3 text-small';
 
   return (
     <div className="hr-designer flex h-[calc(100dvh-64px)] min-h-150 flex-col">
@@ -613,13 +612,13 @@ export function DesignerEditor(props: DesignerEditorProps) {
         <Link
           to="/admin/flows/$flowCode/versions"
           params={{ flowCode: props.flowCode }}
-          className="min-h-target content-center rounded-control px-2.5 text-small font-semibold text-teal-strong no-underline hover:bg-page"
+          className="min-h-target content-center rounded-card px-2.5 text-caption font-semibold text-teal-strong no-underline hover:bg-page"
         >
           {t('toolbar.back')}
         </Link>
-        <h1 className="m-0 flex items-center gap-2 text-section text-ink">
+        <h1 className="m-0 flex items-center gap-2 text-title-sm text-ink">
           <span className="truncate">{props.flowName}</span>
-          <span className="text-label text-muted">v{props.version.versionNo}</span>
+          <span className="text-dense text-muted">v{props.version.versionNo}</span>
           <Chip tone={VERSION_STATUS_TONE[props.version.status]}>
             {tc(`admin.flows.status.${props.version.status}`)}
           </Chip>
@@ -628,7 +627,7 @@ export function DesignerEditor(props: DesignerEditorProps) {
           <span
             role="status"
             className={cx(
-              'text-small font-semibold',
+              'text-caption font-semibold',
               dirty ? 'text-amber-text' : 'text-teal-strong',
             )}
           >
@@ -643,7 +642,7 @@ export function DesignerEditor(props: DesignerEditorProps) {
           {!ro && (
             <>
               <Button
-                className={toolButton}
+                size="sm"
                 onClick={doUndo}
                 disabled={hist.past.length === 0}
                 aria-keyshortcuts="Control+Z"
@@ -651,7 +650,7 @@ export function DesignerEditor(props: DesignerEditorProps) {
                 {t('toolbar.undo')}
               </Button>
               <Button
-                className={toolButton}
+                size="sm"
                 onClick={doRedo}
                 disabled={hist.future.length === 0}
                 aria-keyshortcuts="Control+Shift+Z Control+Y"
@@ -661,7 +660,7 @@ export function DesignerEditor(props: DesignerEditorProps) {
             </>
           )}
           <Button
-            className={toolButton}
+            size="sm"
             onClick={copy}
             disabled={selection.nodes.length + selection.notes.length === 0}
             aria-keyshortcuts="Control+C"
@@ -670,32 +669,32 @@ export function DesignerEditor(props: DesignerEditorProps) {
           </Button>
           {!ro && (
             <>
-              <Button className={toolButton} onClick={pasteClip} aria-keyshortcuts="Control+V">
+              <Button size="sm" onClick={pasteClip} aria-keyshortcuts="Control+V">
                 {t('toolbar.paste')}
               </Button>
               <Button
-                className={toolButton}
+                size="sm"
                 onClick={deleteSelection}
                 disabled={!hasSelection}
                 aria-keyshortcuts="Delete"
               >
                 {t('toolbar.delete')}
               </Button>
-              <Button className={toolButton} onClick={addNoteCmd}>
+              <Button size="sm" onClick={addNoteCmd}>
                 {t('toolbar.note')}
               </Button>
-              <Button className={toolButton} onClick={layout} disabled={doc.nodes.length === 0}>
+              <Button size="sm" onClick={layout} disabled={doc.nodes.length === 0}>
                 {t('toolbar.layout')}
               </Button>
             </>
           )}
-          <Button className={toolButton} onClick={exportJson}>
+          <Button size="sm" onClick={exportJson}>
             {t('toolbar.export')}
           </Button>
           {!ro && (
             <Button
               variant="primary"
-              className={toolButton}
+              size="sm"
               onClick={() => void save()}
               disabled={saving}
               aria-keyshortcuts="Control+S"
@@ -711,7 +710,8 @@ export function DesignerEditor(props: DesignerEditorProps) {
           <Callout tone="blue" label={t('readOnly.label')} role="status">
             {t('readOnly.text')}{' '}
             <Button
-              className="ml-2 min-h-target px-3 text-small"
+              size="sm"
+              className="ml-2"
               onClick={props.onCreateDraft}
               disabled={props.creatingDraft}
             >
@@ -778,7 +778,7 @@ export function DesignerEditor(props: DesignerEditorProps) {
             </ReactFlow>
             {doc.nodes.length === 0 && (
               <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
-                <p className="m-0 max-w-90 rounded-tile bg-card px-5 py-4 text-center text-label text-muted shadow-soft">
+                <p className="m-0 max-w-90 rounded-card bg-card px-5 py-4 text-center text-dense text-muted border border-line">
                   {ro ? t('canvas.emptyReadOnly') : t('canvas.empty')}
                 </p>
               </div>
@@ -794,7 +794,7 @@ export function DesignerEditor(props: DesignerEditorProps) {
                 type="button"
                 aria-expanded={dataOpen}
                 onClick={() => setDataOpen((o) => !o)}
-                className="flex min-h-target w-full items-center px-3.5 text-left text-label font-bold text-ink hover:bg-page"
+                className="flex min-h-target w-full items-center px-3.5 text-left text-dense font-semibold text-ink hover:bg-page"
               >
                 {t('data.title')}
               </button>
@@ -841,7 +841,7 @@ export function DesignerEditor(props: DesignerEditorProps) {
         onClose={() => blocker.reset?.()}
         title={t('leave.title')}
       >
-        <p className="m-0 text-copy text-body">{t('leave.text')}</p>
+        <p className="m-0 text-body-lg text-ink-soft">{t('leave.text')}</p>
         <div className="flex flex-wrap justify-end gap-3">
           <Button onClick={() => blocker.reset?.()}>{t('leave.stay')}</Button>
           <Button variant="primary" onClick={() => blocker.proceed?.()}>
@@ -855,12 +855,12 @@ export function DesignerEditor(props: DesignerEditorProps) {
         onClose={() => setConflict(null)}
         title={t('conflict.title')}
       >
-        <p className="m-0 text-copy text-body">
+        <p className="m-0 text-body-lg text-ink-soft">
           {conflict?.at
             ? t('conflict.text', { time: formatTime(conflict.at) })
             : t('conflict.textNoTime')}
         </p>
-        <p className="m-0 text-small text-muted">{t('conflict.hint')}</p>
+        <p className="m-0 text-caption text-muted">{t('conflict.hint')}</p>
         <div className="flex flex-wrap justify-end gap-3">
           <Button onClick={exportJson}>{t('conflict.export')}</Button>
           <Button

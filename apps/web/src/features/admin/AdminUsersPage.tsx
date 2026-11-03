@@ -1,7 +1,20 @@
 import { useId, useRef, useState, type FormEvent, type KeyboardEvent, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Select } from '../../components/Select';
-import { Button, Callout, Card, Chip, cx, PageHeader } from '../../components/ui';
+import {
+  Button,
+  Callout,
+  Card,
+  cardClass,
+  Chip,
+  cx,
+  inputClass,
+  labelClass,
+  PageHeader,
+  tdActionClass,
+  tdClass,
+  thClass,
+} from '../../components/ui';
 import type { Role } from '../../lib/database.types';
 import { signOutAndReload, useAuth, useAuthService } from '../auth/auth-context';
 import { normalizeUsername, USERNAME_PATTERN } from '../auth/credentials';
@@ -35,10 +48,8 @@ async function loadAll(api: AdminApi): Promise<PageData> {
   return { users, groups, flows, assignments };
 }
 
-const inputClass = 'h-10.5 rounded-control border border-line-input bg-card px-3 text-label';
-const labelClass = 'text-small font-semibold text-body';
 const linkButtonClass =
-  'inline-flex min-h-target items-center rounded-control px-2 text-label font-semibold text-teal-strong hover:bg-teal-tint disabled:text-muted';
+  'inline-flex min-h-target items-center rounded-card px-3 text-button-sm text-teal-strong hover:bg-teal-tint disabled:text-muted';
 
 function ErrorText({ code }: { code: AdminErrorKey | null }) {
   const { t } = useTranslation();
@@ -93,10 +104,8 @@ function Tabs<K extends string>({
           onClick={() => onChange(tab.key)}
           onKeyDown={(e) => onKey(e, i)}
           className={cx(
-            'min-h-target rounded-full px-4 text-label',
-            active === tab.key
-              ? 'bg-teal-tint font-bold text-teal-strong'
-              : 'font-semibold text-muted hover:bg-page',
+            'min-h-target rounded-pill px-4 text-body font-semibold',
+            active === tab.key ? 'bg-teal-tint text-teal-strong' : 'text-muted hover:bg-neutral',
           )}
         >
           {tab.label}
@@ -140,16 +149,16 @@ function TempPasswordDialog({ secret, onClose }: { secret: Secret | null; onClos
       }}
       title={t('admin.temp.title', { username: secret?.username ?? '' })}
     >
-      <p className="m-0 text-label text-muted">{t('admin.temp.intro')}</p>
+      <p className="m-0 text-body text-muted">{t('admin.temp.intro')}</p>
       <div className="flex flex-wrap items-center gap-3">
         <output
           aria-label={t('admin.temp.passwordLabel')}
-          className="rounded-control bg-neutral px-4 py-3 font-mono text-xl font-bold tracking-wider text-ink select-all"
+          className="rounded-card bg-neutral px-4 py-3 font-mono text-title-sm tracking-wider text-ink select-all"
         >
           {secret?.password}
         </output>
         <Button onClick={() => void copy()}>{t('admin.temp.copy')}</Button>
-        <span role="status" className="text-small font-semibold text-teal-strong">
+        <span role="status" className="text-caption font-semibold text-teal-strong">
           {copied ? t('admin.temp.copied') : ''}
         </span>
       </div>
@@ -194,7 +203,7 @@ function ConfirmDialog({ confirm, onClose }: { confirm: Confirm | null; onClose:
   }
   return (
     <Dialog open={confirm !== null} onClose={close} title={confirm?.title ?? ''}>
-      <div className="text-label text-body">{confirm?.body}</div>
+      <div className="text-body text-ink-soft">{confirm?.body}</div>
       <ErrorText code={error} />
       <div className="flex flex-wrap justify-end gap-3">
         <Button onClick={close}>{t('admin.cancel')}</Button>
@@ -241,9 +250,14 @@ function GroupCheckboxes({
   return (
     <fieldset className="m-0 flex flex-col gap-1 border-0 p-0">
       <legend className={cx(labelClass, 'mb-1.5')}>{legend}</legend>
-      {groups.length === 0 && <p className="m-0 text-small text-muted">{t('admin.groups.none')}</p>}
+      {groups.length === 0 && (
+        <p className="m-0 text-caption text-muted">{t('admin.groups.none')}</p>
+      )}
       {groups.map((g) => (
-        <label key={g.id} className="flex min-h-target items-center gap-2.5 text-label text-body">
+        <label
+          key={g.id}
+          className="flex min-h-target items-center gap-2.5 text-body text-ink-soft"
+        >
           <input
             type="checkbox"
             className="size-4.5 accent-teal-strong"
@@ -273,7 +287,7 @@ function RoleRadios({
     <fieldset className="m-0 flex flex-wrap gap-4 border-0 p-0">
       <legend className={cx(labelClass, 'mb-1.5')}>{t('admin.users.role')}</legend>
       {(['user', 'admin'] as const).map((r) => (
-        <label key={r} className="flex min-h-target items-center gap-2 text-label text-body">
+        <label key={r} className="flex min-h-target items-center gap-2 text-body text-ink-soft">
           <input
             type="radio"
             name={name}
@@ -337,9 +351,9 @@ function CreateUserForm({
       aria-labelledby="create-user-title"
       onSubmit={(e) => void submit(e)}
       noValidate
-      className="flex flex-[1_1_300px] flex-col gap-3.5 rounded-card border-t-8 border-teal bg-card p-6 shadow-card"
+      className={cx(cardClass, 'flex flex-[1_1_300px] flex-col gap-4 p-6')}
     >
-      <h2 id="create-user-title" className="m-0 text-section">
+      <h2 id="create-user-title" className="m-0 text-title-md text-ink">
         {t('admin.create.title')}
       </h2>
       <div className="flex flex-col gap-1.5">
@@ -358,7 +372,7 @@ function CreateUserForm({
           onChange={(e) => setUsername(e.target.value)}
           className={inputClass}
         />
-        <span id="new-username-hint" className="text-small text-muted">
+        <span id="new-username-hint" className="text-caption text-muted">
           {t('admin.create.usernameHint')}
         </span>
       </div>
@@ -381,7 +395,7 @@ function CreateUserForm({
         onChange={setGroupIds}
         legend={t('admin.users.groups')}
       />
-      <Callout tone="blue" label={t('admin.create.tempLabel')} className="text-small">
+      <Callout tone="blue" label={t('admin.create.tempLabel')} size="caption">
         {t('admin.create.temp')}
       </Callout>
       <ErrorText code={error} />
@@ -527,26 +541,26 @@ function UsersTable({
   const groupName = new Map(data.groups.map((g) => [g.id, g.name]));
   return (
     <div className="overflow-x-auto">
-      <table className="w-full min-w-155 border-collapse text-label text-body">
+      <table className="w-full min-w-155 border-collapse text-body text-ink-soft">
         <caption className="sr-only">{t('admin.users.caption')}</caption>
         <thead>
-          <tr className="border-b border-line text-left text-muted">
-            <th scope="col" className="px-2 py-2.5 font-semibold">
+          <tr>
+            <th scope="col" className={thClass}>
               {t('admin.users.username')}
             </th>
-            <th scope="col" className="px-2 py-2.5 font-semibold">
+            <th scope="col" className={thClass}>
               {t('admin.users.fullName')}
             </th>
-            <th scope="col" className="px-2 py-2.5 font-semibold">
+            <th scope="col" className={thClass}>
               {t('admin.users.role')}
             </th>
-            <th scope="col" className="px-2 py-2.5 font-semibold">
+            <th scope="col" className={thClass}>
               {t('admin.users.groups')}
             </th>
-            <th scope="col" className="px-2 py-2.5 font-semibold">
+            <th scope="col" className={thClass}>
               {t('admin.users.status')}
             </th>
-            <th scope="col" className="px-2 py-2.5 font-semibold">
+            <th scope="col" className={thClass}>
               {t('admin.users.actions')}
             </th>
           </tr>
@@ -554,32 +568,26 @@ function UsersTable({
         <tbody>
           {data.users.map((u) => {
             return (
-              <tr
-                key={u.id}
-                className={cx(
-                  'border-b border-line last:border-b-0',
-                  u.isActive && u.mustChangePassword && 'bg-amber-tint',
-                )}
-              >
-                <th scope="row" className="px-2 py-2 text-left font-semibold">
+              <tr key={u.id} className={cx(u.isActive && u.mustChangePassword && 'bg-amber-tint')}>
+                <th scope="row" className={cx(tdClass, 'text-left font-semibold text-ink')}>
                   {u.username}
                 </th>
-                <td className="px-2 py-2">{u.fullName || '-'}</td>
-                <td className="px-2 py-2">
+                <td className={tdClass}>{u.fullName || '-'}</td>
+                <td className={tdClass}>
                   <Chip tone={u.role === 'admin' ? 'blue' : 'neutral'}>
                     {t(`userMenu.role.${u.role}`)}
                   </Chip>
                 </td>
-                <td className="px-2 py-2">
+                <td className={tdClass}>
                   {u.groupIds
                     .map((id) => groupName.get(id))
                     .filter(Boolean)
                     .join(', ') || '-'}
                 </td>
-                <td className="px-2 py-2">
+                <td className={tdClass}>
                   <StatusChip user={u} />
                 </td>
-                <td className="px-2 py-1">
+                <td className={tdActionClass}>
                   <div className="flex flex-wrap items-center">
                     <button
                       type="button"
@@ -706,33 +714,33 @@ function GroupsTable({
   }
   return (
     <div className="overflow-x-auto">
-      <table className="w-full min-w-120 border-collapse text-label text-body">
+      <table className="w-full min-w-120 border-collapse text-body text-ink-soft">
         <caption className="sr-only">{t('admin.groups.caption')}</caption>
         <thead>
-          <tr className="border-b border-line text-left text-muted">
-            <th scope="col" className="px-2 py-2.5 font-semibold">
+          <tr>
+            <th scope="col" className={thClass}>
               {t('admin.groups.name')}
             </th>
-            <th scope="col" className="px-2 py-2.5 font-semibold">
+            <th scope="col" className={thClass}>
               {t('admin.groups.description')}
             </th>
-            <th scope="col" className="px-2 py-2.5 font-semibold">
+            <th scope="col" className={thClass}>
               {t('admin.groups.members')}
             </th>
-            <th scope="col" className="px-2 py-2.5 font-semibold">
+            <th scope="col" className={thClass}>
               {t('admin.users.actions')}
             </th>
           </tr>
         </thead>
         <tbody>
           {data.groups.map((g) => (
-            <tr key={g.id} className="border-b border-line last:border-b-0">
-              <th scope="row" className="px-2 py-2 text-left font-semibold">
+            <tr key={g.id}>
+              <th scope="row" className={cx(tdClass, 'text-left font-semibold text-ink')}>
                 {g.name}
               </th>
-              <td className="px-2 py-2">{g.description || '-'}</td>
-              <td className="px-2 py-2">{counts.get(g.id) ?? 0}</td>
-              <td className="px-2 py-1">
+              <td className={tdClass}>{g.description || '-'}</td>
+              <td className={tdClass}>{counts.get(g.id) ?? 0}</td>
+              <td className={tdActionClass}>
                 <button
                   type="button"
                   className={linkButtonClass}
@@ -800,7 +808,7 @@ function AssignmentsCard({ data, onChanged }: { data: PageData; onChanged: () =>
 
   return (
     <Card aria-labelledby="assign-title" className="flex flex-col gap-3">
-      <h2 id="assign-title" className="m-0 text-section">
+      <h2 id="assign-title" className="m-0 text-title-md text-ink">
         {targetName
           ? t(kind === 'group' ? 'admin.assign.titleGroup' : 'admin.assign.titleUser', {
               name: targetName,
@@ -842,7 +850,7 @@ function AssignmentsCard({ data, onChanged }: { data: PageData; onChanged: () =>
             return (
               <label
                 key={f.id}
-                className="flex min-h-target items-center gap-2.5 text-label text-body"
+                className="flex min-h-target items-center gap-2.5 text-body text-ink-soft"
               >
                 <input
                   type="checkbox"
@@ -857,11 +865,11 @@ function AssignmentsCard({ data, onChanged }: { data: PageData; onChanged: () =>
           })}
         </fieldset>
       )}
-      <p role="status" className="m-0 min-h-5 text-small text-teal-strong">
+      <p role="status" className="m-0 min-h-5 text-caption text-teal-strong">
         {status}
       </p>
       <ErrorText code={error} />
-      <p className="m-0 text-small text-muted">{t('admin.assign.note')}</p>
+      <p className="m-0 text-caption text-muted">{t('admin.assign.note')}</p>
     </Card>
   );
 }
@@ -1012,9 +1020,9 @@ export function AdminUsersPage() {
             ) : (
               <section
                 aria-labelledby="create-group-title"
-                className="flex flex-[1_1_300px] flex-col gap-3.5 rounded-card border-t-8 border-teal bg-card p-6 shadow-card"
+                className={cx(cardClass, 'flex flex-[1_1_300px] flex-col gap-4 p-6')}
               >
-                <h2 id="create-group-title" className="m-0 text-section">
+                <h2 id="create-group-title" className="m-0 text-title-md text-ink">
                   {t('admin.groups.createTitle')}
                 </h2>
                 <GroupForm group={null} onDone={reload} />

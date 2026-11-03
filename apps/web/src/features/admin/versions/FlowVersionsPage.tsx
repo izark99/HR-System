@@ -11,7 +11,11 @@ import {
   Card,
   Chip,
   cx,
+  labelClass,
   PageHeader,
+  tdClass,
+  textareaClass,
+  thClass,
   type Tone,
 } from '../../../components/ui';
 import type { Json, VersionStatus } from '../../../lib/database.types';
@@ -46,9 +50,6 @@ export const VERSION_STATUS_TONE: Record<VersionStatus, Tone> = {
   published: 'teal',
   retired: 'neutral',
 };
-
-const labelClass = 'text-small font-semibold text-body';
-const smallButton = 'min-h-target px-3.5 text-small';
 
 /** YYYY-MM-DD → dd/MM/yyyy. */
 export function formatDay(iso: string | null): string {
@@ -245,18 +246,18 @@ export function FlowVersionsPage() {
 
       <Timeline versions={versions} gaps={gaps} today={today} />
 
-      <Card aria-labelledby="versions-title" className="flex flex-col gap-3.5">
-        <h2 id="versions-title" className="m-0 text-section">
+      <Card aria-labelledby="versions-title" className="flex flex-col gap-4">
+        <h2 id="versions-title" className="m-0 text-title-md text-ink">
           {t('admin.versions.listTitle', { count: versions.length })}
         </h2>
         <div className="overflow-x-auto">
-          <table className="w-full min-w-200 border-collapse text-label text-body">
+          <table className="w-full min-w-200 border-collapse text-body text-ink-soft">
             <caption className="sr-only">{t('admin.versions.caption')}</caption>
             <thead>
-              <tr className="border-b border-line text-left text-muted">
+              <tr>
                 {(['version', 'status', 'range', 'note', 'published', 'actions'] as const).map(
                   (c) => (
-                    <th key={c} scope="col" className="px-2 py-2.5 font-semibold">
+                    <th key={c} scope="col" className={thClass}>
                       {t(`admin.versions.col.${c}`)}
                     </th>
                   ),
@@ -267,17 +268,14 @@ export function FlowVersionsPage() {
               {versions.map((v) => {
                 const isCurrent = current?.id === v.id;
                 return (
-                  <tr
-                    key={v.id}
-                    className={cx(
-                      'border-b border-line align-top last:border-b-0',
-                      isCurrent && 'bg-teal-tint-soft',
-                    )}
-                  >
-                    <th scope="row" className="px-2 py-3 text-left font-bold whitespace-nowrap">
+                  <tr key={v.id} className={cx(isCurrent && 'bg-teal-tint-soft')}>
+                    <th
+                      scope="row"
+                      className={cx(tdClass, 'text-left font-semibold whitespace-nowrap text-ink')}
+                    >
                       v{v.versionNo}
                     </th>
-                    <td className="px-2 py-3">
+                    <td className={tdClass}>
                       <span className="flex flex-wrap gap-1.5">
                         <Chip tone={VERSION_STATUS_TONE[v.status]}>
                           {t(`admin.flows.status.${v.status}`)}
@@ -285,11 +283,11 @@ export function FlowVersionsPage() {
                         {isCurrent && <Chip tone="teal">{t('admin.versions.current')}</Chip>}
                       </span>
                     </td>
-                    <td className="px-2 py-3">{rangeText(t, v.effectiveFrom, v.effectiveTo)}</td>
-                    <td className="max-w-70 px-2 py-3 break-words whitespace-pre-line">
+                    <td className={tdClass}>{rangeText(t, v.effectiveFrom, v.effectiveTo)}</td>
+                    <td className={cx(tdClass, 'max-w-70 break-words whitespace-pre-line')}>
                       {v.changeNote || '-'}
                     </td>
-                    <td className="px-2 py-3 text-small">
+                    <td className={cx(tdClass, 'text-caption')}>
                       {v.publishedAt
                         ? v.publishedBy
                           ? t('admin.versions.publishedBy', {
@@ -299,7 +297,7 @@ export function FlowVersionsPage() {
                           : formatDateTime(v.publishedAt)
                         : '-'}
                     </td>
-                    <td className="px-2 py-3">
+                    <td className={tdClass}>
                       <div className="flex flex-wrap gap-2">
                         {v.status === 'draft' && (
                           <>
@@ -308,13 +306,16 @@ export function FlowVersionsPage() {
                               params={{ flowCode }}
                               search={{}}
                               aria-label={action(t('admin.versions.openDesigner'), v)}
-                              className={cx(buttonClass.secondary, smallButton, 'no-underline')}
+                              className={cx(
+                                buttonClass('outline', 'sm'),
+                                'no-underline hover:text-ink',
+                              )}
                             >
                               {t('admin.versions.openDesigner')}
                             </Link>
                             <Button
                               variant="primary"
-                              className={smallButton}
+                              size="sm"
                               aria-label={action(t('admin.versions.publish'), v)}
                               onClick={() => {
                                 setMessage(null);
@@ -324,7 +325,8 @@ export function FlowVersionsPage() {
                               {t('admin.versions.publish')}
                             </Button>
                             <Button
-                              className={smallButton}
+                              variant="danger"
+                              size="sm"
                               aria-label={action(t('admin.versions.discard'), v)}
                               onClick={() => setDialog({ kind: 'discard', version: v })}
                             >
@@ -338,14 +340,17 @@ export function FlowVersionsPage() {
                             params={{ flowCode }}
                             search={{ version: v.id }}
                             aria-label={action(t('admin.versions.viewInDesigner'), v)}
-                            className={cx(buttonClass.secondary, smallButton, 'no-underline')}
+                            className={cx(
+                              buttonClass('outline', 'sm'),
+                              'no-underline hover:text-ink',
+                            )}
                           >
                             {t('admin.versions.viewInDesigner')}
                           </Link>
                         )}
                         {v.status !== 'draft' && (
                           <Button
-                            className={smallButton}
+                            size="sm"
                             aria-label={action(t('admin.versions.clone'), v)}
                             onClick={() => void cloneFrom(v)}
                           >
@@ -355,14 +360,15 @@ export function FlowVersionsPage() {
                         {v.status === 'published' && (
                           <>
                             <Button
-                              className={smallButton}
+                              size="sm"
                               aria-label={action(t('admin.versions.editEnd'), v)}
                               onClick={() => setDialog({ kind: 'end', version: v })}
                             >
                               {t('admin.versions.editEnd')}
                             </Button>
                             <Button
-                              className={smallButton}
+                              variant="danger"
+                              size="sm"
                               aria-label={action(t('admin.versions.retire'), v)}
                               onClick={() => setDialog({ kind: 'retire', version: v })}
                             >
@@ -372,7 +378,7 @@ export function FlowVersionsPage() {
                         )}
                         {versions.length > 1 && (
                           <Button
-                            className={smallButton}
+                            size="sm"
                             aria-label={action(t('admin.versions.compare'), v)}
                             onClick={() => compareWithPrevious(v)}
                           >
@@ -381,7 +387,7 @@ export function FlowVersionsPage() {
                         )}
                         {v.status !== 'draft' && (
                           <Button
-                            className={smallButton}
+                            size="sm"
                             aria-label={action(t('admin.versions.export'), v)}
                             onClick={() => exportJson(v)}
                           >
@@ -399,7 +405,7 @@ export function FlowVersionsPage() {
       </Card>
 
       <Card aria-labelledby="diff-title" className="flex flex-col gap-4">
-        <h2 id="diff-title" className="m-0 text-section">
+        <h2 id="diff-title" className="m-0 text-title-md text-ink">
           {t('admin.versions.diff.title')}
         </h2>
         {effectiveCompare ? (
@@ -512,7 +518,7 @@ function BackLink() {
   return (
     <Link
       to="/admin/flows"
-      className="inline-flex min-h-target items-center gap-1.5 self-start text-label font-semibold text-teal-strong"
+      className="inline-flex min-h-target items-center gap-1.5 self-start text-label text-teal-strong"
     >
       <ArrowLeftIcon />
       {t('admin.versions.back')}
@@ -533,8 +539,8 @@ function Timeline({
   const { t } = useTranslation();
   const ranges = publishedRanges(versions);
   return (
-    <Card aria-labelledby="timeline-title" className="flex flex-col gap-3.5">
-      <h2 id="timeline-title" className="m-0 text-section">
+    <Card aria-labelledby="timeline-title" className="flex flex-col gap-4">
+      <h2 id="timeline-title" className="m-0 text-title-md text-ink">
         {t('admin.versions.timeline.title')}
       </h2>
       {ranges.length === 0 ? (
@@ -548,12 +554,12 @@ function Timeline({
             <li
               key={v.id}
               className={cx(
-                'flex min-w-45 flex-1 flex-col gap-1 rounded-tile border-t-8 bg-neutral px-3.5 py-2.5',
-                isEffectiveOn(v, today) ? 'border-teal' : 'border-line-input',
+                'flex min-w-45 flex-1 flex-col gap-1 rounded-card border border-t-4 border-line bg-card px-4 py-3',
+                isEffectiveOn(v, today) ? 'border-t-teal' : 'border-t-line-input',
               )}
             >
-              <span className="font-bold text-ink">v{v.versionNo}</span>
-              <span className="text-small text-body">
+              <span className="font-semibold text-ink">v{v.versionNo}</span>
+              <span className="text-caption text-ink-soft">
                 {rangeText(t, v.effectiveFrom, v.effectiveTo)}
               </span>
             </li>
@@ -625,7 +631,7 @@ function RequiredMark() {
 
 function FieldError({ id, children }: { id: string; children: string }) {
   return (
-    <p id={id} className="m-0 text-small font-semibold text-coral-text">
+    <p id={id} className="m-0 text-caption font-semibold text-coral-text">
       {children}
     </p>
   );
@@ -732,7 +738,7 @@ function PublishForm({
         {problems && (
           <ul className="mt-2 mb-0 pl-5">
             {problems.slice(0, 30).map((p, i) => (
-              <li key={i} className="font-mono text-small">
+              <li key={i} className="font-mono text-caption">
                 {p}
               </li>
             ))}
@@ -751,7 +757,7 @@ function PublishForm({
             {t('admin.versions.publishDialog.from')}
             <RequiredMark />
           </label>
-          <div className={cx('rounded-control', has('fromRequired') && 'ring-2 ring-coral')}>
+          <div className={cx('rounded-input', has('fromRequired') && 'ring-2 ring-coral-text')}>
             <DatePicker
               id="publish-from"
               labelId="publish-from-label"
@@ -770,7 +776,7 @@ function PublishForm({
           <label id="publish-to-label" htmlFor="publish-to" className={labelClass}>
             {t('admin.versions.publishDialog.to')}
           </label>
-          <div className={cx('rounded-control', has('range') && 'ring-2 ring-coral')}>
+          <div className={cx('rounded-input', has('range') && 'ring-2 ring-coral-text')}>
             <DatePicker id="publish-to" labelId="publish-to-label" value={to} onChange={setTo} />
           </div>
           {has('range') && (
@@ -780,9 +786,11 @@ function PublishForm({
           )}
         </div>
       </div>
-      <p className="-mt-2 m-0 text-small text-muted">{t('admin.versions.publishDialog.toHint')}</p>
+      <p className="-mt-2 m-0 text-caption text-muted">
+        {t('admin.versions.publishDialog.toHint')}
+      </p>
       {previous && (
-        <label className="flex min-h-target items-center gap-2.5 text-label text-body">
+        <label className="flex min-h-target items-center gap-2.5 text-body text-ink-soft">
           <input
             type="checkbox"
             className="size-4.5 accent-teal-strong"
@@ -808,10 +816,7 @@ function PublishForm({
           aria-invalid={has('noteRequired') || undefined}
           aria-describedby={has('noteRequired') ? 'publish-note-error' : undefined}
           onChange={(e) => setNote(e.target.value)}
-          className={cx(
-            'rounded-control border bg-card px-3 py-2.5 text-label',
-            has('noteRequired') ? 'border-2 border-coral' : 'border-line-input',
-          )}
+          className={textareaClass}
         />
         {has('noteRequired') && (
           <FieldError id="publish-note-error">
@@ -885,7 +890,7 @@ function EndDateForm({
 
   return (
     <form onSubmit={(e) => void submit(e)} noValidate className="flex flex-col gap-3.5">
-      <p className="m-0 text-label text-body">
+      <p className="m-0 text-body text-ink-soft">
         {rangeText(t, version.effectiveFrom, version.effectiveTo)}
       </p>
       <div className="flex flex-col gap-1.5">
@@ -894,7 +899,9 @@ function EndDateForm({
         </label>
         <DatePicker id="end-to" labelId="end-to-label" value={to} onChange={setTo} />
       </div>
-      <p className="-mt-2 m-0 text-small text-muted">{t('admin.versions.publishDialog.toHint')}</p>
+      <p className="-mt-2 m-0 text-caption text-muted">
+        {t('admin.versions.publishDialog.toHint')}
+      </p>
       {created.map((g) => (
         <Callout key={`${g.from}-${g.to ?? ''}`} tone="amber" label={t('admin.versions.gapLabel')}>
           {gapText(t, g)}
@@ -939,7 +946,7 @@ function ConfirmDialog({
       }}
       title={title}
     >
-      <p className="m-0 text-copy text-body">{body}</p>
+      <p className="m-0 text-body-lg text-ink-soft">{body}</p>
       {error && (
         <Callout tone="coral" label={t('admin.errorLabel')} role="alert">
           {t(`admin.errors.${error}`)}

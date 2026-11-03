@@ -123,10 +123,7 @@ export function useOpenFlow(flowCode: string) {
 export function BackToFlows() {
   const { t } = useTranslation();
   return (
-    <Link
-      to="/"
-      className="inline-flex min-h-target items-center gap-1.5 self-start text-label font-semibold"
-    >
+    <Link to="/" className="inline-flex min-h-target items-center gap-1.5 self-start text-label">
       <ArrowLeftIcon />
       {t('run.back')}
     </Link>
@@ -156,7 +153,7 @@ export function RunPage() {
   const busy = state.run.status === 'running' || state.run.status === 'cancelling';
 
   return (
-    <main id="main" className="mx-auto flex max-w-260 flex-col gap-5.5 px-4 pt-7 pb-12">
+    <main id="main" className="mx-auto flex w-full max-w-320 flex-col gap-6 px-4 pt-8 pb-12">
       <BackToFlows />
 
       {state.load === 'loading' && <p className="m-0 text-muted">{t('common.loading')}</p>}
@@ -239,12 +236,12 @@ export function RunPage() {
               tone="teal"
               label={t('run.safety.label')}
               icon={<LockIcon className="mt-0.5 shrink-0 text-teal-strong" />}
-              className="text-small"
+              size="caption"
             >
               {t('run.safety.text')}
             </Callout>
             <div className="flex flex-wrap gap-3">
-              <Link to="/" className={cx(buttonClass.secondary, 'no-underline hover:text-ink')}>
+              <Link to="/" className={cx(buttonClass('outline'), 'no-underline hover:text-ink')}>
                 {t('run.actions.back')}
               </Link>
               {/* The previous run's result is still in memory (MEMORY 13:08). */}
@@ -252,7 +249,7 @@ export function RunPage() {
                 <Link
                   to="/run/$flowCode/result"
                   params={{ flowCode }}
-                  className={cx(buttonClass.secondary, 'no-underline hover:text-ink')}
+                  className={cx(buttonClass('outline'), 'no-underline hover:text-ink')}
                 >
                   {t('run.actions.viewResult')}
                 </Link>

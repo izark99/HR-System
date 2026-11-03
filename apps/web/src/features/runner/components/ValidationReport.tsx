@@ -1,7 +1,7 @@
 import type { FlowDefinition } from '@hrflow/flow-schema';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Callout, Card, Chip, cx } from '../../../components/ui';
+import { Callout, Card, Chip, cx, tdClass, thClass } from '../../../components/ui';
 import { formatIssue, type ValidationIssue } from '../../../engine/io/validation';
 import type { SessionState } from '../run-store';
 import type { Readiness } from '../readiness';
@@ -56,9 +56,9 @@ export function ValidationReport({
   const shown = rows.slice(0, MAX_ROWS);
 
   return (
-    <Card aria-labelledby="report-title" className="flex flex-col gap-3.5">
+    <Card aria-labelledby="report-title" className="flex flex-col gap-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h2 id="report-title" className="m-0 text-section text-ink">
+        <h2 id="report-title" className="m-0 text-title-md text-ink">
           {t('report.title')}
         </h2>
         {anyValidated && (
@@ -76,7 +76,7 @@ export function ValidationReport({
         )}
       </div>
 
-      {!anyValidated && <p className="m-0 text-label text-muted">{t('report.empty')}</p>}
+      {!anyValidated && <p className="m-0 text-body text-muted">{t('report.empty')}</p>}
 
       {anyValidated && rows.length === 0 && !ready.validating && (
         <Callout tone="teal" label={t('report.validLabel')} role="status">
@@ -91,22 +91,22 @@ export function ValidationReport({
 
       {shown.length > 0 && (
         <div className="overflow-x-auto">
-          <table className="w-full min-w-180 border-collapse text-label text-body">
+          <table className="w-full min-w-180 border-collapse text-body text-ink-soft">
             <thead>
-              <tr className="border-b border-line text-left text-muted">
-                <th scope="col" className="px-2 py-2.5 font-semibold">
+              <tr>
+                <th scope="col" className={thClass}>
                   {t('report.col.severity')}
                 </th>
-                <th scope="col" className="px-2 py-2.5 font-semibold">
+                <th scope="col" className={thClass}>
                   {t('report.col.file')}
                 </th>
-                <th scope="col" className="px-2 py-2.5 font-semibold">
+                <th scope="col" className={thClass}>
                   {t('report.col.row')}
                 </th>
-                <th scope="col" className="px-2 py-2.5 font-semibold">
+                <th scope="col" className={thClass}>
                   {t('report.col.column')}
                 </th>
-                <th scope="col" className="px-2 py-2.5 font-semibold">
+                <th scope="col" className={thClass}>
                   {t('report.col.message')}
                 </th>
               </tr>
@@ -115,22 +115,20 @@ export function ValidationReport({
               {shown.map(({ key, issue, column }) => {
                 const error = issue.severity === 'error';
                 return (
-                  <tr
-                    key={key}
-                    className={cx('border-b border-line last:border-0', error && 'bg-coral-tint')}
-                  >
+                  <tr key={key} className={cx(error && 'bg-coral-tint')}>
                     <td
                       className={cx(
-                        'px-2 py-3 font-bold',
+                        tdClass,
+                        'font-semibold',
                         error ? 'text-coral-text' : 'text-amber-text',
                       )}
                     >
                       {t(`report.severity.${issue.severity}`)}
                     </td>
-                    <td className="px-2 py-3 break-all">{issue.file ?? ''}</td>
-                    <td className="px-2 py-3">{issue.row ?? ''}</td>
-                    <td className="px-2 py-3 whitespace-nowrap">{column}</td>
-                    <td className="px-2 py-3">{formatIssue(issue, (k, p) => te(k, p ?? {}))}</td>
+                    <td className={cx(tdClass, 'break-all')}>{issue.file ?? ''}</td>
+                    <td className={tdClass}>{issue.row ?? ''}</td>
+                    <td className={cx(tdClass, 'whitespace-nowrap')}>{column}</td>
+                    <td className={tdClass}>{formatIssue(issue, (k, p) => te(k, p ?? {}))}</td>
                   </tr>
                 );
               })}
@@ -139,7 +137,7 @@ export function ValidationReport({
         </div>
       )}
       {rows.length > MAX_ROWS && (
-        <p className="m-0 text-small text-muted">
+        <p className="m-0 text-caption text-muted">
           {t('report.truncated', { shown: MAX_ROWS, total: rows.length })}
         </p>
       )}
@@ -152,7 +150,7 @@ export function ValidationReport({
               setDownloading(true);
               void onDownload().finally(() => setDownloading(false));
             }}
-            className="min-h-target rounded-control px-1 text-label font-semibold text-teal-strong underline hover:text-teal-hover"
+            className="min-h-target rounded-card px-1 text-label text-teal-strong underline hover:text-teal-hover"
           >
             {t('report.download')}
           </button>

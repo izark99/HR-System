@@ -53,7 +53,7 @@ export function RunProgress({
   return (
     <Card aria-labelledby="progress-title" className="flex flex-col gap-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h2 id="progress-title" className="m-0 text-section text-ink">
+        <h2 id="progress-title" className="m-0 text-title-md text-ink">
           {t('run.progress.title')}
         </h2>
         <Button onClick={onCancel} disabled={run.status === 'cancelling'}>
@@ -83,13 +83,13 @@ export function RunProgress({
             )}%)`}
         </Callout>
       )}
-      <ol className="m-0 flex list-none flex-col gap-2 p-0 text-label" aria-live="polite">
+      <ol className="m-0 flex list-none flex-col gap-2 p-0 text-body" aria-live="polite">
         {run.nodes.map((n) => {
           const rows = n.rows ? Object.values(n.rows).reduce((a, b) => a + b, 0) : null;
           return (
             <li
               key={n.id}
-              className="flex items-center justify-between gap-3 rounded-control bg-page px-3.5 py-2.5"
+              className="flex items-center justify-between gap-3 rounded-card bg-page px-3.5 py-2.5"
             >
               <span className={cx(n.status === 'pending' ? 'text-muted' : 'text-ink')}>
                 {n.label}

@@ -38,7 +38,7 @@ export function ParamsForm({
   const forParam = (i: number) => issues.filter((x) => x.paramIndex === i);
   return (
     <div className="flex flex-col gap-3.5">
-      <p className="m-0 text-small text-muted">{t('params.intro')}</p>
+      <p className="m-0 text-caption text-muted">{t('params.intro')}</p>
       <ListEditor
         label={t('params.title')}
         items={params}

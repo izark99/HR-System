@@ -371,7 +371,9 @@ export function SlotForm({
         disabled={ro}
       />
       <fieldset className="m-0 flex gap-4 border-0 p-0">
-        <legend className="mb-1 p-0 text-small font-semibold text-body">{t('slot.accept')}</legend>
+        <legend className="mb-1 p-0 text-caption font-semibold text-ink-soft">
+          {t('slot.accept')}
+        </legend>
         {['.xlsx', '.xls'].map((ext) => (
           <CheckField
             key={ext}
@@ -470,7 +472,7 @@ export function SlotForm({
           disabled={ro}
         />
       </div>
-      <p className="m-0 -mt-2 text-small text-muted">{t('slot.rowsHint')}</p>
+      <p className="m-0 -mt-2 text-caption text-muted">{t('slot.rowsHint')}</p>
       <NumberField
         label={t('slot.stopAt')}
         value={num(obj(slot.stopAt)?.blankRows)}

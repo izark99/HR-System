@@ -119,7 +119,7 @@ export function DesignerPage() {
   if (error) {
     return (
       <div className="flex flex-col gap-3 p-6">
-        <h1 className="m-0 text-page-title text-ink">{t('page.title')}</h1>
+        <h1 className="m-0 text-display-lg text-ink">{t('page.title')}</h1>
         <Callout tone="coral" label={tc('admin.errorLabel')} role="alert">
           {tc(`admin.errors.${error}`)}
         </Callout>
@@ -132,7 +132,7 @@ export function DesignerPage() {
   if (data === null || !version || !initial) {
     return (
       <div className="flex flex-col gap-3 p-6">
-        <h1 className="m-0 text-page-title text-ink">{t('page.title')}</h1>
+        <h1 className="m-0 text-display-lg text-ink">{t('page.title')}</h1>
         <Callout tone="coral" label={tc('admin.errorLabel')} role="alert">
           {data === null ? tc('admin.versions.notFound') : t('page.noVersion')}
         </Callout>
@@ -177,7 +177,7 @@ export function DesignerPage() {
                   (saved.current?.json ?? JSON.stringify(toDefinition(initial)))
               }
             />
-            <h1 className="m-0 text-page-title text-ink">{t('crash.title')}</h1>
+            <h1 className="m-0 text-display-lg text-ink">{t('crash.title')}</h1>
             <Callout tone="coral" label={t('toast.errorLabel')} role="alert">
               {t('crash.text')}
             </Callout>
@@ -243,7 +243,7 @@ function CrashGuard({ dirty }: { dirty: boolean }) {
       onClose={() => blocker.reset?.()}
       title={t('leave.title')}
     >
-      <p className="m-0 text-copy text-body">{t('leave.text')}</p>
+      <p className="m-0 text-body-lg text-ink-soft">{t('leave.text')}</p>
       <div className="flex flex-wrap justify-end gap-3">
         <Button onClick={() => blocker.reset?.()}>{t('leave.stay')}</Button>
         <Button variant="primary" onClick={() => blocker.proceed?.()}>

@@ -168,8 +168,8 @@ export default function FormulaEditor({
       data-testid={testId ?? 'formula-editor'}
       aria-describedby={describedBy}
       className={
-        'h-21 w-full overflow-hidden rounded-control border bg-card py-1 ' +
-        (invalid ? 'border-2 border-coral' : 'border-line-input')
+        'h-21 w-full overflow-hidden rounded-input border bg-card py-1 ' +
+        (invalid ? 'border-2 border-coral-text' : 'border-line-input')
       }
     />
   );

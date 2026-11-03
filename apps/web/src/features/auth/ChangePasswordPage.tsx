@@ -53,16 +53,12 @@ export function ChangePasswordPage() {
 
   return (
     <AuthLayout>
-      <form
-        className={cx(authCardClass, 'border-t-8 border-amber')}
-        onSubmit={(e) => void submit(e)}
-        noValidate
-      >
+      <form className={authCardClass} onSubmit={(e) => void submit(e)} noValidate>
         <Eyebrow tone="amber">
           {forced ? t('auth.password.eyebrowFirst') : t('auth.password.eyebrow')}
         </Eyebrow>
-        <h1 className="m-0 text-2xl font-bold tracking-[-0.5px]">{t('auth.password.title')}</h1>
-        <p className="m-0 text-label text-muted" id="password-rules">
+        <h1 className="m-0 text-display-lg text-ink">{t('auth.password.title')}</h1>
+        <p className="m-0 text-body-lg text-muted" id="password-rules">
           {forced
             ? t('auth.password.introFirst', { min: MIN_PASSWORD_LENGTH })
             : t('auth.password.intro', { min: MIN_PASSWORD_LENGTH })}
@@ -80,7 +76,7 @@ export function ChangePasswordPage() {
         )}
 
         <div className="flex flex-col gap-1.5">
-          <label htmlFor="new-password" className="text-label font-semibold text-body">
+          <label htmlFor="new-password" className="text-label text-ink">
             {t('auth.password.new')}
           </label>
           <input
@@ -96,7 +92,7 @@ export function ChangePasswordPage() {
           />
         </div>
         <div className="flex flex-col gap-1.5">
-          <label htmlFor="confirm-password" className="text-label font-semibold text-body">
+          <label htmlFor="confirm-password" className="text-label text-ink">
             {t('auth.password.confirm')}
           </label>
           <input
@@ -109,24 +105,20 @@ export function ChangePasswordPage() {
             className={authInputClass}
           />
         </div>
-        {/* Dark ink button per wireframe (white text on #1F2A44 passes WCAG AA). */}
-        <button
-          type="submit"
-          disabled={busy}
-          className="inline-flex min-h-11.5 items-center justify-center rounded-control bg-ink px-5 text-copy font-bold text-white disabled:bg-line disabled:text-muted"
-        >
+        {/* Dark button per wireframe (white text on #1F2A44 passes WCAG AA). */}
+        <button type="submit" disabled={busy} className={buttonClass('dark')}>
           {busy ? t('auth.password.saving') : t('auth.password.save')}
         </button>
         {forced ? (
           <button
             type="button"
             onClick={() => void signOutAndReload(auth)}
-            className={cx(buttonClass.secondary)}
+            className={buttonClass('outline')}
           >
             {t('userMenu.signOut')}
           </button>
         ) : (
-          <Link to="/" className={cx(buttonClass.secondary, 'no-underline hover:text-ink')}>
+          <Link to="/" className={cx(buttonClass('outline'), 'no-underline hover:text-ink')}>
             {t('auth.password.back')}
           </Link>
         )}
