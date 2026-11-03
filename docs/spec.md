@@ -998,7 +998,7 @@ Không thuộc Phase 1: `input.refTable`, bảng tham chiếu, template — Phas
 | ~~Q22~~ | Đã chốt 2026-11-03 09:07: tiêu đề câu kết luận chỉ ở màn Kết quả (§25.1, §28.3) | — |
 | ~~Q23~~ | Đã chốt 2026-11-03 09:07: bỏ weight 800, ngân sách thêm CSS gzip +10% (§28.7); weight 500 giữ lại (chốt 2026-11-03 10:13) | — |
 | ~~Q24~~ | Đã chốt 2026-11-03 09:07: làm KPI card + 1 card tối ở màn Kết quả (§28.3) | — |
-| Q25 | Cột "Thao tác" chung cho mọi bảng Admin: 1 nút hay dùng + menu "Thao tác khác", hay mọi nút 1 hàng, hay nút chữ? Nút nào hiện sẵn? | UI Admin, component menu |
+| ~~Q25~~ | Đã chốt 2026-11-03 10:51: 1 nút hay dùng + menu "Thao tác khác" cho mọi bảng Admin (§25.3, AC-UI-54) | — |
 | ~~Q18~~ | Đã chốt 2026-10-30 13:29: canvas Designer, Monaco và bảng xem trước giữ chữ 14px (§25.1) | — |
 | ~~Q17~~ | Đã chốt 2026-10-30 13:24: công thức dùng `,` ngăn đối số và `.` thập phân, không nhận `;` (§12.2) | — |
 | ~~Q16~~ | Đã chốt 2026-10-30 13:18: `transform.formula` chỉ nhận công thức Excel (transpile sang SQL), 41 hàm, không có XLOOKUP/VLOOKUP (§9.1, §12.2) | — |
@@ -1178,6 +1178,7 @@ Thang khoảng cách cơ sở 4px: `2 · 4 · 8 · 12 · 16 · 24 · 32 · 48 ·
 | Tab | Dạng pill; tab đang chọn nền tint + chữ màu đậm |
 | Menu trái | Item cao 44px, radius 6px; item đang chọn nền `#DDF5EF`, chữ `#0F766E` 600, **vạch trái 3px `#0F766E`** |
 | Thanh trên (top bar) | Nền trắng, viền dưới 1px `#E2E8F0`, padding 12px 24px |
+| Thao tác trên dòng bảng | 1 nút nhỏ viền (36px) cho thao tác hay dùng + nút "Thao tác khác ▾" mở menu (độ nổi mức 2, radius 12px); thao tác nguy hiểm ở cuối menu, chữ `#C2410C`; không xếp nhiều nút xuống dòng (chốt 2026-11-03 10:51) |
 | Callout | Nền tint, radius 12px, không viền, mở đầu bằng nhãn in đậm (`An toàn dữ liệu:`, `Lưu ý:`, `Hợp lệ:`) |
 | Bảng | Trong card; header nền `#F1F5F9`, chữ `caption` 600 `#475569`; ô `body`, padding 12px 16px; đường kẻ dòng `#E2E8F0`; dòng cần chú ý tô nền tint; ô chênh lệch tô coral tint |
 | Dialog | Độ nổi mức 2, radius 12px, padding 24px; tiêu đề `title-sm`; nút đặt phải, nút chính ngoài cùng |
@@ -1504,5 +1505,5 @@ Breakpoint: mobile < 768px (1 cột, menu trái thu thành nút mở), tablet 76
 | AC-UI-51 | Màn Kết quả: lệch = 0 và hai nhóm "chỉ có ở một bên" = 0 → "khớp toàn bộ N nhân viên"; còn lại → "Kỳ … có N nhân viên cần xử lý", N = lệch + chỉ trong lương + chỉ trong chấm công, bằng số trên card tối. Test "lỗi đã biết" trong `e2e/ui-v2-qa.spec.ts` chuyển thành test thường. |
 | AC-UI-52 | Thanh công cụ Designer ở 1280×800 nằm 1 hàng cùng tiêu đề; nút 36px; Hoàn tác/Làm lại/Sao chép/Dán/Xóa là nút biểu tượng có `aria-label` và tooltip; vẫn đủ vùng chạm theo AC-UI-21 cho toolbar (≥ 36px cao, khoảng cách giữa nút). Phím tắt hiện có không đổi. |
 | AC-UI-53 | Palette node: mọi item cùng chiều cao và chiều rộng; tên và mô tả mỗi thứ đúng 1 dòng, cắt "…"; mô tả đầy đủ hiện khi rê chuột/focus và có trong tên đọc a11y. |
-| AC-UI-54 | Màn Users & Groups, Version (và mọi bảng Admin) ở 1280×800 và 1024px: cột Thao tác cùng một kiểu ở mọi bảng, nằm 1 hàng, thẳng cột giữa các dòng (kiểu cụ thể theo Q25); chip trạng thái, role, "Sắp có" ở menu trái, nhãn nút (VD "Tạo và hiện mật khẩu tạm") không xuống dòng; bảng rộng thì cuộn ngang trong card. Rà cùng lỗi ở các bảng Admin khác (Nhóm, Flows, Version). |
+| AC-UI-54 | Màn Users & Groups, Version (và mọi bảng Admin) ở 1280×800 và 1024px: cột Thao tác cùng một kiểu ở mọi bảng, nằm 1 hàng, thẳng cột giữa các dòng gồm 1 nút nhỏ viền hiện sẵn + nút "Thao tác khác ▾" mở menu (chốt 2026-11-03 10:51): Users/Nhóm "Sửa", Flows "Mở trang phiên bản", Version draft "Mở Designer" + "Publish" (nút chính), Version published/retired "Xem trong Designer"; thao tác nguy hiểm cuối menu, chữ coral, giữ hộp xác nhận; menu theo APG menu button (Enter/Space/mũi tên mở, mũi tên di chuyển, Esc đóng và trả focus, nhãn a11y nêu tên dòng VD "Thao tác khác cho hr.nv01"); chip trạng thái, role, "Sắp có" ở menu trái, nhãn nút (VD "Tạo và hiện mật khẩu tạm") không xuống dòng; bảng rộng thì cuộn ngang trong card. Rà cùng lỗi ở các bảng Admin khác (Nhóm, Flows, Version). |
 
