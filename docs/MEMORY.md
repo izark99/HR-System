@@ -225,7 +225,11 @@
 
 ## Kỹ thuật & tổ chức
 
-2026-11-03 10:51 - Màn Admin (Users & Groups, Nhóm, Flows, Version): chip trạng thái, menu trái ("Sắp có"), nhãn nút không xuống dòng vỡ bố cục. Cột Thao tác dùng chung cho mọi bảng Admin: 1 nút nhỏ viền 36px cho thao tác hay dùng + nút "Thao tác khác ▾" mở menu (bàn phím theo APG menu button) chứa phần còn lại; thao tác nguy hiểm (Khóa, Retire, Hủy draft…) ở cuối menu, chữ coral, giữ hộp xác nhận. Nút hiện sẵn: Users "Sửa"; Nhóm "Sửa"; Flows "Mở trang phiên bản"; Version draft "Mở Designer" + "Publish" (nút chính); Version published/retired "Xem trong Designer".
+2026-11-03 13:24 - Màn Admin (Users & Groups, Nhóm, Flows, Version): chip trạng thái, menu trái ("Sắp có"), nhãn nút không xuống dòng vỡ bố cục. Cột Thao tác dùng chung cho mọi bảng Admin: 1 nút chữ (`button-text` của `docs/design-reference.md`: không viền, 14,4px/700, hover nền `#F1F5F9`, vùng bấm cao 36px) cho thao tác hay dùng + nút chữ "Thao tác khác ▾" mở menu (bàn phím theo APG menu button) chứa phần còn lại; thao tác nguy hiểm (Khóa, Retire, Hủy draft…) ở cuối menu, chữ coral, giữ hộp xác nhận. Nút hiện sẵn: Users "Sửa"; Nhóm "Sửa"; Flows "Mở trang phiên bản"; Version draft "Mở Designer" + "Publish" (nút chính teal cỡ nhỏ); Version published/retired "Xem trong Designer".
+
+2026-11-03 13:24 - Màn Users & Groups: form tạo tài khoản chuyển vào dialog mở từ nút "+ Tạo tài khoản"; bảng chiếm đủ chiều ngang.
+
+~~2026-11-03 10:51 - Màn Admin (Users & Groups, Nhóm, Flows, Version): chip trạng thái, menu trái ("Sắp có"), nhãn nút không xuống dòng vỡ bố cục. Cột Thao tác dùng chung cho mọi bảng Admin: 1 nút nhỏ viền 36px cho thao tác hay dùng + nút "Thao tác khác ▾" mở menu (bàn phím theo APG menu button) chứa phần còn lại; thao tác nguy hiểm (Khóa, Retire, Hủy draft…) ở cuối menu, chữ coral, giữ hộp xác nhận. Nút hiện sẵn: Users "Sửa"; Nhóm "Sửa"; Flows "Mở trang phiên bản"; Version draft "Mở Designer" + "Publish" (nút chính); Version published/retired "Xem trong Designer".~~ → thay bởi 2026-11-03 13:24
 
 2026-11-03 10:49 - Tiêu đề trang giữ cao dòng bằng cỡ chữ (48/48, mobile 32/32); tiêu đề chứa tên do người dùng đặt (tên flow, tên version…) giới hạn 1 dòng, cắt bằng "…", hiện đủ tên khi rê chuột/focus (tránh dấu tiếng Việt chồng dòng).
 
