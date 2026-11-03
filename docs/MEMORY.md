@@ -225,6 +225,8 @@
 
 ## Kỹ thuật & tổ chức
 
+2026-11-03 16:22 - Duyệt mẫu bảng Admin (https://claude.ai/artifact/AwjFJEPc5YndnE6Z1tf56B): dòng cao 56px; biểu tượng bút chì = Sửa / Mở Designer, con mắt = Xem trong Designer, chồng lớp = Mở trang phiên bản; cột Phiên bản ở màn Flows hiện 2 phiên bản mới nhất kèm ngày "từ dd/MM/yyyy" ngay trong ô (+N cho phần còn lại). Thanh cuộn của mọi vùng cuộn trong app đồng bộ: mảnh 10px, rãnh `#F1F5F9`, tay kéo bo tròn `#475569`, hover `#1F2A44`.
+
 2026-11-03 16:06 - Bảng Admin (Users, Nhóm, Flows, Version): mọi dòng cùng chiều cao, mỗi ô 1 dòng nhưng hiện đủ chữ (không cắt "…"); bảng rộng hơn card thì kéo ngang trong card; cột Thao tác cố định ở mép phải (có vạch ngăn trái), các cột còn lại cuộn. Nhiều chip trong 1 ô nằm cùng 1 hàng.
 
 2026-11-03 15:32 - Cột Thao tác của mọi bảng Admin dùng nút biểu tượng cho gọn: 1 nút biểu tượng cho thao tác hay dùng (Users/Nhóm "Sửa" = bút chì; Flows "Mở trang phiên bản" = biểu tượng danh sách phiên bản; Version draft "Mở Designer" = bút chì; Version published/retired "Xem trong Designer" = con mắt) + nút "⋯" mở menu "Thao tác khác" (menu giữ chữ; Publish là mục đầu menu của dòng draft; thao tác nguy hiểm cuối menu, chữ coral, giữ hộp xác nhận). Nút biểu tượng 36px, SVG inline, có `aria-label` nêu tên dòng + tooltip chữ; bàn phím theo APG menu button.

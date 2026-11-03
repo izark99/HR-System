@@ -242,6 +242,44 @@
 }
 
 @layer base {
+  /*
+   * In-app scroll areas (tables, diff, reports; AC-UI-59): one scrollbar look for the whole app.
+   * 10px track on #F1F5F9, pill thumb in the input-border grey (3:1 against the track,
+   * WCAG 1.4.11), ink on hover. Chromium/Safari use ::-webkit-scrollbar (rounded); Firefox
+   * gets the standard thin bar in the same colours.
+   */
+  .overflow-auto::-webkit-scrollbar,
+  .overflow-x-auto::-webkit-scrollbar,
+  .overflow-y-auto::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+  .overflow-auto::-webkit-scrollbar-track,
+  .overflow-x-auto::-webkit-scrollbar-track,
+  .overflow-y-auto::-webkit-scrollbar-track {
+    background: var(--color-neutral);
+    border-radius: var(--radius-pill);
+  }
+  .overflow-auto::-webkit-scrollbar-thumb,
+  .overflow-x-auto::-webkit-scrollbar-thumb,
+  .overflow-y-auto::-webkit-scrollbar-thumb {
+    background: var(--color-line-input);
+    border: 2px solid var(--color-neutral);
+    border-radius: var(--radius-pill);
+  }
+  .overflow-auto::-webkit-scrollbar-thumb:hover,
+  .overflow-x-auto::-webkit-scrollbar-thumb:hover,
+  .overflow-y-auto::-webkit-scrollbar-thumb:hover {
+    background: var(--color-ink);
+  }
+  @supports (-moz-appearance: none) {
+    .overflow-auto,
+    .overflow-x-auto,
+    .overflow-y-auto {
+      scrollbar-width: thin;
+      scrollbar-color: var(--color-line-input) var(--color-neutral);
+    }
+  }
   html {
     background-color: var(--color-page);
   }

@@ -51,7 +51,7 @@ export const rowActionsCellClass =
   // Separator drawn by the cell itself: a collapsed-table border stays behind when the cell sticks.
   'before:absolute before:inset-y-0 before:left-0 before:w-px before:bg-line ' +
   // A sticky cell is a stacking context: lift the one holding an open menu above the next rows.
-  'has-[[role=menu]]:z-20';
+  'has-[[role=menu]]:z-20 has-[[data-tooltip]]:z-20';
 
 /** Header cell of the action column (right-aligned and pinned like the cells). */
 export const rowActionsHeadClass = cx(

@@ -93,18 +93,17 @@ export const tdClass = 'border-b border-line px-4 py-3 align-top';
 
 /**
  * Admin table cell (AC-UI-57): one line, vertically centred, so every row has the same height.
- * Long text goes through `CellText` (cut with "…", full text in tooltip + accessible name);
- * the table uses `table-fixed` with a `<colgroup>` so cut columns cannot push others aside.
+ * Text is never cut: columns size to their content and a table wider than its card scrolls
+ * sideways inside its region, with the action column pinned to the right edge.
  */
 export const tdLineClass = 'border-b border-line px-4 py-3 align-middle whitespace-nowrap';
 
-/** Header cell of a fixed-layout admin table: cut with "…" when the column is narrow. */
-export const thLineClass = `${thClass} truncate`;
+/** Header cell of an admin table: one line, full text. */
+export const thLineClass = thClass;
 
-/** One-line cell text: cut with "…", full text on hover/focus and for screen readers. */
+/** One-line cell text, shown in full (line breaks of change notes collapse into spaces). */
 export function CellText({ text, className }: { text: string; className?: string }) {
-  // Line breaks (change notes) collapse into spaces on one line.
-  return <OneLine text={text.replace(/\s+/g, ' ').trim()} {...(className ? { className } : {})} />;
+  return <span className={className}>{text.replace(/\s+/g, ' ').trim()}</span>;
 }
 
 /** Cell holding row actions (small buttons): tighter vertical padding. */

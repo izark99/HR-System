@@ -549,16 +549,8 @@ function UsersTable({
       tabIndex={0}
       aria-label={t('admin.users.caption')}
     >
-      <table className="w-full min-w-215 table-fixed border-collapse text-body text-ink-soft">
+      <table className="w-full border-collapse text-body text-ink-soft">
         <caption className="sr-only">{t('admin.users.caption')}</caption>
-        <colgroup>
-          <col className="w-44" />
-          <col />
-          <col className="w-26" />
-          <col />
-          <col className="w-54" />
-          <col className="w-30" />
-        </colgroup>
         <thead>
           <tr>
             <th scope="col" className={thLineClass}>
@@ -748,14 +740,8 @@ function GroupsTable({
       tabIndex={0}
       aria-label={t('admin.groups.caption')}
     >
-      <table className="w-full min-w-200 table-fixed border-collapse text-body text-ink-soft">
+      <table className="w-full border-collapse text-body text-ink-soft">
         <caption className="sr-only">{t('admin.groups.caption')}</caption>
-        <colgroup>
-          <col className="w-72" />
-          <col />
-          <col className="w-32" />
-          <col className="w-30" />
-        </colgroup>
         <thead>
           <tr>
             <th scope="col" className={thLineClass}>

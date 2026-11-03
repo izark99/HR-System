@@ -116,9 +116,9 @@ async function readFlowFile(file: File, t: TFunction): Promise<ReadResult> {
 }
 
 /**
- * Versions of a flow on ONE line (AC-UI-57): the two newest versions with their status chips,
- * then "+N" for the others. The full list with effective ranges is in the tooltip and is read by
- * screen readers (sr-only list); the cell is focusable when something is hidden.
+ * Versions of a flow on ONE line (AC-UI-57): the two newest versions with their status chips and
+ * effective start, then "+N" for the others (full list in the tooltip). Screen readers get the
+ * full list (sr-only); the cell is focusable only when versions are hidden.
  */
 function VersionList({ versions }: { versions: AdminFlowVersion[] }) {
   const { t } = useTranslation();
@@ -137,7 +137,7 @@ function VersionList({ versions }: { versions: AdminFlowVersion[] }) {
   const full = versions.map(describe).join('; ');
   const shown = versions.slice(0, 2);
   const rest = versions.length - shown.length;
-  const hidden = rest > 0 || versions.some((v) => v.effectiveFrom);
+  const hidden = rest > 0;
   return (
     <Tooltip text={hidden ? full : null} className="block">
       <span
@@ -155,6 +155,11 @@ function VersionList({ versions }: { versions: AdminFlowVersion[] }) {
             {i > 0 && <span className="text-muted">·</span>}
             <span className="font-semibold">v{v.versionNo}</span>
             <Chip tone={STATUS_TONE[v.status]}>{t(`admin.flows.status.${v.status}`)}</Chip>
+            {v.effectiveFrom && (
+              <span className="text-caption">
+                {t('admin.flows.rangeOpen', { from: formatDate(v.effectiveFrom) })}
+              </span>
+            )}
           </span>
         ))}
         {rest > 0 && (
@@ -562,14 +567,7 @@ export function AdminFlowsPage() {
               tabIndex={0}
               aria-label={t('admin.flows.tableLabel')}
             >
-              <table className="w-full min-w-215 table-fixed border-collapse text-body text-ink-soft">
-                <colgroup>
-                  <col />
-                  <col className="w-48" />
-                  <col className="w-36" />
-                  <col className="w-64" />
-                  <col className="w-30" />
-                </colgroup>
+              <table className="w-full border-collapse text-body text-ink-soft">
                 <thead>
                   <tr>
                     <th scope="col" className={thLineClass}>

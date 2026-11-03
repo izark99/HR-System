@@ -366,7 +366,7 @@ test.describe('admin screens 1280x800', () => {
     await cardChecks(page.locator('main [data-card]'));
     await adminTableChecks(page.locator('main table').first());
     await rowActionsChecks(page.locator('main table').first());
-    await tableRowChecks(page.locator('main table').first(), { noScroll: true });
+    await tableRowChecks(page.locator('main table').first());
     await axe(page, 'admin-flows 1280x800');
     await shot(page, '09-admin-flows', 'list');
     await rowMenuChecks(page, page.locator('main tbody tr').first());
@@ -385,7 +385,7 @@ test.describe('admin screens 1280x800', () => {
     const table = page.getByRole('table', { name: 'Danh sách phiên bản' });
     await adminTableChecks(table);
     await rowActionsChecks(table);
-    await tableRowChecks(table, { noScroll: true });
+    await tableRowChecks(table);
     // Draft row: visible "Mở Designer" only (same pattern as the Flows table), "Publish" first in
     // the menu; published row: "Xem trong Designer".
     const draft = table.getByRole('row', { name: /^v2/ });

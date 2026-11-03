@@ -561,7 +561,9 @@ export { style };
  * Admin table rows (AC-UI-57): every body row has the same height (within 1px), every cell
  * holds ONE line of text (text-node line boxes share one top; screen-reader-only text is
  * ignored), the action column has its 1px #E2E8F0 separator (`::before`) in the header and in
- * every row, and it does not cover the column before it. `noScroll`: the table fits its region.
+ * every row. Text is never cut (no ellipsis, 2026-11-03 16:06): a wider table scrolls inside its
+ * region, and scrolled to the end the pinned action column does not cover the column before it.
+ * `noScroll`: the table also fits its region without scrolling.
  */
 export async function tableRowChecks(table: Locator, opts: { noScroll?: boolean } = {}) {
   const r = await table.evaluate((t) => {
@@ -589,7 +591,29 @@ export async function tableRowChecks(table: Locator, opts: { noScroll?: boolean 
       return `${cs.width} ${cs.backgroundColor}`;
     };
     const region = t.closest('[role="region"]');
+    const cut = Array.from(t.querySelectorAll('th, td, th *, td *'))
+      .filter((el) => {
+        const cs = getComputedStyle(el);
+        return (
+          !el.closest('.sr-only') &&
+          (cs.textOverflow === 'ellipsis' || cs.overflowX === 'hidden') &&
+          el.scrollWidth > el.clientWidth + 1
+        );
+      })
+      .map((el) => (el.textContent ?? '').trim().slice(0, 30));
+    // Scrolled fully right, the pinned last column must not cover the one before it.
+    const before = region?.scrollLeft ?? 0;
+    if (region) region.scrollLeft = region.scrollWidth;
+    const coveredAtEnd = rows.flatMap((row, i) => {
+      const cells = Array.from(row.children);
+      const last = cells.at(-1)!.getBoundingClientRect();
+      const prev = cells.at(-2)!.getBoundingClientRect();
+      return last.left < prev.right - 1 ? [`row ${i + 1}`] : [];
+    });
+    if (region) region.scrollLeft = before;
     return {
+      cut,
+      coveredAtEnd,
       heights: rows.map((row) => Math.round(row.getBoundingClientRect().height)),
       multi: rows.flatMap((row, i) =>
         Array.from(row.children)
@@ -616,6 +640,8 @@ export async function tableRowChecks(table: Locator, opts: { noScroll?: boolean 
     `row heights ${r.heights.join(', ')}`,
   ).toBeLessThanOrEqual(1);
   expect(r.multi, 'cells on more than one line').toEqual([]);
+  expect(r.cut, 'cut cell text').toEqual([]);
+  expect(r.coveredAtEnd, 'action column covers a column (scrolled to the end)').toEqual([]);
   for (const s of r.seps) expect(s, 'action column separator').toBe(`1px ${C.line}`);
   if (opts.noScroll) {
     expect(r.scroll, 'table scrolls horizontally').toBeLessThanOrEqual(0);

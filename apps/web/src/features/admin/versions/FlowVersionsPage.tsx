@@ -329,16 +329,8 @@ export function FlowVersionsPage() {
           tabIndex={0}
           aria-label={t('admin.versions.tableLabel')}
         >
-          <table className="w-full min-w-215 table-fixed border-collapse text-body text-ink-soft">
+          <table className="w-full border-collapse text-body text-ink-soft">
             <caption className="sr-only">{t('admin.versions.caption')}</caption>
-            <colgroup>
-              <col className="w-26" />
-              <col className="w-60" />
-              <col className="w-44" />
-              <col />
-              <col className="w-40" />
-              <col className="w-30" />
-            </colgroup>
             <thead>
               <tr>
                 {(['version', 'status', 'range', 'note', 'published', 'actions'] as const).map(
