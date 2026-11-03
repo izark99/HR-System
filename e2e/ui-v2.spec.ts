@@ -421,3 +421,31 @@ const REACT_FLOW_EXCLUDE = [
 async function settleCanvas(page: Page): Promise<void> {
   await page.evaluate(() => new Promise((r) => requestAnimationFrame(() => r(null))));
 }
+
+test.describe('admin screens at 1024px: no horizontal page scroll (AC-UI-12)', () => {
+  test.use({ signedInAs: ADMIN, viewport: { width: 1024, height: 768 } });
+
+  test('users, flows, versions', async ({ page, supabase }) => {
+    withDraft(supabase);
+    for (const url of ['/admin/users', '/admin/flows', VERSIONS]) {
+      await page.goto(url);
+      await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
+      await expect(page.locator('main table').first()).toBeVisible();
+      await commonChecks(page);
+    }
+  });
+});
+
+test.describe('zoom 200% (640px wide): run and result stay usable (AC-UI-23)', () => {
+  test.use({ viewport: { width: 640, height: 400 } });
+
+  test('run + result', async ({ page }) => {
+    test.setTimeout(120_000);
+    await uploadFixtures(page);
+    await commonChecks(page);
+    await runToResult(page);
+    await commonChecks(page, { darkCards: 1 });
+    await expect(page.getByRole('button', { name: /Tải Excel/ })).toBeVisible();
+    await shot(page, '06-result', 'zoom-200');
+  });
+});
