@@ -998,6 +998,7 @@ Không thuộc Phase 1: `input.refTable`, bảng tham chiếu, template — Phas
 | ~~Q22~~ | Đã chốt 2026-11-03 09:07: tiêu đề câu kết luận chỉ ở màn Kết quả (§25.1, §28.3) | — |
 | ~~Q23~~ | Đã chốt 2026-11-03 09:07: bỏ weight 800, ngân sách thêm CSS gzip +10% (§28.7); weight 500 giữ lại (chốt 2026-11-03 10:13) | — |
 | ~~Q24~~ | Đã chốt 2026-11-03 09:07: làm KPI card + 1 card tối ở màn Kết quả (§28.3) | — |
+| Q25 | Cột "Thao tác" chung cho mọi bảng Admin: 1 nút hay dùng + menu "Thao tác khác", hay mọi nút 1 hàng, hay nút chữ? Nút nào hiện sẵn? | UI Admin, component menu |
 | ~~Q18~~ | Đã chốt 2026-10-30 13:29: canvas Designer, Monaco và bảng xem trước giữ chữ 14px (§25.1) | — |
 | ~~Q17~~ | Đã chốt 2026-10-30 13:24: công thức dùng `,` ngăn đối số và `.` thập phân, không nhận `;` (§12.2) | — |
 | ~~Q16~~ | Đã chốt 2026-10-30 13:18: `transform.formula` chỉ nhận công thức Excel (transpile sang SQL), 41 hàm, không có XLOOKUP/VLOOKUP (§9.1, §12.2) | — |
@@ -1148,7 +1149,7 @@ Font duy nhất `Be Vietnam Pro` (400, 500, 600, 700), fallback `Arial, sans-ser
 | Viền nút outline | `#1F2A44` | — | — |
 | Viền card / đường kẻ bảng | `#E2E8F0` | — | — |
 
-- Chữ trắng chỉ đặt trên `#0F766E`, `#1F2A44` hoặc `#1D4ED8` (đạt WCAG AA). Không đặt chữ trắng trên `#14B8A6`.
+- Chữ trắng chỉ đặt trên `#0F766E`, `#1F2A44` hoặc `#1D4ED8` (đạt WCAG AA). Không đặt chữ trắng trên `#14B8A6`; ngoại lệ chỉ cho trạng thái hover/active của nút: `#115E59` (nút chính), `#334155` (nút tối) (chốt 2026-11-03 10:49). Không đặt chữ trắng trên `#14B8A6`.
 - Trang đăng nhập: nền phẳng `#F7FAF9`, card đăng nhập có viền (chốt 2026-10-30 13:26; bỏ gradient và vòng tròn trang trí).
 
 ### 25.3 Component
@@ -1494,3 +1495,14 @@ Breakpoint: mobile < 768px (1 cột, menu trái thu thành nút mở), tablet 76
 | AC-UI-42 | Font: bỏ `@font-face` weight 800; giữ weight 500 vì `display-*` và eyebrow dùng (chốt 2026-11-03 10:13); vẫn self-host, không request ra domain ngoài (`privacy.spec.ts` pass). |
 | AC-UI-43 | `pnpm lint`, `format:check`, `typecheck`, `test`, `build`, `CI=1 pnpm test:e2e` pass. Test E2E cũ chỉ được sửa ở phần kiểm kích thước/màu/selector do giao diện đổi; không xóa test, không đổi nghiệp vụ được kiểm. |
 | AC-UI-44 | Không đổi hành vi: luồng chạy flow nghiệm thu (§24) cho cùng file kết quả (so sánh nội dung các sheet trước/sau). |
+
+### 28.8 Vòng sửa sau kiểm lần 1 (chốt 2026-11-03 10:49)
+
+| # | Given / When / Then |
+|---|---------------------|
+| AC-UI-50 | Tiêu đề trang chứa tên do người dùng đặt (màn Chạy flow, Designer, Version…) hiển thị 1 dòng, cắt "…" khi dài, tên đầy đủ đọc được khi rê chuột/focus và với trình đọc màn hình; cao dòng tiêu đề giữ 48/48 (mobile 32/32). Test dấu tiếng Việt (`e2e/ui-v2-diacritics.spec.ts`) đổi từ "lỗi đã biết" sang kiểm hành vi này và không còn chồng dòng ở 1280 và 390px. |
+| AC-UI-51 | Màn Kết quả: lệch = 0 và hai nhóm "chỉ có ở một bên" = 0 → "khớp toàn bộ N nhân viên"; còn lại → "Kỳ … có N nhân viên cần xử lý", N = lệch + chỉ trong lương + chỉ trong chấm công, bằng số trên card tối. Test "lỗi đã biết" trong `e2e/ui-v2-qa.spec.ts` chuyển thành test thường. |
+| AC-UI-52 | Thanh công cụ Designer ở 1280×800 nằm 1 hàng cùng tiêu đề; nút 36px; Hoàn tác/Làm lại/Sao chép/Dán/Xóa là nút biểu tượng có `aria-label` và tooltip; vẫn đủ vùng chạm theo AC-UI-21 cho toolbar (≥ 36px cao, khoảng cách giữa nút). Phím tắt hiện có không đổi. |
+| AC-UI-53 | Palette node: mọi item cùng chiều cao và chiều rộng; tên và mô tả mỗi thứ đúng 1 dòng, cắt "…"; mô tả đầy đủ hiện khi rê chuột/focus và có trong tên đọc a11y. |
+| AC-UI-54 | Màn Users & Groups, Version (và mọi bảng Admin) ở 1280×800 và 1024px: cột Thao tác cùng một kiểu ở mọi bảng, nằm 1 hàng, thẳng cột giữa các dòng (kiểu cụ thể theo Q25); chip trạng thái, role, "Sắp có" ở menu trái, nhãn nút (VD "Tạo và hiện mật khẩu tạm") không xuống dòng; bảng rộng thì cuộn ngang trong card. Rà cùng lỗi ở các bảng Admin khác (Nhóm, Flows, Version). |
+

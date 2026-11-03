@@ -225,6 +225,18 @@
 
 ## Kỹ thuật & tổ chức
 
+2026-11-03 10:49 - Tiêu đề trang giữ cao dòng bằng cỡ chữ (48/48, mobile 32/32); tiêu đề chứa tên do người dùng đặt (tên flow, tên version…) giới hạn 1 dòng, cắt bằng "…", hiện đủ tên khi rê chuột/focus (tránh dấu tiếng Việt chồng dòng).
+
+2026-11-03 10:49 - Màn Kết quả: tiêu đề "khớp toàn bộ" chỉ khi lệch = 0 và không có nhân viên chỉ có ở một file; còn lại dùng "Kỳ … có N nhân viên cần xử lý" với N = lệch + chỉ có trong lương + chỉ có trong chấm công (khớp số của card tối; card tối giữ phần chi tiết).
+
+2026-11-03 10:49 - Màu nền khi rê chuột của nút: chính `#115E59`, tối `#334155` (chữ trắng ≥ 7:1) là ngoại lệ được phép đặt chữ trắng, chỉ cho trạng thái hover/active.
+
+2026-11-03 10:49 - Thanh công cụ Designer dùng nút nhỏ 36px, 1 hàng; Hoàn tác/Làm lại/Sao chép/Dán/Xóa là nút biểu tượng có nhãn a11y + tooltip.
+
+2026-11-03 10:49 - Palette node của Designer: mọi item cùng kích thước; tên và mô tả mỗi thứ 1 dòng, chữ dài cắt bằng "…", mô tả đầy đủ hiện khi rê chuột/focus.
+
+2026-11-03 10:49 - Màn Admin (Users & Groups, Version…): chữ trong chip trạng thái, menu trái ("Sắp có"), nhãn nút không bị xuống dòng vỡ bố cục; cột Thao tác dùng chung một kiểu cho mọi bảng Admin (kiểu cụ thể: câu hỏi mở Q25 trong spec).
+
 2026-11-03 10:13 - UI/UX đồng nhất theo design language "bright executive" bản 2 (phong cách phẳng), cấu trúc lấy đúng số của `docs/design-reference.md`: giữ nguyên bộ màu (nền #F7FAF9, card trắng; teal = tốt/chính, coral = rủi ro/lỗi, amber = cảnh báo, blue = thông tin) và font Be Vietnam Pro; tiêu đề lớn (`display-xl` 56/56, `display-lg` 48/48) weight 500, `title-md` 24px/600, `title-sm` 20px/700, eyebrow 14px/500 giãn chữ 1px không nền, nút 18px/600 lh 27px, nút nhỏ 14,4px/700; card bo 12px, viền 1px #E2E8F0, không shadow (popover/modal/toast giữ shadow nhẹ); input bo 6px; nút 3 cấp bo 12px cao 48px (chính teal #0F766E, tối #1F2A44, outline viền #1F2A44); menu trái mục đang chọn có vạch màu bên trái; body 16px; trang đăng nhập nền phẳng + card có viền. Font tự host thêm lại weight 500, vẫn bỏ 800; ngân sách CSS gzip +10% giữ nguyên. Chi tiết token ở docs/spec.md §25.
 
 2026-11-03 10:13 - Chấp nhận các chỉnh sửa a11y của vòng giao diện: lưới chọn tháng hiện "Tháng 1"…"Tháng 12" (tên đọc phải chứa chữ hiển thị, WCAG 2.5.3); nút "Reset MK" đổi thành "Reset mật khẩu"; tiêu đề trên thanh của Designer giữ 20px để không mất diện tích canvas.
