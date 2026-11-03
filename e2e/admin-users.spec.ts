@@ -5,7 +5,7 @@
  */
 import { ADMIN, expect, SUPABASE_ORIGIN, test, USER, type Page } from './fixtures';
 import { FIXED_TEMP_PASSWORD, RESET_TEMP_PASSWORD } from './supabase-mock';
-import { chooseOption, persistedState, recordRequests } from './helpers';
+import { chooseOption, persistedState, recordRequests, rowAction, rowMenuItem } from './helpers';
 
 test.use({ signedInAs: ADMIN });
 
@@ -177,18 +177,14 @@ test.describe('reset password', () => {
     supabase,
   }) => {
     await openUsers(page);
-    await userRow(page, USER.username)
-      .getByRole('button', { name: `Reset mật khẩu ${USER.username}` })
-      .click();
+    await rowAction(userRow(page, USER.username), `Reset mật khẩu ${USER.username}`);
     const confirm = page.getByRole('dialog', { name: `Reset mật khẩu ${USER.username}?` });
     await expect(confirm).toContainText('đăng xuất mọi phiên');
     await confirm.getByRole('button', { name: 'Hủy' }).click();
     await expect(confirm).toHaveCount(0);
     expect(supabase.functionCalls).toEqual([]);
 
-    await userRow(page, USER.username)
-      .getByRole('button', { name: `Reset mật khẩu ${USER.username}` })
-      .click();
+    await rowAction(userRow(page, USER.username), `Reset mật khẩu ${USER.username}`);
     await confirm.getByRole('button', { name: 'Reset mật khẩu', exact: true }).click();
     const secret = page.getByRole('dialog', { name: `Mật khẩu tạm của ${USER.username}` });
     await expect(secret.getByLabel('Mật khẩu tạm')).toHaveText(RESET_TEMP_PASSWORD);
@@ -212,9 +208,7 @@ test.describe('reset password', () => {
     supabase,
   }) => {
     await openUsers(page);
-    await userRow(page, USER.username)
-      .getByRole('button', { name: `Reset mật khẩu ${USER.username}` })
-      .click();
+    await rowAction(userRow(page, USER.username), `Reset mật khẩu ${USER.username}`);
     const confirm = page.getByRole('dialog', { name: `Reset mật khẩu ${USER.username}?` });
     supabase.functionFailure = { status: 404, code: 'not_found' };
     await confirm.getByRole('button', { name: 'Reset mật khẩu', exact: true }).click();
@@ -222,9 +216,7 @@ test.describe('reset password', () => {
     await expect(page.getByRole('dialog', { name: /Mật khẩu tạm/ })).toHaveCount(0);
     // Closing clears the error for the next time.
     await confirm.getByRole('button', { name: 'Hủy' }).click();
-    await userRow(page, USER.username)
-      .getByRole('button', { name: `Reset mật khẩu ${USER.username}` })
-      .click();
+    await rowAction(userRow(page, USER.username), `Reset mật khẩu ${USER.username}`);
     await expect(confirm.getByRole('alert')).toHaveCount(0);
   });
 });
@@ -236,17 +228,13 @@ test.describe('lock / unlock', () => {
     browser,
   }) => {
     await openUsers(page);
-    await userRow(page, USER.username)
-      .getByRole('button', { name: `Khóa tài khoản ${USER.username}` })
-      .click();
+    await rowAction(userRow(page, USER.username), `Khóa tài khoản ${USER.username}`);
     const lock = page.getByRole('dialog', { name: `Khóa tài khoản ${USER.username}?` });
     await expect(lock).toContainText('Tài khoản không đăng nhập được nữa');
     await lock.getByRole('button', { name: 'Hủy' }).click();
     expect(supabase.functionCalls).toEqual([]);
 
-    await userRow(page, USER.username)
-      .getByRole('button', { name: `Khóa tài khoản ${USER.username}` })
-      .click();
+    await rowAction(userRow(page, USER.username), `Khóa tài khoản ${USER.username}`);
     await lock.getByRole('button', { name: 'Khóa', exact: true }).click();
     await expect(lock).toHaveCount(0);
     expect(supabase.functionCalls).toEqual([
@@ -254,10 +242,9 @@ test.describe('lock / unlock', () => {
     ]);
     await expect(userRow(page, USER.username)).toContainText('Đã khóa');
     await expect(
-      userRow(page, USER.username).getByRole('button', {
-        name: `Mở khóa tài khoản ${USER.username}`,
-      }),
+      await rowMenuItem(userRow(page, USER.username), `Mở khóa tài khoản ${USER.username}`),
     ).toBeVisible();
+    await page.keyboard.press('Escape');
 
     // A second browser: the locked User is refused at login.
     const other = await browser.newContext({ locale: 'vi-VN' });
@@ -270,9 +257,7 @@ test.describe('lock / unlock', () => {
     await expect(p2.getByRole('alert')).toContainText('tài khoản đã bị khóa');
     await other.close();
 
-    await userRow(page, USER.username)
-      .getByRole('button', { name: `Mở khóa tài khoản ${USER.username}` })
-      .click();
+    await rowAction(userRow(page, USER.username), `Mở khóa tài khoản ${USER.username}`);
     const unlock = page.getByRole('dialog', { name: `Mở khóa tài khoản ${USER.username}?` });
     await unlock.getByRole('button', { name: 'Mở khóa', exact: true }).click();
     await expect(unlock).toHaveCount(0);
@@ -327,21 +312,19 @@ test.describe('edit account', () => {
 test.describe('own account (MEMORY 2026-10-26 18:09: no self-action guard, explicit warning)', () => {
   test('own row has edit, reset and lock like any other row', async ({ page }) => {
     await openUsers(page);
-    await expect(userRow(page, ADMIN.username).getByRole('button')).toHaveCount(3);
-    await expect(userRow(page, USER.username).getByRole('button')).toHaveCount(3);
+    // Visible "Sửa" + the "Thao tác khác" menu button (AC-UI-54); reset and lock are in the menu.
+    await expect(userRow(page, ADMIN.username).getByRole('button')).toHaveCount(2);
+    await expect(userRow(page, USER.username).getByRole('button')).toHaveCount(2);
+    const own = userRow(page, ADMIN.username);
+    await expect(await rowMenuItem(own, `Khóa tài khoản ${ADMIN.username}`)).toBeVisible();
     await expect(
-      page.getByRole('button', { name: `Khóa tài khoản ${ADMIN.username}` }),
-    ).toBeVisible();
-    await expect(
-      page.getByRole('button', { name: `Reset mật khẩu ${ADMIN.username}` }),
+      own.getByRole('menuitem', { name: `Reset mật khẩu ${ADMIN.username}` }),
     ).toBeVisible();
   });
 
   test('other accounts get no self warning', async ({ page }) => {
     await openUsers(page);
-    await userRow(page, USER.username)
-      .getByRole('button', { name: `Khóa tài khoản ${USER.username}` })
-      .click();
+    await rowAction(userRow(page, USER.username), `Khóa tài khoản ${USER.username}`);
     const dialog = page.getByRole('dialog', { name: `Khóa tài khoản ${USER.username}?` });
     await expect(dialog).toBeVisible();
     await expect(dialog).not.toContainText('Bạn đang khóa chính mình');
@@ -353,9 +336,7 @@ test.describe('own account (MEMORY 2026-10-26 18:09: no self-action guard, expli
   }) => {
     await openUsers(page);
     const lockSelf = () =>
-      userRow(page, ADMIN.username)
-        .getByRole('button', { name: `Khóa tài khoản ${ADMIN.username}` })
-        .click();
+      rowAction(userRow(page, ADMIN.username), `Khóa tài khoản ${ADMIN.username}`);
     await lockSelf();
     const dialog = page.getByRole('dialog', { name: `Khóa tài khoản ${ADMIN.username}?` });
     await expect(dialog.getByRole('alert')).toContainText('Bạn đang khóa chính mình');
@@ -379,9 +360,7 @@ test.describe('own account (MEMORY 2026-10-26 18:09: no self-action guard, expli
     supabase,
   }) => {
     await openUsers(page);
-    await userRow(page, ADMIN.username)
-      .getByRole('button', { name: `Reset mật khẩu ${ADMIN.username}` })
-      .click();
+    await rowAction(userRow(page, ADMIN.username), `Reset mật khẩu ${ADMIN.username}`);
     const confirm = page.getByRole('dialog', { name: `Reset mật khẩu ${ADMIN.username}?` });
     await expect(confirm.getByRole('alert')).toContainText(
       'Bạn đang reset mật khẩu của chính mình',
@@ -474,9 +453,7 @@ test.describe('function errors and warnings', () => {
       supabase,
     }) => {
       await openUsers(page);
-      await userRow(page, USER.username)
-        .getByRole('button', { name: `Khóa tài khoản ${USER.username}` })
-        .click();
+      await rowAction(userRow(page, USER.username), `Khóa tài khoản ${USER.username}`);
       const dialog = page.getByRole('dialog', { name: `Khóa tài khoản ${USER.username}?` });
       supabase.functionFailure = { status: 400, code };
       await dialog.getByRole('button', { name: 'Khóa', exact: true }).click();
@@ -508,9 +485,7 @@ test.describe('function errors and warnings', () => {
     await expect(created).toContainText('chưa ghi được nhật ký quản trị');
     await created.getByRole('button', { name: 'Đã lưu, đóng' }).click();
 
-    await userRow(page, USER.username)
-      .getByRole('button', { name: `Reset mật khẩu ${USER.username}` })
-      .click();
+    await rowAction(userRow(page, USER.username), `Reset mật khẩu ${USER.username}`);
     await page
       .getByRole('dialog', { name: `Reset mật khẩu ${USER.username}?` })
       .getByRole('button', { name: 'Reset mật khẩu', exact: true })
@@ -566,11 +541,11 @@ test.describe('groups', () => {
     expect(supabase.groups.map((g) => g.name)).toContain('C&B 2026'); // trimmed
 
     // Delete asks first, then members lose the group and assignments are gone.
-    await page.getByRole('button', { name: 'Xóa nhóm C&B 2026' }).click();
+    await rowAction(groupsTable(page).getByRole('row', { name: /C&B 2026/ }), 'Xóa nhóm C&B 2026');
     const del = page.getByRole('dialog', { name: 'Xóa nhóm C&B 2026?' });
     await del.getByRole('button', { name: 'Hủy' }).click();
     expect(supabase.groups).toHaveLength(2);
-    await page.getByRole('button', { name: 'Xóa nhóm C&B 2026' }).click();
+    await rowAction(groupsTable(page).getByRole('row', { name: /C&B 2026/ }), 'Xóa nhóm C&B 2026');
     await del.getByRole('button', { name: 'Xóa', exact: true }).click();
     await expect(del).toHaveCount(0);
     await expect(page.getByRole('tab', { name: 'Nhóm (1)' })).toBeVisible();

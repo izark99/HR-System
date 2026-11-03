@@ -14,7 +14,7 @@ import {
 import { Link, useBlocker } from '@tanstack/react-router';
 import { useCallback, useEffect, useMemo, useRef, useState, type DragEvent } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Button, Callout, Chip, cx } from '../../components/ui';
+import { Button, Callout, Chip, cx, OneLine } from '../../components/ui';
 import type { DesignIssue } from '../../engine/design';
 import type { RunWarningInfo } from '../../engine/protocol';
 import type { Json } from '../../lib/database.types';
@@ -27,6 +27,7 @@ import { useUnsavedChanges } from '../auth/idle/activity';
 import { FlowCard, NoteCard, type FlowCardNode, type NoteCardNode } from './canvas/nodes';
 import { groupOf, inputPortsOf, outputPortsOf, typeKey } from './catalog';
 import { ConfigPanel, type PanelTab } from './ConfigPanel';
+import { CopyIcon, IconButton, PasteIcon, RedoIcon, TrashIcon, UndoIcon } from './ToolbarIcons';
 import {
   addNode,
   addNote,
@@ -608,17 +609,19 @@ export function DesignerEditor(props: DesignerEditorProps) {
 
   return (
     <div className="hr-designer flex h-[calc(100dvh-64px)] min-h-150 flex-col">
-      <header className="flex flex-wrap items-center gap-2.5 border-b border-line bg-card px-3.5 py-2">
+      <header className="flex flex-wrap items-center gap-2.5 border-b border-line bg-card px-3.5 py-2 lg:flex-nowrap">
         <Link
           to="/admin/flows/$flowCode/versions"
           params={{ flowCode: props.flowCode }}
-          className="min-h-target content-center rounded-card px-2.5 text-caption font-semibold text-teal-strong no-underline hover:bg-page"
+          className="min-h-target shrink-0 content-center rounded-card px-2.5 text-caption font-semibold whitespace-nowrap text-teal-strong no-underline hover:bg-page"
         >
           {t('toolbar.back')}
         </Link>
-        <h1 className="m-0 flex items-center gap-2 text-title-sm text-ink">
-          <span className="truncate">{props.flowName}</span>
-          <span className="text-dense text-muted">v{props.version.versionNo}</span>
+        <h1 className="m-0 flex min-w-0 items-center gap-2 text-title-sm text-ink">
+          <OneLine text={props.flowName} />
+          <span className="shrink-0 text-dense whitespace-nowrap text-muted">
+            v{props.version.versionNo}
+          </span>
           <Chip tone={VERSION_STATUS_TONE[props.version.status]}>
             {tc(`admin.flows.status.${props.version.status}`)}
           </Chip>
@@ -627,7 +630,7 @@ export function DesignerEditor(props: DesignerEditorProps) {
           <span
             role="status"
             className={cx(
-              'text-caption font-semibold',
+              'shrink-0 text-caption font-semibold whitespace-nowrap',
               dirty ? 'text-amber-text' : 'text-teal-strong',
             )}
           >
@@ -637,49 +640,53 @@ export function DesignerEditor(props: DesignerEditorProps) {
         <div
           role="toolbar"
           aria-label={t('toolbar.label')}
-          className="ml-auto flex flex-wrap items-center gap-1.5"
+          className="ml-auto flex shrink-0 items-center gap-1.5"
         >
           {!ro && (
             <>
-              <Button
-                size="sm"
+              <IconButton
+                label={t('toolbar.undo')}
+                tooltip={t('toolbar.undoTip')}
+                icon={<UndoIcon />}
                 onClick={doUndo}
                 disabled={hist.past.length === 0}
                 aria-keyshortcuts="Control+Z"
-              >
-                {t('toolbar.undo')}
-              </Button>
-              <Button
-                size="sm"
+              />
+              <IconButton
+                label={t('toolbar.redo')}
+                tooltip={t('toolbar.redoTip')}
+                icon={<RedoIcon />}
                 onClick={doRedo}
                 disabled={hist.future.length === 0}
                 aria-keyshortcuts="Control+Shift+Z Control+Y"
-              >
-                {t('toolbar.redo')}
-              </Button>
+              />
             </>
           )}
-          <Button
-            size="sm"
+          <IconButton
+            label={t('toolbar.copy')}
+            tooltip={t('toolbar.copyTip')}
+            icon={<CopyIcon />}
             onClick={copy}
             disabled={selection.nodes.length + selection.notes.length === 0}
             aria-keyshortcuts="Control+C"
-          >
-            {t('toolbar.copy')}
-          </Button>
+          />
           {!ro && (
             <>
-              <Button size="sm" onClick={pasteClip} aria-keyshortcuts="Control+V">
-                {t('toolbar.paste')}
-              </Button>
-              <Button
-                size="sm"
+              <IconButton
+                label={t('toolbar.paste')}
+                tooltip={t('toolbar.pasteTip')}
+                icon={<PasteIcon />}
+                onClick={pasteClip}
+                aria-keyshortcuts="Control+V"
+              />
+              <IconButton
+                label={t('toolbar.delete')}
+                tooltip={t('toolbar.deleteTip')}
+                icon={<TrashIcon />}
                 onClick={deleteSelection}
                 disabled={!hasSelection}
                 aria-keyshortcuts="Delete"
-              >
-                {t('toolbar.delete')}
-              </Button>
+              />
               <Button size="sm" onClick={addNoteCmd}>
                 {t('toolbar.note')}
               </Button>

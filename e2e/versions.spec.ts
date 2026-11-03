@@ -4,7 +4,7 @@
  * mocked (e2e/supabase-mock.ts); fake flow configurations only.
  */
 import { ADMIN, expect, test, USER, type Page } from './fixtures';
-import { chooseOption, pickDate } from './helpers';
+import { chooseOption, pickDate, rowAction, rowMenuItem } from './helpers';
 import { baseFlowDefinition, flowWithCongTolerance, type SupabaseMock } from './supabase-mock';
 
 test.use({ signedInAs: ADMIN });
@@ -51,7 +51,7 @@ test.describe('Version & validity screen', () => {
   }) => {
     setup(supabase);
     await page.goto('/admin/flows');
-    await page.getByRole('link', { name: /Quản lý phiên bản và hiệu lực của Đối chiếu/ }).click();
+    await page.getByRole('link', { name: /Mở trang phiên bản của Đối chiếu/ }).click();
     await expect(page).toHaveURL(URL);
     await expect(page.getByRole('heading', { level: 1 })).toHaveText(
       'Đối chiếu bảng lương – chấm công: đang áp dụng v1',
@@ -71,12 +71,17 @@ test.describe('Version & validity screen', () => {
     await expect(v2).toContainText('Chưa đặt ngày');
     await expect(v2).not.toContainText('Đang áp dụng');
     // Actions by status (spec §14.4).
+    // Visible: draft "Mở Designer" + "Publish"; the rest sits in the row menu (AC-UI-54).
     await expect(v2.getByRole('button', { name: 'Publish v2' })).toBeVisible();
-    await expect(v2.getByRole('button', { name: 'Hủy draft v2' })).toBeVisible();
-    await expect(v2.getByRole('button', { name: 'Retire v2' })).toHaveCount(0);
-    await expect(v1.getByRole('button', { name: 'Retire v1' })).toBeVisible();
-    await expect(v1.getByRole('button', { name: 'Tạo draft từ version này v1' })).toBeVisible();
+    await expect(await rowMenuItem(v2, 'Hủy draft v2')).toBeVisible();
+    await expect(v2.getByRole('menuitem', { name: /Retire/ })).toHaveCount(0);
+    await page.keyboard.press('Escape');
+    await expect(await rowMenuItem(v1, 'Retire v1')).toBeVisible();
+    await expect(v1.getByRole('menuitem', { name: 'Tạo draft từ version này v1' })).toBeVisible();
+    await expect(v1.getByRole('menuitem', { name: /Hủy draft|Publish/ })).toHaveCount(0);
     await expect(v1.getByRole('button', { name: /Hủy draft|Publish/ })).toHaveCount(0);
+    expect(await page.getByRole('menuitem', { name: /Xóa/ }).count()).toBe(0);
+    await page.keyboard.press('Escape');
     expect(await page.getByRole('button', { name: /Xóa/ }).count()).toBe(0);
   });
 
@@ -216,14 +221,14 @@ test.describe('Version & validity screen', () => {
   }) => {
     setup(supabase);
     await page.goto(URL);
-    await row(page, 1).getByRole('button', { name: 'Retire v1' }).click();
+    await rowAction(row(page, 1), 'Retire v1');
     const confirm = page.getByRole('dialog', { name: 'Retire v1?' });
     await expect(confirm).toContainText('từ 01/01/2026, không thời hạn');
     await confirm.getByRole('button', { name: 'Hủy' }).click();
     await expect(confirm).toHaveCount(0);
     expect(supabase.versionWrites).toEqual([]);
 
-    await row(page, 1).getByRole('button', { name: 'Retire v1' }).click();
+    await rowAction(row(page, 1), 'Retire v1');
     await page
       .getByRole('dialog', { name: 'Retire v1?' })
       .getByRole('button', { name: 'Retire' })
@@ -235,9 +240,11 @@ test.describe('Version & validity screen', () => {
     await expect(row(page, 1).getByRole('button', { name: /Retire|Publish|Đổi ngày/ })).toHaveCount(
       0,
     );
+    await expect(await rowMenuItem(row(page, 1), 'Tạo draft từ version này v1')).toBeVisible();
     await expect(
-      row(page, 1).getByRole('button', { name: 'Tạo draft từ version này v1' }),
-    ).toBeVisible();
+      row(page, 1).getByRole('menuitem', { name: /Retire|Publish|Đổi ngày/ }),
+    ).toHaveCount(0);
+    await page.keyboard.press('Escape');
     await expect(page.getByRole('heading', { level: 1 })).toContainText(
       'chưa có phiên bản áp dụng hôm nay',
     );
@@ -249,7 +256,7 @@ test.describe('Version & validity screen', () => {
   }) => {
     setup(supabase);
     await page.goto(URL);
-    await row(page, 1).getByRole('button', { name: 'Tạo draft từ version này v1' }).click();
+    await rowAction(row(page, 1), 'Tạo draft từ version này v1');
     await expect(page.getByRole('alert')).toHaveText(
       'Chưa thành công: Flow đang có bản nháp v2. Hãy publish hoặc hủy bản nháp đó trước.',
     );
@@ -262,7 +269,7 @@ test.describe('Version & validity screen', () => {
   }) => {
     setup(supabase);
     await page.goto(URL);
-    await row(page, 2).getByRole('button', { name: 'Hủy draft v2' }).click();
+    await rowAction(row(page, 2), 'Hủy draft v2');
     await page
       .getByRole('dialog', { name: 'Hủy bản nháp v2?' })
       .getByRole('button', { name: 'Hủy bản nháp' })
@@ -270,7 +277,7 @@ test.describe('Version & validity screen', () => {
     await expect(row(page, 2)).toHaveCount(0);
     expect(supabase.versionWrites).toEqual([{ method: 'DELETE', id: DRAFT_ID, body: {} }]);
 
-    await row(page, 1).getByRole('button', { name: 'Tạo draft từ version này v1' }).click();
+    await rowAction(row(page, 1), 'Tạo draft từ version này v1');
     // Numbering is max + 1 (the discarded v2 number is reused, as in the database trigger).
     await expect(page.getByRole('status')).toContainText('đã tạo bản nháp v2 từ v1.');
     await expect(row(page, 2)).toContainText('Draft');
@@ -291,7 +298,7 @@ test.describe('Version & validity screen', () => {
       { no: 2, from: '2026-06-01', to: null },
     ]);
     await page.goto(URL);
-    await row(page, 1).getByRole('button', { name: 'Đổi ngày kết thúc v1' }).click();
+    await rowAction(row(page, 1), 'Đổi ngày kết thúc v1');
     const dialog = page.getByRole('dialog', { name: 'Đổi ngày kết thúc của v1' });
     await pickDate(page, dialog.locator('#end-to'), '2026-07-01');
     await dialog.getByRole('button', { name: 'Lưu ngày kết thúc' }).click();
@@ -353,7 +360,7 @@ test.describe('Version & validity screen', () => {
     setup(supabase);
     await page.goto(URL);
     const download = page.waitForEvent('download');
-    await row(page, 1).getByRole('button', { name: 'Xuất JSON v1' }).click();
+    await rowAction(row(page, 1), 'Xuất JSON v1');
     const file = await download;
     expect(file.suggestedFilename()).toBe('payroll-timesheet_v1.json');
   });

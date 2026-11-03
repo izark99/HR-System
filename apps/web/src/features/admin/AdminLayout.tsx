@@ -36,7 +36,7 @@ export function AdminLayout() {
     <div className="flex flex-wrap">
       <nav
         aria-label={t('admin.nav.label')}
-        className="flex max-w-64 flex-[1_1_220px] flex-col gap-1.5 px-3.5 py-6"
+        className="flex max-w-68 flex-[1_1_240px] flex-col gap-1.5 px-3.5 py-6"
       >
         {ITEMS.map((item) => {
           // Sub-pages (e.g. /admin/flows/:code/versions) keep their section highlighted.
@@ -60,8 +60,10 @@ export function AdminLayout() {
                 'justify-between gap-2 text-muted hover:bg-transparent hover:text-muted',
               )}
             >
-              {t(`admin.nav.${item.key}`)}
-              <span className="text-caption">{t('admin.nav.soon')}</span>
+              <span className="min-w-0 truncate">{t(`admin.nav.${item.key}`)}</span>
+              <span className="shrink-0 rounded-pill bg-neutral px-2 py-0.5 text-caption whitespace-nowrap">
+                {t('admin.nav.soon')}
+              </span>
             </span>
           );
         })}

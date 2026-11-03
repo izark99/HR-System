@@ -16,7 +16,9 @@
     "loading": "Đang tải…",
     "yes": "Có",
     "no": "Không",
-    "required": "bắt buộc"
+    "required": "bắt buộc",
+    "moreActions": "Thao tác khác",
+    "moreActionsFor": "Thao tác khác cho {{name}}"
   },
   "flows": {
     "eyebrow": "Flow của bạn",
@@ -175,6 +177,8 @@
     "eyebrow": "Chạy xong · {{rows}} dòng · {{seconds}} giây",
     "titleMismatched": "Kỳ {{period}} có {{count, number}} nhân viên lệch cần xử lý",
     "titleMismatchedNoPeriod": "Có {{count, number}} nhân viên lệch cần xử lý",
+    "titlePending": "Kỳ {{period}} có {{count, number}} nhân viên cần xử lý",
+    "titlePendingNoPeriod": "Có {{count, number}} nhân viên cần xử lý",
     "titleMatched": "Kỳ {{period}}: tất cả nhân viên đều khớp",
     "titleMatchedNoPeriod": "Tất cả nhân viên đều khớp",
     "titleMatchedCount": "Kỳ {{period}} khớp toàn bộ {{count, number}} nhân viên",
@@ -497,6 +501,8 @@
       "actions": "Thao tác",
       "openDesigner": "Designer",
       "openDesignerFor": "Mở Designer của {{name}}",
+      "openVersions": "Mở trang phiên bản",
+      "openVersionsFor": "Mở trang phiên bản của {{name}}",
       "create": {
         "button": "Tạo flow mới",
         "title": "Tạo flow mới",

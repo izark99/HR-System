@@ -70,7 +70,7 @@ test('acceptance flow: upload 6 fixtures, run, see 63/9/3/3, download the workbo
 
   await expect(page).toHaveURL(/\/run\/payroll-timesheet\/result$/);
   await expect(page.getByRole('heading', { level: 1 })).toHaveText(
-    'Kỳ 09/2026 có 9 nhân viên lệch cần xử lý',
+    'Kỳ 09/2026 có 15 nhân viên cần xử lý',
   );
   const kpis = page.getByTestId('kpi');
   await expect(kpis).toHaveText([/Khớp\s*63/, /Lệch\s*9/, /lương\s*3/, /chấm công\s*3/]);

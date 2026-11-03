@@ -1,6 +1,7 @@
 import { useId, useRef, useState, type FormEvent, type KeyboardEvent, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Select } from '../../components/Select';
+import { RowActions, rowActionsCellClass, rowActionsHeadClass } from '../../components/RowActions';
 import {
   Button,
   Callout,
@@ -11,7 +12,6 @@ import {
   inputClass,
   labelClass,
   PageHeader,
-  tdActionClass,
   tdClass,
   thClass,
 } from '../../components/ui';
@@ -47,9 +47,6 @@ async function loadAll(api: AdminApi): Promise<PageData> {
   ]);
   return { users, groups, flows, assignments };
 }
-
-const linkButtonClass =
-  'inline-flex min-h-target items-center rounded-card px-3 text-button-sm text-teal-strong hover:bg-teal-tint disabled:text-muted';
 
 function ErrorText({ code }: { code: AdminErrorKey | null }) {
   const { t } = useTranslation();
@@ -565,7 +562,7 @@ function UsersTable({
             <th scope="col" className={thClass}>
               {t('admin.users.status')}
             </th>
-            <th scope="col" className={thClass}>
+            <th scope="col" className={rowActionsHeadClass}>
               {t('admin.users.actions')}
             </th>
           </tr>
@@ -577,7 +574,7 @@ function UsersTable({
                 <th scope="row" className={cx(tdClass, 'text-left font-semibold text-ink')}>
                   {u.username}
                 </th>
-                <td className={tdClass}>{u.fullName || '-'}</td>
+                <td className={cx(tdClass, 'min-w-40')}>{u.fullName || '-'}</td>
                 <td className={tdClass}>
                   <Chip tone={u.role === 'admin' ? 'blue' : 'neutral'}>
                     {t(`userMenu.role.${u.role}`)}
@@ -592,36 +589,37 @@ function UsersTable({
                 <td className={tdClass}>
                   <StatusChip user={u} />
                 </td>
-                <td className={tdActionClass}>
-                  <div className="flex flex-wrap items-center">
-                    <button
-                      type="button"
-                      className={linkButtonClass}
-                      aria-label={t('admin.users.editNamed', { username: u.username })}
-                      onClick={() => onEdit(u)}
-                    >
-                      {t('admin.users.edit')}
-                    </button>
-                    <button
-                      type="button"
-                      className={linkButtonClass}
-                      aria-label={t('admin.users.resetNamed', { username: u.username })}
-                      onClick={() => onReset(u)}
-                    >
-                      {t('admin.users.reset')}
-                    </button>
-                    <button
-                      type="button"
-                      className={linkButtonClass}
-                      aria-label={t(
-                        u.isActive ? 'admin.users.lockNamed' : 'admin.users.unlockNamed',
-                        { username: u.username },
-                      )}
-                      onClick={() => onToggleActive(u)}
-                    >
-                      {u.isActive ? t('admin.users.lock') : t('admin.users.unlock')}
-                    </button>
-                  </div>
+                <td className={rowActionsCellClass}>
+                  <RowActions
+                    rowName={u.username}
+                    visible={
+                      <Button
+                        size="sm"
+                        aria-label={t('admin.users.editNamed', { username: u.username })}
+                        onClick={() => onEdit(u)}
+                      >
+                        {t('admin.users.edit')}
+                      </Button>
+                    }
+                    items={[
+                      {
+                        key: 'reset',
+                        label: t('admin.users.reset'),
+                        ariaLabel: t('admin.users.resetNamed', { username: u.username }),
+                        onSelect: () => onReset(u),
+                      },
+                      {
+                        key: u.isActive ? 'lock' : 'unlock',
+                        label: u.isActive ? t('admin.users.lock') : t('admin.users.unlock'),
+                        ariaLabel: t(
+                          u.isActive ? 'admin.users.lockNamed' : 'admin.users.unlockNamed',
+                          { username: u.username },
+                        ),
+                        danger: u.isActive,
+                        onSelect: () => onToggleActive(u),
+                      },
+                    ]}
+                  />
                 </td>
               </tr>
             );
@@ -737,7 +735,7 @@ function GroupsTable({
             <th scope="col" className={thClass}>
               {t('admin.groups.members')}
             </th>
-            <th scope="col" className={thClass}>
+            <th scope="col" className={rowActionsHeadClass}>
               {t('admin.users.actions')}
             </th>
           </tr>
@@ -750,23 +748,28 @@ function GroupsTable({
               </th>
               <td className={tdClass}>{g.description || '-'}</td>
               <td className={tdClass}>{counts.get(g.id) ?? 0}</td>
-              <td className={tdActionClass}>
-                <button
-                  type="button"
-                  className={linkButtonClass}
-                  aria-label={t('admin.groups.editNamed', { name: g.name })}
-                  onClick={() => onEdit(g)}
-                >
-                  {t('admin.users.edit')}
-                </button>
-                <button
-                  type="button"
-                  className={linkButtonClass}
-                  aria-label={t('admin.groups.deleteNamed', { name: g.name })}
-                  onClick={() => onDelete(g)}
-                >
-                  {t('admin.groups.delete')}
-                </button>
+              <td className={rowActionsCellClass}>
+                <RowActions
+                  rowName={g.name}
+                  visible={
+                    <Button
+                      size="sm"
+                      aria-label={t('admin.groups.editNamed', { name: g.name })}
+                      onClick={() => onEdit(g)}
+                    >
+                      {t('admin.users.edit')}
+                    </Button>
+                  }
+                  items={[
+                    {
+                      key: 'delete',
+                      label: t('admin.groups.delete'),
+                      ariaLabel: t('admin.groups.deleteNamed', { name: g.name }),
+                      danger: true,
+                      onSelect: () => onDelete(g),
+                    },
+                  ]}
+                />
               </td>
             </tr>
           ))}

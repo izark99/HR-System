@@ -1,5 +1,6 @@
 import { useId, useState, type DragEvent } from 'react';
 import { useTranslation } from 'react-i18next';
+import { Tooltip } from '../../components/Tooltip';
 import { cx } from '../../components/ui';
 import { foldText } from '../../components/select-logic';
 import { NODE_GROUPS, NODE_TYPES, typeKey } from './catalog';
@@ -59,28 +60,33 @@ export function Palette({ onAdd, disabled }: { onAdd: (type: string) => void; di
             <ul className="m-0 flex list-none flex-col gap-1.5 p-0">
               {items.map((s) => (
                 <li key={s.type}>
-                  <button
-                    type="button"
-                    draggable={!disabled}
-                    disabled={disabled}
-                    onDragStart={(e) => onDragStart(e, s.type)}
-                    onClick={() => onAdd(s.type)}
-                    title={t('palette.addHint')}
-                    className={cx(
-                      'flex min-h-target w-full items-stretch gap-2.5 overflow-hidden rounded-card border border-line bg-card text-left',
-                      'hover:border-teal-strong disabled:cursor-not-allowed disabled:text-muted',
-                    )}
+                  <Tooltip
+                    text={`${t(`palette.desc.${typeKey(s.type)}`)}. ${t('palette.addHint')}`}
+                    className="block"
                   >
-                    <span aria-hidden className={cx('w-1.5 shrink-0', GROUP_BAR[s.group])} />
-                    <span className="flex min-w-0 flex-col py-1.5 pr-2">
-                      <span className="text-dense font-semibold text-ink">
-                        {t(`types.node.${typeKey(s.type)}`)}
+                    <button
+                      type="button"
+                      draggable={!disabled}
+                      disabled={disabled}
+                      onDragStart={(e) => onDragStart(e, s.type)}
+                      onClick={() => onAdd(s.type)}
+                      data-palette-item
+                      className={cx(
+                        'flex h-15 w-full items-stretch gap-2.5 overflow-hidden rounded-card border border-line bg-card text-left',
+                        'hover:border-teal-strong disabled:cursor-not-allowed disabled:text-muted',
+                      )}
+                    >
+                      <span aria-hidden className={cx('w-1.5 shrink-0', GROUP_BAR[s.group])} />
+                      <span className="flex min-w-0 flex-1 flex-col justify-center pr-2">
+                        <span className="truncate text-dense font-semibold text-ink">
+                          {t(`types.node.${typeKey(s.type)}`)}
+                        </span>
+                        <span className="truncate text-caption text-muted">
+                          {t(`palette.desc.${typeKey(s.type)}`)}
+                        </span>
                       </span>
-                      <span className="text-caption text-muted">
-                        {t(`palette.desc.${typeKey(s.type)}`)}
-                      </span>
-                    </span>
-                  </button>
+                    </button>
+                  </Tooltip>
                 </li>
               ))}
             </ul>

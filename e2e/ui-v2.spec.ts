@@ -29,14 +29,18 @@ import {
   cardChecks,
   commonChecks,
   denseTableChecks,
+  designerToolbarChecks,
   DESKTOP,
   floatChecks,
   inputChecks,
   labelChecks,
   MOBILE,
   navChecks,
+  paletteChecks,
   pillChecks,
   primaryChecks,
+  rowActionsChecks,
+  rowMenuChecks,
   shot,
   style,
   titleChecks,
@@ -232,7 +236,7 @@ for (const viewport of [DESKTOP, MOBILE]) {
       await uploadFixtures(page);
       await runToResult(page);
       const h1 = page.getByRole('heading', { level: 1 });
-      await expect(h1).toHaveText('Kỳ 09/2026 có 9 nhân viên lệch cần xử lý');
+      await expect(h1).toHaveText('Kỳ 09/2026 có 15 nhân viên cần xử lý');
       // AC-UI-09: exactly one dark card, KPI cards with a 4px top bar and display-xl numbers.
       await commonChecks(page, { darkCards: 1 });
       await titleChecks(page);
@@ -279,8 +283,26 @@ test.describe('admin screens 1280x800', () => {
     await inputChecks(page.locator('main input[type="text"], main [role="combobox"]'));
     await labelChecks(page.locator('main label[for]'));
     await pillChecks(page.getByRole('tab'));
+    // AC-UI-54: shared action column, one line, aligned; menu by keyboard; left menu "Sắp có".
+    const users = page.getByRole('table', { name: 'Danh sách tài khoản' });
+    await rowActionsChecks(users);
+    await soonChecks(page);
     await axe(page, 'admin-users 1280x800');
     await shot(page, '07-admin-users', 'table');
+    await rowMenuChecks(page, users.getByRole('row', { name: /^hr\./ }).first());
+    await commonChecks(page);
+    await axe(page, 'admin-users-row-menu 1280x800');
+    await shot(page, '07-admin-users', 'row-menu-open');
+    await page.keyboard.press('Escape');
+
+    await page.getByRole('tab', { name: /^Nhóm/ }).click();
+    const groups = page.getByRole('table', { name: 'Danh sách nhóm' });
+    await expect(groups).toBeVisible();
+    await rowActionsChecks(groups);
+    await commonChecks(page);
+    await axe(page, 'admin-groups 1280x800');
+    await shot(page, '07-admin-users', 'groups-table');
+    await page.getByRole('tab', { name: /^Tài khoản/ }).click();
 
     // Custom Select open: popover level 2, eyebrow group headers (uppercase allowed there).
     const trigger = page.getByRole('combobox', { name: 'Gán cho' });
@@ -313,8 +335,13 @@ test.describe('admin screens 1280x800', () => {
     await titleChecks(page);
     await cardChecks(page.locator('main [data-card]'));
     await adminTableChecks(page.locator('main table').first());
+    await rowActionsChecks(page.locator('main table').first());
     await axe(page, 'admin-flows 1280x800');
     await shot(page, '09-admin-flows', 'list');
+    await rowMenuChecks(page, page.locator('main tbody tr').first());
+    await axe(page, 'admin-flows-row-menu 1280x800');
+    await shot(page, '09-admin-flows', 'row-menu-open');
+    await page.keyboard.press('Escape');
   });
 
   test('versions: list + diff', async ({ page, supabase }) => {
@@ -324,13 +351,27 @@ test.describe('admin screens 1280x800', () => {
     await commonChecks(page);
     await titleChecks(page);
     await cardChecks(page.locator('main [data-card]'));
-    await adminTableChecks(page.getByRole('table', { name: 'Danh sách phiên bản' }));
+    const table = page.getByRole('table', { name: 'Danh sách phiên bản' });
+    await adminTableChecks(table);
+    await rowActionsChecks(table);
+    // Draft row: visible "Mở Designer" + "Publish" (primary); published row: "Xem trong Designer".
+    const draft = table.getByRole('row', { name: /^v2/ });
+    await expect(draft.getByRole('link', { name: 'Mở Designer v2' })).toBeVisible();
+    await primaryChecks(draft.getByRole('button', { name: 'Publish v2' }));
+    await expect(
+      table.getByRole('row', { name: /^v1/ }).getByRole('link', { name: 'Xem trong Designer v1' }),
+    ).toBeVisible();
     const diff = page.getByRole('region', { name: 'So sánh phiên bản' });
     await expect(diff.getByRole('heading', { name: /^Node/ })).toBeVisible();
     // JSON diff is a code area: 14px.
     expect((await style(diff.locator('td.font-mono').first())).fontSize).toBe('14px');
     await axe(page, 'versions 1280x800');
     await shot(page, '10-versions', 'list-and-diff');
+    const menu = await rowMenuChecks(page, table.getByRole('row', { name: /^v1/ }));
+    await expect(menu.getByRole('menuitem').last()).toHaveAccessibleName('Retire v1');
+    await axe(page, 'versions-row-menu 1280x800');
+    await shot(page, '10-versions', 'row-menu-open');
+    await page.keyboard.press('Escape');
     await diff.scrollIntoViewIfNeeded();
     await shot(page, '10-versions', 'diff');
   });
@@ -358,6 +399,8 @@ test.describe('admin screens 1280x800', () => {
     expect(s.shadow).toBe('none');
     expect((await style(node.locator('p').first())).fontSize).toBe('14px');
     await commonChecks(page);
+    await designerToolbarChecks(page);
+    await paletteChecks(page);
     await axe(page, 'designer-canvas 1280x800', REACT_FLOW_EXCLUDE);
     await shot(page, '11-designer', 'canvas');
 
@@ -418,6 +461,18 @@ const REACT_FLOW_EXCLUDE = [
   { selector: '.react-flow__renderer', reason: 'React Flow canvas markup (library)' },
 ];
 
+/** Left menu (AC-UI-54): "Sắp có" is a small chip on the same line as its label. */
+async function soonChecks(page: Page): Promise<void> {
+  const nav = page.getByRole('navigation', { name: 'Menu Admin' });
+  const items = nav.locator('[aria-disabled="true"]');
+  const n = await items.count();
+  expect(n).toBeGreaterThan(0);
+  for (let i = 0; i < n; i++) {
+    expect((await style(items.nth(i))).height, 'disabled item on one line').toBeLessThanOrEqual(44);
+    expect((await style(items.nth(i).locator('span').last())).radius).toBe('999px');
+  }
+}
+
 async function settleCanvas(page: Page): Promise<void> {
   await page.evaluate(() => new Promise((r) => requestAnimationFrame(() => r(null))));
 }
@@ -432,7 +487,9 @@ test.describe('admin screens at 1024px: no horizontal page scroll (AC-UI-12)', (
       await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
       await expect(page.locator('main table').first()).toBeVisible();
       await commonChecks(page);
+      await rowActionsChecks(page.locator('main table').first());
     }
+    await shot(page, '10-versions', 'list-1024');
   });
 });
 

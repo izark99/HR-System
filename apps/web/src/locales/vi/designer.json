@@ -12,6 +12,11 @@
     "copy": "Sao chép",
     "paste": "Dán",
     "delete": "Xóa",
+    "undoTip": "Hoàn tác (Ctrl+Z)",
+    "redoTip": "Làm lại (Ctrl+Shift+Z hoặc Ctrl+Y)",
+    "copyTip": "Sao chép (Ctrl+C)",
+    "pasteTip": "Dán (Ctrl+V)",
+    "deleteTip": "Xóa mục đang chọn (Delete)",
     "note": "Thêm ghi chú",
     "layout": "Tự sắp xếp",
     "export": "Xuất JSON"

@@ -5,6 +5,7 @@ import { useRef, useState, type FormEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, useNavigate } from '@tanstack/react-router';
 import { DatePicker } from '../../components/DatePicker';
+import { RowActions, rowActionsCellClass, rowActionsHeadClass } from '../../components/RowActions';
 import {
   Button,
   buttonClass,
@@ -536,7 +537,7 @@ export function AdminFlowsPage() {
                     <th scope="col" className={thClass}>
                       {t('admin.flows.versions')}
                     </th>
-                    <th scope="col" className={thClass}>
+                    <th scope="col" className={rowActionsHeadClass}>
                       {t('admin.flows.actions')}
                     </th>
                   </tr>
@@ -557,30 +558,36 @@ export function AdminFlowsPage() {
                       <td className={tdClass}>
                         <VersionList versions={f.versions} />
                       </td>
-                      <td className={cx(tdClass, 'whitespace-nowrap')}>
-                        <Link
-                          to="/admin/flows/$flowCode/versions"
-                          params={{ flowCode: f.code }}
-                          aria-label={t('admin.flows.manageVersionsFor', { name: f.name })}
-                          className={cx(
-                            buttonClass('outline', 'sm'),
-                            'no-underline hover:text-ink',
-                          )}
-                        >
-                          {t('admin.flows.manageVersions')}
-                        </Link>
-                        <Link
-                          to="/admin/flows/$flowCode/designer"
-                          params={{ flowCode: f.code }}
-                          search={{}}
-                          aria-label={t('admin.flows.openDesignerFor', { name: f.name })}
-                          className={cx(
-                            buttonClass('outline', 'sm'),
-                            'ml-2 no-underline hover:text-ink',
-                          )}
-                        >
-                          {t('admin.flows.openDesigner')}
-                        </Link>
+                      <td className={rowActionsCellClass}>
+                        <RowActions
+                          rowName={f.name}
+                          visible={
+                            <Link
+                              to="/admin/flows/$flowCode/versions"
+                              params={{ flowCode: f.code }}
+                              aria-label={t('admin.flows.openVersionsFor', { name: f.name })}
+                              className={cx(
+                                buttonClass('outline', 'sm'),
+                                'no-underline hover:text-ink',
+                              )}
+                            >
+                              {t('admin.flows.openVersions')}
+                            </Link>
+                          }
+                          items={[
+                            {
+                              key: 'designer',
+                              label: t('admin.versions.openDesigner'),
+                              ariaLabel: t('admin.flows.openDesignerFor', { name: f.name }),
+                              onSelect: () =>
+                                void navigate({
+                                  to: '/admin/flows/$flowCode/designer',
+                                  params: { flowCode: f.code },
+                                  search: {},
+                                }),
+                            },
+                          ]}
+                        />
                       </td>
                     </tr>
                   ))}

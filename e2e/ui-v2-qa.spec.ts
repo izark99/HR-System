@@ -52,25 +52,19 @@ test.describe('result conclusion (AC-UI-09)', () => {
     expect(persisted).not.toContain('Giả 1');
   });
 
-  test.describe('KNOWN BUG', () => {
-    // ResultPage.tsx picks the "matched" title from `mismatched === 0` only: an employee present
-    // in one file only still gets "khớp toàn bộ N nhân viên", while the KPI card shows 1 and the
-    // dark card says "Cần xử lý 1 nhân viên" on the same screen.
-    test.fail(
-      'no mismatch but one employee only in payroll: title must not say "khớp toàn bộ"',
-      async ({ page }) => {
-        test.setTimeout(120_000);
-        await openFlow(page);
-        await payrollInput(page).setInputFiles([payroll('luong.xlsx', employees(5))]);
-        await timesheetInput(page).setInputFiles([timesheet('cham_cong.xlsx', employees(4))]);
-        await expect(runButton(page)).toBeEnabled();
-        await runToResult(page);
-        await expect(page.getByTestId('kpi').nth(2).locator('dd')).toHaveText('1');
-        await expect(page.getByTestId('conclusion')).toContainText('Cần xử lý 1 nhân viên');
-        await expect(page.getByRole('heading', { level: 1 })).not.toContainText('khớp toàn bộ', {
-          timeout: 2_000,
-        });
-      },
+  test('no mismatch but one employee only in payroll: title counts everyone to handle (AC-UI-51)', async ({
+    page,
+  }) => {
+    test.setTimeout(120_000);
+    await openFlow(page);
+    await payrollInput(page).setInputFiles([payroll('luong.xlsx', employees(5))]);
+    await timesheetInput(page).setInputFiles([timesheet('cham_cong.xlsx', employees(4))]);
+    await expect(runButton(page)).toBeEnabled();
+    await runToResult(page);
+    await expect(page.getByTestId('kpi').nth(2).locator('dd')).toHaveText('1');
+    await expect(page.getByTestId('conclusion')).toContainText('Cần xử lý 1 nhân viên');
+    await expect(page.getByRole('heading', { level: 1 })).toHaveText(
+      'Kỳ 09/2026 có 1 nhân viên cần xử lý',
     );
   });
 });

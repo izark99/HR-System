@@ -141,7 +141,7 @@ async function style(loc: Locator) {
  * - no text in weight 800; h1–h3 in 600;
  * - uppercase only on eyebrows and Select group headers;
  * - no gradient background anywhere;
- * - at most one primary (teal) button per region (card/dialog/toolbar/form);
+ * - at most one primary (teal) button per region (table row/card/dialog/toolbar/form);
  * - no horizontal page scroll.
  */
 export async function commonChecks(page: Page, opts: { darkCards?: number } = {}): Promise<void> {
@@ -184,8 +184,11 @@ export async function commonChecks(page: Page, opts: { darkCards?: number } = {}
         !el.closest('[role="grid"]') // month/day cells: the selected cell is teal by spec
       ) {
         const region =
-          el.closest('dialog, [role="dialog"], [role="toolbar"], section, article, form, header') ??
-          document.body;
+          // A table row is its own region (AC-UI-54: a draft row of the Version table has its own
+          // "Publish" primary next to the row's other actions).
+          el.closest(
+            'tr, dialog, [role="dialog"], [role="toolbar"], section, article, form, header',
+          ) ?? document.body;
         out.primaries.set(region, [...(out.primaries.get(region) ?? []), name(el)]);
       }
       if (!interactive && cs.backgroundColor === 'rgb(31, 42, 68)' && el.closest('main')) {
@@ -353,6 +356,178 @@ export async function pillChecks(pills: Locator): Promise<void> {
   for (let i = 0; i < n; i++) {
     expect((await style(pills.nth(i))).radius).toBe('999px');
   }
+}
+
+/**
+ * Action column of an Admin table (AC-UI-54): every row has the same layout (visible small
+ * button(s) + "Thao tác khác" menu button) on ONE line, the menu buttons line up in a column,
+ * small buttons are 36px; chips and buttons do not wrap.
+ */
+export async function rowActionsChecks(table: Locator): Promise<void> {
+  const report = await table.evaluate((t) => {
+    const rows = Array.from(t.querySelectorAll('tbody tr'));
+    return {
+      rows: rows.length,
+      cells: rows.map((r) => {
+        const box = r.querySelector('[data-row-actions]');
+        const menu = box?.querySelector('[data-menu-button]');
+        const buttons = box ? Array.from(box.querySelectorAll('a, button')) : [];
+        const tops = buttons.map((b) => Math.round(b.getBoundingClientRect().top));
+        return {
+          has: !!box && !!menu,
+          menuLabel: menu?.getAttribute('aria-label') ?? '',
+          menuRight: menu ? Math.round(menu.getBoundingClientRect().right) : -1,
+          oneLine: tops.every((y) => Math.abs(y - tops[0]!) <= 1),
+          heights: buttons.map((b) => Math.round(b.getBoundingClientRect().height)),
+        };
+      }),
+      wrapped: Array.from(t.querySelectorAll('[data-chip], button, a')).flatMap((el) => {
+        const cs = getComputedStyle(el);
+        const lh = parseFloat(cs.lineHeight) || parseFloat(cs.fontSize) * 1.5;
+        const r = el.getBoundingClientRect();
+        const pad = parseFloat(cs.paddingTop) + parseFloat(cs.paddingBottom);
+        const borders = parseFloat(cs.borderTopWidth) + parseFloat(cs.borderBottomWidth);
+        // Taller than one line of text (+ padding) = the label wrapped. Buttons are min 36px tall.
+        const oneLine = Math.max(lh + pad + borders, 36);
+        return r.height > oneLine + 2
+          ? [`${el.tagName} "${el.textContent?.trim()}" ${r.height}`]
+          : [];
+      }),
+    };
+  });
+  expect(report.rows, 'table rows').toBeGreaterThan(0);
+  for (const c of report.cells) {
+    expect(c.has, 'row has the shared action cell').toBe(true);
+    expect(c.menuLabel).toMatch(/^Thao tác khác cho .+/);
+    expect(c.oneLine, `actions on one line (${c.menuLabel})`).toBe(true);
+    for (const h of c.heights) expect(h, `small button height (${c.menuLabel})`).toBe(36);
+  }
+  const rights = new Set(report.cells.map((c) => c.menuRight));
+  expect(rights.size, 'menu buttons aligned in one column').toBe(1);
+  expect(report.wrapped, 'chip/button label wrapped').toEqual([]);
+}
+
+/**
+ * APG menu button keyboard model + look of the open menu (AC-UI-54): Enter opens on the first
+ * item, arrows move (wrapping), Home/End, Escape closes and returns focus, ArrowDown on the
+ * button opens, Tab closes. Danger items are last and coral. Returns with the menu open.
+ */
+export async function rowMenuChecks(page: Page, row: Locator): Promise<Locator> {
+  const button = row.locator('[data-menu-button]');
+  const menu = row.getByRole('menu');
+  await button.focus();
+  await page.keyboard.press('Enter');
+  await expect(menu).toBeVisible();
+  const items = menu.getByRole('menuitem');
+  const n = await items.count();
+  expect(n).toBeGreaterThan(0);
+  await expect(items.first()).toBeFocused();
+  await page.keyboard.press('ArrowDown');
+  await expect(items.nth(n > 1 ? 1 : 0)).toBeFocused();
+  await page.keyboard.press('End');
+  await expect(items.last()).toBeFocused();
+  await page.keyboard.press('ArrowDown');
+  await expect(items.first()).toBeFocused();
+  await page.keyboard.press('ArrowUp');
+  await expect(items.last()).toBeFocused();
+  await page.keyboard.press('Home');
+  await expect(items.first()).toBeFocused();
+  await page.keyboard.press('Escape');
+  await expect(menu).toHaveCount(0);
+  await expect(button).toBeFocused();
+  await expect(button).toHaveAttribute('aria-expanded', 'false');
+  await page.keyboard.press('Space');
+  await expect(items.first()).toBeFocused();
+  await page.keyboard.press('Tab');
+  await expect(menu).toHaveCount(0);
+  await button.focus();
+  await page.keyboard.press('ArrowDown');
+  await expect(menu).toBeVisible();
+  await expect(button).toHaveAttribute('aria-expanded', 'true');
+  await floatChecks(menu);
+  // Danger items: last, coral text.
+  const colors = await items.evaluateAll((els) => els.map((e) => getComputedStyle(e).color));
+  const firstDanger = colors.indexOf(C.coralText);
+  if (firstDanger >= 0) {
+    expect(
+      colors.slice(firstDanger).every((c) => c === C.coralText),
+      'danger items last',
+    ).toBe(true);
+  }
+  for (let i = 0; i < n; i++) {
+    expect((await style(items.nth(i))).height, 'menu item target').toBeGreaterThanOrEqual(44);
+  }
+  return menu;
+}
+
+/**
+ * Designer top bar (AC-UI-52): title and toolbar on one row at 1280px; toolbar buttons 36px;
+ * undo/redo/copy/paste/delete are icon buttons with an accessible name and a tooltip.
+ */
+export async function designerToolbarChecks(page: Page): Promise<void> {
+  const toolbar = page.getByRole('toolbar', { name: 'Thao tác trên flow' });
+  const h1 = page.getByRole('heading', { level: 1 });
+  const tb = (await toolbar.boundingBox())!;
+  const hb = (await h1.boundingBox())!;
+  expect(tb.height, 'toolbar on one row').toBeLessThanOrEqual(40);
+  expect(
+    Math.abs(hb.y + hb.height / 2 - (tb.y + tb.height / 2)),
+    'title and toolbar row',
+  ).toBeLessThan(6);
+  const buttons = toolbar.getByRole('button');
+  const n = await buttons.count();
+  for (let i = 0; i < n; i++) {
+    expect(Math.round((await style(buttons.nth(i))).height)).toBe(36);
+  }
+  for (const name of ['Hoàn tác', 'Làm lại', 'Sao chép', 'Dán', 'Xóa']) {
+    const b = toolbar.getByRole('button', { name, exact: true });
+    await expect(b).toHaveCount(1);
+    expect((await b.textContent())?.trim(), `${name}: icon only`).toBe('');
+    expect(Math.round((await style(b)).width), `${name}: square`).toBe(36);
+    await b.locator('..').hover();
+    await expect(page.locator('[data-tooltip]')).toContainText(name);
+  }
+  await page.mouse.move(640, 500);
+  // Spacing between buttons (target spacing): at least 4px.
+  const gaps = await toolbar.evaluate((t) => {
+    const bs = Array.from(t.querySelectorAll('button')).map((b) => b.getBoundingClientRect());
+    return bs.slice(1).map((b, i) => b.left - bs[i]!.right);
+  });
+  for (const g of gaps) expect(g).toBeGreaterThanOrEqual(4);
+}
+
+/**
+ * Node palette (AC-UI-53): all items the same size; name and description one line each, cut
+ * with "…"; the description is part of the accessible name and shows in a tooltip.
+ */
+export async function paletteChecks(page: Page): Promise<void> {
+  const items = page.locator('[data-palette-item]');
+  const report = await items.evaluateAll((els) =>
+    els.map((el) => {
+      const r = el.getBoundingClientRect();
+      const lines = Array.from(el.querySelectorAll('span.truncate')).map((s) => {
+        const cs = getComputedStyle(s);
+        return {
+          oneLine: s.getBoundingClientRect().height <= parseFloat(cs.lineHeight) + 1,
+          ellipsis: cs.textOverflow === 'ellipsis' && cs.whiteSpace === 'nowrap',
+        };
+      });
+      return { w: Math.round(r.width), h: Math.round(r.height), lines };
+    }),
+  );
+  expect(report.length).toBeGreaterThan(5);
+  expect(new Set(report.map((r) => r.w)).size, 'same width').toBe(1);
+  expect(new Set(report.map((r) => r.h)).size, 'same height').toBe(1);
+  for (const r of report) {
+    expect(r.lines).toHaveLength(2);
+    for (const l of r.lines) expect(l).toEqual({ oneLine: true, ellipsis: true });
+  }
+  const first = items.first();
+  const desc = (await first.locator('span.truncate').nth(1).textContent())!.trim();
+  await expect(first).toHaveAccessibleName(new RegExp(desc.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
+  await first.hover();
+  await expect(page.locator('[data-tooltip]')).toContainText(desc);
+  await page.mouse.move(640, 500);
 }
 
 export { style };

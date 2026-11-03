@@ -348,3 +348,21 @@ export async function optionTexts(field: Locator): Promise<string[]> {
   await trigger.press('Escape');
   return texts.map((t) => t.trim());
 }
+
+/**
+ * Admin tables (AC-UI-54): the less frequent row actions sit in the "Thao tác khác" menu. Opens
+ * the menu of `row` (a row locator) and returns the menu item with the given accessible name.
+ */
+export async function rowMenuItem(row: Locator, name: string | RegExp): Promise<Locator> {
+  const menu = row.getByRole('menu');
+  if (!(await menu.isVisible())) {
+    await row.getByRole('button', { name: /^Thao tác khác cho / }).click();
+    await expect(menu).toBeVisible();
+  }
+  return menu.getByRole('menuitem', { name, exact: typeof name === 'string' });
+}
+
+/** Opens the row menu and chooses an item (see `rowMenuItem`). */
+export async function rowAction(row: Locator, name: string | RegExp): Promise<void> {
+  await (await rowMenuItem(row, name)).click();
+}

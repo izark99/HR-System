@@ -2,6 +2,12 @@ import { Link, useParams } from '@tanstack/react-router';
 import { useCallback, useEffect, useId, useMemo, useState, type FormEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import { DatePicker } from '../../../components/DatePicker';
+import type { MenuItem } from '../../../components/Menu';
+import {
+  RowActions,
+  rowActionsCellClass,
+  rowActionsHeadClass,
+} from '../../../components/RowActions';
 import { Select } from '../../../components/Select';
 import {
   ArrowLeftIcon,
@@ -220,6 +226,53 @@ export function FlowVersionsPage() {
   const action = (label: string, v: AdminVersionDetail) =>
     t('admin.versions.actionFor', { action: label, version: v.versionNo });
 
+  /** Row menu (AC-UI-54): everything but the visible buttons; destructive items last. */
+  const versionMenu = (v: AdminVersionDetail): MenuItem[] => {
+    const item = (key: string, label: string, onSelect: () => void, danger = false): MenuItem => ({
+      key,
+      label,
+      ariaLabel: action(label, v),
+      onSelect,
+      danger,
+    });
+    const items: MenuItem[] = [];
+    if (v.status !== 'draft') {
+      items.push(item('clone', t('admin.versions.clone'), () => void cloneFrom(v)));
+    }
+    if (v.status === 'published') {
+      items.push(
+        item('editEnd', t('admin.versions.editEnd'), () => setDialog({ kind: 'end', version: v })),
+      );
+    }
+    if (versions.length > 1) {
+      items.push(item('compare', t('admin.versions.compare'), () => compareWithPrevious(v)));
+    }
+    if (v.status !== 'draft') {
+      items.push(item('export', t('admin.versions.export'), () => exportJson(v)));
+    }
+    if (v.status === 'published') {
+      items.push(
+        item(
+          'retire',
+          t('admin.versions.retire'),
+          () => setDialog({ kind: 'retire', version: v }),
+          true,
+        ),
+      );
+    }
+    if (v.status === 'draft') {
+      items.push(
+        item(
+          'discard',
+          t('admin.versions.discard'),
+          () => setDialog({ kind: 'discard', version: v }),
+          true,
+        ),
+      );
+    }
+    return items;
+  };
+
   return (
     <>
       <BackLink />
@@ -231,6 +284,7 @@ export function FlowVersionsPage() {
             ? t('admin.versions.titleActive', { name: data.flow.name, version: current.versionNo })
             : t('admin.versions.titleNone', { name: data.flow.name })
         }
+        oneLineTitle
         subtitle={t('admin.versions.subtitle')}
       />
 
@@ -262,7 +316,11 @@ export function FlowVersionsPage() {
               <tr>
                 {(['version', 'status', 'range', 'note', 'published', 'actions'] as const).map(
                   (c) => (
-                    <th key={c} scope="col" className={thClass}>
+                    <th
+                      key={c}
+                      scope="col"
+                      className={c === 'actions' ? rowActionsHeadClass : thClass}
+                    >
                       {t(`admin.versions.col.${c}`)}
                     </th>
                   ),
@@ -288,11 +346,15 @@ export function FlowVersionsPage() {
                         {isCurrent && <Chip tone="teal">{t('admin.versions.current')}</Chip>}
                       </span>
                     </td>
-                    <td className={tdClass}>{rangeText(t, v.effectiveFrom, v.effectiveTo)}</td>
-                    <td className={cx(tdClass, 'max-w-70 break-words whitespace-pre-line')}>
+                    <td className={cx(tdClass, 'min-w-44')}>
+                      {rangeText(t, v.effectiveFrom, v.effectiveTo)}
+                    </td>
+                    <td
+                      className={cx(tdClass, 'max-w-80 min-w-56 break-words whitespace-pre-line')}
+                    >
                       {v.changeNote || '-'}
                     </td>
-                    <td className={cx(tdClass, 'text-caption')}>
+                    <td className={cx(tdClass, 'min-w-44 text-caption')}>
                       {v.publishedAt
                         ? v.publishedBy
                           ? t('admin.versions.publishedBy', {
@@ -302,104 +364,53 @@ export function FlowVersionsPage() {
                           : formatDateTime(v.publishedAt)
                         : '-'}
                     </td>
-                    <td className={tdClass}>
-                      <div className="flex flex-wrap gap-2">
-                        {v.status === 'draft' && (
-                          <>
+                    <td className={rowActionsCellClass}>
+                      <RowActions
+                        rowName={`v${v.versionNo}`}
+                        visible={
+                          v.status === 'draft' ? (
+                            <>
+                              <Link
+                                to="/admin/flows/$flowCode/designer"
+                                params={{ flowCode }}
+                                search={{}}
+                                aria-label={action(t('admin.versions.openDesigner'), v)}
+                                className={cx(
+                                  buttonClass('outline', 'sm'),
+                                  'no-underline hover:text-ink',
+                                )}
+                              >
+                                {t('admin.versions.openDesigner')}
+                              </Link>
+                              <Button
+                                variant="primary"
+                                size="sm"
+                                aria-label={action(t('admin.versions.publish'), v)}
+                                onClick={() => {
+                                  setMessage(null);
+                                  setDialog({ kind: 'publish', version: v });
+                                }}
+                              >
+                                {t('admin.versions.publish')}
+                              </Button>
+                            </>
+                          ) : (
                             <Link
                               to="/admin/flows/$flowCode/designer"
                               params={{ flowCode }}
-                              search={{}}
-                              aria-label={action(t('admin.versions.openDesigner'), v)}
+                              search={{ version: v.id }}
+                              aria-label={action(t('admin.versions.viewInDesigner'), v)}
                               className={cx(
                                 buttonClass('outline', 'sm'),
                                 'no-underline hover:text-ink',
                               )}
                             >
-                              {t('admin.versions.openDesigner')}
+                              {t('admin.versions.viewInDesigner')}
                             </Link>
-                            <Button
-                              variant="primary"
-                              size="sm"
-                              aria-label={action(t('admin.versions.publish'), v)}
-                              onClick={() => {
-                                setMessage(null);
-                                setDialog({ kind: 'publish', version: v });
-                              }}
-                            >
-                              {t('admin.versions.publish')}
-                            </Button>
-                            <Button
-                              variant="danger"
-                              size="sm"
-                              aria-label={action(t('admin.versions.discard'), v)}
-                              onClick={() => setDialog({ kind: 'discard', version: v })}
-                            >
-                              {t('admin.versions.discard')}
-                            </Button>
-                          </>
-                        )}
-                        {v.status !== 'draft' && (
-                          <Link
-                            to="/admin/flows/$flowCode/designer"
-                            params={{ flowCode }}
-                            search={{ version: v.id }}
-                            aria-label={action(t('admin.versions.viewInDesigner'), v)}
-                            className={cx(
-                              buttonClass('outline', 'sm'),
-                              'no-underline hover:text-ink',
-                            )}
-                          >
-                            {t('admin.versions.viewInDesigner')}
-                          </Link>
-                        )}
-                        {v.status !== 'draft' && (
-                          <Button
-                            size="sm"
-                            aria-label={action(t('admin.versions.clone'), v)}
-                            onClick={() => void cloneFrom(v)}
-                          >
-                            {t('admin.versions.clone')}
-                          </Button>
-                        )}
-                        {v.status === 'published' && (
-                          <>
-                            <Button
-                              size="sm"
-                              aria-label={action(t('admin.versions.editEnd'), v)}
-                              onClick={() => setDialog({ kind: 'end', version: v })}
-                            >
-                              {t('admin.versions.editEnd')}
-                            </Button>
-                            <Button
-                              variant="danger"
-                              size="sm"
-                              aria-label={action(t('admin.versions.retire'), v)}
-                              onClick={() => setDialog({ kind: 'retire', version: v })}
-                            >
-                              {t('admin.versions.retire')}
-                            </Button>
-                          </>
-                        )}
-                        {versions.length > 1 && (
-                          <Button
-                            size="sm"
-                            aria-label={action(t('admin.versions.compare'), v)}
-                            onClick={() => compareWithPrevious(v)}
-                          >
-                            {t('admin.versions.compare')}
-                          </Button>
-                        )}
-                        {v.status !== 'draft' && (
-                          <Button
-                            size="sm"
-                            aria-label={action(t('admin.versions.export'), v)}
-                            onClick={() => exportJson(v)}
-                          >
-                            {t('admin.versions.export')}
-                          </Button>
-                        )}
-                      </div>
+                          )
+                        }
+                        items={versionMenu(v)}
+                      />
                     </td>
                   </tr>
                 );

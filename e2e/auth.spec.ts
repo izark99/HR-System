@@ -186,7 +186,9 @@ test.describe('signed in as Admin', () => {
 
     // Own row has reset/lock too (no self-action guard, MEMORY 2026-10-26 18:09).
     const own = table.getByRole('row', { name: /^admin/ });
-    await expect(own.getByRole('button', { name: /Khóa|Reset/ })).toHaveCount(2);
+    await own.getByRole('button', { name: 'Thao tác khác cho admin' }).click();
+    await expect(own.getByRole('menuitem', { name: /Khóa|Reset/ })).toHaveCount(2);
+    await page.keyboard.press('Escape');
 
     // Tabs follow the APG pattern (arrow keys).
     await page.getByRole('tab', { name: /Tài khoản/ }).focus();

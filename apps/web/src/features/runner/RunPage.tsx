@@ -182,6 +182,7 @@ export function RunPage() {
           <PageHeader
             eyebrow={state.summary.category}
             title={state.summary.name}
+            oneLineTitle
             subtitle={
               state.summary.instructions ? (
                 <>

@@ -327,11 +327,14 @@ export function ResultPage() {
 
   const cmp = summary.compare;
   const period = periodOf(state, state.run.params);
+  // "khớp toàn bộ" only when nothing needs attention (MEMORY 2026-11-03 10:49): N counts the same
+  // employees as the dark conclusion card (differ + only in one file).
+  const pending = cmp ? cmp.mismatched + cmp.onlyLeft + cmp.onlyRight : 0;
   const title = cmp
-    ? cmp.mismatched > 0
+    ? pending > 0
       ? period
-        ? t('result.titleMismatched', { period, count: cmp.mismatched })
-        : t('result.titleMismatchedNoPeriod', { count: cmp.mismatched })
+        ? t('result.titlePending', { period, count: pending })
+        : t('result.titlePendingNoPeriod', { count: pending })
       : period
         ? t('result.titleMatchedCount', { period, count: cmp.matched })
         : t('result.titleMatchedCountNoPeriod', { count: cmp.matched })

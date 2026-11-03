@@ -11,7 +11,7 @@
  */
 import { mkdirSync } from 'node:fs';
 import { join } from 'node:path';
-import { expect, test, type Locator, type Page } from './fixtures';
+import { ADMIN, expect, test, type Locator, type Page } from './fixtures';
 import { runToResult, uploadFixtures } from './helpers';
 import { DESKTOP, MOBILE, settle, SHOTS, shot } from './ui-v2-checks';
 
@@ -102,8 +102,11 @@ async function measure(el: Locator): Promise<Measure> {
           const text = upper ? g.text.toLocaleUpperCase('vi') : g.text;
           const m = ctx.measureText(text);
           // CSS line box: top of the line = group top snapped to the source's line grid.
+          // Line boxes start at the content box (the one-line title has padding that keeps
+          // the marks inside its clipping box).
+          const contentTop = srcBox.top + parseFloat(cs.paddingTop) + parseFloat(cs.borderTopWidth);
           const lineTop =
-            srcBox.top + Math.round((g.top - srcBox.top) / lh) * lh - box.top + 2 * PAD;
+            contentTop + Math.round((g.top - contentTop) / lh) * lh - box.top + 2 * PAD;
           const content = m.fontBoundingBoxAscent + m.fontBoundingBoxDescent;
           const baseline = lineTop + (lh - content) / 2 + m.fontBoundingBoxAscent;
           ctx.fillStyle = '#000';
@@ -121,7 +124,10 @@ async function measure(el: Locator): Promise<Measure> {
         });
     }
 
-    const eyebrow = h.parentElement?.querySelector('[data-eyebrow]');
+    // The one-line title sits in a tooltip wrapper: the eyebrow is a sibling of that wrapper.
+    const eyebrow =
+      h.parentElement?.querySelector('[data-eyebrow]') ??
+      h.parentElement?.parentElement?.querySelector(':scope > [data-eyebrow]');
     const all = [...(eyebrow ? layers(eyebrow, 'eyebrow') : []), ...layers(h, 'h1')];
     const INK = 96;
     const pairs = all.slice(1).map((lower, i) => {
@@ -164,14 +170,19 @@ async function measure(el: Locator): Promise<Measure> {
       };
     });
 
-    const inkTop = Math.min(...all.map((r) => r.inkTop)) + box.top;
-    const inkBottom = Math.max(...all.map((r) => r.inkBottom)) + box.top;
+    // The title's own box only has to hold the title's ink; ancestors hold the eyebrow too.
+    const own = all.filter((r) => r.name.startsWith('h1'));
+    const band = (rows: typeof all) => ({
+      top: Math.min(...rows.map((r) => r.inkTop)) + box.top,
+      bottom: Math.max(...rows.map((r) => r.inkBottom)) + box.top,
+    });
     const clipped: string[] = [];
     for (let a: Element | null = h; a && a !== document.documentElement; a = a.parentElement) {
       const acs = getComputedStyle(a);
       if (acs.overflowX === 'visible' && acs.overflowY === 'visible') continue;
+      const ink = band(a === h ? own : all);
       const r = a.getBoundingClientRect();
-      if (r.top > inkTop || r.bottom < inkBottom) {
+      if (r.top > ink.top || r.bottom < ink.bottom) {
         clipped.push(`${a.tagName.toLowerCase()}.${a.className} overflow ${acs.overflow}`);
       }
     }
@@ -218,11 +229,19 @@ async function crop(page: Page, name: string): Promise<void> {
   });
 }
 
-async function checkTitle(page: Page, name: string, minLines: number): Promise<void> {
+/** `lines`: exact number of title lines, or a minimum (`{ min }`) for wrapping titles. */
+async function checkTitle(
+  page: Page,
+  name: string,
+  lines: number | { min: number },
+): Promise<void> {
   const m = await measure(page.getByRole('heading', { level: 1 }));
   test.info().annotations.push({ type: `diacritics ${name}`, description: report(m) });
   console.log(`[ui-v2 diacritics] ${name}\n${report(m)}`);
-  expect(m.rows.filter((r) => r.name.startsWith('h1')).length).toBeGreaterThanOrEqual(minLines);
+  const count = m.rows.filter((r) => r.name.startsWith('h1')).length;
+  if (typeof lines === 'number') expect(count).toBe(lines);
+  else expect(count).toBeGreaterThanOrEqual(lines.min);
+  expect(m.lineHeight, 'title line height = font size (48/48, 32/32)').toBe(m.fontSize);
   expect(m.clipped, 'marks clipped by overflow').toEqual([]);
   for (const p of m.pairs) {
     expect(p.sharedPixels, `${p.rows}: glyphs overlap`).toBe(0);
@@ -230,10 +249,43 @@ async function checkTitle(page: Page, name: string, minLines: number): Promise<v
   }
 }
 
+/**
+ * The h1 is cut with an ellipsis (one line), keeps the full name for assistive tech, and shows
+ * the full name in a tooltip on hover and on keyboard focus.
+ */
+async function checkCut(page: Page, full: string): Promise<void> {
+  const h1 = page.getByRole('heading', { level: 1 });
+  await expect(h1).toHaveAccessibleName(full);
+  const s = await h1.evaluate((el) => {
+    const cs = getComputedStyle(el);
+    return {
+      cut: el.scrollWidth > el.clientWidth,
+      ellipsis: cs.textOverflow,
+      wrap: cs.whiteSpace,
+      tabIndex: (el as HTMLElement).tabIndex,
+    };
+  });
+  expect(s).toEqual({ cut: true, ellipsis: 'ellipsis', wrap: 'nowrap', tabIndex: 0 });
+  const tip = page.locator('[data-tooltip]');
+  await h1.hover();
+  await expect(tip).toHaveText(full);
+  await page.mouse.move(0, 0);
+  await expect(tip).toHaveCount(0);
+  await h1.focus();
+  // Playwright focus() does not set :focus-visible; a Tab from the previous element does.
+  await page.keyboard.press('Shift+Tab');
+  await page.keyboard.press('Tab');
+  await expect(h1).toBeFocused();
+  await expect(tip).toHaveText(full);
+  await expect(tip).toBeInViewport();
+  await page.keyboard.press('Escape');
+  await expect(tip).toHaveCount(0);
+}
+
 for (const viewport of [DESKTOP, MOBILE]) {
   const size = `${viewport.width}x${viewport.height}`;
 
-  test.describe(`two-line titles with Vietnamese marks ${size}`, () => {
+  test.describe(`titles with Vietnamese marks ${size}`, () => {
     test.use({ viewport });
 
     test('run page: acceptance flow name as h1', async ({ page }) => {
@@ -242,24 +294,22 @@ for (const viewport of [DESKTOP, MOBILE]) {
         'Đối chiếu bảng lương – chấm công',
       );
       await crop(page, 'run-title');
-      await checkTitle(page, `run ${size}`, viewport === MOBILE ? 2 : 1);
+      // A user-given name stays on one line (AC-UI-50), cut with "…" when it does not fit.
+      await checkTitle(page, `run ${size}`, 1);
+      if (viewport === MOBILE) await checkCut(page, 'Đối chiếu bảng lương – chấm công');
     });
 
-    test.describe('KNOWN BUG', () => {
-      // display-lg uses line-height = font size (48/48, 32/32): a descender or dot below on one
-      // line (g, ị) runs into the hook/circumflex of a capital on the next line (Ủ, Ấ). Measured
-      // overlap: 13 shared pixels, same-column gap -7px (1280) and -8px (390).
-      test.fail(
-        'run page: long Vietnamese flow name wraps without glyph collisions',
-        async ({ page, supabase }) => {
-          supabase.flows[0]!.name = LONG_NAME;
-          await page.goto('/run/payroll-timesheet');
-          await expect(page.getByRole('heading', { level: 1 })).toHaveText(LONG_NAME);
-          await shot(page, '13-diacritics', 'run-long-title');
-          await crop(page, 'run-long-title');
-          await checkTitle(page, `run long name ${size}`, 2);
-        },
-      );
+    test('run page: long Vietnamese flow name is one line, cut with "…", full name on hover/focus (AC-UI-50)', async ({
+      page,
+      supabase,
+    }) => {
+      supabase.flows[0]!.name = LONG_NAME;
+      await page.goto('/run/payroll-timesheet');
+      await expect(page.getByRole('heading', { level: 1, name: LONG_NAME })).toBeVisible();
+      await shot(page, '13-diacritics', 'run-long-title');
+      await crop(page, 'run-long-title');
+      await checkTitle(page, `run long name ${size}`, 1);
+      await checkCut(page, LONG_NAME);
     });
 
     test('result page: conclusion title', async ({ page }) => {
@@ -267,11 +317,46 @@ for (const viewport of [DESKTOP, MOBILE]) {
       await uploadFixtures(page);
       await runToResult(page);
       await expect(page.getByRole('heading', { level: 1 })).toHaveText(
-        'Kỳ 09/2026 có 9 nhân viên lệch cần xử lý',
+        'Kỳ 09/2026 có 15 nhân viên cần xử lý',
       );
       await shot(page, '13-diacritics', 'result-title');
       await crop(page, 'result-title');
-      await checkTitle(page, `result ${size}`, viewport === MOBILE ? 2 : 1);
+      // Not a user-given name: the conclusion sentence may wrap.
+      await checkTitle(page, `result ${size}`, viewport === MOBILE ? { min: 2 } : 1);
     });
   });
 }
+
+test.describe('admin title with a user-given name 1280x800', () => {
+  test.use({ viewport: DESKTOP, signedInAs: ADMIN });
+
+  test('versions page: long flow name in the title is one line, cut (AC-UI-50)', async ({
+    page,
+    supabase,
+  }) => {
+    supabase.flows[0]!.name = LONG_NAME;
+    await page.goto('/admin/flows/payroll-timesheet/versions');
+    const title = `${LONG_NAME}: đang áp dụng v3`;
+    await expect(page.getByRole('heading', { level: 1, name: title })).toBeVisible();
+    await crop(page, 'versions-long-title');
+    await checkTitle(page, 'versions long name 1280x800', 1);
+    await checkCut(page, title);
+  });
+
+  test('designer: long flow name in the top bar is one line, cut, toolbar stays on the row', async ({
+    page,
+    supabase,
+  }) => {
+    supabase.flows[0]!.name = LONG_NAME;
+    await page.goto('/admin/flows/payroll-timesheet/designer');
+    const h1 = page.getByRole('heading', { level: 1 });
+    await expect(h1).toContainText(LONG_NAME);
+    const name = h1.locator('[data-one-line]');
+    await expect(name).toHaveAttribute('data-cut', 'true');
+    const toolbar = page.getByRole('toolbar', { name: 'Thao tác trên flow' });
+    const [hb, tb] = [await h1.boundingBox(), await toolbar.boundingBox()];
+    expect(Math.abs(hb!.y + hb!.height / 2 - (tb!.y + tb!.height / 2))).toBeLessThan(6);
+    await name.hover();
+    await expect(page.locator('[data-tooltip]')).toHaveText(LONG_NAME);
+  });
+});

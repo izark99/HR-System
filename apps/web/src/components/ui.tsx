@@ -1,4 +1,11 @@
-import type { ButtonHTMLAttributes, ReactNode } from 'react';
+import {
+  useLayoutEffect,
+  useRef,
+  useState,
+  type ButtonHTMLAttributes,
+  type ReactNode,
+} from 'react';
+import { Tooltip } from './Tooltip';
 
 /** Small set of primitives implementing spec §25.3 on top of the theme tokens in index.css. */
 
@@ -57,7 +64,7 @@ export const denseInputClass =
  */
 export function navItemClass(active: boolean): string {
   return cx(
-    'flex min-h-target items-center rounded-input border-l-3 px-3.5 text-body no-underline',
+    'flex min-h-target items-center rounded-input border-l-3 px-3.5 text-body whitespace-nowrap no-underline',
     active
       ? 'border-teal-strong bg-teal-tint font-semibold text-teal-strong hover:text-teal-strong'
       : 'border-transparent text-ink-soft hover:bg-neutral hover:text-ink',
@@ -88,7 +95,7 @@ export const tdClass = 'border-b border-line px-4 py-3 align-top';
 export const tdActionClass = 'border-b border-line px-2 py-1 align-middle';
 
 const buttonBase =
-  'inline-flex shrink-0 items-center justify-center gap-2 rounded-card ' +
+  'inline-flex shrink-0 items-center justify-center gap-2 rounded-card whitespace-nowrap ' +
   // Colors animate only for hover/press. A disabled→enabled change must snap: a fade would leave
   // white text on a pale mid-transition teal (contrast below WCAG AA) for a moment.
   'transition-none hover:transition-colors active:transition-colors disabled:cursor-not-allowed';
@@ -166,7 +173,7 @@ export function Chip({ tone, children }: { tone: Tone; children: ReactNode }) {
     <span
       data-chip
       className={cx(
-        'inline-flex items-center rounded-pill px-3 py-1 text-caption font-semibold',
+        'inline-flex items-center rounded-pill px-3 py-1 text-caption font-semibold whitespace-nowrap',
         toneText[tone],
         toneTint[tone],
       )}
@@ -213,24 +220,81 @@ export function Callout({
   );
 }
 
+/**
+ * One-line text cut with "…" (MEMORY 2026-11-03 10:49: titles holding a user-given name). The DOM
+ * keeps the full text, so screen readers read all of it; when the text is actually cut, the
+ * element becomes focusable and a tooltip with the full text shows on hover and focus.
+ *
+ * Stacked Vietnamese marks (Ổ, Ẫ) and dots below (Ợ) reach outside a line box whose height equals
+ * the font size; the 20px padding (cancelled by a negative margin, so layout is unchanged) keeps
+ * them inside the clipping box.
+ */
+export function OneLine({
+  as: As = 'span',
+  text,
+  className,
+  wrapperClassName,
+}: {
+  as?: 'span' | 'h1';
+  text: string;
+  className?: string;
+  wrapperClassName?: string;
+}) {
+  const ref = useRef<HTMLElement>(null);
+  const [cut, setCut] = useState(false);
+  useLayoutEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const check = () => setCut(el.scrollWidth > el.clientWidth + 1);
+    check();
+    if (typeof ResizeObserver === 'undefined') return;
+    const observer = new ResizeObserver(check);
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [text]);
+  return (
+    <Tooltip text={cut ? text : null} className={cx('block min-w-0', wrapperClassName)}>
+      <As
+        ref={ref as never}
+        data-one-line
+        data-cut={cut || undefined}
+        tabIndex={cut ? 0 : undefined}
+        className={cx('-my-5 block truncate py-5', className)}
+      >
+        {text}
+      </As>
+    </Tooltip>
+  );
+}
+
 export function PageHeader({
   eyebrow,
   eyebrowTone,
   title,
+  oneLineTitle = false,
   subtitle,
   actions,
 }: {
   eyebrow: ReactNode;
   eyebrowTone?: Tone;
   title: ReactNode;
+  /**
+   * The title holds a name chosen by a person (flow, version): keep it on one line, cut with "…"
+   * and show the full name on hover/focus (AC-UI-50). Needs a string `title`.
+   */
+  oneLineTitle?: boolean;
   subtitle?: ReactNode;
   actions?: ReactNode;
 }) {
   return (
     <div className="flex flex-wrap items-end justify-between gap-4">
-      <div className="flex min-w-0 flex-col gap-3">
+      <div className="flex max-w-full min-w-0 flex-col gap-3">
         <Eyebrow {...(eyebrowTone ? { tone: eyebrowTone } : {})}>{eyebrow}</Eyebrow>
-        <h1 className="m-0 text-display-lg text-ink">{title}</h1>
+        {oneLineTitle && typeof title === 'string' ? (
+          <OneLine as="h1" text={title} className="text-display-lg text-ink" />
+        ) : (
+          <h1 className="m-0 text-display-lg text-ink">{title}</h1>
+        )}
         {subtitle && <p className="m-0 text-body-lg text-muted">{subtitle}</p>}
       </div>
       {actions && <div className="flex flex-wrap gap-3">{actions}</div>}

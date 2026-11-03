@@ -4,7 +4,19 @@
     "tagline": "Process Excel files right in your browser — your data never leaves your machine.",
     "status": "Under construction (Phase 1)"
   },
+  "common": {
+    "moreActions": "More actions",
+    "moreActionsFor": "More actions for {{name}}"
+  },
+  "admin": {
+    "flows": {
+      "openVersions": "Open versions page",
+      "openVersionsFor": "Open versions page of {{name}}"
+    }
+  },
   "result": {
+    "titlePending": "Period {{period}}: {{count, number}} employees need attention",
+    "titlePendingNoPeriod": "{{count, number}} employees need attention",
     "titleMatchedCount": "Period {{period}}: all {{count, number}} employees match",
     "titleMatchedCountNoPeriod": "All {{count, number}} employees match",
     "conclusion": {
