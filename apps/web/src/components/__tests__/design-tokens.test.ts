@@ -138,7 +138,11 @@ describe('design tokens (index.css @theme)', () => {
     ['--text-caption', '14px'],
     ['--text-eyebrow', '14px'],
     ['--text-button', '18px'],
-    ['--text-button-sm', '14px'],
+    ['--text-button-sm', '14.4px'],
+    ['--text-display-xl--font-weight', '500'],
+    ['--text-display-lg--line-height', '48px'],
+    ['--text-title-sm--font-weight', '700'],
+    ['--text-eyebrow--font-weight', '500'],
     ['--text-code', '14px'],
     ['--text-dense', '14px'],
     ['--radius-input', '6px'],
@@ -191,9 +195,9 @@ describe('design tokens (index.css @theme)', () => {
     expect(theme.match(/--shadow-[\w*-]+:/g)).toEqual(['--shadow-*:', '--shadow-float:']);
   });
 
-  it('self-hosts Be Vietnam Pro without weights 500 and 800', () => {
+  it('self-hosts Be Vietnam Pro without weight 800', () => {
     const weights = [...css.matchAll(/font-weight:\s*(\d+);/g)].map((m) => m[1]);
-    expect(new Set(weights)).toEqual(new Set(['400', '600', '700']));
+    expect(new Set(weights)).toEqual(new Set(['400', '500', '600', '700']));
     expect(css).not.toMatch(/https?:\/\//);
   });
 });

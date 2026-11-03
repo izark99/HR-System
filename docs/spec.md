@@ -996,7 +996,7 @@ Không thuộc Phase 1: `input.refTable`, bảng tham chiếu, template — Phas
 | ~~Q20~~ | Đã chốt 2026-11-03 09:07: Designer làm cùng vòng, chỉ đổi phần khung; chữ canvas/form/Monaco giữ 14px (§28.2) | — |
 | ~~Q21~~ | Đã chốt 2026-11-03 09:07: thêm `@axe-core/playwright` (MPL-2.0, dev dependency) (§28.5) | — |
 | ~~Q22~~ | Đã chốt 2026-11-03 09:07: tiêu đề câu kết luận chỉ ở màn Kết quả (§25.1, §28.3) | — |
-| ~~Q23~~ | Đã chốt 2026-11-03 09:07: bỏ weight 800 (và 500 nếu không dùng), ngân sách thêm CSS gzip +10% (§28.7) | — |
+| ~~Q23~~ | Đã chốt 2026-11-03 09:07: bỏ weight 800, ngân sách thêm CSS gzip +10% (§28.7); weight 500 giữ lại (chốt 2026-11-03 10:13) | — |
 | ~~Q24~~ | Đã chốt 2026-11-03 09:07: làm KPI card + 1 card tối ở màn Kết quả (§28.3) | — |
 | ~~Q18~~ | Đã chốt 2026-10-30 13:29: canvas Designer, Monaco và bảng xem trước giữ chữ 14px (§25.1) | — |
 | ~~Q17~~ | Đã chốt 2026-10-30 13:24: công thức dùng `,` ngăn đối số và `.` thập phân, không nhận `;` (§12.2) | — |
@@ -1115,21 +1115,21 @@ Toàn bộ UI dùng **một** design language ("bright executive" **bản 2**, c
 
 ### 25.1 Typography
 
-Font duy nhất `Be Vietnam Pro` (400–700), fallback `Arial, sans-serif`, **self-host** (woff2, subset Latin + Vietnamese), không gọi Google Fonts (chốt 2026-10-26). Tiêu đề dùng weight 600 (không 700/800). Chữ in hoa chỉ dùng cho eyebrow; tiêu đề viết hoa đầu câu.
+Font duy nhất `Be Vietnam Pro` (400, 500, 600, 700), fallback `Arial, sans-serif`, **self-host** (woff2, subset Latin + Vietnamese), không gọi Google Fonts (chốt 2026-10-26). Độ đậm theo `docs/design-reference.md` (chốt 2026-11-03 10:13): tiêu đề lớn `display-*` 500, `title-md` 600, `title-sm` 700, eyebrow 500; không dùng 800. Chữ in hoa chỉ dùng cho eyebrow; tiêu đề viết hoa đầu câu.
 
 | Token | Desktop (≥ 768px) | Mobile (< 768px) | Dùng cho |
 |-------|-------------------|------------------|----------|
-| `display-xl` | 56px / 600 / lh 60px | 36px / lh 40px | Số KPI lớn |
-| `display-lg` | 48px / 600 / lh 52px / ls −0.5px | 32px / lh 36px | Tiêu đề trang. Màn Kết quả viết như một câu kết luận có số động ("Kỳ 09/2026 có 9 nhân viên lệch công cần xử lý"); màn khác giữ tiêu đề mô tả (chốt 2026-11-03 09:07) |
+| `display-xl` | 56px / 500 / lh 56px | 36px / lh 36px | Số KPI lớn |
+| `display-lg` | 48px / 500 / lh 48px | 32px / lh 32px | Tiêu đề trang. Màn Kết quả viết như một câu kết luận có số động ("Kỳ 09/2026 có 9 nhân viên lệch công cần xử lý"); màn khác giữ tiêu đề mô tả (chốt 2026-11-03 09:07) |
 | `title-md` | 24px / 600 / lh 30px / ls −0.6px | 20px / lh 26px | Tiêu đề section, tiêu đề card |
-| `title-sm` | 20px / 600 / lh 26px / ls −0.3px | 18px | Tiêu đề nhỏ trong card, tiêu đề dialog |
+| `title-sm` | 20px / 700 / lh 25px / ls −0.5px | 18px | Tiêu đề nhỏ trong card, tiêu đề dialog |
 | `body-lg` | 18px / 400 / lh 27px | 16px / lh 24px | Đoạn dẫn, mô tả dưới tiêu đề trang, chữ trong input |
 | `body` | 16px / 400 / lh 24px | 16px | Chữ mặc định, ô dữ liệu trong bảng |
 | `label` | 16px / 600 / lh 24px | 16px | Nhãn form, chữ in đậm trong câu |
 | `caption` | 14px / 400 / lh 21px | 14px | Chú thích, header bảng (600), thông tin phụ |
-| `eyebrow` | 14px / 600 / lh 14px / ls 1px / UPPERCASE | 13px | Eyebrow trên tiêu đề, tiêu đề nhóm trong Select |
-| `button` | 18px / 600 / lh 24px | 16px | Nhãn nút chuẩn |
-| `button-sm` | 14px / 700 / ls 0.15px | 14px | Nút nhỏ (trong bảng, toolbar) |
+| `eyebrow` | 14px / 500 / lh 14px / ls 1px / UPPERCASE | 13px | Eyebrow trên tiêu đề, tiêu đề nhóm trong Select |
+| `button` | 18px / 600 / lh 27px | 16px | Nhãn nút chuẩn |
+| `button-sm` | 14,4px / 700 / lh 14,4px / ls 0.144px | 14px | Nút nhỏ (trong bảng, toolbar) |
 | `code` | font mono hệ thống, 14px | 14px | Monaco, ô công thức, SQL |
 
 **Ngoại lệ mật độ cao** (chốt 2026-10-30 13:29): canvas Designer (node, form cấu hình bên cạnh canvas), Monaco/ô công thức và bảng xem trước dữ liệu (xem trước node, màn Kết quả) dùng chữ 14px / lh 20px, header bảng 13px 600, padding ô 8px 12px; tiêu đề và nút trong các vùng này vẫn theo thang chung.
@@ -1182,7 +1182,7 @@ Thang khoảng cách cơ sở 4px: `2 · 4 · 8 · 12 · 16 · 24 · 32 · 48 ·
 | Dialog | Độ nổi mức 2, radius 12px, padding 24px; tiêu đề `title-sm`; nút đặt phải, nút chính ngoài cùng |
 | Toast | Độ nổi mức 2, radius 12px, padding 12px 16px, chữ `body` |
 | Node trên canvas | Card radius 12px, viền 1px `#E2E8F0`; vạch màu trên theo nhóm node (blue đầu vào, teal `#14B8A6` biến đổi, coral kiểm soát, `#475569` code, amber đầu ra); node đang chọn có ring teal; node lỗi viền coral `#F97362` 2px; sticky note nền amber tint `#FFF8E1` |
-| Month/Date picker | Tự làm, không dùng picker mặc định của trình duyệt. Trigger giống input, hiển thị "Tháng 10/2026" / `dd/MM/yyyy`; popover radius 12px, độ nổi mức 2; lưới 12 tháng ("Th 1"…"Th 12") hoặc lịch tuần bắt đầu thứ Hai; ô chọn nền `#0F766E` chữ trắng; điều hướng bằng phím mũi tên, PageUp/PageDown đổi năm, Esc đóng (chốt 2026-10-26) |
+| Month/Date picker | Tự làm, không dùng picker mặc định của trình duyệt. Trigger giống input, hiển thị "Tháng 10/2026" / `dd/MM/yyyy`; popover radius 12px, độ nổi mức 2; lưới 12 tháng ("Tháng 1"…"Tháng 12", chốt 2026-11-03 10:13 vì WCAG 2.5.3) hoặc lịch tuần bắt đầu thứ Hai; ô chọn nền `#0F766E` chữ trắng; điều hướng bằng phím mũi tên, PageUp/PageDown đổi năm, Esc đóng (chốt 2026-10-26) |
 | Select (dropdown) | Tự làm, không dùng `<select>` mặc định của trình duyệt ở mọi màn. Trigger giống input; popover radius 12px, độ nổi mức 2; hỗ trợ nhóm (tiêu đề nhóm dạng `eyebrow`, VD "Tài khoản" / "Nhóm"); mục đang chọn nền teal nhạt + dấu check, hover nền `#F1F5F9`; tìm kiếm khi > 8 mục; bàn phím: mũi tên, Enter, Esc, gõ ký tự để nhảy; ARIA listbox/combobox (chốt 2026-10-27) |
 | Vùng kéo thả file | Viền đứt 2px `#99E0D2`, nền `#F3FBF8`, radius 12px |
 | Trang đăng nhập | Nền phẳng `#F7FAF9`; card đăng nhập rộng tối đa 440px, viền 1px `#E2E8F0`, padding 32px |
@@ -1451,10 +1451,10 @@ Breakpoint: mobile < 768px (1 cột, menu trái thu thành nút mở), tablet 76
 |---|---------------------|
 | AC-UI-01 | `@theme` trong `index.css` khai báo đủ token §25: thang chữ (`display-xl`, `display-lg`, `title-md`, `title-sm`, `body-lg`, `body`, `label`, `caption`, `eyebrow`, `button`, `button-sm`, `code`, kèm giá trị mobile < 768px), bo góc (6/12/999px), shadow chỉ 1 mức `0 8px 28px rgba(31,42,68,0.12)` cho lớp nổi, `--color-line-input: #475569`, viền nút outline `#1F2A44`. Token bản 1 (`radius-card` 20px, `radius-card-lg`, `radius-tile`, `radius-callout`, `shadow-card`, `shadow-soft`, `text-page-title` 30px, `text-kpi` 44px/800, `sky-tint` gradient) bị xóa. |
 | AC-UI-02 | Một unit test (hoặc script trong `pnpm lint`) quét `apps/web/src/**/*.tsx` và **fail** khi gặp: class token bản 1 đã xóa; `font-extrabold`; giá trị viết thẳng `text-[…px]`, `rounded-[…]`, `shadow-[…]`, mã màu hex/`rgb(` trong className/style; `bg-linear-*`. Ngoại lệ cần thiết (VD style React Flow) khai báo trong danh sách cho phép có ghi lý do. |
-| AC-UI-03 | Tiêu đề (`h1`–`h3`, tiêu đề card, dialog) có `font-weight` 600; không phần tử text nào có weight 800 (kiểm `getComputedStyle` trên các màn §28.2). Chữ in hoa chỉ ở eyebrow (`text-transform: uppercase` chỉ trên eyebrow và tiêu đề nhóm Select). |
+| AC-UI-03 | Tiêu đề (`h1`–`h3`, tiêu đề card, dialog) có `font-weight` đúng token §25.1 (500 cho `display-*`, 600 `title-md`, 700 `title-sm`; chốt 2026-11-03 10:13); không phần tử text nào có weight 800 (kiểm `getComputedStyle` trên các màn §28.2). Chữ in hoa chỉ ở eyebrow (`text-transform: uppercase` chỉ trên eyebrow và tiêu đề nhóm Select). |
 | AC-UI-04 | Card (`Card`, card bảng, KPI card, node canvas): `border-radius` 12px, viền 1px `#E2E8F0`, `box-shadow: none`. Popover Select/picker/menu người dùng, dialog, toast: radius 12px + shadow mức 2. Input, Select trigger, picker trigger: cao 48px, radius 6px, viền 1px `#475569`; focus viền `#0F766E` + ring 3px `#DDF5EF`; lỗi viền `#C2410C`. |
 | AC-UI-05 | `Button` có 5 biến thể `primary` (nền `#0F766E`), `dark` (`#1F2A44`), `outline` (viền `#1F2A44`), `text`, `danger` (viền + chữ `#C2410C`) và cỡ `md` (48px) / `sm` (36px, chỉ trong bảng/toolbar, vẫn đạt vùng chạm 44px nhờ padding vùng bấm hoặc khoảng cách); radius 12px, không pill. Mỗi vùng (card/dialog/toolbar) tối đa 1 nút `primary` — kiểm E2E trên các màn §28.2. |
-| AC-UI-06 | Eyebrow trên mỗi tiêu đề trang: chữ in hoa, `letter-spacing` 1px, 14px/600 (13px mobile), nền trong suốt, màu theo ý nghĩa. Status chip, tab: pill 999px. |
+| AC-UI-06 | Eyebrow trên mỗi tiêu đề trang: chữ in hoa, `letter-spacing` 1px, 14px/500 (13px mobile), nền trong suốt, màu theo ý nghĩa. Status chip, tab: pill 999px. |
 | AC-UI-07 | Menu trái Admin: item cao 44px, radius 6px; item đang chọn nền `#DDF5EF`, chữ `#0F766E` 600, vạch trái 3px `#0F766E`, có `aria-current="page"`. Top bar nền trắng, viền dưới 1px `#E2E8F0`, không shadow. |
 | AC-UI-08 | Trang đăng nhập và đổi mật khẩu: nền phẳng `#F7FAF9`, không gradient, không phần tử trang trí; card rộng tối đa 440px, viền 1px `#E2E8F0`, padding 32px (24px mobile), không shadow. |
 | AC-UI-09 | Màn Kết quả (chốt Q22, Q24): `h1` là câu kết luận có số động qua i18n (có dạng khi không lệch, VD "Kỳ 09/2026 khớp toàn bộ 120 nhân viên"); hàng KPI card (vạch trên 4px: teal khớp, coral lệch, amber chỉ có một bên; số `display-xl` định dạng kiểu Việt Nam); đúng 1 card tối nền `#1F2A44` chữ trắng cho kết luận chính. Số liệu lấy từ kết quả đã có trong bộ nhớ, không chạy lại; kết quả không có `control.compare` → tiêu đề mô tả chung, không KPI. Các màn khác giữ tiêu đề hiện tại. |
@@ -1463,7 +1463,7 @@ Breakpoint: mobile < 768px (1 cột, menu trái thu thành nút mở), tablet 76
 
 | # | Given / When / Then |
 |---|---------------------|
-| AC-UI-10 | Ở viewport 1280×800: `body` 16px; tiêu đề trang (`h1`) 48px/600; mô tả dưới tiêu đề 18px; nhãn form 16px/600; nút chuẩn 18px/600; header bảng quản trị 14px/600. Ở 390×844: `h1` 32px, `body-lg` 16px, nút 16px (kiểm `getComputedStyle`). |
+| AC-UI-10 | Ở viewport 1280×800: `body` 16px; tiêu đề trang (`h1`) 48px/500 lh 48px; mô tả dưới tiêu đề 18px; nhãn form 16px/600; nút chuẩn 18px/600; header bảng quản trị 14px/600. Thanh trên của Designer: `h1` 20px (chốt 2026-11-03 10:13, giữ diện tích canvas). Ở 390×844: `h1` 32px, `body-lg` 16px, nút 16px (kiểm `getComputedStyle`). |
 | AC-UI-11 | Ngoại lệ (§25.1, chốt 2026-10-30 13:29): node trên canvas, form cấu hình cạnh canvas, Monaco/ô công thức/SQL, bảng xem trước dữ liệu (xem trước node, màn Kết quả) và diff JSON dùng chữ 14px/lh 20px, header bảng 13px/600, padding ô 8px 12px; nút và tiêu đề trong các vùng này vẫn theo thang chung. |
 | AC-UI-12 | Không cuộn ngang trang ở 390px trên các màn User (Danh sách flow, Chạy flow, Kết quả, Đăng nhập, Đổi mật khẩu) và ở 1024px trên mọi màn Admin; chữ dài (tên flow, tên file) xuống dòng hoặc cắt có `title`, không tràn khỏi card. Bảng rộng cuộn ngang **trong** card. |
 | AC-UI-13 | Designer ở 1280×800 vẫn hiện cùng lúc palette, canvas, panel cấu hình và thanh trạng thái; canvas không nhỏ hơn hiện tại quá 10% diện tích (đo trước/sau). |
@@ -1491,6 +1491,6 @@ Breakpoint: mobile < 768px (1 cột, menu trái thu thành nút mở), tablet 76
 |---|---------------------|
 | AC-UI-40 | Entry chunk (gzip) vẫn trong ngân sách hiện có (baseline 200.370 byte, +10%), `pnpm build` tự kiểm. Monaco, React Flow không vào chunk của User. |
 | AC-UI-41 | `scripts/check-bundle-size.mjs` kiểm thêm tổng CSS gzip: không tăng quá 10% so với baseline đo trên `main` trước vòng này (`a6e36e1`), lưu trong `bundle-budget.json` (chốt Q23); vượt → `pnpm build` fail. |
-| AC-UI-42 | Font: bỏ `@font-face` weight 800; weight 500 bỏ nếu không còn dùng sau vòng này (chốt Q23); vẫn self-host, không request ra domain ngoài (`privacy.spec.ts` pass). |
+| AC-UI-42 | Font: bỏ `@font-face` weight 800; giữ weight 500 vì `display-*` và eyebrow dùng (chốt 2026-11-03 10:13); vẫn self-host, không request ra domain ngoài (`privacy.spec.ts` pass). |
 | AC-UI-43 | `pnpm lint`, `format:check`, `typecheck`, `test`, `build`, `CI=1 pnpm test:e2e` pass. Test E2E cũ chỉ được sửa ở phần kiểm kích thước/màu/selector do giao diện đổi; không xóa test, không đổi nghiệp vụ được kiểm. |
 | AC-UI-44 | Không đổi hành vi: luồng chạy flow nghiệm thu (§24) cho cùng file kết quả (so sánh nội dung các sheet trước/sau). |

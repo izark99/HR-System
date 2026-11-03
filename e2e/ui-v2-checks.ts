@@ -163,7 +163,7 @@ export async function commonChecks(page: Page, opts: { darkCards?: number } = {}
         (n) => n.nodeType === Node.TEXT_NODE && n.textContent!.trim() !== '',
       );
       if (ownText && Number(cs.fontWeight) >= 800) out.heavy.push(name(el));
-      if (/^H[1-3]$/.test(el.tagName) && cs.fontWeight !== '600') {
+      if (/^H[1-3]$/.test(el.tagName) && !['500', '600', '700'].includes(cs.fontWeight)) {
         out.headings.push(`${name(el)} ${cs.fontWeight}`);
       }
       // Monaco paints its own UI (suggest widget etc.) — not app text.
@@ -200,7 +200,7 @@ export async function commonChecks(page: Page, opts: { darkCards?: number } = {}
     };
   });
   expect(report.heavy, 'weight 800').toEqual([]);
-  expect(report.headings, 'headings not 600').toEqual([]);
+  expect(report.headings, 'headings outside 500/600/700').toEqual([]);
   expect(report.uppercase, 'uppercase outside eyebrow').toEqual([]);
   expect(report.gradients, 'gradients').toEqual([]);
   expect(report.primaries, 'more than one primary button in a region').toEqual([]);
@@ -209,11 +209,11 @@ export async function commonChecks(page: Page, opts: { darkCards?: number } = {}
   expect(report.bodyFont).toBe('16px');
 }
 
-/** Page title (AC-UI-10): 48px/600 on desktop, 32px on mobile; eyebrow above it (AC-UI-06). */
+/** Page title (AC-UI-10): 48px/500 on desktop, 32px on mobile; eyebrow above it (AC-UI-06). */
 export async function titleChecks(page: Page, opts: { eyebrow?: boolean } = {}): Promise<void> {
   const h1 = await style(page.getByRole('heading', { level: 1 }).first());
   expect(h1.fontSize).toBe(isMobile(page) ? '32px' : '48px');
-  expect(h1.fontWeight).toBe('600');
+  expect(h1.fontWeight).toBe('500');
   if (opts.eyebrow === false) return;
   const eyebrows = page.locator('main [data-eyebrow], body > div [data-eyebrow]');
   const count = await eyebrows.count();
@@ -222,7 +222,7 @@ export async function titleChecks(page: Page, opts: { eyebrow?: boolean } = {}):
     const s = await style(eyebrows.nth(i));
     expect(s.textTransform).toBe('uppercase');
     expect(s.letterSpacing).toBe('1px');
-    expect(s.fontWeight).toBe('600');
+    expect(s.fontWeight).toBe('500');
     expect(s.fontSize).toBe(isMobile(page) ? '13px' : '14px');
     expect(s.bg).toBe('rgba(0, 0, 0, 0)');
   }

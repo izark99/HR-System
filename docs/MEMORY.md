@@ -225,6 +225,10 @@
 
 ## Kỹ thuật & tổ chức
 
+2026-11-03 10:13 - UI/UX đồng nhất theo design language "bright executive" bản 2 (phong cách phẳng), cấu trúc lấy đúng số của `docs/design-reference.md`: giữ nguyên bộ màu (nền #F7FAF9, card trắng; teal = tốt/chính, coral = rủi ro/lỗi, amber = cảnh báo, blue = thông tin) và font Be Vietnam Pro; tiêu đề lớn (`display-xl` 56/56, `display-lg` 48/48) weight 500, `title-md` 24px/600, `title-sm` 20px/700, eyebrow 14px/500 giãn chữ 1px không nền, nút 18px/600 lh 27px, nút nhỏ 14,4px/700; card bo 12px, viền 1px #E2E8F0, không shadow (popover/modal/toast giữ shadow nhẹ); input bo 6px; nút 3 cấp bo 12px cao 48px (chính teal #0F766E, tối #1F2A44, outline viền #1F2A44); menu trái mục đang chọn có vạch màu bên trái; body 16px; trang đăng nhập nền phẳng + card có viền. Font tự host thêm lại weight 500, vẫn bỏ 800; ngân sách CSS gzip +10% giữ nguyên. Chi tiết token ở docs/spec.md §25.
+
+2026-11-03 10:13 - Chấp nhận các chỉnh sửa a11y của vòng giao diện: lưới chọn tháng hiện "Tháng 1"…"Tháng 12" (tên đọc phải chứa chữ hiển thị, WCAG 2.5.3); nút "Reset MK" đổi thành "Reset mật khẩu"; tiêu đề trên thanh của Designer giữ 20px để không mất diện tích canvas.
+
 2026-11-03 10:06 - Design language tham chiếu là file `docs/design-reference.md` (Harold gửi): chỉ lấy phần cấu trúc (bo góc, nút, thang chữ, eyebrow, khoảng cách); giữ bộ màu teal/coral/amber/blue và font Be Vietnam Pro theo §25; chữ thường (body) giữ 16px (file dùng 18px).
 
 2026-11-03 09:07 - Vòng giao diện bản 2: kiểm bằng ảnh chụp E2E (~20 trạng thái, dữ liệu giả) gom vào một trang xem ảnh để Harold duyệt tay, kèm kiểm tự động giá trị CSS thật (bo góc, cỡ chữ, tương phản); không so pixel (`toHaveScreenshot`) ở vòng này, cân nhắc lại sau vòng nâng tooling.
@@ -235,7 +239,7 @@
 
 2026-11-03 09:07 - Tiêu đề trang dạng câu kết luận chỉ áp dụng màn Kết quả (có số động, VD "Kỳ 09/2026 có 9 nhân viên lệch công"); màn Kết quả thêm KPI card (vạch trên 4px, số `display-xl`) và 1 card tối cho kết luận chính. Các màn khác giữ tiêu đề hiện tại.
 
-2026-11-03 09:07 - Bỏ font weight 800 (và 500 nếu không còn dùng); script ngân sách bundle thêm kiểm CSS gzip không tăng quá 10% so với `main` trước vòng giao diện.
+~~2026-11-03 09:07 - Bỏ font weight 800 (và 500 nếu không còn dùng); script ngân sách bundle thêm kiểm CSS gzip không tăng quá 10% so với `main` trước vòng giao diện.~~ → thay bởi 2026-11-03 10:13
 
 2026-11-03 09:01 - Dependabot: merge bản vá/bản nhỏ khi CI xanh; bản major của tooling (vite 8 cùng @vitejs/plugin-react 6, vitest 5, @playwright/test mới — cần khớp Chromium cài sẵn) gom vào một vòng "nâng tooling" riêng ngay sau vòng đổi giao diện, chạy đủ E2E; các PR #9, #11, #13 để mở tới lúc đó. Bỏ qua major của `@types/node` (runtime Node 22) và `apache-arrow` (theo DuckDB-WASM).
 
@@ -249,7 +253,7 @@
 
 2026-10-30 13:26 - Đổi giao diện theo design language bản 2 làm vòng code riêng, ngay sau vòng R1 của `transform.formula`.
 
-2026-10-30 13:26 - UI/UX đồng nhất theo design language "bright executive" bản 2 (phong cách phẳng): giữ nguyên bộ màu (nền #F7FAF9, card trắng; teal = tốt/chính, coral = rủi ro/lỗi, amber = cảnh báo, blue = thông tin) và font Be Vietnam Pro (tiêu đề weight 600); card bo 12px, viền 1px #E2E8F0, không shadow (popover/modal/toast giữ shadow nhẹ); input bo 6px; nút 3 cấp bo 12px cao 48px (chính teal #0F766E, tối #1F2A44, outline viền #1F2A44); eyebrow chữ in hoa giãn chữ, không nền; menu trái mục đang chọn có vạch màu bên trái; thang chữ lớn (body 16–18px, tiêu đề trang 48px); trang đăng nhập nền phẳng + card có viền. Chi tiết token ở docs/spec.md §25.
+~~2026-10-30 13:26 - UI/UX đồng nhất theo design language "bright executive" bản 2 (phong cách phẳng): giữ nguyên bộ màu (nền #F7FAF9, card trắng; teal = tốt/chính, coral = rủi ro/lỗi, amber = cảnh báo, blue = thông tin) và font Be Vietnam Pro (tiêu đề weight 600); card bo 12px, viền 1px #E2E8F0, không shadow (popover/modal/toast giữ shadow nhẹ); input bo 6px; nút 3 cấp bo 12px cao 48px (chính teal #0F766E, tối #1F2A44, outline viền #1F2A44); eyebrow chữ in hoa giãn chữ, không nền; menu trái mục đang chọn có vạch màu bên trái; thang chữ lớn (body 16–18px, tiêu đề trang 48px); trang đăng nhập nền phẳng + card có viền. Chi tiết token ở docs/spec.md §25.~~ → thay bởi 2026-11-03 10:13
 
 2026-10-30 12:51 - Đội agent theo mô hình generator–verifier: bỏ `requirements-analyst` (thay bằng skill `clarify` chạy trong session chính); gộp `tester` + `reviewer` thành `verifier` (test + review, chỉ viết file test); giữ `developer` cho vòng code lớn, sửa nhỏ session chính tự làm; giao việc kèm gói bối cảnh ngắn; mỗi lúc chỉ 1 subagent. Ghi trong `.claude/rules/workflow.md`.
 
