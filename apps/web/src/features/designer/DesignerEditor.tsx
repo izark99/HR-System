@@ -778,7 +778,7 @@ export function DesignerEditor(props: DesignerEditorProps) {
             </ReactFlow>
             {doc.nodes.length === 0 && (
               <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
-                <p className="m-0 max-w-90 rounded-card bg-card px-5 py-4 text-center text-dense text-muted border border-line">
+                <p className="m-0 max-w-90 rounded-card border border-line bg-card px-5 py-4 text-center text-dense text-muted">
                   {ro ? t('canvas.emptyReadOnly') : t('canvas.empty')}
                 </p>
               </div>
@@ -789,7 +789,7 @@ export function DesignerEditor(props: DesignerEditorProps) {
             role="region"
             className="border-t border-line bg-card"
           >
-            <h2 id="designer-data-title" className="m-0">
+            <h2 id="designer-data-title" className="m-0 font-semibold">
               <button
                 type="button"
                 aria-expanded={dataOpen}

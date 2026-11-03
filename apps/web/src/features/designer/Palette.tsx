@@ -53,7 +53,7 @@ export function Palette({ onAdd, disabled }: { onAdd: (type: string) => void; di
             aria-label={t(`palette.groups.${group}`)}
             className="flex flex-col gap-1.5"
           >
-            <h3 className="m-0 text-eyebrow text-muted uppercase">
+            <h3 data-eyebrow className="m-0 text-eyebrow text-muted uppercase">
               {t(`palette.groups.${group}`)}
             </h3>
             <ul className="m-0 flex list-none flex-col gap-1.5 p-0">
