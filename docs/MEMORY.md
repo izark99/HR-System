@@ -225,6 +225,16 @@
 
 ## Kỹ thuật & tổ chức
 
+2026-11-03 09:07 - Vòng giao diện bản 2: kiểm bằng ảnh chụp E2E (~20 trạng thái, dữ liệu giả) gom vào một trang xem ảnh để Harold duyệt tay, kèm kiểm tự động giá trị CSS thật (bo góc, cỡ chữ, tương phản); không so pixel (`toHaveScreenshot`) ở vòng này, cân nhắc lại sau vòng nâng tooling.
+
+2026-11-03 09:07 - Vòng giao diện bản 2 gồm cả Designer nhưng chỉ đổi phần khung (bo góc, viền, nút, tiêu đề); chữ trong canvas, form cấu hình, Monaco giữ 14px.
+
+2026-11-03 09:07 - Thêm `@axe-core/playwright` (MPL-2.0, chỉ dev dependency, không vào bundle) để quét a11y tự động trong E2E; Harold đồng ý ngoại lệ license.
+
+2026-11-03 09:07 - Tiêu đề trang dạng câu kết luận chỉ áp dụng màn Kết quả (có số động, VD "Kỳ 09/2026 có 9 nhân viên lệch công"); màn Kết quả thêm KPI card (vạch trên 4px, số `display-xl`) và 1 card tối cho kết luận chính. Các màn khác giữ tiêu đề hiện tại.
+
+2026-11-03 09:07 - Bỏ font weight 800 (và 500 nếu không còn dùng); script ngân sách bundle thêm kiểm CSS gzip không tăng quá 10% so với `main` trước vòng giao diện.
+
 2026-11-03 09:01 - Dependabot: merge bản vá/bản nhỏ khi CI xanh; bản major của tooling (vite 8 cùng @vitejs/plugin-react 6, vitest 5, @playwright/test mới — cần khớp Chromium cài sẵn) gom vào một vòng "nâng tooling" riêng ngay sau vòng đổi giao diện, chạy đủ E2E; các PR #9, #11, #13 để mở tới lúc đó. Bỏ qua major của `@types/node` (runtime Node 22) và `apache-arrow` (theo DuckDB-WASM).
 
 2026-10-30 23:29 - Giải nén entry .xlsx: đường đồng bộ dùng `fflate` (MIT, giải nén theo luồng, dừng sớm được) thay bộ giải mã DEFLATE tự viết; đường bất đồng bộ (worker) giữ bộ giải nén có sẵn của trình duyệt (`DecompressionStream`) kèm đếm byte và dừng sớm.
