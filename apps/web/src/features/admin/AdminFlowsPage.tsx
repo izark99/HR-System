@@ -118,7 +118,7 @@ async function readFlowFile(file: File, t: TFunction): Promise<ReadResult> {
 /**
  * Versions of a flow on ONE line (AC-UI-57): the two newest versions with their status chips,
  * then "+N" for the others. The full list with effective ranges is in the tooltip and is read by
- * screen readers (sr-only text); the cell is focusable when something is hidden.
+ * screen readers (sr-only list); the cell is focusable when something is hidden.
  */
 function VersionList({ versions }: { versions: AdminFlowVersion[] }) {
   const { t } = useTranslation();
@@ -145,7 +145,11 @@ function VersionList({ versions }: { versions: AdminFlowVersion[] }) {
         data-version-summary
         className="flex items-center gap-2 whitespace-nowrap"
       >
-        <span className="sr-only">{full}</span>
+        <ul className="sr-only">
+          {versions.map((v) => (
+            <li key={v.id}>{describe(v)}</li>
+          ))}
+        </ul>
         {shown.map((v, i) => (
           <span key={v.id} aria-hidden className="flex items-center gap-1.5">
             {i > 0 && <span className="text-muted">·</span>}
