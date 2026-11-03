@@ -540,7 +540,12 @@ function UsersTable({
   const { t } = useTranslation();
   const groupName = new Map(data.groups.map((g) => [g.id, g.name]));
   return (
-    <div className="overflow-x-auto">
+    <div
+      className="overflow-x-auto"
+      role="region"
+      tabIndex={0}
+      aria-label={t('admin.users.caption')}
+    >
       <table className="w-full min-w-155 border-collapse text-body text-ink-soft">
         <caption className="sr-only">{t('admin.users.caption')}</caption>
         <thead>
@@ -713,7 +718,12 @@ function GroupsTable({
     return <p className="m-0 text-muted">{t('admin.groups.none')}</p>;
   }
   return (
-    <div className="overflow-x-auto">
+    <div
+      className="overflow-x-auto"
+      role="region"
+      tabIndex={0}
+      aria-label={t('admin.groups.caption')}
+    >
       <table className="w-full min-w-120 border-collapse text-body text-ink-soft">
         <caption className="sr-only">{t('admin.groups.caption')}</caption>
         <thead>

@@ -250,7 +250,12 @@ export function FlowVersionsPage() {
         <h2 id="versions-title" className="m-0 text-title-md text-ink">
           {t('admin.versions.listTitle', { count: versions.length })}
         </h2>
-        <div className="overflow-x-auto">
+        <div
+          className="overflow-x-auto"
+          role="region"
+          tabIndex={0}
+          aria-label={t('admin.versions.tableLabel')}
+        >
           <table className="w-full min-w-200 border-collapse text-body text-ink-soft">
             <caption className="sr-only">{t('admin.versions.caption')}</caption>
             <thead>

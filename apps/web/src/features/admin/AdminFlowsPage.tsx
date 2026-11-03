@@ -515,7 +515,12 @@ export function AdminFlowsPage() {
               {t('admin.flows.empty')}
             </p>
           ) : (
-            <div className="overflow-x-auto">
+            <div
+              className="overflow-x-auto"
+              role="region"
+              tabIndex={0}
+              aria-label={t('admin.flows.tableLabel')}
+            >
               <table className="w-full min-w-160 border-collapse text-body text-ink-soft">
                 <thead>
                   <tr>
