@@ -8,6 +8,7 @@ import { ADMIN, expect, test, type Page } from './fixtures';
 import {
   employees,
   fixtures,
+  openCreateAccount,
   payroll,
   payrollInput,
   periodButton,
@@ -286,6 +287,13 @@ test.describe('admin screens 1280x800', () => {
     // AC-UI-54: shared action column, one line, aligned; menu by keyboard; left menu "Sắp có".
     const users = page.getByRole('table', { name: 'Danh sách tài khoản' });
     await rowActionsChecks(users);
+    // AC-UI-55: full width, no horizontal scroll in the table region at 1280x800.
+    const noScroll = (t: typeof users) =>
+      t.evaluate((el) => {
+        const r = el.closest('[role="region"]')!;
+        return r.scrollWidth - r.clientWidth;
+      });
+    expect(await noScroll(users)).toBeLessThanOrEqual(0);
     await soonChecks(page);
     await axe(page, 'admin-users 1280x800');
     await shot(page, '07-admin-users', 'table');
@@ -299,6 +307,7 @@ test.describe('admin screens 1280x800', () => {
     const groups = page.getByRole('table', { name: 'Danh sách nhóm' });
     await expect(groups).toBeVisible();
     await rowActionsChecks(groups);
+    expect(await noScroll(groups)).toBeLessThanOrEqual(0);
     await commonChecks(page);
     await axe(page, 'admin-groups 1280x800');
     await shot(page, '07-admin-users', 'groups-table');
@@ -316,6 +325,23 @@ test.describe('admin screens 1280x800', () => {
     await shot(page, '08-select', 'open');
     await page.keyboard.press('Escape');
 
+    // AC-UI-55: create form in a dialog (level 2), focus on the first field, Esc returns focus.
+    const createDialog = await openCreateAccount(page);
+    await floatChecks(createDialog);
+    // Username has focus (teal border + ring); the other text field has the resting style.
+    expect((await style(createDialog.locator('#new-username'))).borderLeft).toBe(
+      `1px solid ${C.teal}`,
+    );
+    await inputChecks(createDialog.locator('#new-fullname'));
+    await labelChecks(createDialog.locator('label[for]'));
+    await buttonChecks(createDialog.getByRole('button', { name: 'Tạo và hiện mật khẩu tạm' }));
+    await commonChecks(page);
+    await axe(page, 'admin-users-create-dialog 1280x800');
+    await shot(page, '07-admin-users', 'create-dialog');
+    await page.keyboard.press('Escape');
+    await expect(createDialog).toHaveCount(0);
+    await expect(page.getByRole('button', { name: '+ Tạo tài khoản' })).toBeFocused();
+    await openCreateAccount(page);
     await page.getByLabel(/^Username/).fill('hr.cn05');
     await page.getByRole('button', { name: 'Tạo và hiện mật khẩu tạm' }).click();
     const dialog = page.getByRole('dialog', { name: 'Mật khẩu tạm của hr.cn05' });

@@ -169,7 +169,7 @@ export function MenuButton({
         data-menu-button
         onClick={() => (open ? close(false) : openAt(0))}
         onKeyDown={onButtonKey}
-        className={cx(buttonClass('outline', 'sm'), 'gap-1 px-3 whitespace-nowrap')}
+        className={cx(buttonClass('text', 'sm'), 'gap-1')}
       >
         {label}
         <ChevronDownIcon />

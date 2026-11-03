@@ -383,6 +383,21 @@ export async function rowActionsChecks(table: Locator): Promise<void> {
           menuRight: menu ? Math.round(menu.getBoundingClientRect().right) : -1,
           oneLine: tops.every((y) => Math.abs(y - tops[0]!) <= 1),
           heights: buttons.map((b) => Math.round(b.getBoundingClientRect().height)),
+          // Text buttons (§25.3, 2026-11-03 13:24): no border, transparent, ink 14.4px/700;
+          // only "Publish" on a draft row stays a (teal) primary button.
+          looks: buttons.map((b) => {
+            const cs = getComputedStyle(b);
+            return {
+              name: b.getAttribute('aria-label') ?? b.textContent?.trim() ?? '',
+              primary: cs.backgroundColor === 'rgb(15, 118, 110)',
+              text:
+                cs.borderTopWidth === '0px' &&
+                cs.backgroundColor === 'rgba(0, 0, 0, 0)' &&
+                cs.color === 'rgb(31, 42, 68)' &&
+                cs.fontSize === '14.4px' &&
+                cs.fontWeight === '700',
+            };
+          }),
         };
       }),
       wrapped: Array.from(t.querySelectorAll('[data-chip], button, a')).flatMap((el) => {
@@ -406,6 +421,10 @@ export async function rowActionsChecks(table: Locator): Promise<void> {
     expect(c.oneLine, `actions on one line (${c.menuLabel})`).toBe(true);
     expect(c.inView, `actions in view without scrolling (${c.menuLabel})`).toBe(true);
     for (const h of c.heights) expect(h, `small button height (${c.menuLabel})`).toBe(36);
+    for (const l of c.looks) {
+      if (l.primary) expect(l.name, 'only Publish is a primary row action').toMatch(/^Publish /);
+      else expect(l.text, `text button: ${l.name}`).toBe(true);
+    }
   }
   const rights = new Set(report.cells.map((c) => c.menuRight));
   expect(rights.size, 'menu buttons aligned in one column').toBe(1);

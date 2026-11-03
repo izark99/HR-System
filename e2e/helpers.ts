@@ -366,3 +366,17 @@ export async function rowMenuItem(row: Locator, name: string | RegExp): Promise<
 export async function rowAction(row: Locator, name: string | RegExp): Promise<void> {
   await (await rowMenuItem(row, name)).click();
 }
+
+/**
+ * Users & Groups (AC-UI-55): the create-account form lives in a dialog opened from
+ * "+ Tạo tài khoản". Opens it unless it is already open; returns the dialog.
+ */
+export async function openCreateAccount(page: Page): Promise<Locator> {
+  const dialog = page.getByRole('dialog', { name: 'Tạo tài khoản' });
+  if (!(await dialog.isVisible())) {
+    await page.getByRole('button', { name: '+ Tạo tài khoản' }).click();
+    await expect(dialog).toBeVisible();
+    await expect(dialog.getByLabel(/^Username/)).toBeFocused();
+  }
+  return dialog;
+}

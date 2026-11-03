@@ -10,11 +10,14 @@ export function Dialog({
   open,
   onClose,
   title,
+  initialFocusId,
   children,
 }: {
   open: boolean;
   onClose: () => void;
   title: string;
+  /** Element focused when the dialog opens (default: the browser's choice, the close button). */
+  initialFocusId?: string;
   children: ReactNode;
 }) {
   const { t } = useTranslation();
@@ -24,9 +27,12 @@ export function Dialog({
   useEffect(() => {
     const d = ref.current;
     if (!d) return;
-    if (open && !d.open) d.showModal();
+    if (open && !d.open) {
+      d.showModal();
+      if (initialFocusId) d.querySelector<HTMLElement>(`#${initialFocusId}`)?.focus();
+    }
     if (!open && d.open) d.close();
-  }, [open]);
+  }, [open, initialFocusId]);
 
   return (
     <dialog

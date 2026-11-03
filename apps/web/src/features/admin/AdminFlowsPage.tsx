@@ -567,7 +567,7 @@ export function AdminFlowsPage() {
                               params={{ flowCode: f.code }}
                               aria-label={t('admin.flows.openVersionsFor', { name: f.name })}
                               className={cx(
-                                buttonClass('outline', 'sm'),
+                                buttonClass('text', 'sm'),
                                 'no-underline hover:text-ink',
                               )}
                             >

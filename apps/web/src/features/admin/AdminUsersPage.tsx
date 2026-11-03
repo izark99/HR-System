@@ -345,14 +345,11 @@ function CreateUserForm({
   return (
     <form
       id="create-user"
-      aria-labelledby="create-user-title"
+      aria-label={t('admin.create.title')}
       onSubmit={(e) => void submit(e)}
       noValidate
-      className={cx(cardClass, 'flex flex-[1_1_300px] flex-col gap-4 p-6')}
+      className="flex flex-col gap-4"
     >
-      <h2 id="create-user-title" className="m-0 text-title-md text-ink">
-        {t('admin.create.title')}
-      </h2>
       <div className="flex flex-col gap-1.5">
         <label htmlFor="new-username" className={labelClass}>
           {t('admin.users.username')} <span aria-hidden>*</span>
@@ -597,6 +594,7 @@ function UsersTable({
                     rowName={u.username}
                     visible={
                       <Button
+                        variant="text"
                         size="sm"
                         aria-label={t('admin.users.editNamed', { username: u.username })}
                         onClick={() => onEdit(u)}
@@ -756,6 +754,7 @@ function GroupsTable({
                   rowName={g.name}
                   visible={
                     <Button
+                      variant="text"
                       size="sm"
                       aria-label={t('admin.groups.editNamed', { name: g.name })}
                       onClick={() => onEdit(g)}
@@ -906,6 +905,8 @@ export function AdminUsersPage() {
   const [confirm, setConfirm] = useState<Confirm | null>(null);
   const [editing, setEditing] = useState<AdminUser | null>(null);
   const [editingGroup, setEditingGroup] = useState<AdminGroup | null>(null);
+  /** "+ Tạo tài khoản" dialog (AC-UI-55): the tables keep the full width of the page. */
+  const [creating, setCreating] = useState(false);
   const tabsBase = useId();
 
   /** Body of a confirm dialog, with an explicit warning when the Admin targets themself. */
@@ -979,9 +980,10 @@ export function AdminUsersPage() {
         actions={
           <Button
             variant="primary"
+            disabled={!data}
             onClick={() => {
               setTab('users');
-              setTimeout(() => document.getElementById('new-username')?.focus(), 0);
+              setCreating(true);
             }}
           >
             {t('admin.users.createButton')}
@@ -994,62 +996,68 @@ export function AdminUsersPage() {
 
       {data && (
         <>
-          <div className="flex flex-wrap items-start gap-5">
-            <Card
-              className="flex min-w-0 flex-[999_1_520px] flex-col gap-3.5"
-              aria-label={t('admin.users.listLabel')}
+          <Card className="flex min-w-0 flex-col gap-3.5" aria-label={t('admin.users.listLabel')}>
+            <Tabs
+              base={tabsBase}
+              label={t('admin.users.tabsLabel')}
+              active={tab}
+              onChange={setTab}
+              tabs={[
+                { key: 'users', label: t('admin.users.tabUsers', { count: data.users.length }) },
+                {
+                  key: 'groups',
+                  label: t('admin.users.tabGroups', { count: data.groups.length }),
+                },
+              ]}
+            />
+            <div {...tabPanelProps(tabsBase, tab)}>
+              {tab === 'users' ? (
+                <UsersTable
+                  data={data}
+                  onEdit={setEditing}
+                  onReset={askReset}
+                  onToggleActive={askToggle}
+                />
+              ) : (
+                <GroupsTable data={data} onEdit={setEditingGroup} onDelete={askDeleteGroup} />
+              )}
+            </div>
+          </Card>
+          {tab === 'groups' && (
+            <section
+              aria-labelledby="create-group-title"
+              className={cx(cardClass, 'flex flex-col gap-4 p-6')}
             >
-              <Tabs
-                base={tabsBase}
-                label={t('admin.users.tabsLabel')}
-                active={tab}
-                onChange={setTab}
-                tabs={[
-                  { key: 'users', label: t('admin.users.tabUsers', { count: data.users.length }) },
-                  {
-                    key: 'groups',
-                    label: t('admin.users.tabGroups', { count: data.groups.length }),
-                  },
-                ]}
-              />
-              <div {...tabPanelProps(tabsBase, tab)}>
-                {tab === 'users' ? (
-                  <UsersTable
-                    data={data}
-                    onEdit={setEditing}
-                    onReset={askReset}
-                    onToggleActive={askToggle}
-                  />
-                ) : (
-                  <GroupsTable data={data} onEdit={setEditingGroup} onDelete={askDeleteGroup} />
-                )}
-              </div>
-            </Card>
-            {tab === 'users' ? (
-              <CreateUserForm
-                groups={data.groups}
-                onCreated={(s) => {
-                  reload();
-                  setSecret(s);
-                }}
-              />
-            ) : (
-              <section
-                aria-labelledby="create-group-title"
-                className={cx(cardClass, 'flex flex-[1_1_300px] flex-col gap-4 p-6')}
-              >
-                <h2 id="create-group-title" className="m-0 text-title-md text-ink">
-                  {t('admin.groups.createTitle')}
-                </h2>
+              <h2 id="create-group-title" className="m-0 text-title-md text-ink">
+                {t('admin.groups.createTitle')}
+              </h2>
+              <div className="max-w-140">
                 <GroupForm group={null} onDone={reload} />
-              </section>
-            )}
-          </div>
+              </div>
+            </section>
+          )}
 
           <AssignmentsCard data={data} onChanged={reload} />
         </>
       )}
 
+      <Dialog
+        open={creating && !!data}
+        onClose={() => setCreating(false)}
+        title={t('admin.create.title')}
+        initialFocusId="new-username"
+      >
+        {data && (
+          <CreateUserForm
+            groups={data.groups}
+            onCreated={(s) => {
+              setCreating(false);
+              reload();
+              setSecret(s);
+            }}
+          />
+        )}
+      </Dialog>
       <TempPasswordDialog
         secret={secret}
         onClose={() => {

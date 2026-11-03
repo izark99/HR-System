@@ -3,7 +3,14 @@
  * screen, all against the mocked Supabase (e2e/supabase-mock.ts). Fake accounts only.
  */
 import { ADMIN, expect, test, USER } from './fixtures';
-import { fixtures, payrollInput, pickMonth, runButton, timesheetInput } from './helpers';
+import {
+  fixtures,
+  openCreateAccount,
+  payrollInput,
+  pickMonth,
+  runButton,
+  timesheetInput,
+} from './helpers';
 
 test.describe('signed out', () => {
   test.use({ signedInAs: null });
@@ -151,6 +158,7 @@ test.describe('signed in as Admin', () => {
     const table = page.getByRole('table', { name: 'Danh sách tài khoản' });
     await expect(table.getByRole('row')).toHaveCount(3);
 
+    await openCreateAccount(page);
     await page.getByLabel(/^Username/).fill('HR.CN03');
     await page.getByLabel('Họ tên', { exact: true }).fill('Nhân viên Giả 3');
     await page.getByRole('checkbox', { name: 'C&B' }).check();
@@ -180,9 +188,12 @@ test.describe('signed in as Admin', () => {
     await expect(page.getByRole('tab', { name: 'Tài khoản (3)' })).toBeVisible();
 
     // Duplicate username → localized error from the function's error code.
+    await openCreateAccount(page);
     await page.getByLabel(/^Username/).fill('hr.cn03');
     await page.getByRole('button', { name: 'Tạo và hiện mật khẩu tạm' }).click();
     await expect(page.getByRole('alert')).toContainText('username đã tồn tại');
+    await page.keyboard.press('Escape');
+    await expect(page.getByRole('button', { name: '+ Tạo tài khoản' })).toBeFocused();
 
     // Own row has reset/lock too (no self-action guard, MEMORY 2026-10-26 18:09).
     const own = table.getByRole('row', { name: /^admin/ });

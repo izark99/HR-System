@@ -5,7 +5,14 @@
  */
 import { ADMIN, expect, SUPABASE_ORIGIN, test, USER, type Page } from './fixtures';
 import { FIXED_TEMP_PASSWORD, RESET_TEMP_PASSWORD } from './supabase-mock';
-import { chooseOption, persistedState, recordRequests, rowAction, rowMenuItem } from './helpers';
+import {
+  chooseOption,
+  openCreateAccount,
+  persistedState,
+  recordRequests,
+  rowAction,
+  rowMenuItem,
+} from './helpers';
 
 test.use({ signedInAs: ADMIN });
 
@@ -24,6 +31,7 @@ async function openUsers(page: Page) {
 }
 
 async function create(page: Page, username: string, fullName = '') {
+  await openCreateAccount(page);
   await page.getByLabel(/^Username/).fill(username);
   if (fullName) await page.getByLabel('Họ tên', { exact: true }).fill(fullName);
   await createButton(page).click();
@@ -99,6 +107,7 @@ test.describe('create account → temporary password', () => {
     supabase,
   }) => {
     await openUsers(page);
+    await openCreateAccount(page);
     await page.getByLabel(/^Username/).fill('qt.phu');
     await page.getByRole('radio', { name: 'Admin' }).check();
     await page.getByRole('checkbox', { name: 'C&B' }).check();
@@ -110,6 +119,7 @@ test.describe('create account → temporary password', () => {
     });
     await expect(userRow(page, 'qt.phu')).toContainText('Admin');
     // The form is cleared for the next account.
+    await openCreateAccount(page);
     await expect(page.getByLabel(/^Username/)).toHaveValue('');
     await expect(page.getByRole('radio', { name: 'User' })).toBeChecked();
     await expect(page.getByRole('checkbox', { name: 'C&B' })).not.toBeChecked();
@@ -146,7 +156,8 @@ test.describe('create account → temporary password', () => {
     supabase.functionFailure = { status: 500, code: 'internal' };
     await createButton(page).click();
     await expect(page.getByRole('alert')).toContainText('có lỗi không xác định');
-    await expect(page.getByRole('dialog')).toHaveCount(0);
+    // No temporary-password dialog (the create-account dialog itself stays open, AC-UI-55).
+    await expect(page.getByRole('dialog', { name: /^Mật khẩu tạm/ })).toHaveCount(0);
   });
 });
 

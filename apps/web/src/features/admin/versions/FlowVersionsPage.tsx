@@ -376,7 +376,7 @@ export function FlowVersionsPage() {
                                 search={{}}
                                 aria-label={action(t('admin.versions.openDesigner'), v)}
                                 className={cx(
-                                  buttonClass('outline', 'sm'),
+                                  buttonClass('text', 'sm'),
                                   'no-underline hover:text-ink',
                                 )}
                               >
@@ -401,7 +401,7 @@ export function FlowVersionsPage() {
                               search={{ version: v.id }}
                               aria-label={action(t('admin.versions.viewInDesigner'), v)}
                               className={cx(
-                                buttonClass('outline', 'sm'),
+                                buttonClass('text', 'sm'),
                                 'no-underline hover:text-ink',
                               )}
                             >
