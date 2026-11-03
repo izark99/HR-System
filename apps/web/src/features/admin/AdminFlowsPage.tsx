@@ -33,6 +33,7 @@ import {
 } from './admin-api';
 import { Dialog } from './Dialog';
 import { useAdminApi, useAdminQuery } from './use-admin';
+import { LoadingRegion, TableCardSkeleton } from '../../components/Skeleton';
 
 const MAX_JSON_BYTES = 1024 * 1024;
 const CODE_PATTERN = /^[a-z0-9][a-z0-9-]{1,62}[a-z0-9]$/;
@@ -504,7 +505,11 @@ export function AdminFlowsPage() {
           {t(`admin.errors.${error}`)}
         </Callout>
       )}
-      {!data && !error && <p className="m-0 text-muted">{t('common.loading')}</p>}
+      {!data && !error && (
+        <LoadingRegion>
+          <TableCardSkeleton rows={2} columns={4} />
+        </LoadingRegion>
+      )}
 
       {data && (
         <Card aria-labelledby="flows-title" className="flex flex-col gap-4">

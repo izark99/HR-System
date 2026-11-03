@@ -12,6 +12,12 @@ import { LoginPage } from '../features/auth/LoginPage';
 import { FlowListPage } from '../features/runner/FlowListPage';
 import { RunPage } from '../features/runner/RunPage';
 import { RootLayout } from './RootLayout';
+import {
+  DesignerSkeleton,
+  LoadingRegion,
+  PageSkeleton,
+  SKELETON_DELAY_MS,
+} from '../components/Skeleton';
 
 export interface RouterContext {
   /** Set by <App> (null only before the provider renders). */
@@ -107,7 +113,25 @@ export const designerRoute = createRoute({
   validateSearch: (search: Record<string, unknown>): { version?: string } =>
     typeof search.version === 'string' && search.version ? { version: search.version } : {},
   component: lazyRouteComponent(() => import('../features/designer/DesignerPage'), 'DesignerPage'),
+  pendingComponent: DesignerPending,
 });
+
+/** Shown while a lazy route chunk loads (the router already waited 200 ms). */
+function RoutePending() {
+  return (
+    <LoadingRegion delayMs={0} className="mx-auto w-full max-w-320 px-4 pt-8 pb-12 md:px-8">
+      <PageSkeleton />
+    </LoadingRegion>
+  );
+}
+
+function DesignerPending() {
+  return (
+    <LoadingRegion delayMs={0}>
+      <DesignerSkeleton />
+    </LoadingRegion>
+  );
+}
 
 export const router = createRouter({
   routeTree: rootRoute.addChildren([
@@ -125,6 +149,9 @@ export const router = createRouter({
     ]),
   ]),
   defaultPreload: false,
+  // Lazy route chunks (AC-UI-56): skeleton of the coming screen after 200 ms of waiting.
+  defaultPendingMs: SKELETON_DELAY_MS,
+  defaultPendingComponent: RoutePending,
   context: { auth: null },
 });
 

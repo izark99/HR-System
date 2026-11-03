@@ -20,6 +20,7 @@ import { formatMonth } from '../../lib/format';
 import { todayIso } from './as-of';
 import type { FlowSummary, RecentRun } from './flow-source';
 import { useRunStore } from './run-context';
+import { FlowCardsSkeleton, LinesSkeleton, LoadingRegion } from '../../components/Skeleton';
 
 const STATUS_TONE: Record<RecentRun['status'], Tone> = {
   succeeded: 'teal',
@@ -52,7 +53,11 @@ function RecentRuns({ runs, failed }: { runs: RecentRun[] | null; failed: boolea
         {t('recent.title')}
       </h2>
       {failed && <p className="m-0 text-coral-text">{t('recent.loadError')}</p>}
-      {!failed && runs === null && <p className="m-0 text-muted">{t('common.loading')}</p>}
+      {!failed && runs === null && (
+        <LoadingRegion>
+          <LinesSkeleton />
+        </LoadingRegion>
+      )}
       {runs !== null && runs.length === 0 && (
         <p className="m-0 rounded-card bg-neutral px-4 py-6 text-center text-body text-muted">
           {t('recent.empty')}
@@ -213,7 +218,11 @@ export function FlowListPage() {
         )}
 
         {failed && <p className="m-0 text-coral-text">{t('flows.loadError')}</p>}
-        {flows === null && !failed && <p className="m-0 text-muted">{t('common.loading')}</p>}
+        {flows === null && !failed && (
+          <LoadingRegion>
+            <FlowCardsSkeleton />
+          </LoadingRegion>
+        )}
         {flows !== null && visible.length === 0 && (
           <p className="m-0 text-muted">{t('flows.empty')}</p>
         )}

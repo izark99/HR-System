@@ -4,7 +4,7 @@
  * 2026-11-03 09:07), computed-style checks and an axe WCAG 2.1 A/AA scan on each state.
  * Supabase is mocked; data is the fake fixture set only.
  */
-import { ADMIN, expect, test, type Page } from './fixtures';
+import { ADMIN, expect, SUPABASE_ORIGIN, test, type Page } from './fixtures';
 import {
   employees,
   fixtures,
@@ -530,5 +530,72 @@ test.describe('zoom 200% (640px wide): run and result stay usable (AC-UI-23)', (
     await commonChecks(page, { darkCards: 1 });
     await expect(page.getByRole('button', { name: /Tải Excel/ })).toBeVisible();
     await shot(page, '06-result', 'zoom-200');
+  });
+});
+
+/**
+ * AC-UI-56: while Supabase answers slowly, the screen shows a skeleton of the coming layout in a
+ * `role="status"` region read as "Đang tải…"; the sweep stops under reduced motion. The data
+ * requests are held until the checks are done, then released.
+ */
+async function holdData(page: Page): Promise<() => void> {
+  let release!: () => void;
+  const gate = new Promise<void>((r) => (release = r));
+  await page.route(`${SUPABASE_ORIGIN}/{rest,functions}/**`, async (route, request) => {
+    // The signed-in profile is part of the app start (its own skeleton): let it through.
+    if (!new URL(request.url()).pathname.startsWith('/rest/v1/profiles')) await gate;
+    await route.fallback();
+  });
+  return release;
+}
+
+async function skeletonChecks(page: Page, state: string, screen: string): Promise<void> {
+  const region = page.locator('[data-loading]').first();
+  await expect(region).toHaveAttribute('role', 'status');
+  await expect(region).toHaveText('Đang tải…', { useInnerText: true });
+  const block = region.locator('[data-skeleton]').first();
+  await expect(block).toBeVisible();
+  const s = await style(block);
+  expect(s.bg).toBe('rgb(241, 245, 249)');
+  expect(['6px', '12px', '999px']).toContain(s.radius);
+  const anim = () =>
+    block.evaluate((el) => {
+      const cs = getComputedStyle(el, '::after');
+      return { name: cs.animationName, duration: cs.animationDuration };
+    });
+  expect(await anim()).toEqual({ name: 'hr-skeleton-sweep', duration: '1.5s' });
+  await commonChecks(page);
+  await axe(page, `${state} skeleton`);
+  // Reduced motion: no sweep. The screenshot is taken in this state (a still frame).
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  expect((await anim()).name).toBe('none');
+  await shot(page, screen, 'skeleton');
+  await page.emulateMedia({ reducedMotion: 'no-preference' });
+}
+
+test.describe('loading skeleton (AC-UI-56)', () => {
+  test.use({ viewport: DESKTOP });
+
+  test('flow list', async ({ page }) => {
+    const release = await holdData(page);
+    await page.goto('/');
+    await skeletonChecks(page, 'flow-list 1280x800', '03-flow-list');
+    release();
+    await expect(page.locator('[data-loading]')).toHaveCount(0);
+    await expect(page.getByRole('link', { name: /^Chạy flow Đối chiếu/ })).toBeVisible();
+  });
+});
+
+test.describe('loading skeleton, admin (AC-UI-56)', () => {
+  test.use({ viewport: DESKTOP, signedInAs: ADMIN });
+
+  test('users & groups', async ({ page }) => {
+    const release = await holdData(page);
+    await page.goto('/admin/users');
+    await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
+    await skeletonChecks(page, 'admin-users 1280x800', '07-admin-users');
+    release();
+    await expect(page.locator('[data-loading]')).toHaveCount(0);
+    await expect(page.getByRole('table', { name: 'Danh sách tài khoản' })).toBeVisible();
   });
 });

@@ -49,6 +49,7 @@ import {
   simulatePublish,
   type Gap,
 } from './version-ranges';
+import { HeaderSkeleton, LoadingRegion, TableCardSkeleton } from '../../../components/Skeleton';
 
 /** Status chips (spec §14.4): Draft = blue, Published = teal, Retired = neutral grey. */
 export const VERSION_STATUS_TONE: Record<VersionStatus, Tone> = {
@@ -210,7 +211,14 @@ export function FlowVersionsPage() {
       </Callout>
     );
   }
-  if (data === undefined) return <p className="m-0 text-muted">{t('common.loading')}</p>;
+  if (data === undefined) {
+    return (
+      <LoadingRegion className="flex flex-col gap-6">
+        <HeaderSkeleton />
+        <TableCardSkeleton rows={3} columns={5} />
+      </LoadingRegion>
+    );
+  }
   if (data === null) {
     return (
       <>

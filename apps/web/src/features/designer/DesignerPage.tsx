@@ -14,6 +14,7 @@ import { DesignerEditor, type SavedState } from './DesignerEditor';
 import { DesignerErrorBoundary } from './ErrorBoundary';
 import { fromDefinition, toDefinition, type JsonObject } from './model';
 import { useUnsavedChanges } from '../auth/idle/activity';
+import { DesignerSkeleton, LoadingRegion } from '../../components/Skeleton';
 
 /**
  * Flow Designer route (spec §15.3; Admin only, lazy chunk with React Flow). Always edits the
@@ -127,7 +128,11 @@ export function DesignerPage() {
     );
   }
   if (data === undefined) {
-    return <p className="m-0 p-6 text-muted">{tc('common.loading')}</p>;
+    return (
+      <LoadingRegion>
+        <DesignerSkeleton />
+      </LoadingRegion>
+    );
   }
   if (data === null || !version || !initial) {
     return (

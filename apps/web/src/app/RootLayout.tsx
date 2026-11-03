@@ -1,10 +1,10 @@
 import { Outlet, useRouter, useRouterState } from '@tanstack/react-router';
 import { useEffect, useRef } from 'react';
-import { useTranslation } from 'react-i18next';
 import { useAuth } from '../features/auth/auth-context';
 import { CHANGE_PASSWORD_PATH, LOGIN_PATH, resolveGuard } from '../features/auth/guard';
 import { IdleLogout } from '../features/auth/idle/IdleLogout';
 import { AppShell } from './AppShell';
+import { LoadingRegion, PageSkeleton } from '../components/Skeleton';
 
 function Redirect({ href }: { href: string }) {
   const router = useRouter();
@@ -21,7 +21,6 @@ function Redirect({ href }: { href: string }) {
  * session survives in memory.
  */
 export function RootLayout() {
-  const { t } = useTranslation();
   const auth = useAuth();
   const location = useRouterState({ select: (s) => s.location });
   // Path of the route actually rendered by <Outlet>. During a navigation `location` already points
@@ -43,9 +42,9 @@ export function RootLayout() {
   const decision = resolveGuard(location.pathname, auth, location.searchStr);
   if (decision.kind === 'wait') {
     return (
-      <p role="status" className="m-0 p-8 font-sans text-muted">
-        {t('common.loading')}
-      </p>
+      <LoadingRegion className="mx-auto w-full max-w-320 px-4 pt-8 pb-12 md:px-8">
+        <PageSkeleton />
+      </LoadingRegion>
     );
   }
   if (decision.kind === 'redirect') return <Redirect href={decision.href} />;

@@ -30,6 +30,7 @@ import {
 } from './admin-api';
 import { Dialog } from './Dialog';
 import { useAdminApi, useAdminQuery } from './use-admin';
+import { LoadingRegion, TableCardSkeleton } from '../../components/Skeleton';
 
 interface PageData {
   users: AdminUser[];
@@ -992,7 +993,11 @@ export function AdminUsersPage() {
       />
 
       <ErrorText code={error} />
-      {!data && !error && <p className="m-0 text-muted">{t('common.loading')}</p>}
+      {!data && !error && (
+        <LoadingRegion>
+          <TableCardSkeleton columns={5} />
+        </LoadingRegion>
+      )}
 
       {data && (
         <>

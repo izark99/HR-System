@@ -21,6 +21,7 @@ import { ValidationReport } from './components/ValidationReport';
 import { readiness, type Readiness } from './readiness';
 import { useRunState, useRunStore } from './run-context';
 import type { SessionState } from './run-store';
+import { LoadingRegion, PageSkeleton } from '../../components/Skeleton';
 
 function currentStep(state: SessionState, ready: Readiness): number {
   const s = state.run.status;
@@ -159,7 +160,11 @@ export function RunPage() {
     >
       <BackToFlows />
 
-      {state.load === 'loading' && <p className="m-0 text-muted">{t('common.loading')}</p>}
+      {state.load === 'loading' && (
+        <LoadingRegion>
+          <PageSkeleton />
+        </LoadingRegion>
+      )}
       {state.load === 'notFound' && <Callout tone="coral" label={t('run.notFound')} role="alert" />}
       {state.load === 'error' && (
         <div className="flex flex-col gap-3">
