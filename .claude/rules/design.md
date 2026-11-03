@@ -13,7 +13,7 @@ paths:
 - Bo góc: 6px input, 12px card/nút/popover/dialog/node, 999px pill. Không bo 16–24px.
 - Card: viền 1px `#E2E8F0`, **không shadow**. Shadow chỉ cho lớp nổi (popover, dialog, toast).
 - Nút 3 cấp cao 48px: chính teal (mỗi vùng 1 nút), tối `#1F2A44`, outline viền `#1F2A44`; thêm nút chữ và nút nguy hiểm. Không làm nút dạng pill.
-- Eyebrow: chữ in hoa, giãn chữ 1px, không nền. Tiêu đề viết hoa đầu câu, weight 600.
+- Eyebrow: chữ in hoa, giãn chữ 1px, không nền. Tiêu đề viết hoa đầu câu; độ đậm theo token §25.1 (`display-*` 500, `title-md` 600, `title-sm` 700, eyebrow 500).
 - Thang chữ §25.1 (body 16px, tiêu đề trang 48px, mobile thu nhỏ; canvas Designer, Monaco, bảng xem trước dữ liệu giữ 14px); một font Be Vietnam Pro self-host, không thêm request tới domain ngoài.
 - Mọi text UI qua i18next (`vi` mặc định); không hard-code chuỗi tiếng Việt trong component.
 - A11y: dùng `<button>`, `<label>`, `<a href>` thật; touch target ≥ 44px; tương phản chữ WCAG AA, viền control ≥ 3:1; tab theo pattern APG. Không dùng `<select>` và date picker mặc định.

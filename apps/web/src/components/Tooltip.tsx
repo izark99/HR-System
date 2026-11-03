@@ -23,12 +23,15 @@ export function Tooltip({
   text,
   children,
   className,
+  as: Wrapper = 'span',
 }: {
   text: string | null;
   children: ReactNode;
   className?: string;
+  /** `div` when the anchor wraps block content (e.g. an `<h1>`): a span may not contain it. */
+  as?: 'span' | 'div';
 }) {
-  const anchor = useRef<HTMLSpanElement>(null);
+  const anchor = useRef<HTMLElement>(null);
   const tip = useRef<HTMLSpanElement>(null);
   const [open, setOpen] = useState(false);
   const visible = open && text !== null;
@@ -62,8 +65,8 @@ export function Tooltip({
   };
 
   return (
-    <span
-      ref={anchor}
+    <Wrapper
+      ref={anchor as never}
       className={cx('relative', className)}
       onMouseEnter={() => setOpen(true)}
       onMouseLeave={() => setOpen(false)}
@@ -85,6 +88,6 @@ export function Tooltip({
           {text}
         </span>
       )}
-    </span>
+    </Wrapper>
   );
 }

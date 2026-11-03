@@ -253,7 +253,11 @@ export function OneLine({
     return () => observer.disconnect();
   }, [text]);
   return (
-    <Tooltip text={cut ? text : null} className={cx('block min-w-0', wrapperClassName)}>
+    <Tooltip
+      text={cut ? text : null}
+      as={As === 'h1' ? 'div' : 'span'}
+      className={cx('block min-w-0', wrapperClassName)}
+    >
       <As
         ref={ref as never}
         data-one-line

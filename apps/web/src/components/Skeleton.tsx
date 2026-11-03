@@ -11,8 +11,11 @@ import { cardClass, cx } from './ui';
 export function Skeleton({
   className,
   shape = 'line',
+  tone = 'neutral',
 }: {
   className?: string;
+  /** `line` for blocks drawn on a `#F1F5F9` surface (table header), else `neutral`. */
+  tone?: 'neutral' | 'line';
   /** `line` = text line (6px radius), `card` = card / button area (12px), `pill` = chip. */
   shape?: 'line' | 'card' | 'pill';
 }) {
@@ -21,7 +24,8 @@ export function Skeleton({
       aria-hidden
       data-skeleton
       className={cx(
-        'hr-skeleton block bg-neutral',
+        'hr-skeleton block',
+        tone === 'line' ? 'bg-line' : 'bg-neutral',
         shape === 'card' ? 'rounded-card' : shape === 'pill' ? 'rounded-pill' : 'rounded-input',
         className,
       )}
@@ -82,7 +86,7 @@ export function TableSkeleton({ rows = 4, columns = 5 }: { rows?: number; column
     <div className="flex flex-col">
       <div className="flex gap-6 border-b border-line bg-neutral px-4 py-3.5">
         {Array.from({ length: columns }, (_, c) => (
-          <Skeleton key={c} className={cx('h-3.5 bg-line', widths[c % widths.length])} />
+          <Skeleton key={c} tone="line" className={cx('h-3.5', widths[c % widths.length])} />
         ))}
       </div>
       {Array.from({ length: rows }, (_, r) => (

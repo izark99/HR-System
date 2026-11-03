@@ -16,6 +16,7 @@ export function Palette({ onAdd, disabled }: { onAdd: (type: string) => void; di
   const { t } = useTranslation('designer');
   const [query, setQuery] = useState('');
   const searchId = useId();
+  const hintId = useId();
   const q = foldText(query);
   const match = (type: string) =>
     !q ||
@@ -34,6 +35,9 @@ export function Palette({ onAdd, disabled }: { onAdd: (type: string) => void; di
       className="flex h-full flex-col gap-3 overflow-y-auto p-3.5"
     >
       <h2 className="m-0 text-dense font-semibold text-ink">{t('palette.title')}</h2>
+      <p id={hintId} className="sr-only">
+        {t('palette.addHint')}
+      </p>
       <label htmlFor={searchId} className="sr-only">
         {t('palette.search')}
       </label>
@@ -71,6 +75,7 @@ export function Palette({ onAdd, disabled }: { onAdd: (type: string) => void; di
                       onDragStart={(e) => onDragStart(e, s.type)}
                       onClick={() => onAdd(s.type)}
                       data-palette-item
+                      aria-describedby={hintId}
                       className={cx(
                         'flex h-15 w-full items-stretch gap-2.5 overflow-hidden rounded-card border border-line bg-card text-left',
                         'hover:border-teal-strong disabled:cursor-not-allowed disabled:text-muted',
