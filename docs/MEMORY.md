@@ -225,6 +225,8 @@
 
 ## Kỹ thuật & tổ chức
 
+2026-11-04 14:16 - Thứ tự vòng: làm vòng nâng tooling (MEMORY 2026-11-03 09:01) trước, rồi mới tới bộ khung UI/UX (spec §29: vòng A dựng token + component, vòng B chuyển màn).
+
 2026-11-04 14:12 - Bộ khung UI/UX (duyệt mẫu https://claude.ai/artifact/Cr36HRRwnWh3VHn5tJY587): thêm lớp layout + pattern dùng chung rồi chuyển các màn sang (không viết lại toàn bộ, không đổi nghiệp vụ). Layout: `PageShell` (content 1280 / fluid / narrow 488), `SideNavLayout`, `PageHeader` (workspace / showcase), `Section`, `Toolbar`. Pattern: `Tabs` (APG), `DataTable` (bảng Admin), `FormField`, `EmptyState`, `ToastProvider` toàn app, `Dialog` + `ConfirmDialog` (chuyển vào `components/`), `KpiCard`, `Stepper`, icon gom một chỗ. Màn mới không tự viết `<main>`, tabs, bảng Admin, field, toast. Chi tiết docs/spec.md §25.5, §29.
 
 2026-11-04 14:12 - Thang chiều cao cho công cụ làm việc, bỏ thang tiêu đề lớn của `docs/design-reference.md` (file đó là trang marketing): tiêu đề trang workspace (Admin, Version, Form) 28/36 600; tiêu đề showcase (Kết quả, Danh sách flow, Đăng nhập) 32/40 600; mobile 24/32; số KPI 40/44 600 (mobile 32/36); mô tả dưới tiêu đề và chữ trong input 16px; nút chuẩn 44px chữ 16px/600; input/Select/picker 44px; nút nhỏ 36px; dòng bảng Admin 48px, header bảng 44px; khoảng cách trên trang 24px. Tiêu đề chứa tên do người dùng đặt vẫn 1 dòng cắt "…", hiện đủ khi rê chuột/focus. Giữ eyebrow + subtitle ở mọi tiêu đề trang (header workspace ≈ 90px).

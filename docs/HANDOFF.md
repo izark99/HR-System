@@ -49,6 +49,7 @@
 
 - ~~Đổi giao diện theo design language bản 2~~ → xong 2026-11-03.
 - **Tiếp theo: vòng nâng tooling** (MEMORY 2026-11-03): PR dependabot `izark99/HR-System#11` (vite 8, nâng cùng `@vitejs/plugin-react` 6 — bỏ luật ignore trong `.github/dependabot.yml`), `izark99/HR-System#13` (vitest 5, CI đang đỏ), `izark99/HR-System#9` (@playwright/test 1.64 — kiểm khớp Chromium cài sẵn `/opt/pw-browsers`); chạy đủ E2E. PR cũ thì comment `@dependabot rebase` trước.
+- Sau tooling: **bộ khung UI/UX** (chốt 2026-11-04, spec §25.5 + §29, AC-UI-60..75; mẫu duyệt https://claude.ai/artifact/Cr36HRRwnWh3VHn5tJY587): vòng A (token + component), vòng B (chuyển màn Auth → User → Admin → Designer khung).
 - Sau đó: HANDOFF §4 mục #3 (nối cạnh bằng bàn phím) và #5 (tối ưu hiệu năng), rồi các mục Phase 2 trong spec §21 (`code.python`/Pyodide, template Excel, bảng tham chiếu có effective date…) — hỏi Harold thứ tự.
 
 ## 6. Token theo vòng (để so sánh hiệu quả)
