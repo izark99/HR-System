@@ -74,6 +74,8 @@ describe('output.preview in the session', () => {
   const duck = vi.fn<DuckDbProvider>(nodeDuckDb);
   const session = new EngineSession('vi', { duck });
   let summary: RunSummary;
+  // Vitest 5 clears mock call history before each test, so count the DuckDB starts of the run here.
+  let duckStarts = 0;
 
   beforeAll(async () => {
     const loaded = session.loadFlow(flowWithPreviews());
@@ -83,6 +85,7 @@ describe('output.preview in the session', () => {
     const outcome = await session.run({ ky_luong: '2026-09' });
     if (!outcome.ok) throw new Error(outcome.error.messageKey);
     summary = outcome.summary;
+    duckStarts = duck.mock.calls.length;
   });
 
   it('AC-B3-27: tabs follow the node order; previews are marked; the file has only the sheets', async () => {
@@ -96,7 +99,7 @@ describe('output.preview in the session', () => {
     const wb = new ExcelJS.Workbook();
     await wb.xlsx.load(session.getArtifact(0).data);
     expect(wb.worksheets.map((w) => w.name)).toEqual(['Tổng hợp', 'Lệch']);
-    expect(duck).toHaveBeenCalledTimes(1);
+    expect(duckStarts).toBe(1);
   });
 
   it('AC-B3-28: only the configured columns, in order; all columns by default', () => {

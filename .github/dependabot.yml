@@ -20,6 +20,3 @@ updates:
       # Pinned to the major that @duckdb/duckdb-wasm depends on; upgrade together with DuckDB-WASM.
       - dependency-name: apache-arrow
         update-types: ['version-update:semver-major']
-      # Next major needs Vite 8; upgrade together with Vite.
-      - dependency-name: '@vitejs/plugin-react'
-        update-types: ['version-update:semver-major']
