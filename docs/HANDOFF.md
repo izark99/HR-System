@@ -1,6 +1,6 @@
 # HANDOFF — Trạng thái dự án để mở session mới
 
-> Cập nhật: 2026-11-03 (sau vòng giao diện bản 2). Đọc file này sau `CLAUDE.md` và `docs/MEMORY.md`.
+> Cập nhật: 2026-11-04 (sau vòng nâng tooling; bộ khung UI/UX đã chốt, chờ vòng A). Đọc file này sau `CLAUDE.md` và `docs/MEMORY.md`.
 
 ## 1. Đã xong
 
@@ -48,7 +48,7 @@
 ## 5. Bước tiếp theo
 
 - ~~Đổi giao diện theo design language bản 2~~ → xong 2026-11-03.
-- **Vòng nâng tooling** (MEMORY 2026-11-03 09:01): xong trên nhánh `claude/exciting-clarke-3ay1w5` (2026-11-04): vite 8.3.5 + @vitejs/plugin-react 6.2.1, vitest 5 (mọi package), @playwright/test 1.64.1 (chạy trên Chromium 1243 cài sẵn qua `executablePath`), eslint 10.14, @tanstack/react-virtual 3.14.24; bỏ luật ignore plugin-react trong dependabot. lint/format/typecheck/test (1091 pass)/build (entry 163,1 KiB, CSS 37,4 KiB gzip)/E2E (364 pass, 5 skip) đều pass. Chờ Harold duyệt đưa lên `main`; sau đó đóng PR dependabot `izark99/HR-System#9`, `#10`, `#11`, `#12`, `#13` (đã gộp).
+- **Vòng nâng tooling** (MEMORY 2026-11-03 09:01): xong trên nhánh `claude/exciting-clarke-3ay1w5` (2026-11-04): vite 8.3.5 + @vitejs/plugin-react 6.2.1, vitest 5 (mọi package), @playwright/test 1.64.1 (chạy trên Chromium 1243 cài sẵn qua `executablePath`), eslint 10.14, @tanstack/react-virtual 3.14.24; bỏ luật ignore plugin-react trong dependabot. lint/format/typecheck/test (1091 pass)/build (entry 163,1 KiB, CSS 37,4 KiB gzip)/E2E (364 pass, 5 skip) đều pass. Lên `main` 2026-11-04 (Harold duyệt bỏ qua verifier vì chỉ đổi phiên bản tooling); đã đóng PR dependabot `izark99/HR-System#9`, `#10`, `#11`, `#12`, `#13` (đã gộp).
 - Sau tooling: **bộ khung UI/UX** (chốt 2026-11-04, spec §25.5 + §29, AC-UI-60..75; mẫu duyệt https://claude.ai/artifact/Cr36HRRwnWh3VHn5tJY587): vòng A (token + component), vòng B (chuyển màn Auth → User → Admin → Designer khung).
 - Sau đó: HANDOFF §4 mục #3 (nối cạnh bằng bàn phím) và #5 (tối ưu hiệu năng), rồi các mục Phase 2 trong spec §21 (`code.python`/Pyodide, template Excel, bảng tham chiếu có effective date…) — hỏi Harold thứ tự.
 
