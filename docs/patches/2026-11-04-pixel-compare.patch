@@ -1,0 +1,169 @@
+diff --git a/e2e/ui-v2-checks.ts b/e2e/ui-v2-checks.ts
+index b0f2fa0..d7f2127 100644
+--- a/e2e/ui-v2-checks.ts
++++ b/e2e/ui-v2-checks.ts
+@@ -67,18 +67,53 @@ ${sections}</html>`,
+   );
+ }
+ 
+-/** Full-page PNG `<screen>--<state>--<w>x<h>.png` in test-results/ui-v2 (+ index.html). */
+-export async function shot(page: Page, screen: string, state: string): Promise<void> {
++/**
++ * Browser clock for the screenshot specs (spec §29.3 AC-TL-11): dates shown on screen (month
++ * picker, version timeline) do not depend on the day the suite runs. After every fixed timestamp
++ * of the Supabase mock and before any real run date, so mocked sessions stay valid.
++ */
++export const FROZEN_NOW = new Date('2026-11-02T09:00:00+07:00');
++
++export async function freezeClock(page: Page): Promise<void> {
++  await page.clock.setFixedTime(FROZEN_NOW);
++}
++
++/**
++ * Full-page PNG `<screen>--<state>--<w>x<h>.png` in test-results/ui-v2 (+ index.html) for the
++ * manual review page, then compared with the committed baseline in e2e/__screenshots__
++ * (spec §29.3; update with `CI=1 pnpm test:e2e e2e/ui-v2 --update-snapshots`).
++ */
++export async function shot(
++  page: Page,
++  screen: string,
++  state: string,
++  // false: a state that changes while it is shown (a run in progress) — kept for manual review only.
++  { compare = true }: { compare?: boolean } = {},
++): Promise<void> {
+   mkdirSync(SHOTS, { recursive: true });
+   await settle(page);
+   const { width, height } = page.viewportSize()!;
++  const name = `${screen}--${state}--${width}x${height}.png`;
+   await page.screenshot({
+-    path: join(SHOTS, `${screen}--${state}--${width}x${height}.png`),
++    path: join(SHOTS, name),
+     fullPage: true,
+     animations: 'disabled',
+     caret: 'hide',
+   });
+   writeIndex();
++  if (compare) {
++    // Run duration ("· 0,04 giây") differs on every run: pinned in the DOM before the comparison
++    // (spec §29.3 AC-TL-11). Masking is not enough: its box width follows the text.
++    await page.evaluate(() => {
++      const walk = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
++      for (let n = walk.nextNode(); n; n = walk.nextNode()) {
++        if (/\d giây/.test(n.nodeValue ?? '')) {
++          n.nodeValue = n.nodeValue!.replace(/[\d.,]+ giây/g, '0,00 giây');
++        }
++      }
++    });
++    await expect(page).toHaveScreenshot(name, { fullPage: true });
++  }
+ }
+ 
+ /** Results of every axe scan, for the run report (serious/critical must be 0). */
+diff --git a/e2e/ui-v2-diacritics.spec.ts b/e2e/ui-v2-diacritics.spec.ts
+index a39ae12..8a196ae 100644
+--- a/e2e/ui-v2-diacritics.spec.ts
++++ b/e2e/ui-v2-diacritics.spec.ts
+@@ -13,7 +13,7 @@ import { mkdirSync } from 'node:fs';
+ import { join } from 'node:path';
+ import { ADMIN, expect, test, type Locator, type Page } from './fixtures';
+ import { runToResult, uploadFixtures } from './helpers';
+-import { DESKTOP, MOBILE, settle, SHOTS, shot } from './ui-v2-checks';
++import { DESKTOP, freezeClock, MOBILE, settle, SHOTS, shot } from './ui-v2-checks';
+ 
+ /** Fake flow name: two lines at 48px on 1280px, mixing stacked marks and dots below. */
+ const LONG_NAME =
+@@ -282,6 +282,9 @@ async function checkCut(page: Page, full: string): Promise<void> {
+   await expect(tip).toHaveCount(0);
+ }
+ 
++// Dates on screen must not depend on the run day (pixel comparison, spec §29.3).
++test.beforeEach(({ page }) => freezeClock(page));
++
+ for (const viewport of [DESKTOP, MOBILE]) {
+   const size = `${viewport.width}x${viewport.height}`;
+ 
+diff --git a/e2e/ui-v2.spec.ts b/e2e/ui-v2.spec.ts
+index 966f43b..da3301b 100644
+--- a/e2e/ui-v2.spec.ts
++++ b/e2e/ui-v2.spec.ts
+@@ -34,6 +34,8 @@ import {
+   designerToolbarChecks,
+   DESKTOP,
+   floatChecks,
++  freezeClock,
++  FROZEN_NOW,
+   inputChecks,
+   labelChecks,
+   MOBILE,
+@@ -55,6 +57,9 @@ const DRAFT_ID = '00000000-0000-4000-8000-000000000777';
+ const VERSIONS = '/admin/flows/payroll-timesheet/versions';
+ const DESIGNER = '/admin/flows/payroll-timesheet/designer';
+ 
++// Dates on screen must not depend on the run day (pixel comparison, spec §29.3).
++test.beforeEach(({ page }) => freezeClock(page));
++
+ test.afterAll(() => {
+   // Summary of every axe scan in this worker (minor/moderate findings are reported, not blocking).
+   const other = axeLog.flatMap((s) =>
+@@ -218,20 +223,22 @@ for (const viewport of [DESKTOP, MOBILE]) {
+       await axe(page, `run-validation ${size}`);
+       await shot(page, '04-run', 'validation');
+ 
+-      // Running: a run large enough to be caught mid-way (12k rows per side).
++      // Running: a run large enough to be caught mid-way (24k rows per side).
+       await page.reload();
+       await pickMonth(page, '2026-09');
+-      await payrollInput(page).setInputFiles([payroll('bang_luong_lon.xlsx', employees(12_000))]);
++      await payrollInput(page).setInputFiles([payroll('bang_luong_lon.xlsx', employees(24_000))]);
+       await timesheetInput(page).setInputFiles([
+-        timesheet('cham_cong_lon.xlsx', employees(12_000, 1, 'CN01', 24)),
++        timesheet('cham_cong_lon.xlsx', employees(24_000, 1, 'CN01', 24)),
+       ]);
+       await expect(runButton(page)).toHaveText('Chạy', { timeout: 30_000 });
+       await runButton(page).click();
+       const cancel = page.getByRole('button', { name: 'Hủy', exact: true });
+       await expect(cancel).toBeVisible({ timeout: 5_000 });
+-      await shot(page, '04-run', 'running');
+-      await axe(page, `run-running ${size}`);
++      // Checks first, while the run is surely in progress; then the picture and the axe scan.
+       await commonChecks(page);
++      await shot(page, '04-run', 'running', { compare: false });
++      await axe(page, `run-running ${size}`);
++      await expect(cancel).toBeVisible();
+     });
+ 
+     test('result: summary tab and mismatch tab', async ({ page }) => {
+@@ -474,7 +481,7 @@ test.describe('idle sign-out warning', () => {
+   test.use({ viewport: DESKTOP });
+ 
+   test('dialog', async ({ page }) => {
+-    await page.clock.install();
++    await page.clock.install({ time: FROZEN_NOW });
+     await page.goto('/');
+     await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
+     await page.clock.fastForward('07:55:00');
+diff --git a/playwright.config.ts b/playwright.config.ts
+index e93ad4d..50f49d3 100644
+--- a/playwright.config.ts
++++ b/playwright.config.ts
+@@ -15,7 +15,19 @@ const PORT = Number(process.env.E2E_PORT ?? 4173);
+ export default defineConfig({
+   testDir: './e2e',
+   timeout: 60_000,
+-  expect: { timeout: 15_000 },
++  expect: {
++    timeout: 15_000,
++    // Pixel comparison of the design screenshots (spec §29.3). Zero tolerance: a dropped Vietnamese
++    // tone mark changes only 2–9 pixels.
++    toHaveScreenshot: {
++      animations: 'disabled',
++      caret: 'hide',
++      scale: 'css',
++      maxDiffPixels: 0,
++    },
++  },
++  // Baselines are made with the preinstalled Chromium only (one platform): no OS suffix.
++  snapshotPathTemplate: 'e2e/__screenshots__/{testFileName}/{arg}{ext}',
+   fullyParallel: false,
+   forbidOnly: !!process.env.CI,
+   retries: 0,

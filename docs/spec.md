@@ -874,7 +874,7 @@ Chỉ Admin; chỉ desktop (≥ 1280px). Route riêng, lazy-load (React Flow, co
 | Trình duyệt | Chrome, Edge (2 phiên bản mới nhất), desktop |
 | Hiệu năng | 100k dòng × 30 cột, flow 15 node: < 10 giây (không có node Python) trên laptop 8GB RAM |
 | UI | Tải trang đầu < 3 giây (chưa tính WASM engine); UI không bị treo khi engine chạy |
-| Kích thước bundle | Entry chunk và chunk của User không chứa React Flow, Monaco, DuckDB; Monaco + React Flow chỉ trong chunk Designer. Ngân sách (chốt 2026-10-27): entry chunk (gzip) không tăng quá 10% so với cuối bước 2 (đo tại commit `d079f6b`, lưu mốc trong repo); script build tự kiểm tra và báo lỗi khi vượt |
+| Kích thước bundle | Entry chunk và chunk của User không chứa React Flow, Monaco, DuckDB; Monaco + React Flow chỉ trong chunk Designer. Ngân sách (chốt 2026-10-27, sửa 2026-11-04 15:16): JS tải ban đầu = entry chunk + các chunk `modulepreload` (gzip) không tăng quá 10% so với cuối bước 2 (đo tại commit `d079f6b`, lưu mốc trong repo); script build tự kiểm tra và báo lỗi khi vượt |
 | Khả dụng | Phụ thuộc SLA free tier; app vẫn mở được khi Supabase lỗi nhưng không đăng nhập được |
 | Accessibility | WCAG 2.1 AA cho phần User |
 | i18n | `vi` mặc định; mọi text UI qua i18next; định dạng số/ngày theo locale (`1.234.567,89` cho vi) |
@@ -955,7 +955,7 @@ Toàn bộ Phase 1:
 
 **Bước 4** (ngay sau bước 3, chốt 2026-10-27 07:31; chi tiết chốt 2026-10-30 13:18): `transform.formula` — công thức Excel transpile sang SQL DuckDB (§9.1, §12.2), dùng DuckDB runtime của bước 3. User story + AC: §27. Vòng code đầu gộp HANDOFF §4 mục #1 (giới hạn giải nén .xlsx).
 
-**Đổi giao diện bản 2** (ngay sau bước 4 – R1, chốt 2026-10-30 13:26): theo §25; user story + AC: §28. Sau đó là vòng nâng tooling (MEMORY 2026-11-03 09:01).
+**Đổi giao diện bản 2** (ngay sau bước 4 – R1, chốt 2026-10-30 13:26): theo §25; user story + AC: §28. Sau đó là vòng nâng tooling (xong 2026-11-04, §30), rồi bộ khung UI/UX (§29); so ảnh pixel sau vòng B của §29 (§30.3).
 
 Không thuộc Phase 1: `input.refTable`, bảng tham chiếu, template — Phase 2.
 
@@ -999,6 +999,7 @@ Không thuộc Phase 1: `input.refTable`, bảng tham chiếu, template — Phas
 | ~~Q23~~ | Đã chốt 2026-11-03 09:07: bỏ weight 800, ngân sách thêm CSS gzip +10% (§28.7); weight 500 giữ lại (chốt 2026-11-03 10:13) | — |
 | ~~Q24~~ | Đã chốt 2026-11-03 09:07: làm KPI card + 1 card tối ở màn Kết quả (§28.3) | — |
 | ~~Q25~~ | Đã chốt 2026-11-03 10:51: 1 nút hay dùng + menu "Thao tác khác" cho mọi bảng Admin (§25.3, AC-UI-54) | — |
+| ~~Q26~~ | Đã chốt 2026-11-04 13:39, sửa 15:16: so ảnh pixel (`toHaveScreenshot`) làm sau vòng B của bộ khung UI/UX; Playwright 1.64.1 chạy trên Chromium cài sẵn (§30) | — |
 | ~~Q18~~ | Đã chốt 2026-10-30 13:29: canvas Designer, Monaco và bảng xem trước giữ chữ 14px (§25.1) | — |
 | ~~Q17~~ | Đã chốt 2026-10-30 13:24: công thức dùng `,` ngăn đối số và `.` thập phân, không nhận `;` (§12.2) | — |
 | ~~Q16~~ | Đã chốt 2026-10-30 13:18: `transform.formula` chỉ nhận công thức Excel (transpile sang SQL), 41 hàm, không có XLOOKUP/VLOOKUP (§9.1, §12.2) | — |
@@ -1607,3 +1608,38 @@ Mọi màn có đủ 4 trạng thái: đang tải (skeleton đúng bố cục, �
 | AC-UI-74 | Không hồi quy: toàn bộ E2E hiện có pass, chỉ sửa phần kiểm kích thước/selector do giao diện đổi; `ui-v2.spec.ts` chụp lại đủ trạng thái AC-UI-30 + skeleton + toast + ConfirmDialog, kiểm giá trị CSS theo AC-UI-60..62; axe 0 vi phạm serious/critical; luồng flow nghiệm thu cho cùng file kết quả (AC-UI-44); ngân sách JS entry và CSS gzip (AC-UI-40/41) vẫn đạt. |
 | AC-UI-75 | `.claude/rules/design.md` ghi quy tắc: màn mới dùng `PageShell` + mẫu màn §25.5; không tự viết `<main>`, tabs, bảng Admin, field, toast, icon; khoảng cách chỉ theo thang. |
 
+---
+
+## 30. Vòng nâng tooling — Acceptance criteria
+
+> Chốt 2026-11-04 13:39, sửa 2026-11-04 15:16 (MEMORY nhóm "Kỹ thuật & tổ chức"). Chỉ nâng công cụ build/test, **không đổi hành vi** app. Bản nâng trên `main`: `fbc21f0`.
+
+### 30.1 Phạm vi
+
+| Gói | Từ → tới | Ghi chú |
+|-----|----------|---------|
+| `vite` | 7.x → 8.x | Rolldown thay Rollup; Oxc minify JS; Lightning CSS minify CSS |
+| `@vitejs/plugin-react` | 5.x → 6.x | Bỏ Babel, dùng Oxc; bỏ luật ignore trong `.github/dependabot.yml` |
+| `vitest` | 4.x → 5.x | `clearMocks` mặc định `true`: sửa test ghi lời gọi mock ngoài thân test |
+| `@playwright/test` | 1.63.0 → 1.64.1 | 1.64 đi kèm Chromium rev 1248, môi trường có rev 1243: chạy trên bản cài sẵn qua `executablePath` (full E2E pass). Dependabot bỏ qua gói này; nâng tay kèm full E2E khi Chromium môi trường đổi |
+
+### 30.2 Acceptance criteria
+
+| # | Given / When / Then |
+|---|---------------------|
+| AC-TL-01 | `pnpm lint`, `format:check`, `typecheck`, `test`, `build`, `CI=1 pnpm test:e2e` (full, trên bản build mới) pass. Không skip/xóa test; chỉ sửa test ở phần phụ thuộc hành vi công cụ (VD `clearMocks`). |
+| AC-TL-02 | Ngân sách: JS tải ban đầu (entry + chunk `modulepreload`, gzip) và tổng CSS gzip vẫn ≤ baseline +10% (`bundle-budget.json`, không đổi baseline); `scripts/check-bundle-size.mjs` cộng cả chunk `modulepreload` (Rolldown tách phần dùng chung khỏi entry). Vượt → dừng, báo Harold số liệu trước/sau. Số đo: trước (Vite 7) 212.474 B, sau (Vite 8) 211.105 B; CSS 38.712 → 38.289 B. |
+| AC-TL-03 | DuckDB-WASM: build vẫn tách `.wasm` thành các phần < 25 MiB kèm manifest checksum; worker tải, ghép, chạy được (E2E `duckdb*.spec.ts` pass). |
+| AC-TL-04 | Monaco và React Flow chỉ nằm trong chunk Designer (không vào entry, không vào chunk màn User); worker build dạng ES module. |
+| AC-TL-05 | CSP không đổi; bản build không có script inline; `privacy.spec.ts` pass (không request ra ngoài origin). |
+| AC-TL-06 | `.github/dependabot.yml`: bỏ ignore major `@vitejs/plugin-react`; thêm ignore `@playwright/test` (mọi bản) kèm lý do; giữ ignore `xlsx`, major `@types/node`, major `apache-arrow`. |
+
+### 30.3 So ảnh pixel (hoãn tới sau vòng B của §29)
+
+> Chốt 2026-11-04 15:16: làm sau vòng B để chỉ chụp ảnh gốc 1 lần. Code đã làm và kiểm (2 lần liên tiếp pass ở ngưỡng 0 pixel; lỗi bỏ 1 dấu thanh lệch 2–9 pixel được phát hiện): `docs/patches/2026-11-04-pixel-compare.patch` (áp bằng `git apply`, rồi sinh ảnh gốc bằng `--update-snapshots`).
+
+| # | Given / When / Then |
+|---|---------------------|
+| AC-TL-10 | Mọi trạng thái chụp trong `e2e/ui-v2.spec.ts` và `e2e/ui-v2-diacritics.spec.ts` (AC-UI-30) so với ảnh gốc bằng `toHaveScreenshot`; ảnh gốc commit trong `e2e/__screenshots__/`, sinh trên Chromium cài sẵn (`/opt/pw-browsers/chromium`). Ngoại lệ: trạng thái "đang chạy" của màn Chạy flow (tiến độ đổi liên tục, flow chạy xong trong lúc chờ khung hình ổn định) chỉ chụp để duyệt tay. |
+| AC-TL-11 | Ổn định: font đã nạp, tắt animation/caret; đồng hồ trình duyệt cố định ở 2026-11-02 09:00 (giờ VN) nên ngày hiển thị không phụ thuộc ngày chạy; thời gian chạy ("… giây") được thay bằng "0,00 giây" trong DOM ngay trước khi so (che bằng `mask` không đủ vì bề rộng chữ thay đổi). Ngưỡng cấu hình tập trung `maxDiffPixels: 0` (lỗi bỏ 1 dấu thanh chỉ lệch 2–9 pixel). Chạy 2 lần liên tiếp đều pass. |
+| AC-TL-12 | Vẫn sinh trang ảnh duyệt tay (`test-results/ui-v2/index.html`) và kiểm giá trị CSS (AC-UI-03..11). Đổi giao diện hoặc đổi Chromium → cập nhật ảnh gốc (`--update-snapshots`) trong cùng commit. |

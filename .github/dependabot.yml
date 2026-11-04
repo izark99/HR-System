@@ -20,3 +20,7 @@ updates:
       # Pinned to the major that @duckdb/duckdb-wasm depends on; upgrade together with DuckDB-WASM.
       - dependency-name: apache-arrow
         update-types: ['version-update:semver-major']
+      # E2E runs on the Chromium preinstalled in the cloud dev environment (/opt/pw-browsers,
+      # revision 1243); @playwright/test 1.64.1 is accepted on it (MEMORY 2026-11-04). Newer versions
+      # expect another Chromium: upgrade by hand, with a full E2E run, when that Chromium changes.
+      - dependency-name: '@playwright/test'

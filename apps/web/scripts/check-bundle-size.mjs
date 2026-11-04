@@ -3,6 +3,9 @@
 // than 10% over the end-of-step-2 baseline (commit d079f6b), stored in bundle-budget.json.
 // Design v2 (spec §28 AC-UI-41): the total gzipped CSS (every dist/assets/*.css) must not grow
 // more than 10% over the baseline measured on a6e36e1.
+// Vite 8 (Rolldown) moves shared modules out of the entry into chunks the entry imports statically
+// (listed as <link rel="modulepreload">); they load with the entry, so they count towards the entry
+// budget (spec §30 AC-TL-02). The d079f6b baseline was a single entry file (no preloads).
 //
 //   node scripts/check-bundle-size.mjs [distDir]            check (run after `vite build`)
 //   node scripts/check-bundle-size.mjs [distDir] --measure  print the size only (to set a baseline)
@@ -23,22 +26,25 @@ if (!match) {
   process.exit(1);
 }
 const entry = match[1];
+const preloads = [...html.matchAll(/<link[^>]*rel="modulepreload"[^>]*href="\/([^"]+\.js)"/g)].map(
+  (m) => m[1],
+);
 const gzip = (file) => gzipSync(readFileSync(join(dist, file)), { level: 9 }).length;
-const gzipBytes = gzip(entry);
+const gzipBytes = [entry, ...preloads].reduce((sum, f) => sum + gzip(f), 0);
 const cssFiles = readdirSync(join(dist, 'assets'))
   .filter((f) => f.endsWith('.css'))
   .map((f) => `assets/${f}`);
 const cssGzipBytes = cssFiles.reduce((sum, f) => sum + gzip(f), 0);
 
 if (measureOnly) {
-  console.log(JSON.stringify({ entry, gzipBytes, cssFiles, cssGzipBytes }));
+  console.log(JSON.stringify({ entry, preloads, gzipBytes, cssFiles, cssGzipBytes }));
   process.exit(0);
 }
 
 const budget = JSON.parse(readFileSync(join(here, '..', 'bundle-budget.json'), 'utf8'));
 const limit = Math.floor(budget.entryGzipBytes * (1 + budget.maxGrowth));
 const kb = (n) => `${(n / 1024).toFixed(1)} KiB`;
-const line = `entry chunk ${entry}: ${kb(gzipBytes)} gzip (baseline ${kb(budget.entryGzipBytes)} at ${budget.baselineCommit}, limit ${kb(limit)})`;
+const line = `entry chunk ${entry} + ${preloads.length} preloaded: ${kb(gzipBytes)} gzip (baseline ${kb(budget.entryGzipBytes)} at ${budget.baselineCommit}, limit ${kb(limit)})`;
 const cssLimit = Math.floor(budget.cssGzipBytes * (1 + budget.maxGrowth));
 const cssLine = `css (${cssFiles.length} files): ${kb(cssGzipBytes)} gzip (baseline ${kb(budget.cssGzipBytes)} at ${budget.cssBaselineCommit}, limit ${kb(cssLimit)})`;
 let failed = false;

@@ -225,6 +225,14 @@
 
 ## Kỹ thuật & tổ chức
 
+2026-11-04 15:16 - Ngân sách bundle: JS tải ban đầu (gzip) = entry chunk + các chunk tải ngay cùng entry (`<link rel="modulepreload">`, vì Vite 8/Rolldown tách phần dùng chung ra khỏi entry) không tăng quá 10% so với cuối bước 2 (commit `d079f6b`, baseline giữ nguyên); build tự kiểm tra và báo lỗi khi vượt.
+
+2026-11-04 15:16 - So ảnh pixel (`toHaveScreenshot`) hoãn tới sau vòng B của bộ khung UI/UX (tránh chụp lại ảnh gốc nhiều lần); code đã làm và kiểm (ngưỡng 0 pixel, đồng hồ trình duyệt cố định, cố định chữ thời gian chạy) lưu ở `docs/patches/2026-11-04-pixel-compare.patch`.
+
+2026-11-04 15:16 - `@playwright/test` giữ 1.64.1 như đã lên `main` (chạy trên Chromium rev 1243 cài sẵn qua `executablePath`, full E2E pass); dependabot bỏ qua `@playwright/test`, chỉ nâng tay kèm full E2E khi Chromium môi trường đổi.
+
+2026-11-04 15:16 - Hai session làm trùng vòng nâng tooling: giữ bản trên `main` (`fbc21f0`); nhánh của session kia chỉ chuyển thêm phần riêng (ngân sách, dependabot, tài liệu).
+
 2026-11-04 14:16 - Thứ tự vòng: làm vòng nâng tooling (MEMORY 2026-11-03 09:01) trước, rồi mới tới bộ khung UI/UX (spec §29: vòng A dựng token + component, vòng B chuyển màn).
 
 2026-11-04 14:12 - Bộ khung UI/UX (duyệt mẫu https://claude.ai/artifact/Cr36HRRwnWh3VHn5tJY587): thêm lớp layout + pattern dùng chung rồi chuyển các màn sang (không viết lại toàn bộ, không đổi nghiệp vụ). Layout: `PageShell` (content 1280 / fluid / narrow 488), `SideNavLayout`, `PageHeader` (workspace / showcase), `Section`, `Toolbar`. Pattern: `Tabs` (APG), `DataTable` (bảng Admin), `FormField`, `EmptyState`, `ToastProvider` toàn app, `Dialog` + `ConfirmDialog` (chuyển vào `components/`), `KpiCard`, `Stepper`, icon gom một chỗ. Màn mới không tự viết `<main>`, tabs, bảng Admin, field, toast. Chi tiết docs/spec.md §25.5, §29.
@@ -236,6 +244,16 @@
 2026-11-04 14:12 - Màn User bỏ menu trái: mọi màn User căn giữa 1280px; Đổi mật khẩu vào từ menu tài khoản. Màn Chạy flow: stepper gọn 1 dòng (Tham số → Tải file & kiểm tra → Chạy → Kết quả), nút chính nằm ở thanh dính đáy màn hình.
 
 2026-11-04 14:12 - Bảng Admin: dòng cao 48px (thay 56px); giữ biểu tượng bút chì = Sửa / Mở Designer, con mắt = Xem trong Designer, chồng lớp = Mở trang phiên bản; cột Phiên bản ở màn Flows hiện 2 phiên bản mới nhất kèm "từ dd/MM/yyyy" (+N); thanh cuộn mảnh 10px, rãnh `#F1F5F9`, tay kéo `#475569`, hover `#1F2A44`.
+
+2026-11-04 13:39 - Vòng nâng tooling: session chính tự làm và tự chạy đủ check + full E2E; `verifier` kiểm gói hẹp (review diff, CSP, tách file .wasm, Monaco chỉ trong chunk Designer, ngân sách) trước khi lên `main`.
+
+2026-11-04 13:39 - Nâng tooling làm cho entry JS hoặc CSS vượt ngân sách +10% (minifier mới Oxc, Lightning CSS) → dừng, báo Harold số liệu trước/sau; không tự đổi minifier, không tự đo lại baseline.
+
+2026-11-04 13:39 - Vitest 5: giữ mặc định mới `clearMocks: true`, sửa các test ghi lời gọi mock ngoài thân test (VD trong `beforeAll`).
+
+~~2026-11-04 13:39 - So ảnh pixel (`toHaveScreenshot`) cho toàn bộ các trạng thái của `e2e/ui-v2.spec.ts`, làm ngay sau vòng nâng tooling: ảnh gốc sinh trên Chromium cài sẵn và commit vào repo; đổi giao diện hoặc đổi Chromium thì cập nhật ảnh gốc trong cùng commit. Vẫn giữ trang ảnh duyệt tay và kiểm giá trị CSS.~~ → thay bởi 2026-11-04 15:16
+
+~~2026-11-04 13:39 - Dependabot: merge bản vá/bản nhỏ khi CI xanh. Vòng nâng tooling nâng trực tiếp trên nhánh làm việc (mỗi gói 1 commit; PR dependabot tự đóng khi `main` có bản mới): vite 8 cùng @vitejs/plugin-react 6 (bỏ luật ignore), vitest 5. `@playwright/test` giữ 1.63.0 vì 1.64 cần Chromium 156 (rev 1248) còn môi trường cài sẵn Chromium 153 (rev 1243); dependabot bỏ qua `@playwright/test` cho tới khi Chromium của môi trường được nâng; đóng PR #9. Bỏ qua major của `@types/node` (runtime Node 22) và `apache-arrow` (theo DuckDB-WASM).~~ → thay bởi 2026-11-04 15:16
 
 ~~2026-11-03 16:22 - Duyệt mẫu bảng Admin (https://claude.ai/artifact/AwjFJEPc5YndnE6Z1tf56B): dòng cao 56px; biểu tượng bút chì = Sửa / Mở Designer, con mắt = Xem trong Designer, chồng lớp = Mở trang phiên bản; cột Phiên bản ở màn Flows hiện 2 phiên bản mới nhất kèm ngày "từ dd/MM/yyyy" ngay trong ô (+N cho phần còn lại). Thanh cuộn của mọi vùng cuộn trong app đồng bộ: mảnh 10px, rãnh `#F1F5F9`, tay kéo bo tròn `#475569`, hover `#1F2A44`.~~ → thay bởi 2026-11-04 14:12
 
@@ -283,7 +301,7 @@
 
 ~~2026-11-03 09:07 - Bỏ font weight 800 (và 500 nếu không còn dùng); script ngân sách bundle thêm kiểm CSS gzip không tăng quá 10% so với `main` trước vòng giao diện.~~ → thay bởi 2026-11-03 10:13
 
-2026-11-03 09:01 - Dependabot: merge bản vá/bản nhỏ khi CI xanh; bản major của tooling (vite 8 cùng @vitejs/plugin-react 6, vitest 5, @playwright/test mới — cần khớp Chromium cài sẵn) gom vào một vòng "nâng tooling" riêng ngay sau vòng đổi giao diện, chạy đủ E2E; các PR #9, #11, #13 để mở tới lúc đó. Bỏ qua major của `@types/node` (runtime Node 22) và `apache-arrow` (theo DuckDB-WASM).
+~~2026-11-03 09:01 - Dependabot: merge bản vá/bản nhỏ khi CI xanh; bản major của tooling (vite 8 cùng @vitejs/plugin-react 6, vitest 5, @playwright/test mới — cần khớp Chromium cài sẵn) gom vào một vòng "nâng tooling" riêng ngay sau vòng đổi giao diện, chạy đủ E2E; các PR #9, #11, #13 để mở tới lúc đó. Bỏ qua major của `@types/node` (runtime Node 22) và `apache-arrow` (theo DuckDB-WASM).~~ → thay bởi 2026-11-04 13:39
 
 2026-10-30 23:29 - Giải nén entry .xlsx: đường đồng bộ dùng `fflate` (MIT, giải nén theo luồng, dừng sớm được) thay bộ giải mã DEFLATE tự viết; đường bất đồng bộ (worker) giữ bộ giải nén có sẵn của trình duyệt (`DecompressionStream`) kèm đếm byte và dừng sớm.
 
@@ -307,7 +325,7 @@
 
 2026-10-27 17:50 - Không dùng `<select>` (dropdown) mặc định của trình duyệt ở mọi màn; dùng Select tự làm theo design system (tương tự DatePicker), hỗ trợ nhóm, tìm kiếm, bàn phím.
 
-2026-10-27 07:36 - Ngân sách bundle: entry chunk (gzip) không tăng quá 10% so với cuối bước 2 (commit `d079f6b`); build tự kiểm tra và báo lỗi khi vượt.
+~~2026-10-27 07:36 - Ngân sách bundle: entry chunk (gzip) không tăng quá 10% so với cuối bước 2 (commit `d079f6b`); build tự kiểm tra và báo lỗi khi vượt.~~ → thay bởi 2026-11-04 15:16
 
 2026-10-27 07:31 - Editor code trong Designer dùng Monaco (theo spec §5), chỉ tải trong chunk Designer, worker và font self-host.
 

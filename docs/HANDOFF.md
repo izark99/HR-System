@@ -44,11 +44,14 @@
 7. `transform.formula`: chuỗi 50 cột nối tiếp mất ≈ 3–4 s lập kế hoạch SQL (không phụ thuộc số dòng), kể cả khi xem trước; chưa có E2E cho việc ẩn cảnh báo khi sửa node phía trên (mới có unit test `preview-signature`).
 8. CI GitHub (`ci.yml`) không chạy E2E; E2E phải chạy local trước khi lên `main`.
 9. Giao diện bản 2 (MINOR): skeleton lúc chờ tải chunk route (Designer) chỉ kiểm bằng đọc code; menu "⋯" không tự đóng khi nút của nó bị cuộn khuất (vẫn nổi ở mép); bản `en` chỉ có các key mới, phần còn lại dựa vào ngôn ngữ dự phòng; ảnh chụp E2E không hiện thanh cuộn (Chromium headless ẩn).
+10. Vòng nâng tooling (MINOR, verifier 2026-11-04): `check-bundle-size.mjs` chỉ cộng chunk khai báo `<link rel="modulepreload">` (hiện trùng đúng đồ thị import tĩnh của entry; nếu Vite đổi cách phát preload có thể lọt chunk). Cảnh báo direct `eval` của Rolldown trong `duckdb-browser-blocking.mjs` là có sẵn từ thư viện; CSP không có `'unsafe-eval'`, đường chạy thật không dùng tới.
 
 ## 5. Bước tiếp theo
 
 - ~~Đổi giao diện theo design language bản 2~~ → xong 2026-11-03.
-- **Vòng nâng tooling** (MEMORY 2026-11-03 09:01): xong trên nhánh `claude/exciting-clarke-3ay1w5` (2026-11-04): vite 8.3.5 + @vitejs/plugin-react 6.2.1, vitest 5 (mọi package), @playwright/test 1.64.1 (chạy trên Chromium 1243 cài sẵn qua `executablePath`), eslint 10.14, @tanstack/react-virtual 3.14.24; bỏ luật ignore plugin-react trong dependabot. lint/format/typecheck/test (1091 pass)/build (entry 163,1 KiB, CSS 37,4 KiB gzip)/E2E (364 pass, 5 skip) đều pass. Lên `main` 2026-11-04 (Harold duyệt bỏ qua verifier vì chỉ đổi phiên bản tooling); đã đóng PR dependabot `izark99/HR-System#9`, `#10`, `#11`, `#12`, `#13` (đã gộp).
+- **Vòng nâng tooling** (MEMORY 2026-11-03 09:01): xong trên nhánh `claude/exciting-clarke-3ay1w5` (2026-11-04): vite 8.3.5 + @vitejs/plugin-react 6.2.1, vitest 5 (mọi package), @playwright/test 1.64.1 (chạy trên Chromium 1243 cài sẵn qua `executablePath`), eslint 10.14, @tanstack/react-virtual 3.14.24; bỏ luật ignore plugin-react trong dependabot. lint/format/typecheck/test (1091 pass)/build (entry 163,1 KiB — số này đo thiếu, xem dòng dưới; CSS 37,4 KiB gzip)/E2E (364 pass, 5 skip) đều pass. Lên `main` 2026-11-04 (Harold duyệt bỏ qua verifier vì chỉ đổi phiên bản tooling); đã đóng PR dependabot `izark99/HR-System#9`, `#10`, `#11`, `#12`, `#13` (đã gộp).
+- Vòng nâng tooling, phần bổ sung (session song song, chốt 2026-11-04 15:16; spec §30): Rolldown tách phần dùng chung ra 10 chunk tải ngay cùng entry, nên `check-bundle-size.mjs` nay cộng entry + chunk `modulepreload`: thực tế 211.105 B (206,2 KiB, giới hạn 215,2 KiB), trước nâng 212.474 B; dependabot bỏ qua `@playwright/test` (nâng tay khi Chromium môi trường đổi). Verifier kiểm vòng tooling (gói hẹp): PASS.
+- **So ảnh pixel** (`toHaveScreenshot`): làm ngay sau vòng B của bộ khung UI/UX — áp `docs/patches/2026-11-04-pixel-compare.patch` (`git apply`), sinh ảnh gốc `CI=1 npx playwright test e2e/ui-v2.spec.ts e2e/ui-v2-diacritics.spec.ts --update-snapshots` (sau `pnpm --filter @hrflow/web build:e2e`), chạy 2 lần liên tiếp pass rồi commit ảnh trong `e2e/__screenshots__/`. Patch viết trên `ui-v2.spec.ts` trước vòng A/B: nếu không áp sạch thì làm lại theo nội dung patch (đồng hồ cố định `freezeClock`, thay chữ "… giây" trước khi so, trạng thái "đang chạy" không so, `maxDiffPixels: 0`).
 - Sau tooling: **bộ khung UI/UX** (chốt 2026-11-04, spec §25.5 + §29, AC-UI-60..75; mẫu duyệt https://claude.ai/artifact/Cr36HRRwnWh3VHn5tJY587): vòng A (token + component), vòng B (chuyển màn Auth → User → Admin → Designer khung).
 - Sau đó: HANDOFF §4 mục #3 (nối cạnh bằng bàn phím) và #5 (tối ưu hiệu năng), rồi các mục Phase 2 trong spec §21 (`code.python`/Pyodide, template Excel, bảng tham chiếu có effective date…) — hỏi Harold thứ tự.
 
@@ -63,6 +66,8 @@
 | Giao diện bản 2 vòng sửa (AC-UI-50..56: tiêu đề 1 dòng, cột Thao tác + menu, dialog tạo tài khoản, skeleton, toolbar/palette Designer) | developer | ≈ 546k (239k + 307k) |
 | Giao diện bản 2 kiểm lần 2 | verifier | ≈ 112k |
 | Giao diện bản 2: Version giống Flows, sửa focus menu, bảng đủ chữ + kéo ngang, thanh cuộn | session chính (không subagent) | — |
+| Nâng tooling (session song song, trùng việc với `fbc21f0`) + so ảnh pixel (hoãn, lưu patch) | session chính | — |
+| Nâng tooling kiểm gói hẹp (session song song) | verifier | ≈ 75k |
 
 Ghi chú vòng giao diện: tốn nhiều vòng do yêu cầu UI chốt dần qua ảnh chụp; lần sau với thay đổi UI nên dựng **trang mẫu tương tác (Artifact) để Harold duyệt trước khi code** (đã làm ở cuối vòng, hiệu quả). Trang ảnh duyệt: https://claude.ai/artifact/F8Zq7ULN6RSgJFfEgFcmhB; mẫu bảng: https://claude.ai/artifact/AwjFJEPc5YndnE6Z1tf56B.
 
