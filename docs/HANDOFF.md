@@ -37,7 +37,7 @@
 
 1. ~~Giới hạn giải nén .xlsx~~ → đã làm ở bước 4 – R1.
 2. `xlsx-stream.ts` `isoToSerial`: ô `t="d"` có múi giờ (`+07:00`) hoặc phần lẻ giây đọc khác SheetJS (Excel không ghi dạng này). Test `it.fails` đang giữ chỗ.
-3. Designer: nối cạnh chỉ bằng chuột (chốt 2026-10-29); cách nối bằng bàn phím chưa làm.
+3. Designer: nối cạnh chỉ bằng chuột (chốt 2026-10-29); cách nối bằng bàn phím chưa làm — xếp vào vòng B của bộ khung UI/UX (chốt 2026-11-04 15:34).
 4. `hrflow_norm_key` khác `normalizeKeyPart` với sigma cuối Hy Lạp, ký tự NUL, chữ Unicode 16/17 mới (DuckDB 1.32 có bảng Unicode cũ hơn Node; CI chạy Node có ICU Unicode 17). Chấp nhận.
 5. Hiệu năng: AC-B3-24 (100k × 30 < 10 giây) biên mỏng. 1 triệu × 30: đọc async ≈ 30–36 s, sync ≈ 42–48 s (dao động theo tải máy), upload DuckDB ≈ 19 s, SQL công thức 10 cột ≈ 28 s, ghi ≈ 60 s. AC-B4-31 mới đo trên Node, chưa đo trên Chromium.
 6. File DEFLATE dựng đặc biệt (hàng chục nghìn block tí hon) đọc chậm ~100 lần/byte (cả `DecompressionStream` native cũng vậy); file ~50 MB như vậy có thể treo worker vài phút, nút Hủy vẫn dùng được. Phương án nếu cần: trần thời gian đọc mỗi file.
@@ -53,7 +53,7 @@
 - Vòng nâng tooling, phần bổ sung (session song song, chốt 2026-11-04 15:16; spec §30): Rolldown tách phần dùng chung ra 10 chunk tải ngay cùng entry, nên `check-bundle-size.mjs` nay cộng entry + chunk `modulepreload`: thực tế 211.105 B (206,2 KiB, giới hạn 215,2 KiB), trước nâng 212.474 B; dependabot bỏ qua `@playwright/test` (nâng tay khi Chromium môi trường đổi). Verifier kiểm vòng tooling (gói hẹp): PASS.
 - **So ảnh pixel** (`toHaveScreenshot`): làm ngay sau vòng B của bộ khung UI/UX — áp `docs/patches/2026-11-04-pixel-compare.patch` (`git apply`), sinh ảnh gốc `CI=1 npx playwright test e2e/ui-v2.spec.ts e2e/ui-v2-diacritics.spec.ts --update-snapshots` (sau `pnpm --filter @hrflow/web build:e2e`), chạy 2 lần liên tiếp pass rồi commit ảnh trong `e2e/__screenshots__/`. Patch viết trên `ui-v2.spec.ts` trước vòng A/B: nếu không áp sạch thì làm lại theo nội dung patch (đồng hồ cố định `freezeClock`, thay chữ "… giây" trước khi so, trạng thái "đang chạy" không so, `maxDiffPixels: 0`).
 - Sau tooling: **bộ khung UI/UX** (chốt 2026-11-04, spec §25.5 + §29, AC-UI-60..75; mẫu duyệt https://claude.ai/artifact/Cr36HRRwnWh3VHn5tJY587): vòng A (token + component), vòng B (chuyển màn Auth → User → Admin → Designer khung).
-- Sau đó: HANDOFF §4 mục #3 (nối cạnh bằng bàn phím) và #5 (tối ưu hiệu năng), rồi các mục Phase 2 trong spec §21 (`code.python`/Pyodide, template Excel, bảng tham chiếu có effective date…) — hỏi Harold thứ tự.
+- Thứ tự đã chốt (2026-11-04 15:34, spec §21): vòng A → vòng B (gộp §4 mục #3 nối cạnh bằng bàn phím, AC-UI-76; **chốt Q27 với Harold trước khi giao vòng B**) → so ảnh pixel → §4 mục #5 tối ưu hiệu năng (vòng riêng) → Phase 2: bảng tham chiếu + `input.refTable` → `output.template` → `code.python`.
 
 ## 6. Token theo vòng (để so sánh hiệu quả)
 

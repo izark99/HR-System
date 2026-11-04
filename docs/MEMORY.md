@@ -9,7 +9,11 @@
 
 ## Phạm vi & sản phẩm
 
-2026-10-30 17:32 - Vòng code đầu của bước 4 gộp thêm HANDOFF §4 mục #1 (giới hạn giải nén .xlsx: 2 GiB/entry; tỉ lệ nén ≤ 1:200 chỉ áp cho entry giải nén > 16 MiB, kèm giới hạn chống cộng dồn nhiều entry nhỏ; vượt → báo "file quá lớn"); mục #2, #4 giữ nguyên (chấp nhận); mục #3 (nối cạnh bằng bàn phím) và #5 (tối ưu hiệu năng, gồm thời gian đẩy dữ liệu vào DuckDB) làm vòng riêng sau `transform.formula`.
+2026-11-04 15:34 - Thứ tự Phase 2: (1) bảng tham chiếu có effective date (`ref_tables`, `ref_table_versions`) + node `input.refTable`; (2) `output.template` (template Excel); (3) `code.python` (Pyodide). Các node Phase 2 khác chưa xếp thứ tự.
+
+2026-11-04 15:34 - Thứ tự sau vòng nâng tooling: bộ khung UI/UX vòng A → vòng B (gộp HANDOFF §4 mục #3: nối cạnh bằng bàn phím trong Designer) → so ảnh pixel → mục #5 tối ưu hiệu năng (vòng riêng, gồm thời gian đẩy dữ liệu vào DuckDB và đo AC-B4-31 trên Chromium) → Phase 2. HANDOFF §4 mục #1 đã xong ở bước 4 – R1; mục #2, #4 vẫn chấp nhận như cũ.
+
+~~2026-10-30 17:32 - Vòng code đầu của bước 4 gộp thêm HANDOFF §4 mục #1 (giới hạn giải nén .xlsx: 2 GiB/entry; tỉ lệ nén ≤ 1:200 chỉ áp cho entry giải nén > 16 MiB, kèm giới hạn chống cộng dồn nhiều entry nhỏ; vượt → báo "file quá lớn"); mục #2, #4 giữ nguyên (chấp nhận); mục #3 (nối cạnh bằng bàn phím) và #5 (tối ưu hiệu năng, gồm thời gian đẩy dữ liệu vào DuckDB) làm vòng riêng sau `transform.formula`.~~ → thay bởi 2026-11-04 15:34
 
 ~~2026-10-30 13:18 - Vòng code đầu của bước 4 gộp thêm HANDOFF §4 mục #1 (giới hạn giải nén .xlsx: ~1 GB/entry, tỉ lệ nén ≤ 1:200, vượt → báo "file quá lớn"); mục #2, #4 giữ nguyên (chấp nhận); mục #3 (nối cạnh bằng bàn phím) và #5 (tối ưu hiệu năng) làm vòng riêng sau `transform.formula`.~~ → thay bởi 2026-10-30 17:32
 
@@ -135,6 +139,8 @@
 
 ## Flow & xử lý
 
+2026-11-04 15:34 - Designer: nối cạnh bằng bàn phím làm trong vòng B của bộ khung UI/UX (cách thao tác cụ thể chốt trước khi giao vòng B, spec Q27); bước 3 chỉ nối bằng chuột.
+
 2026-10-30 17:32 - `transform.formula`: cảnh báo dòng lỗi (`rowErrors`) hiện cả trên node ở canvas (không chỉ panel xem trước); sửa trong vòng sửa R1.
 
 2026-10-30 17:32 - `transform.formula`: chấp nhận 4 khác biệt: `^` với số mũ lấy từ cột dùng quy tắc 15 chữ số có nghĩa (số mũ là hằng nguyên vẫn chính xác); VALUE chỉ nhận dạng `1.5`/`1e3`, không nhận "1,500", "50%"; key cột bắt đầu bằng `_` bị cấm (`formula.error.reservedKey`); `type` `date`/`boolean` chỉ nhận biểu thức đúng kiểu đó (`decimal`/`integer`/`string` nhận mọi kiểu).
@@ -165,7 +171,7 @@
 
 2026-10-29 21:18 - Designer: luôn cho lưu draft, kể cả khi chưa có node nào hoặc còn lỗi; lỗi chỉ chặn ở bước Publish.
 
-2026-10-29 21:18 - Designer: nối cạnh chỉ bằng chuột ở bước 3 (React Flow không hỗ trợ bàn phím); cách nối bằng bàn phím làm ở R4 nếu còn hạn mức.
+~~2026-10-29 21:18 - Designer: nối cạnh chỉ bằng chuột ở bước 3 (React Flow không hỗ trợ bàn phím); cách nối bằng bàn phím làm ở R4 nếu còn hạn mức.~~ → thay bởi 2026-11-04 15:34
 
 2026-10-27 13:06 - `transform.groupBy`: `min`/`max` trên cột chữ so theo mã ký tự (thứ tự nhị phân của DuckDB), không theo bảng chữ cái tiếng Việt; ghi rõ trong spec.
 

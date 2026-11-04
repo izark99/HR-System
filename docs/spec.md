@@ -824,7 +824,7 @@ Chỉ Admin; chỉ desktop (≥ 1280px). Route riêng, lazy-load (React Flow, co
 - **Minimap**, zoom, fit view.
 - **Sticky note**: thêm/sửa/xóa ghi chú văn bản trên canvas, lưu trong `ui.notes`.
 - **Export JSON**: tải `definition` hiện tại (kể cả chưa lưu) thành file `.json`; **Import JSON** giữ luồng đã có ở màn Flow của Admin (§8.1).
-- Bàn phím: mọi hành động chính có phím tắt và nút tương ứng; node chọn được bằng Tab. Ngoại lệ ở bước 3: nối cạnh giữa các cổng chỉ làm bằng chuột (React Flow không hỗ trợ bàn phím); cách nối bằng bàn phím (chọn cổng nguồn → chọn cổng đích trong menu) làm ở R4 nếu còn hạn mức (chốt 2026-10-29).
+- Bàn phím: mọi hành động chính có phím tắt và nút tương ứng; node chọn được bằng Tab. Ngoại lệ ở bước 3: nối cạnh giữa các cổng chỉ làm bằng chuột (React Flow không hỗ trợ bàn phím); cách nối bằng bàn phím (chọn cổng nguồn → chọn cổng đích trong menu) làm ở vòng B của bộ khung UI/UX (chốt 2026-11-04 15:34, AC-UI-76; cách thao tác chốt ở Q27).
 
 ---
 
@@ -959,10 +959,15 @@ Toàn bộ Phase 1:
 
 Không thuộc Phase 1: `input.refTable`, bảng tham chiếu, template — Phase 2.
 
+**Sau vòng nâng tooling** (chốt 2026-11-04 15:34): bộ khung UI/UX vòng A → vòng B (gộp nối cạnh bằng bàn phím trong Designer, §29.3) → so ảnh pixel (§30.3) → tối ưu hiệu năng (vòng riêng: thời gian đẩy dữ liệu vào DuckDB, AC-B3-24, đo AC-B4-31 trên Chromium) → Phase 2.
+
 ### Phase 2 — Mở rộng xử lý & báo cáo
-- `code.python` (Pyodide). `transform.formula` không có chế độ Python (chốt 2026-10-30 13:18).
-- `output.template` (template Excel, bảng `templates`), `output.chart`.
-- Bảng tham chiếu (`ref_tables`, `ref_table_versions`) có effective date, import từ Excel, node `input.refTable` (chốt 2026-10-26 22:52).
+
+Thứ tự (chốt 2026-11-04 15:34): (1) bảng tham chiếu, (2) `output.template`, (3) `code.python`; các mục còn lại chưa xếp.
+
+1. Bảng tham chiếu (`ref_tables`, `ref_table_versions`) có effective date, import từ Excel, node `input.refTable` (chốt 2026-10-26 22:52).
+2. `output.template` (template Excel, bảng `templates`); `output.chart` chưa xếp thứ tự.
+3. `code.python` (Pyodide). `transform.formula` không có chế độ Python (chốt 2026-10-30 13:18).
 - `control.assert`, `pivot/unpivot`, `window`, `lookup`, `fillDown`, `cast`, `split/merge`, `sample/limit`.
 
 ### Phase 3 — Nâng cao
@@ -1000,6 +1005,7 @@ Không thuộc Phase 1: `input.refTable`, bảng tham chiếu, template — Phas
 | ~~Q24~~ | Đã chốt 2026-11-03 09:07: làm KPI card + 1 card tối ở màn Kết quả (§28.3) | — |
 | ~~Q25~~ | Đã chốt 2026-11-03 10:51: 1 nút hay dùng + menu "Thao tác khác" cho mọi bảng Admin (§25.3, AC-UI-54) | — |
 | ~~Q26~~ | Đã chốt 2026-11-04 13:39, sửa 15:16: so ảnh pixel (`toHaveScreenshot`) làm sau vòng B của bộ khung UI/UX; Playwright 1.64.1 chạy trên Chromium cài sẵn (§30) | — |
+| Q27 | Nối cạnh bằng bàn phím trong Designer (AC-UI-76): cách thao tác (VD chọn node → phím mở danh sách cổng đích, hay chế độ "nối" bằng phím tắt) — chốt trước khi giao vòng B | Designer, a11y |
 | ~~Q18~~ | Đã chốt 2026-10-30 13:29: canvas Designer, Monaco và bảng xem trước giữ chữ 14px (§25.1) | — |
 | ~~Q17~~ | Đã chốt 2026-10-30 13:24: công thức dùng `,` ngăn đối số và `.` thập phân, không nhận `;` (§12.2) | — |
 | ~~Q16~~ | Đã chốt 2026-10-30 13:18: `transform.formula` chỉ nhận công thức Excel (transpile sang SQL), 41 hàm, không có XLOOKUP/VLOOKUP (§9.1, §12.2) | — |
@@ -1607,6 +1613,7 @@ Mọi màn có đủ 4 trạng thái: đang tải (skeleton đúng bố cục, �
 | AC-UI-73 | Thao tác Admin thành công (tạo/sửa tài khoản, reset mật khẩu, khóa/mở khóa, gán nhóm/flow, nhập flow, publish/retire/hủy draft, lưu Designer) báo bằng toast; lỗi thao tác báo bằng toast coral hoặc tại chỗ trong dialog/form; mật khẩu tạm vẫn hiện trong dialog như hiện tại (không đưa vào toast). Mọi danh sách rỗng dùng `EmptyState` có câu hướng dẫn. |
 | AC-UI-74 | Không hồi quy: toàn bộ E2E hiện có pass, chỉ sửa phần kiểm kích thước/selector do giao diện đổi; `ui-v2.spec.ts` chụp lại đủ trạng thái AC-UI-30 + skeleton + toast + ConfirmDialog, kiểm giá trị CSS theo AC-UI-60..62; axe 0 vi phạm serious/critical; luồng flow nghiệm thu cho cùng file kết quả (AC-UI-44); ngân sách JS entry và CSS gzip (AC-UI-40/41) vẫn đạt. |
 | AC-UI-75 | `.claude/rules/design.md` ghi quy tắc: màn mới dùng `PageShell` + mẫu màn §25.5; không tự viết `<main>`, tabs, bảng Admin, field, toast, icon; khoảng cách chỉ theo thang. |
+| AC-UI-76 | Designer (chốt 2026-11-04 15:34, gộp vào vòng B): nối cạnh giữa 2 cổng làm được hoàn toàn bằng bàn phím, có nhãn a11y và thông báo cho trình đọc màn hình; nối bằng chuột giữ nguyên. Cách thao tác cụ thể chốt trước khi giao vòng B (Q27). |
 
 ---
 
