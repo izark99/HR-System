@@ -1112,24 +1112,24 @@ AC-11 … AC-13 được chi tiết hóa ở §26 (AC-B3-33, AC-B3-53, AC-B3-61,
 
 ## 25. Design system (UI)
 
-Toàn bộ UI dùng **một** design language ("bright executive" **bản 2**, chốt 2026-10-30 13:26), áp dụng như nhau cho phần User và Admin. Bản 2 giữ nguyên bộ màu và font của bản 1, đổi sang phong cách **phẳng**: bo góc vừa (12px), viền mảnh thay cho shadow, nút 3 cấp, eyebrow chữ in hoa không nền, thang chữ lớn. Nguồn tham chiếu cấu trúc: `docs/design-reference.md` (chốt 2026-11-03 10:06: chỉ lấy cấu trúc, giữ màu và font; §25 thắng khi khác nhau). Wireframe cũ (bản 1, chỉ tham khảo bố cục): https://claude.ai/artifact/BUfBGjG3F8XyXmctD86QzW.
+Toàn bộ UI dùng **một** design language ("bright executive" **bản 2**, chốt 2026-10-30 13:26), áp dụng như nhau cho phần User và Admin. Bản 2 giữ nguyên bộ màu và font của bản 1, đổi sang phong cách **phẳng**: bo góc vừa (12px), viền mảnh thay cho shadow, nút 3 cấp, eyebrow chữ in hoa không nền. Thang chiều cao theo công cụ làm việc (chốt 2026-11-04 14:12): **không** dùng thang tiêu đề lớn của `docs/design-reference.md` (trang marketing); file đó chỉ còn là tham khảo cấu trúc nút/card/eyebrow, §25 thắng khi khác nhau. Khung trang và pattern dùng chung: §25.5. Mẫu đã duyệt: https://claude.ai/artifact/Cr36HRRwnWh3VHn5tJY587. Wireframe cũ (bản 1, chỉ tham khảo bố cục): https://claude.ai/artifact/BUfBGjG3F8XyXmctD86QzW.
 
 ### 25.1 Typography
 
-Font duy nhất `Be Vietnam Pro` (400, 500, 600, 700), fallback `Arial, sans-serif`, **self-host** (woff2, subset Latin + Vietnamese), không gọi Google Fonts (chốt 2026-10-26). Độ đậm theo `docs/design-reference.md` (chốt 2026-11-03 10:13): tiêu đề lớn `display-*` 500, `title-md` 600, `title-sm` 700, eyebrow 500; không dùng 800. Chữ in hoa chỉ dùng cho eyebrow; tiêu đề viết hoa đầu câu.
+Font duy nhất `Be Vietnam Pro` (400, 500, 600, 700), fallback `Arial, sans-serif`, **self-host** (woff2, subset Latin + Vietnamese), không gọi Google Fonts (chốt 2026-10-26). Độ đậm (chốt 2026-11-04 14:12): tiêu đề trang và số KPI 600, `title-md` 600, `title-sm` 700, eyebrow 500; không dùng 800. Chữ in hoa chỉ dùng cho eyebrow; tiêu đề viết hoa đầu câu.
 
 | Token | Desktop (≥ 768px) | Mobile (< 768px) | Dùng cho |
 |-------|-------------------|------------------|----------|
-| `display-xl` | 56px / 500 / lh 56px | 36px / lh 36px | Số KPI lớn |
-| `display-lg` | 48px / 500 / lh 48px | 32px / lh 32px | Tiêu đề trang. Màn Kết quả viết như một câu kết luận có số động ("Kỳ 09/2026 có 9 nhân viên lệch công cần xử lý"); màn khác giữ tiêu đề mô tả (chốt 2026-11-03 09:07) |
+| `kpi` | 40px / 600 / lh 44px | 32px / lh 36px | Số KPI (thay `display-xl` 56px, chốt 2026-11-04 14:12) |
+| `page-title-showcase` | 32px / 600 / lh 40px / ls −0.4px | 24px / lh 32px | Tiêu đề trang showcase: Kết quả (câu kết luận có số động, chốt 2026-11-03 09:07), Danh sách flow, Đăng nhập |
+| `page-title` | 28px / 600 / lh 36px / ls −0.4px | 24px / lh 32px | Tiêu đề trang workspace: Admin (Users, Flows, Version), Đổi mật khẩu, form (thay `display-lg` 48px, chốt 2026-11-04 14:12) |
 | `title-md` | 24px / 600 / lh 30px / ls −0.6px | 20px / lh 26px | Tiêu đề section, tiêu đề card |
 | `title-sm` | 20px / 700 / lh 25px / ls −0.5px | 18px | Tiêu đề nhỏ trong card, tiêu đề dialog |
-| `body-lg` | 18px / 400 / lh 27px | 16px / lh 24px | Đoạn dẫn, mô tả dưới tiêu đề trang, chữ trong input |
-| `body` | 16px / 400 / lh 24px | 16px | Chữ mặc định, ô dữ liệu trong bảng |
+| `body` | 16px / 400 / lh 24px | 16px | Chữ mặc định, mô tả dưới tiêu đề trang, chữ trong input, ô dữ liệu trong bảng (`body-lg` 18px bỏ, chốt 2026-11-04 14:12) |
 | `label` | 16px / 600 / lh 24px | 16px | Nhãn form, chữ in đậm trong câu |
 | `caption` | 14px / 400 / lh 21px | 14px | Chú thích, header bảng (600), thông tin phụ |
 | `eyebrow` | 14px / 500 / lh 14px / ls 1px / UPPERCASE | 13px | Eyebrow trên tiêu đề, tiêu đề nhóm trong Select |
-| `button` | 18px / 600 / lh 27px | 16px | Nhãn nút chuẩn |
+| `button` | 16px / 600 / lh 24px | 16px | Nhãn nút chuẩn (thay 18px, chốt 2026-11-04 14:12) |
 | `button-sm` | 14,4px / 700 / lh 14,4px / ls 0.144px | 14px | Nút nhỏ (trong bảng, toolbar) |
 | `code` | font mono hệ thống, 14px | 14px | Monaco, ô công thức, SQL |
 
@@ -1166,15 +1166,15 @@ Thang khoảng cách cơ sở 4px: `2 · 4 · 8 · 12 · 16 · 24 · 32 · 48 ·
 |-----------|----------|
 | Card | Nền trắng, radius 12px, padding 24px, viền 1px `#E2E8F0`, **không shadow** |
 | Card tối (nhấn mạnh) | Nền `#1F2A44`, chữ trắng, radius 12px, padding 24px; tối đa 1 card tối mỗi màn (VD kết luận chính của màn Kết quả) |
-| KPI card | Như card + vạch trên 4px theo ý nghĩa (teal khớp, coral lệch, amber cần xem); số dùng `display-xl` |
+| KPI card | Như card + vạch trên 4px theo ý nghĩa (teal khớp, coral lệch, amber cần xem); số dùng `kpi` |
 | Eyebrow | Trên mỗi tiêu đề trang; `eyebrow` (in hoa, giãn chữ 1px), **không nền**; màu chữ theo ý nghĩa (`#0F766E`, `#1D4ED8`, `#C2410C`, `#B45309`) |
 | Status chip | `caption` 600, radius 999px, chữ màu trên nền tint |
-| Nút chính | Cao 48px (nút nhỏ 36px), padding ngang 24px, radius 12px, nền `#0F766E`, chữ trắng `button`; mỗi vùng chỉ 1 nút chính |
+| Nút chính | Cao 44px (nút nhỏ 36px; chốt 2026-11-04 14:12), padding ngang 24px, radius 12px, nền `#0F766E`, chữ trắng `button`; mỗi vùng chỉ 1 nút chính |
 | Nút tối | Như nút chính, nền `#1F2A44`, chữ trắng; cho hành động quan trọng thứ hai |
 | Nút outline | Như nút chính, nền trắng, viền 1px `#1F2A44`, chữ `#1F2A44` |
 | Nút chữ | Không viền, nền trong suốt, chữ `#1F2A44` `button-sm`, padding 8px 16px, radius 12px; hover nền `#F1F5F9` |
 | Nút nguy hiểm | Như nút outline, viền và chữ `#C2410C` |
-| Input / Select trigger / picker trigger | Cao 48px, radius 6px, viền 1px `#475569`, chữ `body-lg`; focus: viền `#0F766E` + ring 3px `#DDF5EF`; lỗi: viền `#C2410C` + thông báo `caption` |
+| Input / Select trigger / picker trigger | Cao 44px, radius 6px, viền 1px `#475569`, chữ `body`; focus: viền `#0F766E` + ring 3px `#DDF5EF`; lỗi: viền `#C2410C` + thông báo `caption` |
 | Tab | Dạng pill; tab đang chọn nền tint + chữ màu đậm |
 | Menu trái | Item cao 44px, radius 6px; item đang chọn nền `#DDF5EF`, chữ `#0F766E` 600, **vạch trái 3px `#0F766E`** |
 | Thanh trên (top bar) | Nền trắng, viền dưới 1px `#E2E8F0`, padding 12px 24px |
@@ -1182,7 +1182,7 @@ Thang khoảng cách cơ sở 4px: `2 · 4 · 8 · 12 · 16 · 24 · 32 · 48 ·
 | Thanh cuộn | Dày 10px, rãnh `#F1F5F9` bo tròn, tay kéo bo tròn `#475569`, hover `#1F2A44` (chốt 2026-11-03 16:22, AC-UI-59) |
 | Skeleton (đang tải) | Khối nền `#F1F5F9`, radius theo phần tử thay thế (6px dòng chữ, 12px card), vệt sáng lướt ~1,5 giây/lượt; chỉ hiện sau ~200ms chờ; `prefers-reduced-motion` → tĩnh; vùng chứa `role="status"` + nhãn "Đang tải…" cho trình đọc màn hình (chốt 2026-11-03 13:28) |
 | Callout | Nền tint, radius 12px, không viền, mở đầu bằng nhãn in đậm (`An toàn dữ liệu:`, `Lưu ý:`, `Hợp lệ:`) |
-| Bảng | Trong card; header nền `#F1F5F9`, chữ `caption` 600 `#475569`; ô `body`, padding 12px 16px; đường kẻ dòng `#E2E8F0`; dòng cần chú ý tô nền tint; ô chênh lệch tô coral tint |
+| Bảng | Trong card; header nền `#F1F5F9` cao 44px, chữ `caption` 600 `#475569`; ô `body`, padding ngang 16px, dòng bảng Admin cao 48px (chốt 2026-11-04 14:12); đường kẻ dòng `#E2E8F0`; dòng cần chú ý tô nền tint; ô chênh lệch tô coral tint |
 | Dialog | Độ nổi mức 2, radius 12px, padding 24px; tiêu đề `title-sm`; nút đặt phải, nút chính ngoài cùng |
 | Toast | Độ nổi mức 2, radius 12px, padding 12px 16px, chữ `body` |
 | Node trên canvas | Card radius 12px, viền 1px `#E2E8F0`; vạch màu trên theo nhóm node (blue đầu vào, teal `#14B8A6` biến đổi, coral kiểm soát, `#475569` code, amber đầu ra); node đang chọn có ring teal; node lỗi viền coral `#F97362` 2px; sticky note nền amber tint `#FFF8E1` |
@@ -1198,7 +1198,57 @@ Breakpoint: mobile < 768px (1 cột, menu trái thu thành nút mở), tablet 76
 - Xưng "bạn", câu ngắn, rõ hành động. Tiêu đề trang nói được kết luận chính.
 - Định dạng số kiểu Việt Nam (`0,5`, `1.234.567`).
 - Không dùng ký hiệu có thể thiếu trong font (≤ ≥ → × −) trong text UI; dùng chữ hoặc `-`.
-- Touch target tối thiểu 44px (nút chuẩn 48px); tương phản chữ đạt WCAG AA.
+- Touch target tối thiểu 44px (nút chuẩn và input 44px); tương phản chữ đạt WCAG AA.
+
+
+### 25.5 Khung trang & pattern dùng chung (chốt 2026-11-04 14:12)
+
+Mục tiêu: mọi màn lắp từ **một** bộ layout + pattern trong `apps/web/src/components/`; màn không tự viết `<main>`, tabs, bảng Admin, ô nhập có nhãn, toast. Mẫu đã duyệt: https://claude.ai/artifact/Cr36HRRwnWh3VHn5tJY587.
+
+**Khoảng cách**: chỉ dùng thang `4 · 8 · 12 · 16 · 24 · 32 · 48 · 64` px (Tailwind `1 · 2 · 3 · 4 · 6 · 8 · 12 · 16`, cộng `0.5` = 2px). Token ngữ nghĩa: `page-x` 32px (mobile 16px), `page-top` 24px (mobile 16px), `section` 24px (giữa các khối của trang; mobile 16px), `stack` 16px (giữa field/khối trong card), `inline` 8px (giữa phần tử cùng hàng). Ngoại lệ (VD canvas Designer dense, React Flow) khai báo trong danh sách cho phép kèm lý do.
+
+**Layout primitives** (`components/layout/`)
+
+| Component | Quy cách |
+|-----------|----------|
+| `PageShell` | Render `<main id="main">` + padding `page-top`/`page-x`, đáy 48px, gap `section`. `width`: `content` (tối đa 1280px, căn giữa: mọi màn User), `fluid` (màn Admin cạnh menu trái), `narrow` (tối đa 488px: Đăng nhập, Đổi mật khẩu, form đơn). Designer là ngoại lệ full-bleed |
+| `SideNavLayout` | Menu trái 240px (item theo §25.3 "Menu trái", "Sắp có") + `PageShell fluid`; chỉ dùng cho Admin. Mobile: menu thu thành nút mở |
+| `PageHeader` | `variant`: `workspace` (`page-title`) / `showcase` (`page-title-showcase`); eyebrow (bắt buộc, trừ khi có `back`) + `h1` + subtitle `body` `#475569` 1 dòng; tùy chọn `back` (link quay lại, thay eyebrow), `meta` (chip trạng thái), `actions` cùng hàng tiêu đề (căn đáy, xuống dòng khi hẹp). `oneLineTitle` giữ hành vi AC-UI-50 |
+| `Section` | Card (hoặc không card với `plain`) gồm tiêu đề `title-sm` 20px/600 + mô tả `caption` + `actions` bên phải + nội dung, gap `stack` |
+| `Toolbar` | Hàng trên bảng trong card: tabs/lọc/tìm kiếm bên trái, số đếm hoặc 1 nút bên phải; padding 16px, viền dưới |
+| `StickyActionBar` | Thanh dính đáy màn (nền trắng, viền trên, padding 12px `page-x`): ghi chú trái, nút phải, nút chính ngoài cùng; dùng cho màn Wizard |
+
+**Pattern components**
+
+| Component | Quy cách |
+|-----------|----------|
+| `Tabs` | APG tabs (mũi tên trái/phải, Home/End, kích hoạt tự động), dạng pill §25.3, số đếm trong nhãn; thay mọi bản tự viết (Users & Groups, Kết quả, panel cấu hình và panel dữ liệu Designer — 2 chỗ Designer dùng biến thể `dense`) |
+| `DataTable` | Bảng Admin: nhận định nghĩa cột (tiêu đề, render ô, căn phải cho số) + hàng; trong card, header 44px, dòng 48px, mỗi ô 1 dòng đủ chữ (AC-UI-57), cuộn ngang trong vùng focus được, cột Thao tác ghim phải dùng `RowActions` (AC-UI-58); trạng thái `loading` (`TableSkeleton`), `empty` (`EmptyState`), `error` (Callout coral + nút Thử lại); `caption` ẩn cho trình đọc màn hình. Bảng dữ liệu lớn (`ResultTable`, xem trước Designer) giữ component riêng (ảo hóa, 14px) nhưng dùng chung header/ô dense |
+| `FormField` | Nhãn `label` + control + gợi ý `caption` `#475569` + lỗi `caption` `#C2410C`; tự sinh `id`, nối `aria-describedby` (gợi ý + lỗi), đặt `aria-invalid`; bọc được `TextInput`, `Textarea`, `Select`, `MonthPicker`, `DatePicker`, checkbox. Biến thể `dense` (14px, control 42px) cho form cạnh canvas Designer, thay `Field` trong `designer/forms/fields.tsx` |
+| `EmptyState` | Khối 48px icon nền `#F1F5F9` + tiêu đề 18px/600 + câu hướng dẫn + tối đa 1 nút (thường outline nhỏ); padding 48px 24px; biến thể `inline` (1 dòng chữ `#475569`) cho vùng hẹp |
+| `ToastProvider` / `useToast` | Một vùng toast toàn app góc dưới phải (mobile: đáy, rộng đủ màn), mức nổi 2, vạch trái 4px theo tone; tối đa 3 toast; thành công tự ẩn sau 5 giây, lỗi giữ tới khi đóng; `role="status"` (teal/blue) hoặc `role="alert"` (coral/amber); không chứa dữ liệu nhân sự. Dùng cho kết quả thao tác (lưu, tạo, khóa, publish…); lỗi chặn thao tác trong form vẫn hiện tại chỗ |
+| `Dialog` | Chuyển từ `features/admin/Dialog.tsx` sang `components/`; thêm `DialogFooter` (nút phải, nút chính/nguy hiểm ngoài cùng, nút Hủy là nút chữ) |
+| `ConfirmDialog` | Dialog xác nhận 1 câu hỏi có tên đối tượng ("Khóa tài khoản hr.nv07?"), mô tả hậu quả, nút Hủy + nút xác nhận (`danger` cho thao tác nguy hiểm, `primary` cho còn lại); focus ban đầu vào nút Hủy với thao tác nguy hiểm |
+| `KpiCard`, `ConclusionCard` | Tách khỏi `ResultPage.tsx` để Dashboard dùng lại; KPI theo §25.3, hàng 4 KPI (mobile 2 cột) |
+| `Stepper` | 1 dòng: chấm tròn 28px (xong: tint teal + dấu check; hiện tại: nền `#0F766E` chữ trắng; chưa: `#F1F5F9`) + nhãn `caption`, nối bằng vạch mảnh; `aria-current="step"`; mobile chỉ hiện nhãn bước hiện tại. Thay `runner/components/Steps.tsx` (4 thẻ) |
+| Icon | Gom một chỗ `components/icons/` (SVG inline 20px, `stroke` 2, `aria-hidden`), thay icon rải ở `ui.tsx`, `icons.tsx`, `picker-shared.tsx`, `designer/ToolbarIcons.tsx` |
+
+Tái dùng nguyên trạng: `Button`/`buttonClass`, `Card`, `Chip`, `Callout`, `Eyebrow`, `OneLine`, `Tooltip`, `MenuButton`, `RowActions`, `Select`, `MonthPicker`, `DatePicker`, `Skeleton/*`.
+
+**Mẫu màn (screen templates)**
+
+| Mẫu | Màn | Cấu trúc |
+|-----|-----|----------|
+| List | Users & Groups, Flows, Version | `SideNavLayout` → `PageHeader workspace` (nút chính tạo mới ở `actions`) → card: `Toolbar` + `DataTable` → tạo/sửa trong `Dialog`, xác nhận bằng `ConfirmDialog`, kết quả bằng toast |
+| Form | Đổi mật khẩu, Đăng nhập | `PageShell narrow` → `PageHeader` (workspace; Đăng nhập showcase) → card form: `FormField` dọc, gap `stack`, nút chính cuối form căn phải (Đăng nhập: nút rộng đủ card) |
+| Wizard | Chạy flow | `PageShell content` → `PageHeader workspace` có `back` "Danh sách flow" + phiên bản ở subtitle → `Stepper` → `Section` theo bước (Tham số; slot file dạng lưới 2 cột, mobile 1 cột) → `StickyActionBar` (Quay lại + nút chính "Chạy …") |
+| Report | Kết quả (Dashboard sau này) | `PageShell content` → `PageHeader showcase` (câu kết luận, `actions`: Chạy lại + Tải Excel) → hàng `KpiCard` → `ConclusionCard` → card: `Toolbar` (`Tabs` sheet + tìm kiếm) + bảng dense |
+| Danh sách flow | Trang chủ User | `PageShell content` (không menu trái) → `PageHeader showcase` (tìm kiếm ở `actions`) → lọc category (`Tabs` hoặc pill) → lưới card flow → `Section` "Lần chạy gần đây" |
+| Workspace | Designer | Ngoại lệ full-bleed, chỉ dùng chung `Dialog`, `Tabs dense`, `FormField dense`, toast, icon |
+
+Mọi màn có đủ 4 trạng thái: đang tải (skeleton đúng bố cục, §25.3), rỗng (`EmptyState`), lỗi (Callout coral `role="alert"` + nút Thử lại), thành công sau thao tác (toast).
+
+**Khung User** (chốt 2026-11-04 14:12): bỏ menu trái ở mọi màn User; Đổi mật khẩu mở từ menu tài khoản (`UserMenu`), có link quay lại Danh sách flow.
 
 ---
 
@@ -1413,6 +1463,8 @@ Breakpoint: mobile < 768px (1 cột, menu trái thu thành nút mở), tablet 76
 
 ## 28. Đổi giao diện theo design language bản 2 — User story & Acceptance criteria
 
+> **Lưu ý (2026-11-04 14:12):** số chiều cao và cỡ chữ trong AC-UI-01, 03, 04, 05, 09, 10, 42, 50, 57 (tiêu đề 48px, KPI 56px, `body-lg` 18px, nút/input 48px, dòng bảng 56px, weight 500 cho tiêu đề) được thay bởi §25.1, §25.3 và §29. Phần còn lại của §28 vẫn hiệu lực.
+>
 > Phạm vi theo quyết định 2026-10-30 13:26 và 13:29 (§25). Vòng code riêng, ngay sau bước 4 – R1; ngay sau vòng này là vòng nâng tooling (MEMORY 2026-11-03 09:01). Vòng này **chỉ đổi giao diện**: không đổi luồng nghiệp vụ, route, i18n key đang có (chỉ thêm), engine, worker, Supabase. Các điểm làm rõ Q19–Q24 đã chốt 2026-11-03 09:07 (MEMORY nhóm "Kỹ thuật & tổ chức").
 
 **US-UI-01** — Là User, tôi muốn giao diện chữ to, rõ, phẳng và nhất quán, để đọc kết quả đối chiếu nhanh, ít mỏi mắt.
@@ -1513,3 +1565,45 @@ Breakpoint: mobile < 768px (1 cột, menu trái thu thành nút mở), tablet 76
 | AC-UI-57 | Bảng Admin (chốt 2026-11-03 15:18, sửa 2026-11-03 16:06): Users, Nhóm, Flows, Version ở 1280×800 và 1024px — mọi dòng `tbody` cùng chiều cao (chênh ≤ 1px); mỗi ô (kể cả tiêu đề cột) 1 dòng, hiện đủ chữ, **không** cắt "…" (`white-space: nowrap`), độ rộng cột theo nội dung; tiêu đề trang không đổi (vẫn 1 dòng cắt "…" theo AC-UI-50); nhiều chip trong 1 ô nằm 1 hàng; bảng rộng hơn card thì cuộn ngang trong vùng bảng (kéo bằng chuột/trackpad/thanh cuộn, vùng cuộn focus được bằng bàn phím); cột Thao tác cố định mép phải với vạch ngăn trái, không che chữ của cột khác khi đã cuộn hết; tooltip của nút thao tác không bị cắt ở mép màn hình. |
 | AC-UI-58 | Cột Thao tác dạng biểu tượng (chốt 2026-11-03 15:32): Users/Nhóm "Sửa" (bút chì), Flows "Mở trang phiên bản" (danh sách phiên bản), Version draft "Mở Designer" (bút chì), Version published/retired "Xem trong Designer" (con mắt), cộng nút "⋯" mở menu; nút 36×36px, biểu tượng `#1F2A44`, hover nền `#F1F5F9`, focus ring; tên a11y và tooltip giữ đúng chữ cũ kèm tên dòng (VD "Sửa hr.nv01", "Thao tác khác cho v1"); axe không vi phạm. |
 | AC-UI-59 | Thanh cuộn (chốt 2026-11-03 16:22): mọi vùng cuộn trong app (`overflow-auto`/`overflow-x-auto`/`overflow-y-auto`: bảng Admin, diff, validation report, lịch sử chạy…) dùng chung kiểu: dày 10px, rãnh `#F1F5F9` bo tròn, tay kéo bo tròn `#475569` (≥ 3:1 với rãnh), hover `#1F2A44`; Firefox dùng `scrollbar-width: thin` cùng màu. Không đổi thanh cuộn của trang và của Monaco/React Flow. |
+
+---
+
+## 29. Bộ khung UI/UX: layout + pattern dùng chung — User story & Acceptance criteria
+
+> Chốt 2026-11-04 14:12 (MEMORY nhóm "Kỹ thuật & tổ chức"); thiết kế ở §25.1, §25.3, §25.5; mẫu đã duyệt: https://claude.ai/artifact/Cr36HRRwnWh3VHn5tJY587. Vòng này **chỉ đổi giao diện**: không đổi nghiệp vụ, route, engine, worker, Supabase, i18n key đang có (chỉ thêm). Làm 2 vòng: **A** dựng token + component (chưa đổi màn), **B** chuyển màn theo nhóm Auth → User → Admin → Designer (phần khung), mỗi nhóm commit riêng.
+
+**US-UI-10** — Là User/Admin, tôi muốn mọi màn có cùng bố cục, cùng cách báo trạng thái và tiêu đề gọn, để thấy được nhiều dữ liệu hơn mà không phải học lại từng màn.
+
+**US-UI-11** — Là Harold (người maintain) và agent developer, tôi muốn mỗi pattern UI chỉ có một component và có test chặn tự viết lại, để màn mới (Dashboard, Logs, Bảng tham chiếu) tự đồng nhất.
+
+### 29.1 Token & thang chiều cao (vòng A)
+
+| # | Given / When / Then |
+|---|---------------------|
+| AC-UI-60 | `index.css` `@theme` đổi theo §25.1/§25.3: thêm `text-page-title` (28/36/600, mobile 24/32), `text-page-title-showcase` (32/40/600, mobile 24/32), `text-kpi` (40/44/600, mobile 32/36); `text-button` 16/24/600; `spacing-control` 44px; `spacing-row` 48px; token khoảng cách `page-x`, `page-top`, `section`, `stack`, `inline` theo §25.5. Xóa `text-display-xl`, `text-display-lg`, `text-body-lg` (không còn dùng). Màu, bo góc, shadow, font không đổi. |
+| AC-UI-61 | `design-tokens.test.ts` thêm luật: **fail** khi `.tsx` dùng khoảng cách ngoài thang §25.5 (`*-1.5`, `*-2.5`, `*-3.5`, `*-5`, `*-7`, `*-9`, `*-10`, `*-11` và giá trị `[...]` cho gap/padding/margin); khi có `<main` ngoài `PageShell`; khi có `role="tablist"` ngoài `Tabs`; khi có `<table` ngoài `DataTable`, bảng dữ liệu dense và diff (danh sách cho phép có lý do); khi có class token đã xóa ở AC-UI-60. |
+| AC-UI-62 | Ở 1280×800 (đo `getBoundingClientRect`): header trang workspace (eyebrow + `h1` + subtitle) ≤ 96px; nút chuẩn và input/Select/picker trigger cao 44px; nút nhỏ 36px; dòng `tbody` bảng Admin 48px (chênh ≤ 1px), header bảng 44px; màn Users với 10 tài khoản thấy ≥ 9 dòng không cần cuộn trang. Ở 390×844: `h1` 24px. Touch target ≥ 44px (AC-UI-21) vẫn đạt. |
+
+### 29.2 Component (vòng A)
+
+| # | Given / When / Then |
+|---|---------------------|
+| AC-UI-63 | Có `PageShell` (`content`/`fluid`/`narrow`), `SideNavLayout`, `PageHeader` (`workspace`/`showcase`, `back`, `meta`, `actions`, `oneLineTitle`), `Section`, `Toolbar`, `StickyActionBar` theo §25.5; `PageShell` render đúng 1 `<main id="main">` và link "Bỏ qua tới nội dung" vẫn hoạt động. |
+| AC-UI-64 | `Tabs` theo APG tabs: Tab vào tab đang chọn, mũi tên trái/phải chuyển và kích hoạt, Home/End, `aria-controls`/`aria-labelledby` nối đúng panel; biến thể `dense`. Unit test bàn phím + axe 0 vi phạm. |
+| AC-UI-65 | `DataTable`: cột khai báo bằng cấu hình; dòng 1 hàng đủ chữ, cuộn ngang trong vùng `tabIndex=0` có nhãn, cột Thao tác ghim phải (giữ AC-UI-57/58); props `loading`/`empty`/`error` hiện `TableSkeleton` / `EmptyState` / Callout + nút Thử lại; có `<caption>` ẩn. |
+| AC-UI-66 | `FormField` tự sinh `id`, nối `aria-describedby` với gợi ý và lỗi, đặt `aria-invalid` khi có lỗi; dùng được với `TextInput`, `Textarea`, `Select`, `MonthPicker`, `DatePicker`, checkbox; biến thể `dense` cho Designer. Trình đọc màn hình đọc nhãn + gợi ý + lỗi (kiểm bằng accessible name/description trong Playwright). |
+| AC-UI-67 | `ToastProvider`/`useToast`: toast thành công tự ẩn sau 5 giây (dừng khi rê chuột/focus), lỗi giữ tới khi đóng; tối đa 3; `role` đúng tone; có nút đóng 44px; `prefers-reduced-motion` không trượt; nội dung toast chỉ là text i18n + tên đối tượng cấu hình (không dữ liệu nhân sự). |
+| AC-UI-68 | `Dialog` nằm ở `components/`, có `DialogFooter`; `ConfirmDialog` nhận tiêu đề có tên đối tượng, mô tả, tone; với tone `danger` focus ban đầu ở nút Hủy; Esc đóng và trả focus về nút mở. |
+| AC-UI-69 | `EmptyState`, `KpiCard`, `ConclusionCard`, `Stepper` (1 dòng, `aria-current="step"`, mobile chỉ hiện nhãn bước hiện tại) và icon gom ở `components/icons/` theo §25.5; không còn định nghĩa icon SVG trong file màn. |
+
+### 29.3 Chuyển màn (vòng B)
+
+| # | Given / When / Then |
+|---|---------------------|
+| AC-UI-70 | Mọi màn §28.2 dùng mẫu màn §25.5: List (Users & Groups, Flows, Version), Form (Đăng nhập, Đổi mật khẩu), Wizard (Chạy flow), Report (Kết quả), Danh sách flow; Designer chỉ chuyển `Dialog`, `Tabs dense`, `FormField dense`, toast, icon. Không còn `Tabs`/`Field`/toast tự viết trong `features/**` (grep + test AC-UI-61). |
+| AC-UI-71 | Màn User không có menu trái; Danh sách flow, Chạy flow, Kết quả căn giữa tối đa 1280px; Đổi mật khẩu mở từ menu tài khoản và có link quay lại. Không cuộn ngang ở 390px (AC-UI-12 giữ). |
+| AC-UI-72 | Chạy flow: `Stepper` 1 dòng thay 4 thẻ; nút chính "Chạy …" + "Quay lại"/"Hủy" nằm trong `StickyActionBar` dính đáy, luôn thấy ở 1280×800 và 390×844 khi cuộn; nút chính bị vô hiệu kèm lý do khi còn lỗi (hành vi hiện có giữ nguyên). Không che nội dung cuối trang (có khoảng đệm đáy bằng chiều cao thanh). |
+| AC-UI-73 | Thao tác Admin thành công (tạo/sửa tài khoản, reset mật khẩu, khóa/mở khóa, gán nhóm/flow, nhập flow, publish/retire/hủy draft, lưu Designer) báo bằng toast; lỗi thao tác báo bằng toast coral hoặc tại chỗ trong dialog/form; mật khẩu tạm vẫn hiện trong dialog như hiện tại (không đưa vào toast). Mọi danh sách rỗng dùng `EmptyState` có câu hướng dẫn. |
+| AC-UI-74 | Không hồi quy: toàn bộ E2E hiện có pass, chỉ sửa phần kiểm kích thước/selector do giao diện đổi; `ui-v2.spec.ts` chụp lại đủ trạng thái AC-UI-30 + skeleton + toast + ConfirmDialog, kiểm giá trị CSS theo AC-UI-60..62; axe 0 vi phạm serious/critical; luồng flow nghiệm thu cho cùng file kết quả (AC-UI-44); ngân sách JS entry và CSS gzip (AC-UI-40/41) vẫn đạt. |
+| AC-UI-75 | `.claude/rules/design.md` ghi quy tắc: màn mới dùng `PageShell` + mẫu màn §25.5; không tự viết `<main>`, tabs, bảng Admin, field, toast, icon; khoảng cách chỉ theo thang. |
+
