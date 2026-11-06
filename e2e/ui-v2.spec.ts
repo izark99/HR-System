@@ -516,6 +516,87 @@ test.describe('admin screens 1280x800', () => {
   });
 });
 
+test.describe('round B frame states 1280x800 (AC-UI-74)', () => {
+  test.use({ signedInAs: ADMIN, viewport: DESKTOP });
+
+  test('ConfirmDialog (danger) and the success toast', async ({ page }) => {
+    await page.goto('/admin/users');
+    const users = page.getByRole('table', { name: 'Danh sách tài khoản' });
+    await expect(users).toBeVisible();
+    await (
+      await rowMenuItem(users.getByRole('row', { name: /^hr\./ }).first(), /^Khóa tài khoản/)
+    ).click();
+    const dialog = page.getByRole('dialog', { name: /^Khóa tài khoản .+\?$/ });
+    await expect(dialog).toBeVisible();
+    await floatChecks(dialog);
+    // Danger confirmation (§25.5): Cancel is a text button with the focus, the confirm button is
+    // the coral outline one at the outer edge, both 44px.
+    const cancel = dialog.getByRole('button', { name: 'Hủy' });
+    const lock = dialog.getByRole('button', { name: 'Khóa', exact: true });
+    await expect(cancel).toBeFocused();
+    expect((await style(cancel)).bg).toBe('rgba(0, 0, 0, 0)');
+    const ls = await style(lock);
+    expect(ls.color).toBe(C.coralText);
+    expect(ls.borderTop).toBe(`1px solid ${C.coralText}`);
+    expect(Math.round(ls.height)).toBe(44);
+    const footer = await dialog.locator('[data-dialog-footer]').evaluate((f) => {
+      const b = Array.from(f.querySelectorAll('button')).map((x) => x.textContent?.trim());
+      return { last: b.at(-1), justify: getComputedStyle(f).justifyContent };
+    });
+    expect(footer).toEqual({ last: 'Khóa', justify: 'flex-end' });
+    expect((await style(dialog.getByRole('heading', { level: 2 }))).fontSize).toBe('20px');
+    await commonChecks(page);
+    await axe(page, 'confirm-dialog 1280x800');
+    await shot(page, '14-frame', 'confirm-dialog');
+
+    await lock.click();
+    await expect(dialog).toHaveCount(0);
+    const toast = page.getByRole('status').filter({ hasText: 'Đã khóa tài khoản' });
+    await expect(toast).toBeVisible();
+    // Toast (§25.3/§25.5): level 2, 4px teal bar on the left, close button 44px, bottom right.
+    await floatChecks(toast);
+    expect((await style(toast)).borderLeft).toBe(`4px solid ${C.teal}`);
+    const close = toast.getByRole('button', { name: 'Đóng thông báo' });
+    expect(Math.round((await style(close)).height)).toBe(44);
+    // Measured once the slide-in animation has finished.
+    await expect
+      .poll(async () => {
+        const b = (await toast.boundingBox())!;
+        return [
+          Math.round(DESKTOP.width - (b.x + b.width)),
+          Math.round(DESKTOP.height - (b.y + b.height)),
+        ];
+      })
+      .toEqual([24, 24]);
+    await commonChecks(page);
+    await axe(page, 'toast 1280x800');
+    await shot(page, '14-frame', 'toast');
+  });
+
+  test('Designer: "Nối tới…" list open', async ({ page, supabase }) => {
+    withDraft(supabase);
+    await page.goto(DESIGNER);
+    await expect(page.getByTestId('rf__node-formula_1')).toBeVisible({ timeout: 30_000 });
+    await settleCanvas(page);
+    await page.getByTestId('rf__node-in_cc').click();
+    await page.keyboard.press('Control+E');
+    const list = page.locator('[data-connect-menu]');
+    await expect(list).toBeVisible();
+    await floatChecks(list);
+    // Dense search box beside the canvas (14px, 42px; §25.1 high-density exception).
+    const box = await style(list.getByRole('combobox'));
+    expect(box.radius).toBe('6px');
+    expect(box.fontSize).toBe('14px');
+    const button = page.getByRole('button', { name: 'Nối tới…' });
+    expect(Math.round((await style(button)).height)).toBe(36);
+    await commonChecks(page);
+    await axe(page, 'designer-connect 1280x800', REACT_FLOW_EXCLUDE);
+    await shot(page, '11-designer', 'connect-list');
+    await page.keyboard.press('Escape');
+    await expect(button).toBeFocused();
+  });
+});
+
 test.describe('idle sign-out warning', () => {
   test.use({ viewport: DESKTOP });
 
