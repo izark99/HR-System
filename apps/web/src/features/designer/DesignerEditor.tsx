@@ -28,6 +28,7 @@ import { useUnsavedChanges } from '../auth/idle/activity';
 import { FlowCard, NoteCard, type FlowCardNode, type NoteCardNode } from './canvas/nodes';
 import { groupOf, inputPortsOf, outputPortsOf, typeKey } from './catalog';
 import { ConfigPanel, type PanelTab } from './ConfigPanel';
+import { ConnectMenu } from './ConnectMenu';
 import { IconButton } from './ToolbarIcons';
 import {
   addNode,
@@ -48,6 +49,7 @@ import {
   updateNode,
   updateNote,
   type Clip,
+  type DEdge,
   type DesignerDoc,
   type History,
   type JsonObject,
@@ -196,6 +198,10 @@ export function DesignerEditor(props: DesignerEditorProps) {
   const [saving, setSaving] = useState(false);
   const [conflict, setConflict] = useState<{ at: string } | null>(null);
   const [dataOpen, setDataOpen] = useState(false);
+  // "Nối tới…" (AC-UI-76) and the screen-reader line announcing the new edge.
+  // id of the node the list was opened for: selecting another node closes it.
+  const [connectFor, setConnectFor] = useState<string | null>(null);
+  const [announce, setAnnounce] = useState('');
   const { result: check, checking, failed } = useDesignCheck(definition);
 
   const apply = useCallback(
@@ -419,6 +425,31 @@ export function DesignerEditor(props: DesignerEditorProps) {
     [apply, doc, ro, setToast, t],
   );
 
+  /** Edge chosen in the "Nối tới…" list: same check and history entry as a mouse connection. */
+  const connectByKeyboard = useCallback(
+    (e: DEdge) => {
+      if (ro) return;
+      const result = connect(doc, e);
+      if (!result.ok) {
+        setToast({ tone: 'coral', text: t(`canvas.connect.${result.problem}`) });
+        return;
+      }
+      setToast(null);
+      apply(result.doc);
+      const name = (id: string) => {
+        const n = doc.nodes.find((x) => x.id === id);
+        return n?.label || id;
+      };
+      setAnnounce(
+        t('connectMenu.done', {
+          from: `${name(e.from)}.${e.fromPort}`,
+          to: `${name(e.to)}.${e.toPort}`,
+        }),
+      );
+    },
+    [apply, doc, ro, setToast, t],
+  );
+
   // ---- commands -------------------------------------------------------------------------------
 
   const texts = useCallback(
@@ -543,9 +574,15 @@ export function DesignerEditor(props: DesignerEditorProps) {
   }, [ro]);
 
   // Keyboard shortcuts (spec §15.3). Ctrl/Cmd+S never opens the browser's "Save page".
-  const keys = useRef({ save, doUndo, doRedo, copy, pasteClip, deleteSelection });
+  const selectedNodeId =
+    selection.nodes.length === 1 && selection.notes.length === 0 ? selection.nodes[0]! : null;
+  const openConnect = useCallback(() => {
+    const node = doc.nodes.find((n) => n.id === selectedNodeId);
+    if (!ro && node && outputPortsOf(node.type).length > 0) setConnectFor(node.id);
+  }, [doc.nodes, ro, selectedNodeId]);
+  const keys = useRef({ save, doUndo, doRedo, copy, pasteClip, deleteSelection, openConnect });
   useEffect(() => {
-    keys.current = { save, doUndo, doRedo, copy, pasteClip, deleteSelection };
+    keys.current = { save, doUndo, doRedo, copy, pasteClip, deleteSelection, openConnect };
   });
   const modalOpen = conflict !== null;
   useEffect(() => {
@@ -558,6 +595,12 @@ export function DesignerEditor(props: DesignerEditorProps) {
         return;
       }
       if (modalOpen || document.querySelector('dialog[open]')) return;
+      if (mod && k === 'e' && !e.shiftKey && !e.altKey) {
+        // "Nối tới…" (AC-UI-76); the button stays disabled without exactly one node selected.
+        e.preventDefault();
+        keys.current.openConnect();
+        return;
+      }
       if (mod && k === 'z' && !e.shiftKey) {
         e.preventDefault();
         keys.current.doUndo();
@@ -710,6 +753,14 @@ export function DesignerEditor(props: DesignerEditorProps) {
                 disabled={!hasSelection}
                 aria-keyshortcuts="Delete"
               />
+              <ConnectMenu
+                key={selectedNode?.id ?? ''}
+                doc={doc}
+                node={selectedNode}
+                open={selectedNode !== null && connectFor === selectedNode.id}
+                onOpenChange={(o) => setConnectFor(o ? (selectedNode?.id ?? null) : null)}
+                onConnect={connectByKeyboard}
+              />
               <Button size="sm" onClick={addNoteCmd}>
                 {t('toolbar.note')}
               </Button>
@@ -821,6 +872,9 @@ export function DesignerEditor(props: DesignerEditorProps) {
             </div>
           </section>
           <StatusBar check={check} checking={checking} failed={failed} onJump={jump} />
+          <p aria-live="polite" data-connect-announce className="sr-only">
+            {announce}
+          </p>
         </div>
         <aside
           aria-label={t('panel.label')}

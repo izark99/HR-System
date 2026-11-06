@@ -264,3 +264,14 @@ export function TrashIcon({ size = 18, className }: IconProps) {
     </Icon>
   );
 }
+
+/** "Nối tới…" (keyboard edge linking, AC-UI-76): two nodes joined by a wire. */
+export function ConnectIcon({ size = 18, className }: IconProps) {
+  return (
+    <Icon size={size} className={className}>
+      <rect x="2" y="4" width="7" height="6" rx="1.5" />
+      <rect x="15" y="14" width="7" height="6" rx="1.5" />
+      <path d="M9 7h3a2 2 0 0 1 2 2v6a2 2 0 0 0 2 2h-1" />
+    </Icon>
+  );
+}

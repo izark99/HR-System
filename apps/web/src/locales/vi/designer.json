@@ -774,5 +774,17 @@
         "example": "=EOMONTH(PARAM(\"ky_luong\"),0)"
       }
     }
+  },
+  "connectMenu": {
+    "button": "Nối tới…",
+    "tip": "Nối tới… (Ctrl+E)",
+    "pickSource": "Chọn cổng ra của {{node}}",
+    "pickTarget": "Nối {{node}}.{{port}} tới cổng vào",
+    "search": "Tìm node hoặc cổng",
+    "sources": "Cổng ra",
+    "targets": "Cổng vào nối được",
+    "empty": "Không còn cổng vào nào nối được (đã nối hoặc sẽ tạo vòng lặp).",
+    "noResults": "Không có kết quả",
+    "done": "Đã nối {{from}} tới {{to}}."
   }
 }
