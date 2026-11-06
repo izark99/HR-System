@@ -376,3 +376,22 @@
     transform: translateX(100%);
   }
 }
+
+/*
+ * `FieldGrid` (spec §25.5 "FormField", AC-UI-78 rule 6): each field spans two rows shared with its
+ * neighbours (label, then control + hint + error), so controls of one row start on one line. Not
+ * in a layer: it must win over the field's own `flex` utility.
+ */
+:is(.hr-field-grid, .hr-field-grid > .contents) > * {
+  grid-row: span 2;
+}
+:is(.hr-field-grid, .hr-field-grid > .contents) > [data-form-field] {
+  display: grid;
+  grid-template-rows: subgrid;
+}
+:is(.hr-field-grid, .hr-field-grid > .contents) > [data-form-field] > label {
+  align-self: end;
+}
+:is(.hr-field-grid, .hr-field-grid > .contents) > [data-form-field] > :last-child {
+  grid-row: 2;
+}

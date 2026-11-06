@@ -1,3 +1,4 @@
+import { FieldGrid } from '../../../components/FormField';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Callout } from '../../../components/ui';
@@ -103,8 +104,8 @@ function ColumnEditor({
   const ruleKind = (r: Obj) => RULE_KINDS.find((k) => k in r) ?? 'unique';
   return (
     <>
-      <div className="grid grid-cols-2 gap-2">
-        <div onFocus={() => watch.onFocus(field, str(col.key))}>
+      <FieldGrid>
+        <div className="contents" onFocus={() => watch.onFocus(field, str(col.key))}>
           <TextField
             label={t('slot.col.key')}
             value={str(col.key)}
@@ -124,7 +125,7 @@ function ColumnEditor({
           issues={at('label')}
           disabled={ro}
         />
-      </div>
+      </FieldGrid>
       {oldKey && <KeyUsageWarning oldKey={oldKey} nodes={columnUsages(doc, slotKey, oldKey)} />}
       <LinesField
         label={t('slot.col.aliases')}
@@ -135,7 +136,7 @@ function ColumnEditor({
         disabled={ro}
         rows={2}
       />
-      <div className="grid grid-cols-2 gap-2">
+      <FieldGrid>
         <SelectField
           label={t('slot.col.type')}
           value={type}
@@ -160,7 +161,7 @@ function ColumnEditor({
           hint={t('slot.col.presenceHint')}
           disabled={ro}
         />
-      </div>
+      </FieldGrid>
       <CheckField
         label={t('slot.col.required')}
         checked={required}
@@ -244,7 +245,7 @@ function ColumnEditor({
           const withSev = (x: Obj) => (sev !== 'error' ? { ...x, severity: sev } : x);
           return (
             <>
-              <div className="grid grid-cols-2 gap-2">
+              <FieldGrid>
                 <SelectField
                   label={t('slot.rule.kind')}
                   value={kind}
@@ -274,7 +275,7 @@ function ColumnEditor({
                   ]}
                   disabled={ro}
                 />
-              </div>
+              </FieldGrid>
               {kind === 'regex' && (
                 <TextField
                   label={t('slot.rule.regexValue')}
@@ -339,8 +340,8 @@ export function SlotForm({
     .filter((c) => c.key);
   return (
     <div className="flex flex-col gap-3.5">
-      <div className="grid grid-cols-2 gap-2">
-        <div onFocus={() => watch.onFocus('key', key)}>
+      <FieldGrid>
+        <div className="contents" onFocus={() => watch.onFocus('key', key)}>
           <TextField
             label={t('slot.key')}
             value={key}
@@ -361,7 +362,7 @@ export function SlotForm({
           issues={at('label')}
           disabled={ro}
         />
-      </div>
+      </FieldGrid>
       {keyWarning && <KeyUsageWarning oldKey={keyWarning} nodes={slotUsages(doc, keyWarning)} />}
       <CheckField
         label={t('slot.required')}
@@ -394,7 +395,7 @@ export function SlotForm({
           />
         ))}
       </fieldset>
-      <div className="grid grid-cols-2 gap-2">
+      <FieldGrid>
         <SelectField
           label={t('slot.sheetMode')}
           value={mode}
@@ -440,8 +441,8 @@ export function SlotForm({
             disabled={ro}
           />
         )}
-      </div>
-      <div className="grid grid-cols-3 gap-2">
+      </FieldGrid>
+      <FieldGrid cols={3}>
         <NumberField
           label={t('slot.headerRow')}
           value={num(slot.headerRow) ?? 1}
@@ -471,7 +472,7 @@ export function SlotForm({
           issues={at('dataStartRow')}
           disabled={ro}
         />
-      </div>
+      </FieldGrid>
       <p className="m-0 -mt-2 text-caption text-muted">{t('slot.rowsHint')}</p>
       <NumberField
         label={t('slot.stopAt')}
@@ -526,7 +527,7 @@ export function SlotForm({
           />
         </>
       )}
-      <div className="grid grid-cols-2 gap-2">
+      <FieldGrid>
         <SelectField
           label={t('slot.unmerge')}
           value={str(slot.unmergeCells, 'none')}
@@ -548,7 +549,7 @@ export function SlotForm({
           hint={str(slot.extraColumns) === 'keep' ? t('slot.extraKeepHint') : undefined}
           disabled={ro}
         />
-      </div>
+      </FieldGrid>
       <CheckField
         label={t('slot.multiple')}
         checked={multiple.enabled === true}
@@ -557,7 +558,7 @@ export function SlotForm({
         disabled={ro}
       />
       {multiple.enabled === true && (
-        <div className="grid grid-cols-2 gap-2">
+        <FieldGrid>
           <NumberField
             label={t('slot.minFiles')}
             value={num(multiple.minFiles) ?? 1}
@@ -577,7 +578,7 @@ export function SlotForm({
             }
             disabled={ro}
           />
-        </div>
+        </FieldGrid>
       )}
       <NumberField
         label={t('slot.maxRows')}

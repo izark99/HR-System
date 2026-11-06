@@ -1,3 +1,4 @@
+import { FieldGrid } from '../../../components/FormField';
 import { useTranslation } from 'react-i18next';
 import type { DesignIssue } from '../../../engine/design';
 import { paramUsages, type DesignerDoc, type JsonObject } from '../model';
@@ -70,8 +71,8 @@ export function ParamsForm({
           const oldKey = watch.warningFor(field);
           return (
             <>
-              <div className="grid grid-cols-2 gap-2">
-                <div onFocus={() => watch.onFocus(field, str(p.key))}>
+              <FieldGrid>
+                <div className="contents" onFocus={() => watch.onFocus(field, str(p.key))}>
                   <TextField
                     label={t('params.key')}
                     value={str(p.key)}
@@ -92,7 +93,7 @@ export function ParamsForm({
                   issues={at('label')}
                   disabled={ro}
                 />
-              </div>
+              </FieldGrid>
               {oldKey && <KeyUsageWarning oldKey={oldKey} nodes={paramUsages(doc, oldKey)} />}
               <SelectField
                 label={t('params.type')}
@@ -156,7 +157,7 @@ export function ParamsForm({
                   itemLabel={(k) => str(options[k]?.label) || t('params.optionN', { n: k + 1 })}
                   disabled={ro}
                   render={(o, k, setOption) => (
-                    <div className="grid grid-cols-2 gap-2">
+                    <FieldGrid>
                       <TextField
                         label={t('params.optionValue')}
                         value={str(o.value)}
@@ -170,7 +171,7 @@ export function ParamsForm({
                         onChange={(v) => setOption({ ...o, label: v })}
                         disabled={ro}
                       />
-                    </div>
+                    </FieldGrid>
                   )}
                 />
               )}

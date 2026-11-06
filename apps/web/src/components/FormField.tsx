@@ -61,7 +61,12 @@ export function fieldIds(
  * `field.input`), Select (`id`, `describedBy`, `invalid`, `required`) and MonthPicker / DatePicker
  * (`id`, `labelId`, `describedBy`, `invalid`). `inline`: checkbox first, label beside it.
  *
- * `dense`: 14px variant (42px control) for the Designer side form.
+ * `dense`: 14px variant for the Designer side form (control 44px like the regular one, MEMORY
+ * 2026-11-06 13:05).
+ *
+ * Two parts: the label, then the control with its hint and error. Inside a `FieldGrid` the field
+ * becomes a two-row subgrid, so every control of a grid row starts on the same line however long
+ * the labels above or the hints below are (AC-UI-78 rule 6).
  */
 export function FormField({
   label,
@@ -116,37 +121,67 @@ export function FormField({
     </label>
   );
   const text = dense ? 'text-dense' : 'text-caption';
+  const gap = dense ? 'gap-1' : 'gap-2';
   return (
     <div
       data-form-field={dense ? 'dense' : 'default'}
-      className={cx('flex min-w-0 flex-col', dense ? 'gap-1' : 'gap-2', className)}
+      className={cx('flex min-w-0 flex-col', gap, className)}
     >
-      {inline ? (
-        <div className="flex min-h-target items-center gap-2">
-          {children(field)}
-          {labelEl}
-        </div>
-      ) : (
-        <>
-          {labelEl}
-          {children(field)}
-        </>
-      )}
-      {hint && (
-        <p id={ids.hint} className={cx('m-0 text-muted', text)}>
-          {hint}
-        </p>
-      )}
-      {hasError && (
-        <p id={ids.error} className={cx('m-0 text-coral-text', text)}>
-          {error}
-        </p>
-      )}
+      {!inline && labelEl}
+      <div className={cx('flex min-w-0 flex-col', gap)}>
+        {inline ? (
+          <div className="flex min-h-target items-center gap-2">
+            {children(field)}
+            {labelEl}
+          </div>
+        ) : (
+          children(field)
+        )}
+        {hint && (
+          <p id={ids.hint} className={cx('m-0 text-muted', text)}>
+            {hint}
+          </p>
+        )}
+        {hasError && (
+          <p id={ids.error} className={cx('m-0 text-coral-text', text)}>
+            {error}
+          </p>
+        )}
+      </div>
     </div>
   );
 }
 
-/** Text input on the §25.3 frame (44px; `dense` 42px / 14px). Spread a `FormField`'s props. */
+/**
+ * Fields side by side in equal columns (spec §25.5 "FormField"): each `FormField` child spans two
+ * shared rows (label / control + hint + error, CSS subgrid in `index.css`), so the controls of a
+ * row line up even when one label wraps or one field has a hint (AC-UI-78 rule 6). A child that
+ * only wraps a field (e.g. for an `onFocus` handler) must use `className="contents"`.
+ */
+export function FieldGrid({
+  cols = 2,
+  className,
+  children,
+}: {
+  cols?: 2 | 3;
+  className?: string;
+  children: ReactNode;
+}) {
+  return (
+    <div
+      data-field-grid
+      className={cx(
+        'hr-field-grid grid gap-2',
+        cols === 3 ? 'grid-cols-3' : 'grid-cols-2',
+        className,
+      )}
+    >
+      {children}
+    </div>
+  );
+}
+
+/** Text input on the §25.3 frame (44px; `dense` 14px). Spread a `FormField`'s props. */
 export function TextInput({
   dense = false,
   className,

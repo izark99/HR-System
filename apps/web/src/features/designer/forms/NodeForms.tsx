@@ -1,3 +1,4 @@
+import { FieldGrid } from '../../../components/FormField';
 import { lazy, Suspense, useMemo, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Callout } from '../../../components/ui';
@@ -150,7 +151,7 @@ function CompareForm(p: NodeFormProps) {
               issues={at(`metrics.${i}.label`)}
               disabled={ro}
             />
-            <div className="grid grid-cols-2 gap-2">
+            <FieldGrid>
               <ColumnField
                 label={t('node.compare.left')}
                 value={str(m.left)}
@@ -167,7 +168,7 @@ function CompareForm(p: NodeFormProps) {
                 issues={at(`metrics.${i}.right`)}
                 disabled={ro}
               />
-            </div>
+            </FieldGrid>
             <TextField
               label={t('node.compare.tolerance')}
               value={typeof m.tolerance === 'number' ? String(m.tolerance) : str(m.tolerance, '0')}
@@ -210,7 +211,7 @@ function CompareForm(p: NodeFormProps) {
         disabled={ro}
       />
       {sides && (
-        <div className="grid grid-cols-2 gap-2">
+        <FieldGrid>
           <TextField
             label={t('node.compare.sideLeft')}
             value={str(sides.left)}
@@ -225,7 +226,7 @@ function CompareForm(p: NodeFormProps) {
             issues={at('sideLabels.right')}
             disabled={ro}
           />
-        </div>
+        </FieldGrid>
       )}
     </Section>
   );
@@ -395,7 +396,7 @@ function SelectForm(p: NodeFormProps) {
                 issues={at(`columns.${i}.from`)}
                 disabled={ro}
               />
-              <div className="grid grid-cols-2 gap-2">
+              <FieldGrid>
                 <TextField
                   label={t('node.select.key')}
                   value={str(col.key)}
@@ -412,7 +413,7 @@ function SelectForm(p: NodeFormProps) {
                   issues={at(`columns.${i}.title`)}
                   disabled={ro}
                 />
-              </div>
+              </FieldGrid>
             </>
           );
         }}
@@ -602,7 +603,7 @@ function SortForm(p: NodeFormProps) {
               issues={at(`by.${i}.column`)}
               disabled={ro}
             />
-            <div className="grid grid-cols-2 gap-2">
+            <FieldGrid>
               <SelectField
                 label={t('node.sort.direction')}
                 value={str(s.direction, 'asc')}
@@ -623,7 +624,7 @@ function SortForm(p: NodeFormProps) {
                 ]}
                 disabled={ro}
               />
-            </div>
+            </FieldGrid>
           </>
         )}
       />
@@ -662,7 +663,7 @@ function JoinForm(p: NodeFormProps) {
         itemLabel={(i) => t('node.join.keyN', { n: i + 1 })}
         disabled={ro}
         render={(k, i, setItem) => (
-          <div className="grid grid-cols-2 gap-2">
+          <FieldGrid>
             <ColumnField
               label={t('node.join.left')}
               value={str(k.left)}
@@ -679,7 +680,7 @@ function JoinForm(p: NodeFormProps) {
               issues={at(`on.${i}.right`)}
               disabled={ro}
             />
-          </div>
+          </FieldGrid>
         )}
       />
       <CheckField
@@ -879,7 +880,7 @@ function GroupByForm(p: NodeFormProps) {
                   disabled={ro}
                 />
               )}
-              <div className="grid grid-cols-2 gap-2">
+              <FieldGrid>
                 <TextField
                   label={t('node.groupBy.key')}
                   value={str(a.key)}
@@ -895,7 +896,7 @@ function GroupByForm(p: NodeFormProps) {
                   issues={at(`aggregations.${i}.title`)}
                   disabled={ro}
                 />
-              </div>
+              </FieldGrid>
             </>
           );
         }}

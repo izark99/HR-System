@@ -1,3 +1,4 @@
+import { FieldGrid } from '../../../components/FormField';
 import { lazy, Suspense, useId, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { FUNCTIONS, FUNCTION_GROUPS } from '../../../engine/formula/functions';
@@ -219,7 +220,7 @@ function FormulaColumn({
   ];
   return (
     <>
-      <div className="grid grid-cols-2 gap-2">
+      <FieldGrid>
         <TextField
           label={t('node.formula.key')}
           value={str(col.key)}
@@ -237,7 +238,7 @@ function FormulaColumn({
           hint={t('node.formula.titleHint')}
           disabled={readOnly}
         />
-      </div>
+      </FieldGrid>
       <div className="flex flex-col gap-1.5">
         <span className={labelClass}>{t('node.formula.formula')}</span>
         <Suspense
@@ -273,7 +274,7 @@ function FormulaColumn({
         </p>
         <FieldErrors id={`${editorId}-errors`} issues={formulaIssues} />
       </div>
-      <div className="grid grid-cols-2 gap-2">
+      <FieldGrid>
         <SelectField
           label={t('node.formula.type')}
           value={str(col.type, 'auto')}
@@ -294,7 +295,7 @@ function FormulaColumn({
           hint={t('node.formula.onErrorHint')}
           disabled={readOnly}
         />
-      </div>
+      </FieldGrid>
     </>
   );
 }
