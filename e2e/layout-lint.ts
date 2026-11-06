@@ -30,7 +30,9 @@
  *  (14) a hint / explanation shown as text in a form, card, panel or dialog: an element marked
  *      `data-hint` (only allowed as screen-reader text or inside an open (i) popover), or a
  *      paragraph that looks like one (muted colour, ≤ 14px, not a status / live region, not marked
- *      `data-note` as status / metadata text).
+ *      `data-note` as status / metadata text);
+ *  (15) in a dense tab list (`Tabs dense`) or a field grid (`FieldGrid`), a last row holding a single item while a row
+ *      above holds more than one (e.g. 3 tabs + 1, 2 fields + 1 — Harold 2026-11-06).
  * Only rows of one flex/grid parent are compared; hidden / zero-size elements are skipped.
  * Exceptions live in `LAYOUT_ALLOW` only, each with its reason.
  */
@@ -39,7 +41,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { expect, type Page } from './fixtures';
 
-export type LayoutRule = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 | 13 | 14;
+export type LayoutRule = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 | 13 | 14 | 15;
 
 export interface LayoutViolation {
   rule: LayoutRule;
@@ -741,6 +743,39 @@ function measure(
         'looks like a hint paragraph shown by default (muted, small); move it behind an (i) button or mark status / metadata text `data-note`',
       ids: [idOf(el)],
     });
+  }
+
+  // ---- lone item on the last row of a tab list / field grid (rule 15) -------------------------
+  for (const box of all) {
+    // Grids only: a dense tab list (laid out in equal columns) or a FieldGrid. Plain pill tabs
+    // wrap like words on narrow screens (Kết quả at 390px) and are not a grid.
+    if (!box.matches('[role="tablist"][data-tabs="dense"], [data-field-grid]') || allowed(box, 15))
+      continue;
+    const items = (
+      box.matches('[role="tablist"]')
+        ? Array.from(box.querySelectorAll('[role="tab"]'))
+        : kids(box).filter((c) => inFlow(c))
+    ).filter(visible);
+    if (items.length < 2) continue;
+    // Rows: items whose tops are within half the smallest height.
+    const rects = items.map((el) => el.getBoundingClientRect());
+    const minH = Math.min(...rects.map((r) => r.height));
+    const rows: number[][] = [];
+    rects.forEach((r, i) => {
+      const row = rows.find((ix) => Math.abs(rects[ix[0]!]!.top - r.top) < minH / 2);
+      if (row) row.push(i);
+      else rows.push([i]);
+    });
+    if (rows.length < 2) continue;
+    rows.sort((a, b) => rects[a[0]!]!.top - rects[b[0]!]!.top);
+    const last = rows[rows.length - 1]!;
+    if (last.length === 1 && rows.slice(0, -1).some((r) => r.length > 1))
+      out.push({
+        rule: 15,
+        target: name(box),
+        detail: `lone item on the last row: rows of ${rows.map((r) => r.length).join(' + ')} (${name(items[last[0]!]!)})`,
+        ids: items.map(idOf),
+      });
   }
 
   // ---- clipped text (rule 7) ------------------------------------------------------------------

@@ -301,6 +301,31 @@ for (const viewport of [DESKTOP, LAPTOP]) {
       await expect(data.getByRole('tab', { name: /^Lệch/ })).toBeVisible({ timeout: 30_000 });
       await data.getByRole('tab', { name: /^Lệch/ }).click();
       await r.check('designer data panel preview');
+      // Rule 15 on the real tab list: forced to 3 columns (the 3 + 1 of before 2026-11-06) it fails.
+      const tabs = data
+        .getByRole('tablist')
+        .filter({ has: page.getByRole('tab', { name: /^Lệch/ }) });
+      await expect(tabs.getByRole('tab')).toHaveCount(4);
+      const rows = await tabs.evaluate((el) => {
+        const tops = new Set(
+          Array.from(el.querySelectorAll('[role="tab"]')).map((t) =>
+            Math.round(t.getBoundingClientRect().top),
+          ),
+        );
+        return tops.size;
+      });
+      expect([1, 2]).toContain(rows);
+      await tabs.evaluate((el) => {
+        el.setAttribute('data-ll-style', el.getAttribute('style') ?? '');
+        (el as HTMLElement).style.gridAutoFlow = 'row';
+        (el as HTMLElement).style.gridTemplateColumns = 'repeat(3, minmax(0, 1fr))';
+      });
+      const forced = (await layoutLint(page)).filter((v) => v.rule === 15);
+      expect(forced.map((v) => v.detail)).toEqual([expect.stringContaining('3 + 1')]);
+      await tabs.evaluate((el) => {
+        el.setAttribute('style', el.getAttribute('data-ll-style') ?? '');
+        el.removeAttribute('data-ll-style');
+      });
       if (process.env.LL_SHOTS)
         await page.screenshot({ path: `${process.env.LL_SHOTS}/data-panel-${size(viewport)}.png` });
       r.assertClean(`designer-data-${size(viewport)}`);
@@ -425,7 +450,8 @@ test.describe('layout-lint self-test', () => {
       .row{display:flex;gap:8px;align-items:flex-start} input,button{box-sizing:border-box;height:44px;margin:0}
       .grid{display:grid;grid-template-columns:1fr 1fr;gap:8px} .f{display:flex;flex-direction:column;gap:4px;min-width:0}`;
     await page.setContent(`<style>${css}</style>
-      <div class="card" data-card id="clean"><div class="row"><input aria-label="a"><button>OK</button></div></div>`);
+      <div class="card" data-card id="clean"><div class="row"><input aria-label="a"><button>OK</button></div>
+      <div class="grid" data-field-grid><div class="f">c1</div><div class="f">c2</div><div class="f">c3</div><div class="f">c4</div></div></div>`);
     expect(await layoutLint(page)).toEqual([]);
 
     await page.setContent(`<style>${css}</style>
@@ -442,12 +468,18 @@ test.describe('layout-lint self-test', () => {
       <div class="card"><div style="display:flex;flex-direction:column;gap:16px"><div data-form-field>r11 a</div><div data-form-field style="margin-bottom:8px">r11 b</div><div data-checkbox>r11 c</div><h3 style="margin:0">r11 nhóm</h3><div data-form-field>r11 d</div></div></div>
       <div class="card"><div data-form-field style="width:90px"><label data-field-label>r12 nhãn dài xuống dòng</label></div></div>
       <div class="card"><div id="r13-outer" style="height:60px;overflow-y:auto"><div id="r13-inner" style="height:100px;overflow-y:auto"><div style="height:200px">r13</div></div></div></div>
-      <div class="card" data-card><p data-hint>r14 gợi ý đánh dấu</p><p style="color:#475569;font-size:14px;margin:0">r14 đoạn giải thích</p><p data-note style="color:#475569;font-size:14px;margin:0">r14 meta</p></div>`);
+      <div class="card" data-card><p data-hint>r14 gợi ý đánh dấu</p><p style="color:#475569;font-size:14px;margin:0">r14 đoạn giải thích</p><p data-note style="color:#475569;font-size:14px;margin:0">r14 meta</p></div>
+      <div class="card"><div role="tablist" data-tabs="dense" aria-label="r15 tabs" style="display:flex;flex-wrap:wrap;gap:8px;width:200px"><button role="tab" style="width:60px">a</button><button role="tab" style="width:60px">b</button><button role="tab" style="width:60px">c</button><button role="tab" style="width:60px">d</button></div></div>
+      <div class="card"><div class="grid" data-field-grid aria-label="r15 grid"><div class="f">g1</div><div class="f">g2</div><div class="f">g3</div></div></div>`);
     const found = await layoutLint(page);
     const rules = new Set(found.map((v) => v.rule));
     expect([...rules].sort((a, b) => a - b)).toEqual([
-      1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14,
+      1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15,
     ]);
+    const r15 = found.filter((v) => v.rule === 15);
+    expect(r15).toHaveLength(2);
+    expect(r15.some((v) => v.target.includes('r15 tabs') && v.detail.includes('3 + 1'))).toBe(true);
+    expect(r15.some((v) => v.target.includes('r15 grid') && v.detail.includes('2 + 1'))).toBe(true);
     const r8 = found.filter((v) => v.rule === 8).map((v) => v.detail);
     expect(r8.some((d) => d.includes('"r8 nút 40"') && d.includes('h=40px'))).toBe(true);
     // The marked small button (36px) is not a fault.
