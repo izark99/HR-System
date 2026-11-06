@@ -1,20 +1,12 @@
 import { Link, useNavigate, useParams } from '@tanstack/react-router';
-import { useEffect, useMemo, useState, type KeyboardEvent } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { FormField, TextInput } from '../../components/FormField';
+import { ConclusionCard, KpiCard, KpiRow } from '../../components/KpiCard';
+import { PageHeader, PageShell, Toolbar } from '../../components/layout';
 import { Select } from '../../components/Select';
-import {
-  Button,
-  buttonClass,
-  Callout,
-  cardClass,
-  cx,
-  inputClass,
-  labelClass,
-  PageHeader,
-  type Tone,
-  toneText,
-  toneTint,
-} from '../../components/ui';
+import { TabPanel, Tabs } from '../../components/Tabs';
+import { Button, buttonClass, Callout, cardClass, cx, type Tone } from '../../components/ui';
 import type {
   FilterOption,
   ParamValues,
@@ -46,60 +38,6 @@ function periodOf(state: SessionState, params: ParamValues): string | null {
   return def?.type === 'month' ? formatMonth(v) : v;
 }
 
-/** KPI card (§25.3): card + 4px top bar by meaning, number in `display-xl` (Vietnamese format). */
-function KpiCard({ label, value, tone }: { label: string; value: number; tone: Tone }) {
-  const bar: Record<Tone, string> = {
-    teal: 'border-t-teal',
-    coral: 'border-t-coral',
-    amber: 'border-t-amber',
-    blue: 'border-t-blue',
-    neutral: 'border-t-line-input',
-  };
-  return (
-    <div
-      className={cx(cardClass, 'flex flex-col gap-2 border-t-4 p-6', bar[tone])}
-      data-testid="kpi"
-      data-card
-    >
-      <dt className="text-body font-semibold text-ink-soft">{label}</dt>
-      <dd className={cx('m-0 text-display-xl', toneText[tone])}>{formatInteger(value)}</dd>
-    </div>
-  );
-}
-
-/**
- * The one dark card of the Result screen (AC-UI-09): the main conclusion of the comparison, from
- * the counts already in memory.
- */
-function ConclusionCard({ cmp }: { cmp: NonNullable<RunSummary['compare']> }) {
-  const { t } = useTranslation();
-  const pending = cmp.mismatched + cmp.onlyLeft + cmp.onlyRight;
-  const sides = { left: cmp.sideLabels.left, right: cmp.sideLabels.right };
-  return (
-    <section
-      aria-labelledby="conclusion-title"
-      data-testid="conclusion"
-      className="flex flex-col gap-2 rounded-card bg-ink p-6 text-white"
-    >
-      <h2 id="conclusion-title" className="m-0 text-title-md text-white">
-        {pending > 0
-          ? t('result.conclusion.actionTitle', { count: pending })
-          : t('result.conclusion.okTitle')}
-      </h2>
-      <p className="m-0 text-body-lg text-white">
-        {pending > 0
-          ? t('result.conclusion.actionText', {
-              ...sides,
-              mismatched: formatInteger(cmp.mismatched),
-              onlyLeft: formatInteger(cmp.onlyLeft),
-              onlyRight: formatInteger(cmp.onlyRight),
-            })
-          : t('result.conclusion.okText', { ...sides, matched: formatInteger(cmp.matched) })}
-      </p>
-    </section>
-  );
-}
-
 function Filters({
   options,
   values,
@@ -115,17 +53,13 @@ function Filters({
     <div
       role="group"
       aria-label={t('result.filtersLabel')}
-      className="flex flex-wrap items-end gap-3 px-5 py-3.5"
+      className="flex flex-wrap items-end gap-3"
     >
-      {options.map((o) => {
-        const id = `filter-${o.column}`;
-        return (
-          <div key={o.column} className="flex flex-col gap-1">
-            <label htmlFor={id} className={labelClass}>
-              {o.title}
-            </label>
+      {options.map((o) => (
+        <FormField key={o.column} label={o.title} id={`filter-${o.column}`}>
+          {(field) => (
             <Select
-              id={id}
+              id={field.id}
               value={values[o.column] ?? ''}
               onChange={(v) => onChange(o.column, v)}
               options={[
@@ -134,16 +68,45 @@ function Filters({
               ]}
               className="min-w-40"
             />
-          </div>
-        );
-      })}
+          )}
+        </FormField>
+      ))}
     </div>
+  );
+}
+
+/**
+ * The one dark card of the Result screen (AC-UI-09): the main conclusion of the comparison, from
+ * the counts already in memory.
+ */
+function Conclusion({ cmp }: { cmp: NonNullable<RunSummary['compare']> }) {
+  const { t } = useTranslation();
+  const pending = cmp.mismatched + cmp.onlyLeft + cmp.onlyRight;
+  const sides = { left: cmp.sideLabels.left, right: cmp.sideLabels.right };
+  return (
+    <ConclusionCard
+      title={
+        pending > 0
+          ? t('result.conclusion.actionTitle', { count: pending })
+          : t('result.conclusion.okTitle')
+      }
+      text={
+        pending > 0
+          ? t('result.conclusion.actionText', {
+              ...sides,
+              mismatched: formatInteger(cmp.mismatched),
+              onlyLeft: formatInteger(cmp.onlyLeft),
+              onlyRight: formatInteger(cmp.onlyRight),
+            })
+          : t('result.conclusion.okText', { ...sides, matched: formatInteger(cmp.matched) })
+      }
+    />
   );
 }
 
 const SEARCH_DEBOUNCE_MS = 250;
 
-function SheetPanel({ sheet, tabId }: { sheet: SheetInfo; tabId: string }) {
+function SheetPanel({ sheet, tabsId }: { sheet: SheetInfo; tabsId: string }) {
   const { t } = useTranslation();
   const store = useRunStore();
   const [options, setOptions] = useState<FilterOption[]>([]);
@@ -176,29 +139,26 @@ function SheetPanel({ sheet, tabId }: { sheet: SheetInfo; tabId: string }) {
   );
 
   return (
-    <div role="tabpanel" id={`panel-${sheet.id}`} aria-labelledby={tabId} className="flex flex-col">
-      <div className="flex flex-wrap items-end justify-between gap-3 pr-5">
+    <TabPanel tabsId={tabsId} item={sheet.id} focusable={false} className="flex flex-col">
+      <div className="flex flex-wrap items-end justify-between gap-3 px-4 pt-4 pb-3">
         <Filters
           options={options}
           values={values}
           onChange={(column, value) => setValues((v) => ({ ...v, [column]: value }))}
         />
-        <div className={cx('flex flex-col gap-1', options.length === 0 && 'pt-3.5 pl-5')}>
-          <label htmlFor={searchId} className={labelClass}>
-            {t('result.search')}
-          </label>
-          <input
-            id={searchId}
-            type="search"
-            value={text}
-            onChange={(e) => setText(e.target.value)}
-            className={cx(inputClass, 'w-60 max-w-full')}
-          />
-        </div>
+        <FormField label={t('result.search')} id={searchId} className="w-60 max-w-full">
+          {(field) => (
+            <TextInput
+              {...field.input}
+              type="search"
+              value={text}
+              onChange={(e) => setText(e.target.value)}
+            />
+          )}
+        </FormField>
       </div>
-      <div className="h-3" />
       {truncated && (
-        <div className="px-5 pb-3">
+        <div className="px-4 pb-3">
           <Callout tone="blue" label={t('result.noteLabel')} role="status">
             {t('result.truncated', {
               shown: formatInteger(sheet.rowCount),
@@ -216,10 +176,13 @@ function SheetPanel({ sheet, tabId }: { sheet: SheetInfo; tabId: string }) {
         search={search}
         onSort={setSort}
       />
-    </div>
+    </TabPanel>
   );
 }
 
+const TABS_ID = 'result-sheets';
+
+/** Card of the result sheets (Report template, §25.5): `Toolbar` with the sheet `Tabs` + table. */
 function SheetTabs({ summary }: { summary: RunSummary }) {
   const { t } = useTranslation();
   const initial = summary.sheets.find((s) => s.role === 'mismatched') ?? summary.sheets[0];
@@ -227,68 +190,30 @@ function SheetTabs({ summary }: { summary: RunSummary }) {
   const current = summary.sheets.find((s) => s.id === selected) ?? initial;
   if (!current) return null;
 
-  const tabId = (s: SheetInfo) => `tab-${s.id}`;
-  const onKey = (e: KeyboardEvent<HTMLDivElement>) => {
-    const n = summary.sheets.length;
-    const i = summary.sheets.findIndex((s) => s.id === current.id);
-    // WAI-ARIA tabs pattern: arrows wrap around, Home/End jump to the first/last tab.
-    const target =
-      e.key === 'ArrowRight'
-        ? (i + 1) % n
-        : e.key === 'ArrowLeft'
-          ? (i - 1 + n) % n
-          : e.key === 'Home'
-            ? 0
-            : e.key === 'End'
-              ? n - 1
-              : -1;
-    if (target < 0) return;
-    e.preventDefault();
-    const next = summary.sheets[target]!;
-    setSelected(next.id);
-    document.getElementById(tabId(next))?.focus();
-  };
-
   return (
     <section className={cx(cardClass, 'flex flex-col overflow-hidden')}>
-      <div
-        role="tablist"
-        aria-label={t('result.tabsLabel')}
-        onKeyDown={onKey}
-        className="flex flex-wrap gap-2 border-b border-line px-4 py-3"
-      >
-        {summary.sheets.map((s) => {
-          const active = s.id === current.id;
-          const tone = ROLE_TONE[s.role];
-          return (
-            <button
-              key={s.id}
-              id={tabId(s)}
-              type="button"
-              role="tab"
-              aria-selected={active}
-              // Only the selected tab's panel exists in the DOM.
-              aria-controls={active ? `panel-${s.id}` : undefined}
-              tabIndex={active ? 0 : -1}
-              onClick={() => setSelected(s.id)}
-              className={cx(
-                'min-h-target rounded-pill px-4 text-body font-semibold',
-                active ? cx(toneTint[tone], toneText[tone]) : 'text-muted hover:bg-neutral',
-              )}
-            >
-              {s.role === 'summary'
+      <Toolbar>
+        <Tabs
+          id={TABS_ID}
+          label={t('result.tabsLabel')}
+          selected={current.id}
+          onChange={setSelected}
+          items={summary.sheets.map((s) => ({
+            id: s.id,
+            tone: ROLE_TONE[s.role],
+            label:
+              s.role === 'summary'
                 ? s.name
-                : t('result.tabCount', { name: s.name, count: s.totalRows ?? s.rowCount })}
-              {s.kind === 'preview' && (
-                <span className="ml-2 rounded-pill bg-neutral px-2 py-0.5 text-caption font-semibold text-muted">
-                  {t('result.viewOnly')}
-                </span>
-              )}
-            </button>
-          );
-        })}
-      </div>
-      <SheetPanel key={current.id} sheet={current} tabId={tabId(current)} />
+                : t('result.tabCount', { name: s.name, count: s.totalRows ?? s.rowCount }),
+            badge: s.kind === 'preview' && (
+              <span className="rounded-pill bg-neutral px-2 py-0.5 text-caption font-semibold text-muted">
+                {t('result.viewOnly')}
+              </span>
+            ),
+          }))}
+        />
+      </Toolbar>
+      <SheetPanel key={current.id} sheet={current} tabsId={TABS_ID} />
     </section>
   );
 }
@@ -306,10 +231,7 @@ export function ResultPage() {
   const summary = state.code === flowCode ? state.run.summary : null;
   if (!summary) {
     return (
-      <main
-        id="main"
-        className="mx-auto flex w-full max-w-320 flex-col gap-6 px-4 pt-8 pb-12 md:px-8"
-      >
+      <PageShell width="content">
         <BackToFlows />
         <Callout tone="amber" label={t('result.noteLabel')} role="status">
           {t('result.noSession')}
@@ -321,7 +243,7 @@ export function ResultPage() {
         >
           {t('result.goRun')}
         </Link>
-      </main>
+      </PageShell>
     );
   }
 
@@ -355,12 +277,10 @@ export function ResultPage() {
   };
 
   return (
-    <main
-      id="main"
-      className="mx-auto flex w-full max-w-320 flex-col gap-6 px-4 pt-8 pb-12 md:px-8"
-    >
+    <PageShell width="content">
       <BackToFlows />
       <PageHeader
+        variant="showcase"
         eyebrow={eyebrow}
         title={title}
         subtitle={thresholds}
@@ -395,10 +315,7 @@ export function ResultPage() {
       />
 
       {cmp && (
-        <dl
-          aria-label={t('result.kpi.label')}
-          className="m-0 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4"
-        >
+        <KpiRow label={t('result.kpi.label')}>
           <KpiCard label={t('result.kpi.matched')} value={cmp.matched} tone="teal" />
           <KpiCard label={t('result.kpi.mismatched')} value={cmp.mismatched} tone="coral" />
           <KpiCard
@@ -411,9 +328,9 @@ export function ResultPage() {
             value={cmp.onlyRight}
             tone="amber"
           />
-        </dl>
+        </KpiRow>
       )}
-      {cmp && <ConclusionCard cmp={cmp} />}
+      {cmp && <Conclusion cmp={cmp} />}
 
       {summary.warnings.length > 0 && (
         <Callout tone="amber" label={t('result.warningsLabel')} role="status">
@@ -435,6 +352,6 @@ export function ResultPage() {
       <Callout tone="amber" label={t('result.noteLabel')}>
         {t('result.note')}
       </Callout>
-    </main>
+    </PageShell>
   );
 }

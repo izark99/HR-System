@@ -58,7 +58,7 @@ export function SlotCard({
   };
 
   return (
-    <Card aria-labelledby={headingId} className="flex flex-col gap-3.5">
+    <Card aria-labelledby={headingId} className="flex flex-col gap-4">
       <div className="flex flex-wrap items-baseline justify-between gap-2">
         <h2 id={headingId} className="m-0 text-title-md text-ink">
           {slot.label}
@@ -82,7 +82,7 @@ export function SlotCard({
         onDragLeave={() => setDragging(false)}
         onDrop={onDrop}
         className={cx(
-          'rounded-card border-2 border-dashed p-5 text-center text-body',
+          'rounded-card border-2 border-dashed p-6 text-center text-body',
           // Disabled (run in progress): muted colours instead of opacity, so text keeps AA contrast.
           disabled
             ? 'border-line-input bg-neutral text-muted'
@@ -136,7 +136,7 @@ export function SlotCard({
               <li
                 key={f.id}
                 className={cx(
-                  'flex items-center justify-between gap-2 rounded-card py-1 pr-1 pl-3.5',
+                  'flex items-center justify-between gap-2 rounded-card py-1 pr-1 pl-4',
                   s && s.tone !== 'teal' && s.tone !== 'neutral' ? toneTint[s.tone] : 'bg-page',
                 )}
               >

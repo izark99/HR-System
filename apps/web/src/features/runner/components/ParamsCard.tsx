@@ -4,7 +4,8 @@ import { useTranslation } from 'react-i18next';
 import { DatePicker } from '../../../components/DatePicker';
 import { MonthPicker } from '../../../components/MonthPicker';
 import { Select } from '../../../components/Select';
-import { Card, inputClass, labelClass } from '../../../components/ui';
+import { FormField, TextInput } from '../../../components/FormField';
+import { Section } from '../../../components/layout';
 import type { ParamValues } from '../../../engine/protocol';
 
 const INPUT_TYPE: Partial<Record<FlowParam['type'], string>> = {
@@ -29,68 +30,70 @@ export function ParamsCard({
   const { t } = useTranslation();
   if (params.length === 0 && !aside) return null;
   return (
-    <Card aria-label={t('run.paramsTitle')} className="flex flex-wrap items-end gap-5">
-      {params.map((p) => {
-        const id = `param-${p.key}`;
-        const labelId = `${id}-label`;
-        const value = String(values[p.key] ?? '');
-        const options = Array.isArray(p.options) ? p.options : null;
-        return (
-          <div key={p.key} className="flex flex-col gap-1.5">
-            <label id={labelId} htmlFor={id} className={labelClass}>
-              {p.label}
-              {p.required && (
+    <Section title={t('run.paramsTitle')}>
+      <div className="flex flex-wrap items-end gap-6">
+        {params.map((p) => {
+          const value = String(values[p.key] ?? '');
+          const options = Array.isArray(p.options) ? p.options : null;
+          return (
+            <FormField
+              key={p.key}
+              id={`param-${p.key}`}
+              required={p.required}
+              label={
                 <>
-                  <span aria-hidden> *</span>
-                  <span className="sr-only"> ({t('common.required')})</span>
+                  {p.label}
+                  {p.required && <span aria-hidden> *</span>}
                 </>
-              )}
-            </label>
-            {p.type === 'month' ? (
-              <MonthPicker
-                id={id}
-                labelId={labelId}
-                value={value}
-                required={p.required}
-                disabled={disabled}
-                onChange={(v) => onChange(p.key, v)}
-              />
-            ) : p.type === 'date' ? (
-              <DatePicker
-                id={id}
-                labelId={labelId}
-                value={value}
-                required={p.required}
-                disabled={disabled}
-                onChange={(v) => onChange(p.key, v)}
-              />
-            ) : p.type === 'select' && options ? (
-              <Select
-                id={id}
-                value={value}
-                required={p.required}
-                disabled={disabled}
-                onChange={(v) => onChange(p.key, v)}
-                options={[
-                  { value: '', label: t('select.none') },
-                  ...options.map((o) => ({ value: o.value, label: o.label })),
-                ]}
-              />
-            ) : (
-              <input
-                id={id}
-                type={INPUT_TYPE[p.type] ?? 'text'}
-                value={value}
-                required={p.required}
-                disabled={disabled}
-                onChange={(e) => onChange(p.key, e.target.value)}
-                className={inputClass}
-              />
-            )}
-          </div>
-        );
-      })}
-      {aside}
-    </Card>
+              }
+            >
+              {(field) =>
+                p.type === 'month' ? (
+                  <MonthPicker
+                    id={field.id}
+                    labelId={field.labelId}
+                    value={value}
+                    required={p.required}
+                    disabled={disabled}
+                    onChange={(v) => onChange(p.key, v)}
+                  />
+                ) : p.type === 'date' ? (
+                  <DatePicker
+                    id={field.id}
+                    labelId={field.labelId}
+                    value={value}
+                    required={p.required}
+                    disabled={disabled}
+                    onChange={(v) => onChange(p.key, v)}
+                  />
+                ) : p.type === 'select' && options ? (
+                  <Select
+                    id={field.id}
+                    value={value}
+                    required={p.required}
+                    disabled={disabled}
+                    onChange={(v) => onChange(p.key, v)}
+                    options={[
+                      { value: '', label: t('select.none') },
+                      ...options.map((o) => ({ value: o.value, label: o.label })),
+                    ]}
+                  />
+                ) : (
+                  <TextInput
+                    id={field.id}
+                    type={INPUT_TYPE[p.type] ?? 'text'}
+                    value={value}
+                    required={p.required}
+                    disabled={disabled}
+                    onChange={(e) => onChange(p.key, e.target.value)}
+                  />
+                )
+              }
+            </FormField>
+          );
+        })}
+        {aside}
+      </div>
+    </Section>
   );
 }

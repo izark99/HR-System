@@ -43,12 +43,15 @@
     "run": "Chạy flow",
     "runNamed": "Chạy flow {{name}}",
     "empty": "Không tìm thấy flow phù hợp.",
+    "emptyHint": "Thử từ khóa khác hoặc chọn nhóm \"Tất cả\".",
+    "emptyNone": "Admin chưa gán flow nào cho bạn. Vui lòng liên hệ Admin.",
     "loadError": "Không tải được danh sách flow.",
     "version": "Phiên bản {{version}}"
   },
   "recent": {
     "title": "Lần chạy gần đây",
     "empty": "Chưa có lần chạy",
+    "emptyHint": "Chạy một flow ở trên, lần chạy sẽ hiện ở đây.",
     "note": "Lịch sử chỉ lưu thông tin lần chạy, không lưu nội dung dữ liệu.",
     "loadError": "Không tải được lịch sử chạy.",
     "col": {
@@ -100,7 +103,8 @@
       "viewResult": "Xem kết quả",
       "resolvingVersion": "Đang xác định phiên bản…",
       "noVersion": "Chạy (chưa có phiên bản cho kỳ này)",
-      "versionError": "Chạy (chưa xác định được phiên bản)"
+      "versionError": "Chạy (chưa xác định được phiên bản)",
+      "barLabel": "Thao tác chạy flow"
     },
     "progress": {
       "title": "Đang chạy flow",

@@ -2,13 +2,14 @@ import { Link, useNavigate, useParams } from '@tanstack/react-router';
 import { useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { TFunction } from 'i18next';
-import { Button, buttonClass, Callout, cx, PageHeader } from '../../components/ui';
+import { PageHeader, PageShell, StickyActionBar } from '../../components/layout';
+import { Stepper } from '../../components/Stepper';
+import { Button, buttonClass, Callout, cx } from '../../components/ui';
 import { formatMonth } from '../../lib/format';
 import { asOfParam } from './as-of';
 import { ParamsCard } from './components/ParamsCard';
 import { RunProgress } from './components/RunProgress';
 import { SlotCard } from './components/SlotCard';
-import { Steps } from './components/Steps';
 import { ValidationReport } from './components/ValidationReport';
 import { readiness, type Readiness } from './readiness';
 import { useRunState, useRunStore } from './run-context';
@@ -114,10 +115,18 @@ export function useOpenFlow(flowCode: string) {
   }, [store, flowCode]);
 }
 
+const STEPS = ['params', 'upload', 'run', 'result'] as const;
+
+/** The four wizard steps (spec §15.1) for `Stepper`. */
+export function useRunSteps() {
+  const { t } = useTranslation();
+  return STEPS.map((id) => ({ id, label: t(`run.step.${id}`) }));
+}
+
 export function BackToFlows() {
   const { t } = useTranslation();
   return (
-    <Link to="/" className="inline-flex min-h-target items-center gap-1.5 self-start text-label">
+    <Link to="/" className="inline-flex min-h-target items-center gap-2 self-start text-label">
       <ArrowLeftIcon />
       {t('run.back')}
     </Link>
@@ -145,13 +154,13 @@ export function RunPage() {
   const ready = readiness(state);
   const flow = state.flow;
   const busy = state.run.status === 'running' || state.run.status === 'cancelling';
+  const steps = useRunSteps();
+  const loaded = state.load === 'ready' && flow && state.summary;
 
   return (
-    <main
-      id="main"
-      className="mx-auto flex w-full max-w-320 flex-col gap-6 px-4 pt-8 pb-12 md:px-8"
-    >
-      <BackToFlows />
+    // Wizard (spec §25.5): the sticky action bar is the last block, flush with the page bottom.
+    <PageShell width="content" className="pb-0">
+      {!loaded && <BackToFlows />}
 
       {state.load === 'loading' && (
         <LoadingRegion>
@@ -160,13 +169,11 @@ export function RunPage() {
       )}
       {state.load === 'notFound' && <Callout tone="coral" label={t('run.notFound')} role="alert" />}
       {state.load === 'error' && (
-        <div className="flex flex-col gap-3">
+        <div className="flex flex-col items-start gap-3">
           <Callout tone="coral" label={t('run.loadErrorLabel')} role="alert">
             {t('run.loadError')}
           </Callout>
-          <Button className="self-start" onClick={() => void store.open(flowCode)}>
-            {t('run.version.retry')}
-          </Button>
+          <Button onClick={() => void store.open(flowCode)}>{t('run.version.retry')}</Button>
         </div>
       )}
       {state.load === 'invalid' && (
@@ -175,23 +182,23 @@ export function RunPage() {
         </Callout>
       )}
 
-      {state.load === 'ready' && flow && state.summary && (
+      {loaded && (
         <>
           <PageHeader
-            eyebrow={state.summary.category}
-            title={state.summary.name}
+            back={<BackToFlows />}
+            title={state.summary!.name}
             oneLineTitle
             subtitle={
-              state.summary.instructions ? (
+              state.summary!.instructions ? (
                 <>
-                  {t('run.instructions')} {state.summary.instructions}
+                  {t('run.instructions')} {state.summary!.instructions}
                 </>
               ) : (
-                state.summary.description
+                state.summary!.description
               )
             }
           />
-          <Steps current={currentStep(state, ready)} />
+          <Stepper label={t('run.stepsLabel')} steps={steps} current={currentStep(state, ready)} />
 
           <ParamsCard
             params={flow.params}
@@ -201,7 +208,7 @@ export function RunPage() {
             aside={<VersionCallout state={state} onRetry={() => store.retryVersion()} />}
           />
 
-          <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
+          <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
             {flow.inputSlots.map((slot) => {
               const slotState = state.slots[slot.key];
               if (!slotState) return null;
@@ -229,44 +236,54 @@ export function RunPage() {
             run={state.run}
             restoring={state.restoring}
             restoreFailed={state.restoreFailed}
-            onCancel={() => void store.cancel()}
             onRetryRestore={() => void store.retryRestore()}
           />
 
-          <div className="flex flex-wrap items-center justify-between gap-4">
-            <Callout
-              tone="teal"
-              label={t('run.safety.label')}
-              icon={<LockIcon className="mt-0.5 shrink-0 text-teal-strong" />}
-              size="caption"
-            >
-              {t('run.safety.text')}
-            </Callout>
-            <div className="flex flex-wrap gap-3">
+          <Callout
+            tone="teal"
+            label={t('run.safety.label')}
+            icon={<LockIcon className="mt-0.5 shrink-0 text-teal-strong" />}
+            size="caption"
+          >
+            {t('run.safety.text')}
+          </Callout>
+
+          {/* Always in view (AC-UI-72); in the flow of the page, so it never covers the end. */}
+          <StickyActionBar label={t('run.actions.barLabel')} className="-mx-page-x">
+            {busy ? (
+              <Button
+                onClick={() => void store.cancel()}
+                disabled={state.run.status === 'cancelling'}
+              >
+                {state.run.status === 'cancelling'
+                  ? t('run.actions.cancelling')
+                  : t('run.actions.cancel')}
+              </Button>
+            ) : (
               <Link to="/" className={cx(buttonClass('outline'), 'no-underline hover:text-ink')}>
                 {t('run.actions.back')}
               </Link>
-              {/* The previous run's result is still in memory (MEMORY 13:08). */}
-              {state.run.status === 'done' && state.run.summary && (
-                <Link
-                  to="/run/$flowCode/result"
-                  params={{ flowCode }}
-                  className={cx(buttonClass('outline'), 'no-underline hover:text-ink')}
-                >
-                  {t('run.actions.viewResult')}
-                </Link>
-              )}
-              <Button
-                variant="primary"
-                disabled={!ready.canRun || busy}
-                onClick={() => void store.run()}
+            )}
+            {/* The previous run's result is still in memory (MEMORY 13:08). */}
+            {state.run.status === 'done' && state.run.summary && (
+              <Link
+                to="/run/$flowCode/result"
+                params={{ flowCode }}
+                className={cx(buttonClass('outline'), 'no-underline hover:text-ink')}
               >
-                {runLabel(state, ready, t)}
-              </Button>
-            </div>
-          </div>
+                {t('run.actions.viewResult')}
+              </Link>
+            )}
+            <Button
+              variant="primary"
+              disabled={!ready.canRun || busy}
+              onClick={() => void store.run()}
+            >
+              {runLabel(state, ready, t)}
+            </Button>
+          </StickyActionBar>
         </>
       )}
-    </main>
+    </PageShell>
   );
 }

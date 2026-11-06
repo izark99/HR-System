@@ -175,7 +175,9 @@ for (const viewport of [DESKTOP, MOBILE]) {
       await cardChecks(page.locator('main [data-card]'));
       await inputChecks(page.locator('#flow-search'));
       await pillChecks(page.getByRole('group', { name: 'Lọc theo nhóm' }).getByRole('button'));
-      if (!mobile) await navChecks(page.getByRole('navigation', { name: 'Menu chính' }));
+      // AC-UI-71: no left menu on User screens; content centred, at most 1280px.
+      await expect(page.getByRole('navigation', { name: 'Menu chính' })).toHaveCount(0);
+      expect((await style(page.locator('main'))).maxWidth).toBe('1280px');
       await axe(page, `flow-list ${size}`);
       await shot(page, '03-flow-list', 'default');
     });
@@ -187,7 +189,12 @@ for (const viewport of [DESKTOP, MOBILE]) {
       await page.goto('/run/payroll-timesheet');
       await expect(periodButton(page)).toBeVisible();
       await commonChecks(page);
-      await titleChecks(page);
+      // Wizard (§25.5): back link instead of the eyebrow, one-line Stepper, sticky action bar.
+      await titleChecks(page, { eyebrow: false });
+      await expect(page.locator('[data-stepper] li')).toHaveCount(4);
+      await expect(page.locator('[data-stepper] [aria-current="step"]')).toHaveCount(1);
+      const bar = page.getByRole('region', { name: 'Thao tác chạy flow' });
+      await expect(bar.getByRole('button', { name: /^Chạy/ })).toBeInViewport();
       await cardChecks(page.locator('main [data-card]'));
       await inputChecks(periodButton(page));
       await labelChecks(page.locator('main label[for^="param-"]'));
@@ -244,7 +251,7 @@ for (const viewport of [DESKTOP, MOBILE]) {
       await runToResult(page);
       const h1 = page.getByRole('heading', { level: 1 });
       await expect(h1).toHaveText('Kỳ 09/2026 có 15 nhân viên cần xử lý');
-      // AC-UI-09: exactly one dark card, KPI cards with a 4px top bar and display-xl numbers.
+      // AC-UI-09: exactly one dark card, KPI cards with a 4px top bar and `kpi` numbers (40/32px).
       await commonChecks(page, { darkCards: 1 });
       await titleChecks(page);
       const dark = await style(page.getByTestId('conclusion'));
@@ -259,7 +266,9 @@ for (const viewport of [DESKTOP, MOBILE]) {
       for (let i = 0; i < 4; i++) {
         const s = await style(kpis.nth(i));
         expect(s.borderTop).toBe(`4px solid ${tops[Math.min(i, 2)]}`);
-        expect((await style(kpis.nth(i).locator('dd'))).fontSize).toBe(mobile ? '36px' : '56px');
+        const kpi = await style(kpis.nth(i).locator('dd'));
+        expect(kpi.fontSize).toBe(mobile ? '32px' : '40px');
+        expect(kpi.fontWeight).toBe('600');
       }
       await pillChecks(page.getByRole('tab'));
       await denseTableChecks(page.getByRole('region', { name: 'Lệch' }).locator('table'));

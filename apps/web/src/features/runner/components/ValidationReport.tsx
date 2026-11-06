@@ -1,13 +1,21 @@
 import type { FlowDefinition } from '@hrflow/flow-schema';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Callout, Card, Chip, cx, tdClass, thClass } from '../../../components/ui';
+import { denseThClass } from '../../../components/DataTable';
+import { Callout, Card, Chip, cx } from '../../../components/ui';
 import { formatIssue, type ValidationIssue } from '../../../engine/io/validation';
 import type { SessionState } from '../run-store';
 import type { Readiness } from '../readiness';
 
 /** Rows rendered in the page; the downloadable report always has all of them. */
 const MAX_ROWS = 500;
+
+/**
+ * Dense issue table (MEMORY 2026-11-06 08:24: 14px like the result sheets, its own `<table>` in
+ * the frame rules' allow list); the message column may wrap.
+ */
+const thClass = denseThClass;
+const tdClass = 'border-b border-line px-3 py-2 align-top text-dense';
 
 interface Row {
   key: string;
@@ -96,7 +104,7 @@ export function ValidationReport({
           tabIndex={0}
           aria-label={t('report.tableLabel')}
         >
-          <table className="w-full min-w-180 border-collapse text-body text-ink-soft">
+          <table className="w-full min-w-180 border-collapse text-dense text-ink-soft">
             <thead>
               <tr>
                 <th scope="col" className={thClass}>

@@ -232,6 +232,12 @@ const FRAME_ALLOW: { file: string; rule: string; reason: string; only?: string[]
     reason: 'dense Designer preview table (§25.1 high-density exception)',
   },
   {
+    file: 'features/runner/components/ValidationReport.tsx',
+    rule: 'table',
+    reason:
+      'dense file-check issue table, 14px like the result sheets (MEMORY 2026-11-06 08:24, AC-UI-77)',
+  },
+  {
     file: 'features/admin/versions/DiffView.tsx',
     rule: 'table',
     reason: 'side-by-side JSON diff of two versions, not an admin list',
@@ -284,18 +290,6 @@ const PENDING_ROUND_B: { file: string; rules: string[] }[] = [
   { file: 'features/designer/forms/SlotForm.tsx', rules: ['spacing'] },
   { file: 'features/designer/forms/fields.tsx', rules: ['spacing'] },
   { file: 'features/designer/formula/FormulaForm.tsx', rules: ['spacing'] },
-  { file: 'features/runner/FlowListPage.tsx', rules: ['spacing', 'main', 'table'] },
-  {
-    file: 'features/runner/ResultPage.tsx',
-    rules: ['spacing', 'main', 'tablist', 'deprecated-text'],
-  },
-  { file: 'features/runner/RunPage.tsx', rules: ['spacing', 'main'] },
-  { file: 'features/runner/components/ParamsCard.tsx', rules: ['spacing'] },
-  { file: 'features/runner/components/ResultTable.tsx', rules: ['spacing'] },
-  { file: 'features/runner/components/RunProgress.tsx', rules: ['spacing'] },
-  { file: 'features/runner/components/SlotCard.tsx', rules: ['spacing'] },
-  { file: 'features/runner/components/Steps.tsx', rules: ['spacing'] },
-  { file: 'features/runner/components/ValidationReport.tsx', rules: ['table'] },
 ];
 
 interface FrameHit {

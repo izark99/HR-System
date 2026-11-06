@@ -152,18 +152,18 @@ export function ResultTable({
     </Callout>
   );
 
-  if (total === null && failed) return <div className="px-5 pb-5">{errorState}</div>;
+  if (total === null && failed) return <div className="px-4 pb-4">{errorState}</div>;
 
   if (total === 0) {
     return (
-      <p className="m-0 px-5 pb-5 text-body text-muted">
+      <p className="m-0 px-4 pb-4 text-body text-muted">
         {search.trim() ? t('result.noMatch') : t('result.empty')}
       </p>
     );
   }
 
   return (
-    <div className="flex flex-col gap-2 px-5 pb-5">
+    <div className="flex flex-col gap-2 px-4 pb-4">
       {errorState}
       <div
         ref={scrollRef}

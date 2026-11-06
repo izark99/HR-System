@@ -4,18 +4,19 @@ import { formatSeconds } from '../../../lib/format';
 import type { RunState } from '../run-store';
 import { CheckIcon } from '../../../components/icons';
 
-/** Progress per node while a run is going, plus the failure / cancel message afterwards. */
+/**
+ * Progress per node while a run is going, plus the failure / cancel message afterwards. The
+ * "Hủy" button lives in the run page's sticky action bar (AC-UI-72).
+ */
 export function RunProgress({
   run,
   restoring,
   restoreFailed,
-  onCancel,
   onRetryRestore,
 }: {
   run: RunState;
   restoring: boolean;
   restoreFailed: boolean;
-  onCancel: () => void;
   onRetryRestore: () => void;
 }) {
   const { t } = useTranslation();
@@ -53,14 +54,9 @@ export function RunProgress({
 
   return (
     <Card aria-labelledby="progress-title" className="flex flex-col gap-4">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <h2 id="progress-title" className="m-0 text-title-md text-ink">
-          {t('run.progress.title')}
-        </h2>
-        <Button onClick={onCancel} disabled={run.status === 'cancelling'}>
-          {run.status === 'cancelling' ? t('run.actions.cancelling') : t('run.actions.cancel')}
-        </Button>
-      </div>
+      <h2 id="progress-title" className="m-0 text-title-md text-ink">
+        {t('run.progress.title')}
+      </h2>
       <div
         role="progressbar"
         aria-labelledby="progress-title"
@@ -90,14 +86,14 @@ export function RunProgress({
           return (
             <li
               key={n.id}
-              className="flex items-center justify-between gap-3 rounded-card bg-page px-3.5 py-2.5"
+              className="flex items-center justify-between gap-3 rounded-card bg-page px-4 py-3"
             >
               <span className={cx(n.status === 'pending' ? 'text-muted' : 'text-ink')}>
                 {n.label}
               </span>
               <span
                 className={cx(
-                  'flex items-center gap-1.5 font-semibold',
+                  'flex items-center gap-2 font-semibold',
                   n.status === 'done' ? 'text-teal-strong' : 'text-muted',
                 )}
               >

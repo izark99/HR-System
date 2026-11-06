@@ -1,6 +1,6 @@
 /**
- * Design v2 (spec §25.1): `display-lg` / `display-xl` use line-height equal to the font size
- * (48/48, 32/32 mobile). Vietnamese capitals carry stacked marks (Ổ, Ẫ, Ấ) and dots below (Ợ, Ỵ),
+ * Design v2 (spec §25.1): page titles are `page-title` 28/36, `page-title-showcase` 32/40 (24/32
+ * mobile). Vietnamese capitals carry stacked marks (Ổ, Ẫ, Ấ) and dots below (Ợ, Ỵ),
  * so a two-line title is the risky case: the marks must not be clipped (no hidden overflow on the
  * title or an ancestor) and the ink of one line must not run into the ink of the line above.
  *
@@ -15,7 +15,7 @@ import { ADMIN, expect, test, type Locator, type Page } from './fixtures';
 import { runToResult, uploadFixtures } from './helpers';
 import { DESKTOP, MOBILE, settle, SHOTS, shot } from './ui-v2-checks';
 
-/** Fake flow name: two lines at 48px on 1280px, mixing stacked marks and dots below. */
+/** Fake flow name: longer than one line on 1280px, mixing stacked marks and dots below. */
 const LONG_NAME =
   'Ổn định Ấn định Ẫn Ỗ: Đối chiếu bảng lương – chấm công Ủy quyền Ước tính Ỷ Ợ quý gợi ý Ặ';
 
@@ -241,7 +241,10 @@ async function checkTitle(
   const count = m.rows.filter((r) => r.name.startsWith('h1')).length;
   if (typeof lines === 'number') expect(count).toBe(lines);
   else expect(count).toBeGreaterThanOrEqual(lines.min);
-  expect(m.lineHeight, 'title line height = font size (48/48, 32/32)').toBe(m.fontSize);
+  // §25.1 (MEMORY 2026-11-04 14:12): page-title 28/36, page-title-showcase 32/40, mobile 24/32.
+  const LINE: Record<number, number> = { 24: 32, 28: 36, 32: 40 };
+  expect(LINE[m.fontSize], `title size ${m.fontSize}px is a §25.1 page title`).toBeDefined();
+  expect(m.lineHeight, 'title line height (28/36, 32/40, 24/32)').toBe(LINE[m.fontSize]);
   expect(m.clipped, 'marks clipped by overflow').toEqual([]);
   for (const p of m.pairs) {
     expect(p.sharedPixels, `${p.rows}: glyphs overlap`).toBe(0);
