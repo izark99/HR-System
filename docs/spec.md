@@ -824,7 +824,7 @@ Chỉ Admin; chỉ desktop (≥ 1280px). Route riêng, lazy-load (React Flow, co
 - **Minimap**, zoom, fit view.
 - **Sticky note**: thêm/sửa/xóa ghi chú văn bản trên canvas, lưu trong `ui.notes`.
 - **Export JSON**: tải `definition` hiện tại (kể cả chưa lưu) thành file `.json`; **Import JSON** giữ luồng đã có ở màn Flow của Admin (§8.1).
-- Bàn phím: mọi hành động chính có phím tắt và nút tương ứng; node chọn được bằng Tab. Ngoại lệ ở bước 3: nối cạnh giữa các cổng chỉ làm bằng chuột (React Flow không hỗ trợ bàn phím); cách nối bằng bàn phím (chọn cổng nguồn → chọn cổng đích trong menu) làm ở vòng B của bộ khung UI/UX (chốt 2026-11-04 15:34, AC-UI-76): chọn node → nút "Nối tới…" (có phím tắt) → danh sách cổng đích có tìm kiếm → Enter (chốt 2026-11-06 08:24).
+- Bàn phím: mọi hành động chính có phím tắt và nút tương ứng; node chọn được bằng Tab. Ngoại lệ ở bước 3: nối cạnh giữa các cổng chỉ làm bằng chuột (React Flow không hỗ trợ bàn phím); cách nối bằng bàn phím (chọn cổng nguồn → chọn cổng đích trong menu) làm ở vòng B của bộ khung UI/UX (chốt 2026-11-04 15:34, AC-UI-76): chọn node → nút "Nối tới…" (phím tắt Ctrl+E) → danh sách cổng đích có tìm kiếm → Enter (chốt 2026-11-06 08:24).
 
 ---
 
@@ -1205,7 +1205,7 @@ Breakpoint: mobile < 768px (1 cột, menu trái thu thành nút mở), tablet 76
 
 - Xưng "bạn", câu ngắn, rõ hành động. Tiêu đề trang nói được kết luận chính.
 - Định dạng số kiểu Việt Nam (`0,5`, `1.234.567`).
-- Không dùng ký hiệu có thể thiếu trong font (≤ ≥ → × −) trong text UI; dùng chữ hoặc `-`.
+- Không dùng ký hiệu có thể thiếu trong font (≤ ≥ → × −) trong text UI; dùng chữ hoặc `-`. Ngoại lệ (chốt 2026-11-06 12:32): câu chỉ dành cho trình đọc màn hình `connectMenu.done` ("Đã nối A → B", `sr-only`, không hiển thị).
 - Touch target tối thiểu 44px (nút chuẩn và input 44px); tương phản chữ đạt WCAG AA.
 
 
@@ -1614,8 +1614,9 @@ Mọi màn có đủ 4 trạng thái: đang tải (skeleton đúng bố cục, �
 | AC-UI-73 | Thao tác Admin thành công (tạo/sửa tài khoản, reset mật khẩu, khóa/mở khóa, gán nhóm/flow, nhập flow, publish/retire/hủy draft, lưu Designer) báo bằng toast; lỗi thao tác báo bằng toast coral hoặc tại chỗ trong dialog/form; mật khẩu tạm vẫn hiện trong dialog như hiện tại (không đưa vào toast). Mọi danh sách rỗng dùng `EmptyState` có câu hướng dẫn. |
 | AC-UI-74 | Không hồi quy: toàn bộ E2E hiện có pass, chỉ sửa phần kiểm kích thước/selector do giao diện đổi; `ui-v2.spec.ts` chụp lại đủ trạng thái AC-UI-30 + skeleton + toast + ConfirmDialog, kiểm giá trị CSS theo AC-UI-60..62; axe 0 vi phạm serious/critical; luồng flow nghiệm thu cho cùng file kết quả (AC-UI-44); ngân sách JS entry và CSS gzip (AC-UI-40/41) vẫn đạt. |
 | AC-UI-75 | `.claude/rules/design.md` ghi quy tắc: màn mới dùng `PageShell` + mẫu màn §25.5; không tự viết `<main>`, tabs, bảng Admin, field, toast, icon; khoảng cách chỉ theo thang. |
-| AC-UI-76 | Designer (chốt 2026-11-04 15:34, cách thao tác chốt 2026-11-06 08:24): chọn node (chuột hoặc Tab) → nút "Nối tới…" trên thanh công cụ (nút biểu tượng 36px, `aria-label` + tooltip có phím tắt; vô hiệu khi chưa chọn node hoặc node không có cổng ra) → popover danh sách cổng đích dạng Select tự làm có tìm kiếm, nhóm theo node đích, ẩn cổng tạo chu trình hoặc đã nối; node nhiều cổng ra chọn cổng nguồn trước. Enter nối cạnh (vào Hoàn tác được, đánh dấu draft có thay đổi), Esc đóng và trả focus về nút. Vùng `aria-live` đọc "Đã nối A → B". Nối bằng chuột giữ nguyên. E2E: nối đủ flow nghiệm thu chỉ bằng bàn phím, kết quả JSON giống nối bằng chuột. |
+| AC-UI-76 | Designer (chốt 2026-11-04 15:34, cách thao tác chốt 2026-11-06 08:24): chọn node (chuột hoặc Tab) → nút "Nối tới…" trên thanh công cụ (nút biểu tượng 36px, `aria-label` + tooltip có phím tắt Ctrl+E — không cướp phím khi đang gõ trong Monaco/input; vô hiệu khi chưa chọn node hoặc node không có cổng ra) → popover danh sách cổng đích dạng Select tự làm có tìm kiếm, nhóm theo node đích, ẩn cổng tạo chu trình hoặc đã nối; node nhiều cổng ra chọn cổng nguồn trước. Enter nối cạnh (vào Hoàn tác được, đánh dấu draft có thay đổi), Esc đóng và trả focus về nút. Vùng `aria-live` đọc "Đã nối A → B". Nối bằng chuột giữ nguyên. E2E: nối đủ flow nghiệm thu chỉ bằng bàn phím, kết quả JSON giống nối bằng chuột. |
 | AC-UI-77 | Ngoại lệ khoảng cách (chốt 2026-11-06 08:24): Designer (canvas, node, form cạnh canvas, panel dữ liệu) và `ValidationReport` (bảng dense 14px) nằm trong danh sách cho phép vĩnh viễn kèm lý do; khung Designer (thanh công cụ, dialog, toast) theo thang. Component dùng chung cũ (`Select`, `Tooltip`, `Menu`, picker, `Skeleton`, `ui.tsx`) sửa về thang. Bảng "Lần chạy gần đây" dùng `DataTable`. Hết vòng B: `PENDING_ROUND_B` rỗng, token `display-xl`/`display-lg`/`body-lg` đã xóa. |
+| AC-UI-78 | Kiểm hình học tự động (chốt 2026-11-06 12:32): `e2e/layout-lint` chạy trên mọi màn, mọi trạng thái của `ui-v2.spec.ts` và mọi form/tab cấu hình node của Designer (mỗi loại node, tab Tham số / Input slot), ở 1280×800, 1024×768 và 390×844 (màn User). Fail khi: (1) control (input, Select, picker, nút) cùng một hàng lệch chiều cao > 1px hoặc lệch mép trên/dưới > 1px; (2) phần tử tràn ra ngoài card/panel/vùng cuộn chứa nó (trừ vùng cuộn ngang có chủ đích); (3) 2 phần tử anh em chồng lên nhau; (4) khoảng cách giữa các phần tử cùng hàng không đều (chênh > 1px) hoặc ngoài thang §25.5; (5) các tab trong một `Tabs` khác chiều cao; (6) nhãn hoặc gợi ý dài xuống dòng làm control trong cùng hàng lệch nhau (control phải thẳng hàng; nhãn dài thì xuống dòng bên trên mà không đẩy lệch control, gợi ý nằm dưới control); (7) chữ bị cắt mà không có "…" + tooltip. Ngoại lệ phải khai báo trong danh sách cho phép kèm lý do. |
 
 ---
 

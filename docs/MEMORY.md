@@ -139,7 +139,9 @@
 
 ## Flow & xử lý
 
-2026-11-06 08:24 - Designer: nối cạnh bằng bàn phím (vòng B của bộ khung UI/UX): chọn node → nút "Nối tới…" trên thanh công cụ (kèm phím tắt) mở danh sách cổng đích có tìm kiếm (Select tự làm), Enter để nối; thông báo cho trình đọc màn hình "Đã nối A → B"; nối bằng chuột giữ nguyên.
+2026-11-06 12:32 - Designer: nối cạnh bằng bàn phím: chọn node → nút "Nối tới…" trên thanh công cụ, phím tắt Ctrl+E, mở danh sách cổng đích có tìm kiếm (Select tự làm), Enter để nối; câu đọc cho trình đọc màn hình (`sr-only`, không hiển thị) là "Đã nối A → B" — ngoại lệ riêng của quy tắc §25.4 cho key `connectMenu.done`; nối bằng chuột giữ nguyên.
+
+~~2026-11-06 08:24 - Designer: nối cạnh bằng bàn phím (vòng B của bộ khung UI/UX): chọn node → nút "Nối tới…" trên thanh công cụ (kèm phím tắt) mở danh sách cổng đích có tìm kiếm (Select tự làm), Enter để nối; thông báo cho trình đọc màn hình "Đã nối A → B"; nối bằng chuột giữ nguyên.~~ → thay bởi 2026-11-06 12:32
 
 ~~2026-11-04 15:34 - Designer: nối cạnh bằng bàn phím làm trong vòng B của bộ khung UI/UX (cách thao tác cụ thể chốt trước khi giao vòng B, spec Q27); bước 3 chỉ nối bằng chuột.~~ → thay bởi 2026-11-06 08:24
 
@@ -232,6 +234,8 @@
 2026-10-26 08:20 - Flow có Draft/Published, lưu lịch sử version, rollback; quản lý hiệu lực theo effective date (effective_from / effective_to), không chồng lấn.
 
 ## Kỹ thuật & tổ chức
+
+2026-11-06 12:32 - Lỗi bố cục UI (control cùng hàng lệch chiều cao/không thẳng hàng, tràn khỏi khung, chồng lấn, khoảng cách không đều, tab lệch kích thước, nhãn xuống dòng làm lệch hàng) không được lặp lại: thêm bộ kiểm hình học tự động trong E2E (`e2e/layout-lint`) chạy trên mọi màn, mọi trạng thái chụp ảnh và mọi form/tab cấu hình node của Designer, ở 1280×800, 1024×768 và 390×844 (màn User); vi phạm → E2E fail. Mọi vòng đổi UI phải pass bộ này; session chính tự soi ảnh từng màn trước khi gửi Harold duyệt.
 
 2026-11-06 08:24 - Vòng B bộ khung UI/UX: bảng "Lần chạy gần đây" (Danh sách flow) chuyển sang `DataTable`; báo cáo kiểm tra file (`ValidationReport`) giữ bảng dense riêng (14px, như bảng Kết quả), thêm vào danh sách cho phép.
 
