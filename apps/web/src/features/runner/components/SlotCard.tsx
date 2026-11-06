@@ -136,12 +136,13 @@ export function SlotCard({
               <li
                 key={f.id}
                 className={cx(
-                  'flex items-center justify-between gap-2 rounded-card py-1 pr-1 pl-4',
+                  // Phone: the status goes under the name, so the name has the whole row.
+                  'flex items-center justify-between gap-x-2 rounded-card py-1 pr-1 pl-4 max-sm:flex-wrap max-sm:pt-3',
                   s && s.tone !== 'teal' && s.tone !== 'neutral' ? toneTint[s.tone] : 'bg-page',
                 )}
               >
-                <MiddleCut text={f.file.name} />
-                <span className="flex shrink-0 items-center gap-1">
+                <MiddleCut text={f.file.name} className="max-sm:basis-full" />
+                <span className="ml-auto flex shrink-0 items-center gap-1">
                   {s && (
                     <span
                       className={cx('flex items-center gap-1 font-semibold', toneText[s.tone])}

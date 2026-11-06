@@ -158,6 +158,13 @@ for (const viewport of [DESKTOP, LAPTOP, MOBILE]) {
         .evaluateAll((els) => els.map((el) => Math.round(el.getBoundingClientRect().height)));
       expect(heights.length).toBeGreaterThanOrEqual(5);
       expect(new Set(heights).size, `file row heights ${heights.join(', ')}`).toBe(1);
+      if (process.env.LL_SHOTS)
+        await page
+          .locator('main ul[aria-live]')
+          .first()
+          .screenshot({
+            path: `${process.env.LL_SHOTS}/run-files-${size(viewport)}.png`,
+          });
       r.assertClean(`run-${size(viewport)}`);
     });
 

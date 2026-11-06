@@ -361,7 +361,7 @@ export function MiddleCut({
           ref={end}
           data-one-line
           data-cut={cut || undefined}
-          className="-my-5 block min-w-0 truncate py-5"
+          className="-my-5 block max-w-full shrink-0 truncate py-5"
         >
           {text.slice(split)}
         </span>
