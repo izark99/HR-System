@@ -77,7 +77,7 @@ test('FormField: name + description from label, hint and error; sizes 44px', asy
   const group = page.getByRole('combobox', { name: /Group/ });
   await expect(group).toHaveAccessibleDescription('Pick one Required');
   await expect(group).toHaveAttribute('aria-invalid', 'true');
-  const period = page.getByRole('button', { name: /Period/ });
+  const period = page.getByRole('button', { name: /^Period/ });
   await expect(period).toHaveAccessibleDescription('Month of the run');
   // DatePicker through FormField on the real DOM (round B): named by the label (+ value), hint
   // then error as its description, invalid and required on the trigger.

@@ -106,7 +106,7 @@ test('AC-B3-31: a taken flow code is refused with a clear message', async ({ pag
   await dialog.getByRole('button', { name: 'Tạo và mở Designer' }).click();
   await expect(dialog.getByText('Mã flow chưa đúng định dạng.')).toBeVisible();
   await expect(dialog.getByText('Hãy nhập tên flow.')).toBeVisible();
-  await dialog.getByLabel('Mã flow').fill('payroll-timesheet');
+  await dialog.getByLabel('Mã flow', { exact: true }).fill('payroll-timesheet');
   await dialog.getByLabel('Tên flow').fill('Trùng mã');
   await dialog.getByRole('button', { name: 'Tạo và mở Designer' }).click();
   await expect(dialog.getByRole('alert')).toContainText('Mã flow này đã có');
@@ -210,7 +210,7 @@ test('AC-B3-34/35/37/38: slot/param errors on the field, renamed key breaks comp
 
   // AC-B3-34: cross-field rules shown on the field.
   await p.getByRole('tab', { name: 'Input slot' }).click();
-  const dataStart = p.getByLabel('Dòng dữ liệu đầu tiên');
+  const dataStart = p.getByLabel('Dòng dữ liệu đầu tiên', { exact: true });
   await dataStart.fill('3');
   await expect(dataStart).toHaveAttribute('aria-invalid', 'true');
   await expect(p).toContainText('dòng dữ liệu đầu tiên phải nằm sau các dòng tiêu đề');
@@ -330,7 +330,7 @@ test('AC-B3-43/45/46: copy/paste keeps inner edges; notes saved in ui.notes; exp
   ).toHaveCount(0);
 
   await toolbar(page).getByRole('button', { name: 'Thêm ghi chú' }).click();
-  await panel(page).getByLabel('Nội dung ghi chú').fill('Kiểm tra lại ngưỡng OT');
+  await panel(page).getByLabel('Nội dung ghi chú', { exact: true }).fill('Kiểm tra lại ngưỡng OT');
   await expect(canvasNode(page, 'note_1')).toContainText('Kiểm tra lại ngưỡng OT');
   await page.keyboard.press('Control+S');
   await expect(page.getByText('Đã lưu', { exact: true })).toBeVisible();

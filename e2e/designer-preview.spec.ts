@@ -115,7 +115,7 @@ test('AC-B3-50..55: samples stay in the browser; preview runs ancestors only; co
   // AC-B3-54: unsaved canvas config is used (tolerance of "Công" raised to 5).
   await panel.getByRole('tab', { name: 'Tổng hợp (5)' }).click();
   const side = page.getByRole('complementary', { name: 'Cấu hình' });
-  await side.getByLabel('Ngưỡng chênh lệch').first().fill('5');
+  await side.getByLabel('Ngưỡng chênh lệch', { exact: true }).first().fill('5');
   await panel.getByRole('button', { name: 'Xem trước Đối chiếu' }).click();
   await expect(panel.getByRole('tab', { name: /^Lệch/ })).not.toHaveText('Lệch (9)');
   await expect(page.getByText('Có thay đổi chưa lưu')).toBeVisible();

@@ -62,34 +62,37 @@ async function fillSlot(
   await p.getByRole('button', { name: 'Thêm mục upload' }).click();
   await p.getByLabel('Mã', { exact: true }).fill(slot.key);
   await p.getByLabel('Tên hiển thị', { exact: true }).first().fill(slot.label);
-  await chooseOption(p.getByLabel('Chọn sheet'), 'Theo tên');
+  await chooseOption(p.getByLabel('Chọn sheet', { exact: true }), 'Theo tên');
   await p.getByLabel('Tên sheet', { exact: true }).fill(slot.sheet);
   if (slot.headerRow)
     await p.getByLabel('Dòng tiêu đề', { exact: true }).fill(String(slot.headerRow));
   if (slot.dataStartRow) {
-    await p.getByLabel('Dòng dữ liệu đầu tiên').fill(String(slot.dataStartRow));
+    await p.getByLabel('Dòng dữ liệu đầu tiên', { exact: true }).fill(String(slot.dataStartRow));
   }
-  await p.getByLabel('Dừng khi gặp số dòng trống liên tiếp').fill('2');
+  await p.getByLabel('Dừng khi gặp số dòng trống liên tiếp', { exact: true }).fill('2');
   await p.getByRole('checkbox', { name: 'Bỏ qua dòng không phải dữ liệu' }).check();
-  await p.getByLabel('Bỏ dòng khi cột khóa chứa').fill('TỔNG CỘNG');
+  await p.getByLabel('Bỏ dòng khi cột khóa chứa', { exact: true }).fill('TỔNG CỘNG');
   await p.getByRole('checkbox', { name: 'Cho upload nhiều file và tự gộp' }).check();
 
   const cols = p.getByRole('group', { name: 'Các cột', exact: true });
   const first = items(cols).nth(0);
-  await first.getByLabel('Tên cột trong file').fill(keyAliases);
+  await first.getByLabel('Tên cột trong file', { exact: true }).fill(keyAliases);
   await first.getByRole('button', { name: 'Thêm quy tắc' }).click();
   for (const [i, c] of columns.entries()) {
     await cols.getByRole('button', { name: 'Thêm cột', exact: true }).last().click();
     const col = items(cols).nth(i + 1);
-    await col.getByLabel('Mã cột').fill(c.key);
-    await col.getByLabel('Tên hiển thị').fill(c.label);
-    await col.getByLabel('Tên cột trong file').fill(c.alias);
+    await col.getByLabel('Mã cột', { exact: true }).fill(c.key);
+    await col.getByLabel('Tên hiển thị', { exact: true }).fill(c.label);
+    await col.getByLabel('Tên cột trong file', { exact: true }).fill(c.alias);
     if (c.metric) {
-      await chooseOption(col.getByLabel('Kiểu dữ liệu'), 'Số thập phân');
-      await chooseOption(col.getByLabel('Cột phải có trong file'), 'Bắt buộc (thiếu là lỗi)');
-      await col.getByLabel('Giá trị khi ô trống').fill('0');
+      await chooseOption(col.getByLabel('Kiểu dữ liệu', { exact: true }), 'Số thập phân');
+      await chooseOption(
+        col.getByLabel('Cột phải có trong file', { exact: true }),
+        'Bắt buộc (thiếu là lỗi)',
+      );
+      await col.getByLabel('Giá trị khi ô trống', { exact: true }).fill('0');
       await col.getByRole('button', { name: 'Thêm quy tắc' }).click();
-      await chooseOption(col.getByLabel('Loại'), 'Giá trị tối thiểu');
+      await chooseOption(col.getByLabel('Loại', { exact: true }), 'Giá trị tối thiểu');
     }
   }
 }
@@ -115,7 +118,7 @@ test('AC-B3-33: build the acceptance flow in the Designer, save, reload, publish
   await page.goto('/admin/flows');
   await page.getByRole('button', { name: 'Tạo flow mới' }).click();
   const create = page.getByRole('dialog', { name: 'Tạo flow mới' });
-  await create.getByLabel('Mã flow').fill('doi-chieu-moi');
+  await create.getByLabel('Mã flow', { exact: true }).fill('doi-chieu-moi');
   await create.getByLabel('Tên flow').fill('Đối chiếu dựng bằng Designer');
   await create.getByLabel('Nhóm').fill('Lương & công');
   await create.getByRole('button', { name: 'Tạo và mở Designer' }).click();
@@ -130,7 +133,7 @@ test('AC-B3-33: build the acceptance flow in the Designer, save, reload, publish
   await p.getByRole('button', { name: 'Thêm tham số' }).click();
   const param = items(p.getByRole('group', { name: 'Tham số', exact: true })).nth(0);
   await param.getByLabel('Mã', { exact: true }).fill('ky_luong');
-  await param.getByLabel('Tên hiển thị').fill('Kỳ lương');
+  await param.getByLabel('Tên hiển thị', { exact: true }).fill('Kỳ lương');
   await chooseOption(param.getByLabel('Kiểu', { exact: true }), 'Tháng');
   await param.getByRole('checkbox', { name: 'Bắt buộc nhập' }).check();
   await param.getByRole('checkbox', { name: 'Dùng làm ngày hiệu lực' }).check();
@@ -173,22 +176,25 @@ test('AC-B3-33: build the acceptance flow in the Designer, save, reload, publish
   // Nodes from the palette.
   const palette = page.getByRole('navigation', { name: 'Thêm node' });
   await palette.getByRole('button', { name: /^Đọc file Excel/ }).click();
-  await p.getByLabel('Tên node').fill('Bảng lương');
+  await p.getByLabel('Tên node', { exact: true }).fill('Bảng lương');
   await palette.getByRole('button', { name: /^Đọc file Excel/ }).click();
-  await p.getByLabel('Tên node').fill('Chấm công');
-  await chooseOption(p.getByLabel('Mục upload'), 'Chấm công (nhiều chi nhánh) (cham_cong)');
+  await p.getByLabel('Tên node', { exact: true }).fill('Chấm công');
+  await chooseOption(
+    p.getByLabel('Mục upload', { exact: true }),
+    'Chấm công (nhiều chi nhánh) (cham_cong)',
+  );
   await palette.getByRole('button', { name: /^Đối chiếu/ }).click();
-  await p.getByLabel('Tên node').fill('Đối chiếu');
+  await p.getByLabel('Tên node', { exact: true }).fill('Đối chiếu');
   await palette.getByRole('button', { name: /^Xuất Excel/ }).click();
-  await p.getByLabel('Tên node').fill('File đối chiếu');
-  await p.getByLabel('Tên file').fill('DoiChieu_{ky_luong}.xlsx');
+  await p.getByLabel('Tên node', { exact: true }).fill('File đối chiếu');
+  await p.getByLabel('Tên file', { exact: true }).fill('DoiChieu_{ky_luong}.xlsx');
   const sheets = p.getByRole('group', { name: 'Các sheet', exact: true });
-  await items(sheets).nth(0).getByLabel('Tên sheet').fill('Tổng hợp');
+  await items(sheets).nth(0).getByLabel('Tên sheet', { exact: true }).fill('Tổng hợp');
   for (const [i, name] of ['Lệch', 'Chỉ có trong lương', 'Chỉ có trong chấm công'].entries()) {
     await p.getByRole('button', { name: 'Thêm sheet' }).click();
     await items(sheets)
       .nth(i + 1)
-      .getByLabel('Tên sheet')
+      .getByLabel('Tên sheet', { exact: true })
       .fill(name);
   }
   await page.getByRole('toolbar').getByRole('button', { name: 'Tự sắp xếp' }).click();
@@ -200,7 +206,7 @@ test('AC-B3-33: build the acceptance flow in the Designer, save, reload, publish
   // Compare: key, 4 metrics with tolerances, carried columns, side names.
   await node(page, 'compare_1').click();
   await expect(p.getByRole('heading', { name: 'Đối chiếu' })).toBeVisible();
-  await chooseOption(p.getByLabel('Thêm cột vào Cột khóa'), 'Mã NV (ma_nv)');
+  await chooseOption(p.getByLabel('Thêm cột vào Cột khóa', { exact: true }), 'Mã NV (ma_nv)');
   const metrics = p.getByRole('group', { name: 'Chỉ tiêu đối chiếu', exact: true });
   const metricSpecs: [string, string, string][] = [
     ['Công', 'Công (cong)', '0.5'],
@@ -211,15 +217,21 @@ test('AC-B3-33: build the acceptance flow in the Designer, save, reload, publish
   for (const [i, [label, column, tolerance]] of metricSpecs.entries()) {
     await p.getByRole('button', { name: 'Thêm chỉ tiêu' }).click();
     const m = items(metrics).nth(i);
-    await m.getByLabel('Tên chỉ tiêu').fill(label);
-    await chooseOption(m.getByLabel('Cột ở bảng trái (left)'), column);
-    await m.getByLabel('Ngưỡng chênh lệch').fill(tolerance);
+    await m.getByLabel('Tên chỉ tiêu', { exact: true }).fill(label);
+    await chooseOption(m.getByLabel('Cột ở bảng trái (left)', { exact: true }), column);
+    await m.getByLabel('Ngưỡng chênh lệch', { exact: true }).fill(tolerance);
   }
-  await chooseOption(p.getByLabel('Thêm cột vào Cột hiển thị kèm'), 'Họ tên (ho_ten)');
-  await chooseOption(p.getByLabel('Thêm cột vào Cột hiển thị kèm'), 'Chi nhánh (chi_nhanh)');
+  await chooseOption(
+    p.getByLabel('Thêm cột vào Cột hiển thị kèm', { exact: true }),
+    'Họ tên (ho_ten)',
+  );
+  await chooseOption(
+    p.getByLabel('Thêm cột vào Cột hiển thị kèm', { exact: true }),
+    'Chi nhánh (chi_nhanh)',
+  );
   await p.getByRole('checkbox', { name: 'Đặt tên cho 2 bảng' }).check();
-  await p.getByLabel('Tên bảng trái').fill('lương');
-  await p.getByLabel('Tên bảng phải').fill('chấm công');
+  await p.getByLabel('Tên bảng trái', { exact: true }).fill('lương');
+  await p.getByLabel('Tên bảng phải', { exact: true }).fill('chấm công');
 
   for (const [i, port] of ['summary', 'mismatched', 'only_left', 'only_right'].entries()) {
     await wire(page, 'compare_1', port, 'excel_1', `sheet_${i + 1}`);

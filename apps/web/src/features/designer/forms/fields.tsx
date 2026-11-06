@@ -485,6 +485,7 @@ export function ListEditor<T>({
 }) {
   const { t } = useTranslation('designer');
   const errId = useId();
+  const labelId = useId();
   const listIssues = issues.filter((i) => !/\.\d+(\.|$)/.test(i.path ?? ''));
   const move = (from: number, to: number) => {
     const next = [...items];
@@ -493,9 +494,14 @@ export function ListEditor<T>({
     onChange(next);
   };
   return (
-    <fieldset data-field-block className="m-0 flex min-w-0 flex-col gap-stack-dense border-0 p-0">
+    <fieldset
+      data-field-block
+      // Named by the label alone, not by the hint text inside the legend's (i).
+      aria-labelledby={hint ? labelId : undefined}
+      className="m-0 flex min-w-0 flex-col gap-stack-dense border-0 p-0"
+    >
       <legend className={cx(labelClass, 'mb-2 flex items-center p-0')}>
-        {label}
+        <span id={labelId}>{label}</span>
         {hint && <InfoTip label={typeof label === 'string' ? label : ''}>{hint}</InfoTip>}
       </legend>
       <FieldErrors id={errId} issues={listIssues} />
