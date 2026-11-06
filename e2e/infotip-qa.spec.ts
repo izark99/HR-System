@@ -47,7 +47,7 @@ async function openDesignerNode(page: Page, id: string) {
   return page.getByRole('complementary', { name: 'Cấu hình' });
 }
 
-test.describe('InfoTip: keyboard, mouse (Designer, 1280); KNOWN BUG: one at a time', () => {
+test.describe('InfoTip: keyboard, mouse, one at a time (Designer, 1280)', () => {
   test.use({ signedInAs: ADMIN, viewport: { width: 1280, height: 800 } });
 
   test('Tab opens, Enter / Space pin and toggle, Escape closes and keeps focus', async ({
@@ -127,7 +127,6 @@ test.describe('InfoTip: keyboard, mouse (Designer, 1280); KNOWN BUG: one at a ti
   });
 
   test('only one popover at a time: a pinned one and a hovered one', async ({ page }) => {
-    test.fail(true, 'KNOWN BUG: a pinned (i) stays open while another (i) opens on hover');
     const panel = await openDesignerNode(page, 'cmp');
     const tips = panel.locator('[data-infotip-button]');
     await tips.first().scrollIntoViewIfNeeded();
@@ -139,10 +138,21 @@ test.describe('InfoTip: keyboard, mouse (Designer, 1280); KNOWN BUG: one at a ti
     await expect(page.locator(POP)).toHaveCount(1);
   });
 
+  test('only one popover at a time: a pinned one and a click on another', async ({ page }) => {
+    const panel = await openDesignerNode(page, 'cmp');
+    const tips = panel.locator('[data-infotip-button]');
+    await tips.first().scrollIntoViewIfNeeded();
+    await tips.first().click();
+    await tips.nth(1).scrollIntoViewIfNeeded();
+    await tips.nth(1).click();
+    await expect(tips.nth(1)).toHaveAttribute('aria-expanded', 'true');
+    await expect(tips.first()).toHaveAttribute('aria-expanded', 'false');
+    await expect(page.locator(POP)).toHaveCount(1);
+  });
+
   test('only one popover at a time: keyboard focus on one, mouse over another', async ({
     page,
   }) => {
-    test.fail(true, 'KNOWN BUG: a focused (i) stays open while another (i) opens on hover');
     const panel = await openDesignerNode(page, 'cmp');
     const tips = panel.locator('[data-infotip-button]');
     await tips.nth(1).scrollIntoViewIfNeeded();
@@ -173,16 +183,14 @@ test.describe('InfoTip: read with its control', () => {
   });
 });
 
-test.describe('KNOWN BUG: InfoTip', () => {
+test.describe('InfoTip in a modal dialog', () => {
   test.use({ signedInAs: ADMIN, viewport: { width: 1024, height: 768 } });
 
   test('Escape on an open (i) in a modal dialog closes only the popover, not the dialog', async ({
     page,
   }) => {
-    // KNOWN BUG: InfoTip's Escape handler does not preventDefault (Select / pickers do), so the
-    // native <dialog> also gets "cancel": one Escape closes the hint AND the create-account dialog,
-    // losing what was typed.
-    test.fail(true, 'KNOWN BUG: Escape on (i) inside a dialog also closes the dialog');
+    // Like Select: the first Escape closes the hint (keydown preventDefault, no "cancel"), the
+    // second one closes the dialog.
     await page.goto('/admin/users');
     const dialog = await openCreateAccount(page);
     await dialog.getByLabel(/^Username/).fill('hr.cn09');
@@ -192,6 +200,8 @@ test.describe('KNOWN BUG: InfoTip', () => {
     await expect(page.locator(POP)).toHaveCount(0);
     await expect(dialog).toBeVisible({ timeout: 3000 });
     await expect(dialog.getByLabel(/^Username/)).toHaveValue('hr.cn09');
+    await page.keyboard.press('Escape');
+    await expect(dialog).toHaveCount(0);
   });
 });
 

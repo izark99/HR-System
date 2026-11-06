@@ -15,6 +15,18 @@ const GAP = 4;
 const MARGIN = 8;
 
 /**
+ * The one (i) popover open on the page (AC-UI-78 rule 18): opening another one (hover, focus or a
+ * click) closes it. Module store, no context needed.
+ */
+let openTip: string | null = null;
+const listeners = new Set<() => void>();
+function setOpenTip(id: string | null) {
+  if (openTip === id) return;
+  openTip = id;
+  listeners.forEach((l) => l());
+}
+
+/**
  * "(i)" button that holds a hint / explanation instead of a paragraph shown under a field or a
  * heading (spec §25.5 "InfoTip", MEMORY 2026-11-06 14:45). 20px icon in a 44px target; the target
  * reaches 12px above and below the line (`-my-3`), so a label row stays one line high.
@@ -57,11 +69,30 @@ export function InfoTip({
     setPinned(false);
   };
 
+  // One popover at a time: claim the store when opening, close when another one claims it.
+  useEffect(() => {
+    if (!open) return;
+    setOpenTip(textId);
+    const onChange = () => {
+      if (openTip !== textId) {
+        setHover(false);
+        setFocus(false);
+        setPinned(false);
+      }
+    };
+    listeners.add(onChange);
+    return () => {
+      listeners.delete(onChange);
+      if (openTip === textId) setOpenTip(null);
+    };
+  }, [open, textId]);
+
   // Placed straight on the element before paint, again when a panel scrolls or the window resizes.
   useLayoutEffect(() => {
     if (!open) return;
     const place = () => {
-      const a = button.current?.getBoundingClientRect();
+      // Anchored on the painted icon (it sits at the start of the 44px target).
+      const a = (button.current?.querySelector('svg') ?? button.current)?.getBoundingClientRect();
       const el = pop.current;
       if (!a || !el) return;
       const w = el.offsetWidth;
@@ -70,7 +101,7 @@ export function InfoTip({
       if (top + h > window.innerHeight - MARGIN) top = Math.max(MARGIN, a.top - h - GAP);
       const left = Math.max(
         MARGIN,
-        Math.min(a.left + a.width / 2 - 24, window.innerWidth - w - MARGIN),
+        Math.min(a.left + a.width / 2 - 14, window.innerWidth - w - MARGIN),
       );
       el.style.top = `${top}px`;
       el.style.left = `${left}px`;
@@ -87,16 +118,24 @@ export function InfoTip({
   useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') close();
+      if (e.key !== 'Escape') return;
+      // Inside a modal <dialog> Escape closes only the popover (like Select): preventDefault on
+      // the keydown keeps the dialog's "cancel" from firing; a second Escape closes the dialog.
+      e.preventDefault();
+      close();
     };
     const onDown = (e: Event) => {
       if (!wrap.current?.contains(e.target as Node)) close();
     };
+    // Belt and braces: a dialog's "cancel" while a popover is open is not the dialog's Escape.
+    const onCancel = (e: Event) => e.preventDefault();
     document.addEventListener('keydown', onKey);
     document.addEventListener('pointerdown', onDown);
+    document.addEventListener('cancel', onCancel, true);
     return () => {
       document.removeEventListener('keydown', onKey);
       document.removeEventListener('pointerdown', onDown);
+      document.removeEventListener('cancel', onCancel, true);
     };
   }, [open]);
 
@@ -129,7 +168,9 @@ export function InfoTip({
           setPinned(false);
         }}
         className={cx(
-          '-my-3 inline-flex size-target shrink-0 items-center justify-center rounded-card',
+          // The icon sits 4px after the text it explains (AC-UI-78 rule 17: ≤ 8px), the rest of
+          // the target trails after it.
+          '-my-3 inline-flex size-target shrink-0 items-center justify-start rounded-card pl-1',
           // No hover fill: the target reaches over the line above and below (only the icon shows).
           'text-muted hover:text-ink',
           open && 'text-teal-strong',
