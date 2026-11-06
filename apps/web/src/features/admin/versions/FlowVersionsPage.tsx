@@ -721,49 +721,53 @@ function PublishForm({
   const has = (k: PublishFieldError) => fieldErrors.includes(k);
   return (
     <form onSubmit={(e) => void submit(e)} noValidate className="flex flex-col gap-4">
-      <div className="flex flex-wrap gap-4">
-        <FormField
-          id="publish-from"
-          required
-          label={
-            <>
-              {t('admin.versions.publishDialog.from')}
-              <span aria-hidden> *</span>
-            </>
-          }
-          error={
-            has('fromRequired') ? t('admin.versions.publishDialog.errors.fromRequired') : undefined
-          }
-        >
-          {(f) => (
-            <DatePicker
-              id={f.id}
-              labelId={f.labelId}
-              describedBy={f.describedBy}
-              invalid={f.invalid}
-              value={from}
-              required
-              onChange={setFrom}
-            />
-          )}
-        </FormField>
-        <FormField
-          id="publish-to"
-          label={t('admin.versions.publishDialog.to')}
-          hint={t('admin.versions.publishDialog.toHint')}
-          error={has('range') ? t('admin.versions.publishDialog.errors.range') : undefined}
-        >
-          {(f) => (
-            <DatePicker
-              id={f.id}
-              labelId={f.labelId}
-              describedBy={f.describedBy}
-              invalid={f.invalid}
-              value={to}
-              onChange={setTo}
-            />
-          )}
-        </FormField>
+      <div data-field-block className="flex flex-col gap-2">
+        <div className="flex flex-wrap gap-4">
+          <FormField
+            id="publish-from"
+            required
+            label={
+              <>
+                {t('admin.versions.publishDialog.from')}
+                <span aria-hidden> *</span>
+              </>
+            }
+            error={
+              has('fromRequired')
+                ? t('admin.versions.publishDialog.errors.fromRequired')
+                : undefined
+            }
+          >
+            {(f) => (
+              <DatePicker
+                id={f.id}
+                labelId={f.labelId}
+                describedBy={f.describedBy}
+                invalid={f.invalid}
+                value={from}
+                required
+                onChange={setFrom}
+              />
+            )}
+          </FormField>
+          <FormField
+            id="publish-to"
+            label={t('admin.versions.publishDialog.to')}
+            error={has('range') ? t('admin.versions.publishDialog.errors.range') : undefined}
+          >
+            {(f) => (
+              <DatePicker
+                id={f.id}
+                labelId={f.labelId}
+                describedBy={f.describedBy}
+                invalid={f.invalid}
+                value={to}
+                onChange={setTo}
+              />
+            )}
+          </FormField>
+        </div>
+        <p className="m-0 text-caption text-muted">{t('admin.versions.publishDialog.toHint')}</p>
       </div>
       {previous && (
         <Checkbox

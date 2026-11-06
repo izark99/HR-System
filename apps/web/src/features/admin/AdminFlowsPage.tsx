@@ -269,40 +269,39 @@ function ImportForm({
       {field('import-category', t('admin.import.category'), category, setCategory)}
       {field('import-description', t('admin.import.description'), description, setDescription)}
       {field('import-instructions', t('admin.import.instructions'), instructions, setInstructions)}
-      <div className="flex flex-wrap gap-4">
-        <FormField
-          id="import-from"
-          required
-          label={
-            <>
-              {t('admin.import.effectiveFrom')} <span aria-hidden>*</span>
-            </>
-          }
-        >
-          {(f) => (
-            <DatePicker
-              id={f.id}
-              labelId={f.labelId}
-              value={effectiveFrom}
-              required
-              onChange={setEffectiveFrom}
-            />
-          )}
-        </FormField>
-        <FormField
-          id="import-to"
-          label={t('admin.import.effectiveTo')}
-          hint={t('admin.import.rangeHint')}
-        >
-          {(f) => (
-            <DatePicker
-              id={f.id}
-              labelId={f.labelId}
-              value={effectiveTo}
-              onChange={setEffectiveTo}
-            />
-          )}
-        </FormField>
+      <div data-field-block className="flex flex-col gap-2">
+        <div className="flex flex-wrap gap-4">
+          <FormField
+            id="import-from"
+            required
+            label={
+              <>
+                {t('admin.import.effectiveFrom')} <span aria-hidden>*</span>
+              </>
+            }
+          >
+            {(f) => (
+              <DatePicker
+                id={f.id}
+                labelId={f.labelId}
+                value={effectiveFrom}
+                required
+                onChange={setEffectiveFrom}
+              />
+            )}
+          </FormField>
+          <FormField id="import-to" label={t('admin.import.effectiveTo')}>
+            {(f) => (
+              <DatePicker
+                id={f.id}
+                labelId={f.labelId}
+                value={effectiveTo}
+                onChange={setEffectiveTo}
+              />
+            )}
+          </FormField>
+        </div>
+        <p className="m-0 text-caption text-muted">{t('admin.import.rangeHint')}</p>
       </div>
       {openVersion && (
         <Checkbox

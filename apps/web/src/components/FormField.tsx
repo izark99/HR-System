@@ -226,7 +226,8 @@ export function Checkbox({
         className,
       )}
     >
-      <span className={cx('flex shrink-0 items-center', dense ? 'h-5' : 'h-6')}>
+      {/* Positioned so it paints above the label's enlarged click area (::before). */}
+      <span className={cx('relative flex shrink-0 items-center', dense ? 'h-5' : 'h-6')}>
         <input type={type} className={checkboxClass} {...input} />
       </span>
       <span className="min-w-0">{label}</span>
