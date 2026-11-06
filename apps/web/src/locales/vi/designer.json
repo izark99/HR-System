@@ -292,8 +292,8 @@
         "date": "Ngày dạng YYYY-MM-DD, VD 2026-09-30.",
         "datetime": "Ngày giờ dạng YYYY-MM-DDTHH:mm:ss."
       },
-      "normalizeText": "So sánh chữ không phân biệt hoa thường, bỏ khoảng trắng thừa",
-      "normalizeTextHint": "Mặc định bật (giống đối chiếu).",
+      "normalizeText": "Chữ không phân biệt hoa thường",
+      "normalizeTextHint": "So sánh chữ không phân biệt hoa thường, bỏ khoảng trắng thừa. Mặc định bật (giống đối chiếu).",
       "ops": {
         "eq": "bằng",
         "neq": "khác",
@@ -338,12 +338,13 @@
       "keyN": "Khóa {{n}}",
       "left": "Cột bảng trái",
       "right": "Cột bảng phải",
-      "normalizeKeys": "So khớp khóa không phân biệt hoa thường, bỏ khoảng trắng thừa",
-      "normalizeKeysHint": "Chỉ áp dụng cho cột chữ; mặc định bật.",
-      "allRight": "Lấy mọi cột bảng phải (trừ cột khóa)",
+      "normalizeKeys": "Khóa không phân biệt hoa thường",
+      "normalizeKeysHint": "So khớp khóa không phân biệt hoa thường, bỏ khoảng trắng thừa. Chỉ áp dụng cho cột chữ; mặc định bật.",
+      "allRight": "Lấy mọi cột bảng phải",
       "rightColumns": "Cột lấy từ bảng phải",
       "rightSuffix": "Hậu tố khi trùng tên cột",
-      "rightSuffixHint": "Bắt đầu bằng \"_\", VD _r."
+      "rightSuffixHint": "Bắt đầu bằng \"_\", VD _r.",
+      "allRightHint": "Trừ cột khóa (đã có ở bảng trái)."
     },
     "union": {
       "inputCount": "Số bảng đầu vào",
@@ -383,7 +384,7 @@
       "keep": "Giữ dòng",
       "first": "Dòng đầu tiên",
       "last": "Dòng cuối cùng",
-      "normalizeKeys": "So khớp khóa không phân biệt hoa thường, bỏ khoảng trắng thừa",
+      "normalizeKeys": "Khóa không phân biệt hoa thường",
       "hint": "Dòng bị loại ra ở cổng removed (nối nếu cần)."
     },
     "sql": {

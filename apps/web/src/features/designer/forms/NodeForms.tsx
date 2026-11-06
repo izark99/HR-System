@@ -694,6 +694,7 @@ function JoinForm(p: NodeFormProps) {
       />
       <CheckField
         label={t('node.join.allRight')}
+        hint={t('node.join.allRightHint')}
         checked={allRight}
         onChange={(v) =>
           v
