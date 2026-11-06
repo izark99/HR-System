@@ -1,7 +1,7 @@
 import type { InputSlot } from '@hrflow/flow-schema';
 import { useId, useRef, useState, type DragEvent } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Card, cx, toneText, toneTint, type Tone } from '../../../components/ui';
+import { Card, cx, MiddleCut, toneText, toneTint, type Tone } from '../../../components/ui';
 import type { SlotState } from '../run-store';
 import { CheckIcon, CloseIcon } from '../../../components/icons';
 
@@ -140,7 +140,7 @@ export function SlotCard({
                   s && s.tone !== 'teal' && s.tone !== 'neutral' ? toneTint[s.tone] : 'bg-page',
                 )}
               >
-                <span className="min-w-0 break-all">{f.file.name}</span>
+                <MiddleCut text={f.file.name} />
                 <span className="flex shrink-0 items-center gap-1">
                   {s && (
                     <span

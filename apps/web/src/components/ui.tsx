@@ -323,3 +323,49 @@ export function OneLine({
     </Tooltip>
   );
 }
+
+/**
+ * A file name on one line (MEMORY 2026-11-06 18:27): when it does not fit, the middle is cut with
+ * "…" and the end (`tail` characters, usually the part that tells files apart and the extension)
+ * stays; the whole name shows on hover / focus (`Tooltip`, AC-UI-78 rule 7).
+ */
+export function MiddleCut({
+  text,
+  tail = 12,
+  className,
+}: {
+  text: string;
+  tail?: number;
+  className?: string;
+}) {
+  const head = useRef<HTMLSpanElement>(null);
+  const end = useRef<HTMLSpanElement>(null);
+  const split = text.length > tail + 4 ? text.length - tail : text.length;
+  const headCut = useTextCut(head, text);
+  const endCut = useTextCut(end, text);
+  const cut = headCut || (split < text.length && endCut);
+  return (
+    <Tooltip text={cut ? text : null} className={cx('flex min-w-0', className)}>
+      {/* The start gives way first; the end only when the start is gone (very narrow box). */}
+      <span
+        ref={head}
+        data-one-line
+        data-cut={cut || undefined}
+        tabIndex={cut ? 0 : undefined}
+        className="-my-5 block min-w-0 shrink-[1000] truncate py-5"
+      >
+        {text.slice(0, split)}
+      </span>
+      {split < text.length && (
+        <span
+          ref={end}
+          data-one-line
+          data-cut={cut || undefined}
+          className="-my-5 block min-w-0 truncate py-5"
+        >
+          {text.slice(split)}
+        </span>
+      )}
+    </Tooltip>
+  );
+}
