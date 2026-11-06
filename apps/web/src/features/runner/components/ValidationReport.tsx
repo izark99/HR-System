@@ -132,14 +132,14 @@ export function ValidationReport({
                     <td
                       className={cx(
                         tdClass,
-                        'font-semibold',
+                        'font-semibold whitespace-nowrap',
                         error ? 'text-coral-text' : 'text-amber-text',
                       )}
                     >
                       {t(`report.severity.${issue.severity}`)}
                     </td>
                     <td className={cx(tdClass, 'whitespace-nowrap')}>{issue.file ?? ''}</td>
-                    <td className={tdClass}>{issue.row ?? ''}</td>
+                    <td className={cx(tdClass, 'whitespace-nowrap')}>{issue.row ?? ''}</td>
                     <td className={cx(tdClass, 'whitespace-nowrap')}>{column}</td>
                     <td className={tdClass}>{formatIssue(issue, (k, p) => te(k, p ?? {}))}</td>
                   </tr>
