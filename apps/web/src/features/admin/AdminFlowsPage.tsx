@@ -38,7 +38,7 @@ import {
   type AdminFlow,
   type AdminFlowVersion,
 } from './admin-api';
-import { Dialog } from './Dialog';
+import { Dialog } from '../../components/Dialog';
 import { useAdminApi, useAdminQuery } from './use-admin';
 import { LoadingRegion, TableCardSkeleton } from '../../components/Skeleton';
 import { LayersIcon } from '../../components/icons';

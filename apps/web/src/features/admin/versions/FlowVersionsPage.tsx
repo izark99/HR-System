@@ -36,7 +36,7 @@ import {
   type AdminVersionDetail,
   type FlowVersions,
 } from '../admin-api';
-import { Dialog } from '../Dialog';
+import { Dialog } from '../../../components/Dialog';
 import { useAdminApi } from '../use-admin';
 import { DiffView } from './DiffView';
 import {

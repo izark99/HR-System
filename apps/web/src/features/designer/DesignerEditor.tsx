@@ -20,7 +20,7 @@ import type { RunWarningInfo } from '../../engine/protocol';
 import type { Json } from '../../lib/database.types';
 import { saveFile } from '../../lib/download';
 import { errorKeyOf, type AdminVersionDetail } from '../admin/admin-api';
-import { Dialog } from '../admin/Dialog';
+import { Dialog } from '../../components/Dialog';
 import { useAdminApi } from '../admin/use-admin';
 import { VERSION_STATUS_TONE } from '../admin/versions/FlowVersionsPage';
 import { useUnsavedChanges } from '../auth/idle/activity';

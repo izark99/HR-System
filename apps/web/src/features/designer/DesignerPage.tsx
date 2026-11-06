@@ -8,7 +8,7 @@ import { useTranslation } from 'react-i18next';
 import { Button, Callout } from '../../components/ui';
 import { saveFile } from '../../lib/download';
 import { errorKeyOf, type AdminErrorKey, type FlowVersions } from '../admin/admin-api';
-import { Dialog } from '../admin/Dialog';
+import { Dialog } from '../../components/Dialog';
 import { useAdminApi } from '../admin/use-admin';
 import { DesignerEditor, type SavedState } from './DesignerEditor';
 import { DesignerErrorBoundary } from './ErrorBoundary';

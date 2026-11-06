@@ -35,7 +35,7 @@ import {
   type AdminUser,
   type Assignment,
 } from './admin-api';
-import { Dialog } from './Dialog';
+import { Dialog } from '../../components/Dialog';
 import { useAdminApi, useAdminQuery } from './use-admin';
 import { LoadingRegion, TableCardSkeleton } from '../../components/Skeleton';
 import { PencilIcon } from '../../components/icons';
