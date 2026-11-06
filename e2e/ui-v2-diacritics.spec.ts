@@ -350,16 +350,19 @@ test.describe('admin title with a user-given name 1280x800', () => {
     page,
     supabase,
   }) => {
-    supabase.flows[0]!.name = LONG_NAME;
+    // Read-only view: the toolbar holds two icon buttons only, so the name needs to be longer
+    // than the other titles to be cut at 1280px.
+    const name2 = `${LONG_NAME} – bản tổng hợp toàn quốc`;
+    supabase.flows[0]!.name = name2;
     await page.goto('/admin/flows/payroll-timesheet/designer');
     const h1 = page.getByRole('heading', { level: 1 });
-    await expect(h1).toContainText(LONG_NAME);
+    await expect(h1).toContainText(name2);
     const name = h1.locator('[data-one-line]');
     await expect(name).toHaveAttribute('data-cut', 'true');
     const toolbar = page.getByRole('toolbar', { name: 'Thao tác trên flow' });
     const [hb, tb] = [await h1.boundingBox(), await toolbar.boundingBox()];
     expect(Math.abs(hb!.y + hb!.height / 2 - (tb!.y + tb!.height / 2))).toBeLessThan(6);
     await name.hover();
-    await expect(page.locator('[data-tooltip]')).toHaveText(LONG_NAME);
+    await expect(page.locator('[data-tooltip]')).toHaveText(name2);
   });
 });

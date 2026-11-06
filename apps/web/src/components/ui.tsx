@@ -254,20 +254,30 @@ export function Callout({
  * them inside the clipping box.
  */
 /**
- * Whether the one-line text of `ref` is cut (wider than its box); re-checked when the box resizes
- * or `text` changes. For "…" + tooltip (AC-UI-78 rule 7).
+ * Whether the one-line text of `ref` is cut (wider than its box); re-checked when the box resizes,
+ * a web font finishes loading or `text` changes. For "…" + tooltip (AC-UI-78 rule 7).
  */
 export function useTextCut(ref: RefObject<HTMLElement | null>, text: string): boolean {
   const [cut, setCut] = useState(false);
   useLayoutEffect(() => {
     const el = ref.current;
     if (!el) return;
-    const check = () => setCut(el.scrollWidth > el.clientWidth + 1);
+    let live = true;
+    const check = () => {
+      if (live) setCut(el.scrollWidth > el.clientWidth + 1);
+    };
     check();
-    if (typeof ResizeObserver === 'undefined') return;
-    const observer = new ResizeObserver(check);
-    observer.observe(el);
-    return () => observer.disconnect();
+    // A box of fixed width does not resize when the web font arrives, but its text does.
+    const fonts = typeof document !== 'undefined' ? document.fonts : undefined;
+    void fonts?.ready.then(check);
+    fonts?.addEventListener?.('loadingdone', check);
+    const observer = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(check);
+    observer?.observe(el);
+    return () => {
+      live = false;
+      fonts?.removeEventListener?.('loadingdone', check);
+      observer?.disconnect();
+    };
   }, [ref, text]);
   return cut;
 }
