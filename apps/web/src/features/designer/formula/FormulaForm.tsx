@@ -84,7 +84,7 @@ export function FormulaForm(p: NodeFormProps) {
   };
 
   return (
-    <div className="flex flex-col gap-3.5">
+    <div className="flex flex-col gap-stack-dense">
       <ListEditor
         label={t('node.formula.columns')}
         items={items}
@@ -220,7 +220,7 @@ function FormulaColumn({
   ];
   return (
     <>
-      <FieldGrid>
+      <FieldGrid dense>
         <TextField
           label={t('node.formula.key')}
           value={str(col.key)}
@@ -239,7 +239,7 @@ function FormulaColumn({
           disabled={readOnly}
         />
       </FieldGrid>
-      <div className="flex flex-col gap-1.5">
+      <div data-field-block className="flex flex-col gap-1">
         <span className={labelClass}>{t('node.formula.formula')}</span>
         <Suspense
           fallback={
@@ -274,7 +274,7 @@ function FormulaColumn({
         </p>
         <FieldErrors id={`${editorId}-errors`} issues={formulaIssues} />
       </div>
-      <FieldGrid>
+      <FieldGrid dense>
         <SelectField
           label={t('node.formula.type')}
           value={str(col.type, 'auto')}

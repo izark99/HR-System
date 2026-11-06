@@ -2,7 +2,7 @@ import { useRef, useState, type FormEvent, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { DataTable, type DataTableColumn } from '../../components/DataTable';
 import { Dialog, DialogFooter } from '../../components/Dialog';
-import { FormField, TextInput } from '../../components/FormField';
+import { Checkbox, FormField, TextInput } from '../../components/FormField';
 import { PageHeader, Section, Toolbar } from '../../components/layout';
 import { RowActions, RowIcon, rowIconClass } from '../../components/RowActions';
 import { Select } from '../../components/Select';
@@ -136,23 +136,20 @@ function GroupCheckboxes({
 }) {
   const { t } = useTranslation();
   return (
-    <fieldset className="m-0 flex flex-col gap-1 border-0 p-0">
+    <fieldset data-field-block className="m-0 flex flex-col gap-stack border-0 p-0">
       <legend className={cx(labelClass, 'mb-2')}>{legend}</legend>
       {groups.length === 0 && (
         <p className="m-0 text-caption text-muted">{t('admin.groups.none')}</p>
       )}
       {groups.map((g) => (
-        <label key={g.id} className="flex min-h-target items-center gap-3 text-body text-ink-soft">
-          <input
-            type="checkbox"
-            className="size-4.5 accent-teal-strong"
-            checked={value.includes(g.id)}
-            onChange={(e) =>
-              onChange(e.target.checked ? [...value, g.id] : value.filter((id) => id !== g.id))
-            }
-          />
-          {g.name}
-        </label>
+        <Checkbox
+          key={g.id}
+          label={g.name}
+          checked={value.includes(g.id)}
+          onChange={(e) =>
+            onChange(e.target.checked ? [...value, g.id] : value.filter((id) => id !== g.id))
+          }
+        />
       ))}
     </fieldset>
   );
@@ -169,19 +166,17 @@ function RoleRadios({
 }) {
   const { t } = useTranslation();
   return (
-    <fieldset className="m-0 flex flex-wrap gap-4 border-0 p-0">
+    <fieldset data-field-block className="m-0 flex flex-wrap gap-4 border-0 p-0">
       <legend className={cx(labelClass, 'mb-2')}>{t('admin.users.role')}</legend>
       {(['user', 'admin'] as const).map((r) => (
-        <label key={r} className="flex min-h-target items-center gap-2 text-body text-ink-soft">
-          <input
-            type="radio"
-            name={name}
-            className="size-4.5 accent-teal-strong"
-            checked={value === r}
-            onChange={() => onChange(r)}
-          />
-          {t(`userMenu.role.${r}`)}
-        </label>
+        <Checkbox
+          key={r}
+          type="radio"
+          name={name}
+          label={t(`userMenu.role.${r}`)}
+          checked={value === r}
+          onChange={() => onChange(r)}
+        />
       ))}
     </fieldset>
   );
@@ -740,26 +735,20 @@ function AssignmentsCard({ data, onChanged }: { data: PageData; onChanged: () =>
       </FormField>
       {flows.length === 0 && <EmptyState variant="inline" title={t('admin.assign.noFlows')} />}
       {target && (
-        <fieldset className="m-0 flex flex-col gap-1 border-0 p-0">
+        <fieldset data-field-block className="m-0 flex flex-col gap-stack border-0 p-0">
           <legend className="sr-only">{t('admin.assign.flowsLegend')}</legend>
           {flows.map((f) => {
             const checked = data.assignments.some(
               (a) => a.flowId === f.id && (kind === 'group' ? a.groupId : a.userId) === targetId,
             );
             return (
-              <label
+              <Checkbox
                 key={f.id}
-                className="flex min-h-target items-center gap-3 text-body text-ink-soft"
-              >
-                <input
-                  type="checkbox"
-                  className="size-4.5 accent-teal-strong"
-                  checked={checked}
-                  disabled={busyFlow !== null}
-                  onChange={(e) => void toggle(f, e.target.checked)}
-                />
-                {f.name}
-              </label>
+                label={f.name}
+                checked={checked}
+                disabled={busyFlow !== null}
+                onChange={(e) => void toggle(f, e.target.checked)}
+              />
             );
           })}
         </fieldset>

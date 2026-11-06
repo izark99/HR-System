@@ -38,7 +38,7 @@ export function ParamsForm({
   const params = doc.params;
   const forParam = (i: number) => issues.filter((x) => x.paramIndex === i);
   return (
-    <div className="flex flex-col gap-3.5">
+    <div className="flex flex-col gap-stack-dense">
       <p className="m-0 text-caption text-muted">{t('params.intro')}</p>
       <ListEditor
         label={t('params.title')}
@@ -71,7 +71,7 @@ export function ParamsForm({
           const oldKey = watch.warningFor(field);
           return (
             <>
-              <FieldGrid>
+              <FieldGrid dense>
                 <div className="contents" onFocus={() => watch.onFocus(field, str(p.key))}>
                   <TextField
                     label={t('params.key')}
@@ -157,7 +157,7 @@ export function ParamsForm({
                   itemLabel={(k) => str(options[k]?.label) || t('params.optionN', { n: k + 1 })}
                   disabled={ro}
                   render={(o, k, setOption) => (
-                    <FieldGrid>
+                    <FieldGrid dense>
                       <TextField
                         label={t('params.optionValue')}
                         value={str(o.value)}

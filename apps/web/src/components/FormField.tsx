@@ -5,7 +5,7 @@ import {
   type TextareaHTMLAttributes,
 } from 'react';
 import { useTranslation } from 'react-i18next';
-import { cx, denseInputClass, inputClass, labelClass, textareaClass } from './ui';
+import { checkboxClass, cx, denseInputClass, inputClass, labelClass, textareaClass } from './ui';
 
 /** ARIA wiring for a native `<input>` / `<textarea>` / checkbox: spread it on the element. */
 export interface NativeFieldProps {
@@ -157,27 +157,80 @@ export function FormField({
  * shared rows (label / control + hint + error, CSS subgrid in `index.css`), so the controls of a
  * row line up even when one label wraps or one field has a hint (AC-UI-78 rule 6). A child that
  * only wraps a field (e.g. for an `onFocus` handler) must use `className="contents"`.
+ *
+ * Rows of fields are `stack` apart (`dense`: `stack-dense`), like the fields of the form around
+ * it (AC-UI-78 rule 11). `hint`: one note for the whole row, under it, part of the same block.
  */
 export function FieldGrid({
   cols = 2,
+  dense = false,
+  hint,
   className,
   children,
 }: {
   cols?: 2 | 3;
+  dense?: boolean;
+  hint?: ReactNode;
   className?: string;
   children: ReactNode;
 }) {
-  return (
+  const grid = (
     <div
       data-field-grid
       className={cx(
-        'hr-field-grid grid gap-2',
+        'hr-field-grid grid gap-x-2',
+        dense ? 'gap-y-stack-dense' : 'gap-y-stack',
         cols === 3 ? 'grid-cols-3' : 'grid-cols-2',
-        className,
+        !hint && className,
       )}
     >
       {children}
     </div>
+  );
+  if (!hint) return grid;
+  return (
+    <div
+      data-field-block
+      className={cx('flex min-w-0 flex-col', dense ? 'gap-1' : 'gap-2', className)}
+    >
+      {grid}
+      <p className={cx('m-0 text-muted', dense ? 'text-dense' : 'text-caption')}>{hint}</p>
+    </div>
+  );
+}
+
+/**
+ * Checkbox (or radio) with its label on one row (spec §25.5): the 20px box never shrinks and sits
+ * on the first line of the label. The row itself is only as tall as the label, so it stacks with
+ * the same gap as other fields (AC-UI-78 rule 11); the clickable area reaches 12px above and below
+ * (44px touch target for one dense line).
+ */
+export function Checkbox({
+  label,
+  dense = false,
+  type = 'checkbox',
+  className,
+  ...input
+}: Omit<InputHTMLAttributes<HTMLInputElement>, 'type'> & {
+  label: ReactNode;
+  dense?: boolean;
+  type?: 'checkbox' | 'radio';
+}) {
+  return (
+    <label
+      data-checkbox
+      className={cx(
+        'relative flex cursor-pointer items-start gap-3 text-ink-soft',
+        "before:absolute before:inset-x-0 before:-inset-y-3 before:content-['']",
+        dense ? 'text-dense' : 'text-body',
+        className,
+      )}
+    >
+      <span className={cx('flex shrink-0 items-center', dense ? 'h-5' : 'h-6')}>
+        <input type={type} className={checkboxClass} {...input} />
+      </span>
+      <span className="min-w-0">{label}</span>
+    </label>
   );
 }
 

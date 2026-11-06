@@ -83,7 +83,7 @@ function SlotsTab({
     setIndex(slots.length);
   };
   return (
-    <div className="flex flex-col gap-3.5">
+    <div className="flex flex-col gap-stack-dense">
       <p className="m-0 text-caption text-muted">{t('slot.intro')}</p>
       <div className="flex flex-wrap items-end gap-2">
         {slots.length > 0 && (
@@ -106,8 +106,10 @@ function SlotsTab({
           </FormField>
         )}
         {!readOnly && (
-          // 44px like the Select beside it (AC-UI-78 rules 1 and 8).
-          <Button onClick={add}>{t('slot.add')}</Button>
+          // 44px like the Select beside it, 14px/600 text of the dense form (AC-UI-78 rule 8).
+          <Button size="dense" onClick={add}>
+            {t('slot.add')}
+          </Button>
         )}
       </div>
       {slots.length === 0 && <p className="m-0 text-dense text-muted">{t('slot.empty')}</p>}
@@ -156,7 +158,7 @@ export function ConfigPanel(p: ConfigPanelProps) {
   if (p.note) {
     const id = `note-${p.note.id}`;
     return (
-      <section aria-labelledby={`${id}-title`} className="flex flex-col gap-3.5">
+      <section aria-labelledby={`${id}-title`} className="flex flex-col gap-stack-dense">
         <h2 id={`${id}-title`} className="m-0 text-title-sm">
           {t('panel.note')}
         </h2>
@@ -188,7 +190,7 @@ export function ConfigPanel(p: ConfigPanelProps) {
     const warnings = general.filter((i) => i.severity === 'warning');
     const errors = general.filter((i) => i.severity === 'error');
     return (
-      <section aria-labelledby="node-panel-title" className="flex flex-col gap-3.5">
+      <section aria-labelledby="node-panel-title" className="flex flex-col gap-stack-dense">
         <div className="flex flex-col gap-0.5">
           <h2 id="node-panel-title" className="m-0 text-title-sm">
             {node.label || node.id}
@@ -241,7 +243,7 @@ export function ConfigPanel(p: ConfigPanelProps) {
   }
 
   return (
-    <section aria-label={t('panel.flowSettings')} className="flex flex-col gap-3.5">
+    <section aria-label={t('panel.flowSettings')} className="flex flex-col gap-stack-dense">
       <Tabs
         id="designer"
         dense
@@ -250,7 +252,12 @@ export function ConfigPanel(p: ConfigPanelProps) {
         onChange={(x) => setTab(x as Tab)}
         items={(['params', 'slots'] as const).map((x) => ({ id: x, label: t(`panel.tabs.${x}`) }))}
       />
-      <TabPanel tabsId="designer" item={tab} focusable={false} className="flex flex-col gap-3.5">
+      <TabPanel
+        tabsId="designer"
+        item={tab}
+        focusable={false}
+        className="flex flex-col gap-stack-dense"
+      >
         {tab === 'params' ? (
           <ParamsForm
             doc={p.doc}

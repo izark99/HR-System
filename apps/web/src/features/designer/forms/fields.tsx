@@ -1,6 +1,6 @@
 import { useId, useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
-import { FormField } from '../../../components/FormField';
+import { Checkbox, FormField } from '../../../components/FormField';
 import { Select, type SelectOption } from '../../../components/Select';
 import { cx } from '../../../components/ui';
 import type { ColumnInfo } from '../../../engine/protocol';
@@ -201,25 +201,19 @@ export function CheckField({
   const hintId = useId();
   const errId = useId();
   return (
-    <div className="flex flex-col gap-1">
-      <label
-        htmlFor={id}
-        className="flex min-h-target cursor-pointer items-center gap-3 text-dense text-ink-soft"
-      >
-        <input
-          id={id}
-          type="checkbox"
-          checked={checked}
-          disabled={disabled}
-          aria-describedby={
-            [hint ? hintId : '', issues.length ? errId : ''].join(' ').trim() || undefined
-          }
-          aria-invalid={issues.length > 0 || undefined}
-          onChange={(e) => onChange(e.target.checked)}
-          className="size-5 accent-teal-strong"
-        />
-        {label}
-      </label>
+    <div data-check-field className="flex flex-col gap-1">
+      <Checkbox
+        dense
+        id={id}
+        label={label}
+        checked={checked}
+        disabled={disabled}
+        aria-describedby={
+          [hint ? hintId : '', issues.length ? errId : ''].join(' ').trim() || undefined
+        }
+        aria-invalid={issues.length > 0 || undefined}
+        onChange={(e) => onChange(e.target.checked)}
+      />
       {hint && (
         <p id={hintId} className="m-0 text-caption text-muted">
           {hint}
@@ -502,7 +496,7 @@ export function ListEditor<T>({
     onChange(next);
   };
   return (
-    <fieldset className="m-0 flex min-w-0 flex-col gap-2 border-0 p-0">
+    <fieldset data-field-block className="m-0 flex min-w-0 flex-col gap-stack-dense border-0 p-0">
       <legend className={cx(labelClass, 'mb-2 p-0')}>{label}</legend>
       <FieldErrors id={errId} issues={listIssues} />
       {items.map((item, i) => (
@@ -510,7 +504,7 @@ export function ListEditor<T>({
           key={i}
           role="group"
           aria-label={itemLabel(i)}
-          className="flex flex-col gap-2 rounded-card border border-line bg-page p-3"
+          className="flex flex-col gap-stack-dense rounded-card border border-line bg-page p-3"
         >
           <div className="flex items-center justify-between gap-2">
             {/* Up / Down / Remove: one size, text centred (AC-UI-78 rule 8). */}

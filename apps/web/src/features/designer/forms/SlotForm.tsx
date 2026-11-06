@@ -104,7 +104,7 @@ function ColumnEditor({
   const ruleKind = (r: Obj) => RULE_KINDS.find((k) => k in r) ?? 'unique';
   return (
     <>
-      <FieldGrid>
+      <FieldGrid dense>
         <div className="contents" onFocus={() => watch.onFocus(field, str(col.key))}>
           <TextField
             label={t('slot.col.key')}
@@ -136,7 +136,7 @@ function ColumnEditor({
         disabled={ro}
         rows={2}
       />
-      <FieldGrid>
+      <FieldGrid dense>
         <SelectField
           label={t('slot.col.type')}
           value={type}
@@ -245,7 +245,7 @@ function ColumnEditor({
           const withSev = (x: Obj) => (sev !== 'error' ? { ...x, severity: sev } : x);
           return (
             <>
-              <FieldGrid>
+              <FieldGrid dense>
                 <SelectField
                   label={t('slot.rule.kind')}
                   value={kind}
@@ -339,8 +339,8 @@ export function SlotForm({
     .map((c) => ({ key: str(c.key), title: str(c.label) || str(c.key), type: 'string' as const }))
     .filter((c) => c.key);
   return (
-    <div className="flex flex-col gap-3.5">
-      <FieldGrid>
+    <div className="flex flex-col gap-stack-dense">
+      <FieldGrid dense>
         <div className="contents" onFocus={() => watch.onFocus('key', key)}>
           <TextField
             label={t('slot.key')}
@@ -371,7 +371,7 @@ export function SlotForm({
         hint={t('slot.requiredHint')}
         disabled={ro}
       />
-      <fieldset className="m-0 flex gap-4 border-0 p-0">
+      <fieldset data-field-block className="m-0 flex gap-4 border-0 p-0">
         <legend className="mb-1 p-0 text-caption font-semibold text-ink-soft">
           {t('slot.accept')}
         </legend>
@@ -395,7 +395,7 @@ export function SlotForm({
           />
         ))}
       </fieldset>
-      <FieldGrid>
+      <FieldGrid dense>
         <SelectField
           label={t('slot.sheetMode')}
           value={mode}
@@ -442,7 +442,7 @@ export function SlotForm({
           />
         )}
       </FieldGrid>
-      <FieldGrid cols={3}>
+      <FieldGrid dense cols={3} hint={t('slot.rowsHint')}>
         <NumberField
           label={t('slot.headerRow')}
           value={num(slot.headerRow) ?? 1}
@@ -473,7 +473,6 @@ export function SlotForm({
           disabled={ro}
         />
       </FieldGrid>
-      <p className="m-0 -mt-2 text-caption text-muted">{t('slot.rowsHint')}</p>
       <NumberField
         label={t('slot.stopAt')}
         value={num(obj(slot.stopAt)?.blankRows)}
@@ -527,7 +526,7 @@ export function SlotForm({
           />
         </>
       )}
-      <FieldGrid>
+      <FieldGrid dense>
         <SelectField
           label={t('slot.unmerge')}
           value={str(slot.unmergeCells, 'none')}
@@ -558,7 +557,7 @@ export function SlotForm({
         disabled={ro}
       />
       {multiple.enabled === true && (
-        <FieldGrid>
+        <FieldGrid dense>
           <NumberField
             label={t('slot.minFiles')}
             value={num(multiple.minFiles) ?? 1}

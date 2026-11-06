@@ -148,6 +148,7 @@ const SPACING_OK = new Set([
   'page-top',
   'section',
   'stack',
+  'stack-dense',
   'inline',
 ]);
 const SPACING_CLASS = new RegExp(
@@ -253,11 +254,6 @@ const FRAME_ALLOW: { file: string; rule: string; reason: string; only?: string[]
     reason: 'node cards on the React Flow canvas: dense 14px layout around the port handles',
   },
   {
-    file: 'features/designer/ConfigPanel.tsx',
-    rule: 'spacing',
-    reason: 'form panel beside the canvas (dense 14px, MEMORY 2026-11-06 08:24)',
-  },
-  {
     file: 'features/designer/DataPanel.tsx',
     rule: 'spacing',
     reason: 'data panel under the canvas: sample files and preview table (dense 14px)',
@@ -266,16 +262,6 @@ const FRAME_ALLOW: { file: string; rule: string; reason: string; only?: string[]
     file: 'features/designer/forms/NodeForms.tsx',
     rule: 'spacing',
     reason: 'node config forms beside the canvas (dense 14px, MEMORY 2026-11-06 08:24)',
-  },
-  {
-    file: 'features/designer/forms/ParamsForm.tsx',
-    rule: 'spacing',
-    reason: 'flow params form beside the canvas (dense 14px, MEMORY 2026-11-06 08:24)',
-  },
-  {
-    file: 'features/designer/forms/SlotForm.tsx',
-    rule: 'spacing',
-    reason: 'input slot form beside the canvas (dense 14px, MEMORY 2026-11-06 08:24)',
   },
   {
     file: 'features/designer/formula/FormulaForm.tsx',
@@ -356,6 +342,7 @@ describe('design tokens (index.css @theme)', () => {
     ['--spacing-page-top', '24px'],
     ['--spacing-section', '24px'],
     ['--spacing-stack', '16px'],
+    ['--spacing-stack-dense', '12px'],
     ['--spacing-inline', '8px'],
   ])('%s is %s', (name, value) => {
     expect(theme).toMatch(new RegExp(`\\n\\s*${name}:\\s*${value.replace(/[().]/g, '\\$&')};`));

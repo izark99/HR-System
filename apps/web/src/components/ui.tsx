@@ -82,6 +82,12 @@ export function pillClass(selected: boolean): string {
   );
 }
 
+/**
+ * Checkbox / radio box (AC-UI-78 rule 10): 20px everywhere and never shrunk by a long label
+ * beside it.
+ */
+export const checkboxClass = 'size-5 shrink-0 accent-teal-strong';
+
 /** Form label (§25.1 `label`: 16px / 600). */
 export const labelClass = 'text-label text-ink';
 
@@ -116,10 +122,14 @@ const buttonBase =
   // white text on a pale mid-transition teal (contrast below WCAG AA) for a moment.
   'transition-none hover:transition-colors active:transition-colors disabled:cursor-not-allowed';
 
-/** Height + type per size (§25.3): md 44px / `button`, sm 36px / `button-sm` (tables, toolbars). */
+/**
+ * Height + type per size (§25.3): md 44px / `button`, sm 36px / `button-sm` (tables, toolbars),
+ * dense 44px with 14px/600 type (standard button of a dense Designer form, MEMORY 2026-11-06).
+ */
 export const buttonSize = {
   md: 'min-h-control px-6 text-button',
   sm: 'min-h-control-sm px-4 text-button-sm',
+  dense: 'min-h-control px-4 text-dense font-semibold',
 } as const;
 
 export type ButtonVariant = 'primary' | 'dark' | 'outline' | 'text' | 'danger';
@@ -141,7 +151,7 @@ export function buttonClass(variant: ButtonVariant = 'outline', size: ButtonSize
   // The text button keeps `button-sm` type and 8px 16px padding at every size (§25.3).
   const sizing =
     variant === 'text'
-      ? cx(size === 'md' ? 'min-h-control' : 'min-h-control-sm', 'px-4 py-2 text-button-sm')
+      ? cx(size === 'sm' ? 'min-h-control-sm' : 'min-h-control', 'px-4 py-2 text-button-sm')
       : buttonSize[size];
   return cx(buttonBase, sizing, buttonTone[variant]);
 }

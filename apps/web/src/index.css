@@ -232,6 +232,7 @@
   --spacing-page-top: 24px; /* space above the page header */
   --spacing-section: 24px; /* between blocks of a page */
   --spacing-stack: 16px; /* between fields / blocks inside a card */
+  --spacing-stack-dense: 12px; /* between fields / blocks of a dense (Designer) form */
   --spacing-inline: 8px; /* between items on one row */
 }
 

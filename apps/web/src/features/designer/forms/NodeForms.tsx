@@ -80,7 +80,7 @@ function useForm(p: NodeFormProps) {
 }
 
 function Section({ children }: { children: ReactNode }) {
-  return <div className="flex flex-col gap-3.5">{children}</div>;
+  return <div className="flex flex-col gap-stack-dense">{children}</div>;
 }
 
 // ---- input.excel ------------------------------------------------------------------------------
@@ -151,7 +151,7 @@ function CompareForm(p: NodeFormProps) {
               issues={at(`metrics.${i}.label`)}
               disabled={ro}
             />
-            <FieldGrid>
+            <FieldGrid dense>
               <ColumnField
                 label={t('node.compare.left')}
                 value={str(m.left)}
@@ -211,7 +211,7 @@ function CompareForm(p: NodeFormProps) {
         disabled={ro}
       />
       {sides && (
-        <FieldGrid>
+        <FieldGrid dense>
           <TextField
             label={t('node.compare.sideLeft')}
             value={str(sides.left)}
@@ -396,7 +396,7 @@ function SelectForm(p: NodeFormProps) {
                 issues={at(`columns.${i}.from`)}
                 disabled={ro}
               />
-              <FieldGrid>
+              <FieldGrid dense>
                 <TextField
                   label={t('node.select.key')}
                   value={str(col.key)}
@@ -603,7 +603,7 @@ function SortForm(p: NodeFormProps) {
               issues={at(`by.${i}.column`)}
               disabled={ro}
             />
-            <FieldGrid>
+            <FieldGrid dense>
               <SelectField
                 label={t('node.sort.direction')}
                 value={str(s.direction, 'asc')}
@@ -663,7 +663,7 @@ function JoinForm(p: NodeFormProps) {
         itemLabel={(i) => t('node.join.keyN', { n: i + 1 })}
         disabled={ro}
         render={(k, i, setItem) => (
-          <FieldGrid>
+          <FieldGrid dense>
             <ColumnField
               label={t('node.join.left')}
               value={str(k.left)}
@@ -880,7 +880,7 @@ function GroupByForm(p: NodeFormProps) {
                   disabled={ro}
                 />
               )}
-              <FieldGrid>
+              <FieldGrid dense>
                 <TextField
                   label={t('node.groupBy.key')}
                   value={str(a.key)}
@@ -1000,7 +1000,7 @@ function CodeSqlForm(p: NodeFormProps) {
           />
         )}
       />
-      <div className="flex flex-col gap-1.5">
+      <div data-field-block className="flex flex-col gap-1">
         <span id={`${sqlId}-label`} className="text-caption font-semibold text-ink-soft">
           {t('node.sql.sql')}
         </span>

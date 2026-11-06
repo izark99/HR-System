@@ -5,7 +5,7 @@ import { DatePicker } from '../../../components/DatePicker';
 import type { MenuItem } from '../../../components/Menu';
 import { DataTable, type DataTableColumn } from '../../../components/DataTable';
 import { Dialog, DialogFooter } from '../../../components/Dialog';
-import { FormField, Textarea } from '../../../components/FormField';
+import { Checkbox, FormField, Textarea } from '../../../components/FormField';
 import { PageHeader, Toolbar } from '../../../components/layout';
 import { RowActions, RowIcon, rowIconClass } from '../../../components/RowActions';
 import { Select } from '../../../components/Select';
@@ -750,6 +750,7 @@ function PublishForm({
         <FormField
           id="publish-to"
           label={t('admin.versions.publishDialog.to')}
+          hint={t('admin.versions.publishDialog.toHint')}
           error={has('range') ? t('admin.versions.publishDialog.errors.range') : undefined}
         >
           {(f) => (
@@ -764,22 +765,15 @@ function PublishForm({
           )}
         </FormField>
       </div>
-      <p className="-mt-2 m-0 text-caption text-muted">
-        {t('admin.versions.publishDialog.toHint')}
-      </p>
       {previous && (
-        <label className="flex min-h-target items-center gap-3 text-body text-ink-soft">
-          <input
-            type="checkbox"
-            className="size-4.5 accent-teal-strong"
-            checked={closePrevious}
-            onChange={(e) => setClosePrevious(e.target.checked)}
-          />
-          {t('admin.versions.publishDialog.closePrevious', {
+        <Checkbox
+          checked={closePrevious}
+          onChange={(e) => setClosePrevious(e.target.checked)}
+          label={t('admin.versions.publishDialog.closePrevious', {
             version: previous.versionNo,
             date: formatDay(from),
           })}
-        </label>
+        />
       )}
       <FormField
         id={noteId}
@@ -877,9 +871,6 @@ function EndDateForm({
       <FormField id="end-to" label={t('admin.versions.publishDialog.to')}>
         {(f) => <DatePicker id={f.id} labelId={f.labelId} value={to} onChange={setTo} />}
       </FormField>
-      <p className="-mt-2 m-0 text-caption text-muted">
-        {t('admin.versions.publishDialog.toHint')}
-      </p>
       {created.map((g) => (
         <Callout key={`${g.from}-${g.to ?? ''}`} tone="amber" label={t('admin.versions.gapLabel')}>
           {gapText(t, g)}

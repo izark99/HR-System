@@ -7,7 +7,7 @@ import { Link, useNavigate } from '@tanstack/react-router';
 import { DataTable, type DataTableColumn } from '../../components/DataTable';
 import { DatePicker } from '../../components/DatePicker';
 import { Dialog, DialogFooter } from '../../components/Dialog';
-import { FormField, Textarea, TextInput } from '../../components/FormField';
+import { Checkbox, FormField, Textarea, TextInput } from '../../components/FormField';
 import { PageHeader, Toolbar } from '../../components/layout';
 import { RowActions, RowIcon, rowIconClass } from '../../components/RowActions';
 import { useToast } from '../../components/Toast';
@@ -289,7 +289,11 @@ function ImportForm({
             />
           )}
         </FormField>
-        <FormField id="import-to" label={t('admin.import.effectiveTo')}>
+        <FormField
+          id="import-to"
+          label={t('admin.import.effectiveTo')}
+          hint={t('admin.import.rangeHint')}
+        >
           {(f) => (
             <DatePicker
               id={f.id}
@@ -300,20 +304,15 @@ function ImportForm({
           )}
         </FormField>
       </div>
-      <p className="-mt-2 m-0 text-caption text-muted">{t('admin.import.rangeHint')}</p>
       {openVersion && (
-        <label className="flex min-h-target items-center gap-3 text-body text-ink-soft">
-          <input
-            type="checkbox"
-            className="size-4.5 accent-teal-strong"
-            checked={closePrevious}
-            onChange={(e) => setClosePrevious(e.target.checked)}
-          />
-          {t('admin.import.closePrevious', {
+        <Checkbox
+          checked={closePrevious}
+          onChange={(e) => setClosePrevious(e.target.checked)}
+          label={t('admin.import.closePrevious', {
             version: `v${openVersion.versionNo}`,
             date: formatDate(effectiveFrom),
           })}
-        </label>
+        />
       )}
       {field('import-note', t('admin.import.changeNote'), changeNote, setChangeNote, {
         required: true,
