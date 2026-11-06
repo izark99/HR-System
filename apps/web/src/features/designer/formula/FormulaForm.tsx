@@ -16,6 +16,7 @@ import {
   TextField,
 } from '../forms/fields';
 import type { FormulaMarker } from './FormulaEditor';
+import { withoutNode } from '../issue-text';
 import {
   checkShown,
   generatedSql,
@@ -206,11 +207,12 @@ function FormulaColumn({
     return {
       start: prob.start,
       end: prob.end,
-      message: te(prob.messageKey, {
-        ...prob.params,
-        node: nodeLabel,
-        formulaColumn: formulaTitle,
-      }),
+      // Shown in the node's own panel: without the node name (MEMORY 2026-11-06 18:27).
+      message: withoutNode(
+        t,
+        te(prob.messageKey, { ...prob.params, node: nodeLabel, formulaColumn: formulaTitle }),
+        nodeLabel,
+      ),
     };
   };
   const typeOptions = [

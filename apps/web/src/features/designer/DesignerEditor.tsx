@@ -69,6 +69,7 @@ import { upstreamSignature } from './preview-signature';
 import { DRAG_MIME, Palette } from './Palette';
 import { StatusBar } from './StatusBar';
 import { useDesignCheck } from './use-design-check';
+import { issueText } from './issue-text';
 import {
   ArrowLeftIcon,
   CopyIcon,
@@ -234,7 +235,18 @@ export function DesignerEditor(props: DesignerEditorProps) {
   // id of the node the list was opened for: selecting another node closes it.
   const [connectFor, setConnectFor] = useState<string | null>(null);
   const [announce, setAnnounce] = useState('');
-  const { result: check, checking, failed } = useDesignCheck(definition);
+  const { result: rawCheck, checking, failed } = useDesignCheck(definition);
+  // Invalid config fields named by their form labels, not internal keys (MEMORY 2026-11-06 18:27).
+  const check = useMemo(() => {
+    if (!rawCheck) return rawCheck;
+    const types = new Map(doc.nodes.map((n) => [n.id, n.type]));
+    return {
+      ...rawCheck,
+      issues: rawCheck.issues.map((i) =>
+        i.nodeId ? { ...i, text: issueText(t, i, types.get(i.nodeId), false) } : i,
+      ),
+    };
+  }, [rawCheck, doc.nodes, t]);
 
   const apply = useCallback(
     (next: DesignerDoc | ((d: DesignerDoc) => DesignerDoc), key?: string) => {

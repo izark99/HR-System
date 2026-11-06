@@ -194,7 +194,18 @@
     "errorsLabel": "Lỗi:",
     "warningsLabel": "Cảnh báo:",
     "noteLabel": "Lưu ý:",
-    "nodeLabel": "Tên node"
+    "nodeLabel": "Tên node",
+    "issuePath": {
+      "invalid": "{{field}}: giá trị chưa hợp lệ hoặc còn thiếu.",
+      "invalidNode": "Node \"{{node}}\": {{field}} chưa hợp lệ hoặc còn thiếu.",
+      "row": "dòng {{n}}",
+      "other": "mục cấu hình",
+      "thisNode": "node này",
+      "thisNodeStart": "Node này",
+      "keys": {
+        "labels": "Nhãn của các bảng"
+      }
+    }
   },
   "form": {
     "columnsUnknown": "Chưa xác định được cột: hãy nối node phía trước và sửa lỗi của nó.",

@@ -9,7 +9,8 @@ import { typeKey } from './catalog';
 import { NodeConfigForm } from './forms/NodeForms';
 import { ParamsForm } from './forms/ParamsForm';
 import { SlotForm } from './forms/SlotForm';
-import { FieldErrors, TextField } from './forms/fields';
+import { FieldErrors, IssueTextContext, TextField } from './forms/fields';
+import { issueText } from './issue-text';
 import { uniqueId, type DesignerDoc, type DNode, type DNote, type JsonObject } from './model';
 
 export interface ConfigPanelProps {
@@ -194,56 +195,60 @@ export function ConfigPanel(p: ConfigPanelProps) {
     const general = nodeIssues.filter((i) => i.path === undefined);
     const warnings = general.filter((i) => i.severity === 'warning');
     const errors = general.filter((i) => i.severity === 'error');
+    // In its own panel: no node name, field labels instead of config keys (MEMORY 2026-11-06 18:27).
+    const wording = (i: DesignIssue) => issueText(t, i, node.type, true);
     return (
-      <section aria-labelledby="node-panel-title" className="flex flex-col gap-stack-dense">
-        <div className="flex flex-col gap-0.5">
-          <h2 id="node-panel-title" className="m-0 text-title-sm">
-            {node.label || node.id}
-          </h2>
-          <p data-note className="m-0 text-caption text-muted">
-            {t(`types.node.${typeKey(node.type)}`)} · <span className="font-mono">{node.id}</span>
-          </p>
-        </div>
-        <TextField
-          label={t('panel.nodeLabel')}
-          value={node.label ?? ''}
-          onChange={(v) => p.onNodeLabel(node.id, v)}
-          placeholder={node.id}
-          disabled={p.readOnly}
-        />
-        {errors.length > 0 && (
-          <Callout tone="coral" label={t('panel.errorsLabel')} role="status">
-            <FieldErrors id={`${node.id}-errors`} issues={errors} />
-          </Callout>
-        )}
-        {warnings.length > 0 && (
-          <Callout tone="amber" label={t('panel.warningsLabel')} role="status">
-            <span className="flex flex-col gap-1">
-              {warnings.map((w, i) => (
-                <span key={i}>{w.text}</span>
-              ))}
-            </span>
-          </Callout>
-        )}
-        {p.check?.nodes[node.id]?.status === 'blocked' && (
-          <Callout tone="neutral" label={t('panel.noteLabel')}>
-            {t('canvas.blocked')}
-          </Callout>
-        )}
-        <NodeConfigForm
-          node={node}
-          info={p.check?.nodes[node.id]}
-          issues={nodeIssues.filter((i) => i.path !== undefined)}
-          doc={p.doc}
-          readOnly={p.readOnly}
-          onConfig={(config, mk, renames) => p.onNodeConfig(node.id, config, mk, renames)}
-        />
-        {!p.readOnly && (
-          <Button variant="danger" size="sm" className="self-start" onClick={p.onDeleteSelection}>
-            {t('panel.deleteNode')}
-          </Button>
-        )}
-      </section>
+      <IssueTextContext.Provider value={wording}>
+        <section aria-labelledby="node-panel-title" className="flex flex-col gap-stack-dense">
+          <div className="flex flex-col gap-0.5">
+            <h2 id="node-panel-title" className="m-0 text-title-sm">
+              {node.label || node.id}
+            </h2>
+            <p data-note className="m-0 text-caption text-muted">
+              {t(`types.node.${typeKey(node.type)}`)} · <span className="font-mono">{node.id}</span>
+            </p>
+          </div>
+          <TextField
+            label={t('panel.nodeLabel')}
+            value={node.label ?? ''}
+            onChange={(v) => p.onNodeLabel(node.id, v)}
+            placeholder={node.id}
+            disabled={p.readOnly}
+          />
+          {errors.length > 0 && (
+            <Callout tone="coral" label={t('panel.errorsLabel')} role="status">
+              <FieldErrors id={`${node.id}-errors`} issues={errors} />
+            </Callout>
+          )}
+          {warnings.length > 0 && (
+            <Callout tone="amber" label={t('panel.warningsLabel')} role="status">
+              <span className="flex flex-col gap-1">
+                {warnings.map((w, i) => (
+                  <span key={i}>{wording(w)}</span>
+                ))}
+              </span>
+            </Callout>
+          )}
+          {p.check?.nodes[node.id]?.status === 'blocked' && (
+            <Callout tone="neutral" label={t('panel.noteLabel')}>
+              {t('canvas.blocked')}
+            </Callout>
+          )}
+          <NodeConfigForm
+            node={node}
+            info={p.check?.nodes[node.id]}
+            issues={nodeIssues.filter((i) => i.path !== undefined)}
+            doc={p.doc}
+            readOnly={p.readOnly}
+            onConfig={(config, mk, renames) => p.onNodeConfig(node.id, config, mk, renames)}
+          />
+          {!p.readOnly && (
+            <Button variant="danger" size="sm" className="self-start" onClick={p.onDeleteSelection}>
+              {t('panel.deleteNode')}
+            </Button>
+          )}
+        </section>
+      </IssueTextContext.Provider>
     );
   }
 

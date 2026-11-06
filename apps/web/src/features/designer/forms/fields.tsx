@@ -1,4 +1,4 @@
-import { useId, useState, type ReactNode } from 'react';
+import { createContext, useContext, useId, useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Checkbox, FormField } from '../../../components/FormField';
 import { Select, type SelectOption } from '../../../components/Select';
@@ -26,12 +26,20 @@ export function issuesAt(issues: readonly DesignIssue[], path: string): DesignIs
   );
 }
 
+/**
+ * Wording of an issue inside a config panel: the node panel provides one without the node name and
+ * with field labels (`issue-text.ts`); elsewhere the issue's own text.
+ */
+export const IssueTextContext = createContext<(issue: DesignIssue) => string>((i) => i.text);
+export const useIssueText = () => useContext(IssueTextContext);
+
 export function FieldErrors({ id, issues }: { id: string; issues: readonly DesignIssue[] }) {
+  const text = useIssueText();
   if (issues.length === 0) return null;
   return (
     <ul id={id} className="m-0 flex list-none flex-col gap-0.5 p-0 text-caption text-coral-text">
       {issues.map((i, k) => (
-        <li key={k}>{i.text}</li>
+        <li key={k}>{text(i)}</li>
       ))}
     </ul>
   );
@@ -60,6 +68,7 @@ export function Field({
   className?: string;
 }) {
   const generated = useId();
+  const text = useIssueText();
   return (
     <FormField
       dense
@@ -71,7 +80,7 @@ export function Field({
         issues.length > 0
           ? issues.map((i, k) => (
               <span key={k} className="block">
-                {i.text}
+                {text(i)}
               </span>
             ))
           : undefined
@@ -399,6 +408,7 @@ export function ColumnListField({
   disabled?: boolean;
 }) {
   const { t } = useTranslation('designer');
+  const text = useIssueText();
   const addId = useId();
   const options = columnOptions(columns);
   const title = (key: string) => options.find((o) => o.value === key)?.label ?? key;
@@ -439,7 +449,7 @@ export function ColumnListField({
                     </span>
                     {errs.map((e, k) => (
                       <span key={k} className="text-caption text-coral-text">
-                        {e.text}
+                        {text(e)}
                       </span>
                     ))}
                   </li>
