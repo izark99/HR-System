@@ -12,6 +12,7 @@ import {
 import { menuKeyTarget } from './menu-logic';
 import { Tooltip } from './Tooltip';
 import { buttonClass, cx, floatClass } from './ui';
+import { ChevronDownIcon } from './icons';
 
 export interface MenuItem {
   /** Stable key (also used in tests through `data-menu-item`). */
@@ -28,24 +29,6 @@ export interface MenuItem {
 
 const MARGIN = 8;
 const GAP = 4;
-
-function ChevronDownIcon() {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      width="16"
-      height="16"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth={2}
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden
-    >
-      <path d="M6 9l6 6 6-6" />
-    </svg>
-  );
-}
 
 /**
  * Menu button following the WAI-ARIA APG "menu button" pattern (spec §25.3 "Thao tác trên dòng
@@ -180,7 +163,7 @@ export function MenuButton({
           {icon ?? (
             <>
               {label}
-              <ChevronDownIcon />
+              <ChevronDownIcon size={16} />
             </>
           )}
         </button>

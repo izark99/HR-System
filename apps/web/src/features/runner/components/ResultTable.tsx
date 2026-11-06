@@ -12,6 +12,7 @@ import type {
 } from '../../../engine/protocol';
 import { formatCell, isNumericType } from '../../../lib/format';
 import { useRunStore } from '../run-context';
+import { SortArrowIcon } from '../../../components/icons';
 
 /** Rows fetched from the worker per request; only visible pages are ever requested. */
 const PAGE_SIZE = 200;
@@ -214,17 +215,7 @@ export function ResultTable({
                           className="flex min-h-target items-center gap-1 rounded-input px-1 font-semibold text-muted hover:bg-card"
                         >
                           {header}
-                          {dir && (
-                            <svg
-                              viewBox="0 0 12 12"
-                              width="10"
-                              height="10"
-                              aria-hidden
-                              fill="currentColor"
-                            >
-                              <path d={dir === 'asc' ? 'M6 2l4 6H2z' : 'M6 10L2 4h8z'} />
-                            </svg>
-                          )}
+                          {dir && <SortArrowIcon dir={dir} />}
                         </button>
                       ) : (
                         header

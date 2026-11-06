@@ -8,7 +8,6 @@ import {
   Callout,
   cardClass,
   cx,
-  DownloadIcon,
   inputClass,
   labelClass,
   PageHeader,
@@ -29,6 +28,7 @@ import { ResultTable, type SortState } from './components/ResultTable';
 import { useRunState, useRunStore } from './run-context';
 import { BackToFlows, useOpenFlow } from './RunPage';
 import type { SessionState } from './run-store';
+import { DownloadIcon } from '../../components/icons';
 
 const ROLE_TONE: Record<SheetRole, Tone> = {
   summary: 'teal',

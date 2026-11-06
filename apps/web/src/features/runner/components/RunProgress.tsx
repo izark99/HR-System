@@ -1,7 +1,8 @@
 import { useTranslation } from 'react-i18next';
-import { Button, Callout, Card, CheckIcon, cx } from '../../../components/ui';
+import { Button, Callout, Card, cx } from '../../../components/ui';
 import { formatSeconds } from '../../../lib/format';
 import type { RunState } from '../run-store';
+import { CheckIcon } from '../../../components/icons';
 
 /** Progress per node while a run is going, plus the failure / cancel message afterwards. */
 export function RunProgress({

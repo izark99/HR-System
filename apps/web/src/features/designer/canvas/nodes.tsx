@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { cx } from '../../../components/ui';
 import type { DesignIssue, DesignNodeStatus } from '../../../engine/design';
 import type { NodeGroup, PortSpec } from '../catalog';
+import { AlertCircleIcon } from '../../../components/icons';
 
 /**
  * Canvas cards (spec §25.3 "Node trên canvas"): radius 16px, colour bar by group, ring when
@@ -38,22 +39,7 @@ export interface FlowCardData extends Record<string, unknown> {
 export type FlowCardNode = Node<FlowCardData, 'flow'>;
 
 function ErrorBadge({ tone }: { tone: 'coral' | 'amber' }) {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      width="18"
-      height="18"
-      aria-hidden
-      className={tone === 'coral' ? 'text-coral-text' : 'text-amber-text'}
-      fill="none"
-      stroke="currentColor"
-      strokeWidth={2}
-      strokeLinecap="round"
-    >
-      <circle cx="12" cy="12" r="9" />
-      <path d="M12 7v6M12 16.5v.5" />
-    </svg>
-  );
+  return <AlertCircleIcon className={tone === 'coral' ? 'text-coral-text' : 'text-amber-text'} />;
 }
 
 function FlowCardImpl({ data, selected }: NodeProps<FlowCardNode>) {

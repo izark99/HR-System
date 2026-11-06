@@ -9,9 +9,7 @@ import {
   type YearMonth,
 } from './calendar';
 import {
-  CalendarIcon,
   cellClass,
-  ChevronIcon,
   footerButtonClass,
   navButtonClass,
   PickerPanel,
@@ -19,6 +17,7 @@ import {
   usePickerPopover,
 } from './picker-shared';
 import { cx } from './ui';
+import { CalendarIcon, ChevronIcon } from './icons';
 
 export interface PickerProps {
   /** id of the trigger button (target of the field's `<label htmlFor>`). */

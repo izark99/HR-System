@@ -3,7 +3,6 @@ import { useCallback, useEffect, useId, useMemo, useState, type FormEvent } from
 import { useTranslation } from 'react-i18next';
 import { DatePicker } from '../../../components/DatePicker';
 import type { MenuItem } from '../../../components/Menu';
-import { EyeIcon, PencilIcon } from '../../../components/icons';
 import {
   RowActions,
   rowActionsCellClass,
@@ -13,7 +12,6 @@ import {
 } from '../../../components/RowActions';
 import { Select } from '../../../components/Select';
 import {
-  ArrowLeftIcon,
   Button,
   Callout,
   Card,
@@ -53,6 +51,7 @@ import {
   type Gap,
 } from './version-ranges';
 import { HeaderSkeleton, LoadingRegion, TableCardSkeleton } from '../../../components/Skeleton';
+import { ArrowLeftIcon, EyeIcon, PencilIcon } from '../../../components/icons';
 
 /** Status chips (spec §14.4): Draft = blue, Published = teal, Retired = neutral grey. */
 export const VERSION_STATUS_TONE: Record<VersionStatus, Tone> = {

@@ -1,16 +1,9 @@
 import type { InputSlot } from '@hrflow/flow-schema';
 import { useId, useRef, useState, type DragEvent } from 'react';
 import { useTranslation } from 'react-i18next';
-import {
-  Card,
-  CheckIcon,
-  CloseIcon,
-  cx,
-  toneText,
-  toneTint,
-  type Tone,
-} from '../../../components/ui';
+import { Card, cx, toneText, toneTint, type Tone } from '../../../components/ui';
 import type { SlotState } from '../run-store';
+import { CheckIcon, CloseIcon } from '../../../components/icons';
 
 interface FileStatus {
   tone: Tone;

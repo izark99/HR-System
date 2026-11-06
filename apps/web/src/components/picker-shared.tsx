@@ -12,34 +12,9 @@ import { cx, floatClass } from './ui';
 /**
  * Building blocks shared by MonthPicker and DatePicker: the input-like trigger button, the
  * non-modal popover dialog (closes on Escape / outside click / focus leaving it, returns focus to
- * the trigger on Escape; inside a modal <dialog> Escape closes only the picker) and the icons. No dependency.
+ * the trigger on Escape; inside a modal <dialog> Escape closes only the picker). Icons come from
+ * `components/icons`. No dependency.
  */
-
-const iconProps = {
-  fill: 'none',
-  stroke: 'currentColor',
-  strokeWidth: 2,
-  strokeLinecap: 'round' as const,
-  strokeLinejoin: 'round' as const,
-  'aria-hidden': true,
-};
-
-export function CalendarIcon({ className }: { className?: string }) {
-  return (
-    <svg viewBox="0 0 24 24" width="18" height="18" className={className} {...iconProps}>
-      <rect x="3.5" y="5" width="17" height="15.5" rx="2.5" />
-      <path d="M3.5 10h17M8 3v4M16 3v4" />
-    </svg>
-  );
-}
-
-export function ChevronIcon({ dir, className }: { dir: 'left' | 'right'; className?: string }) {
-  return (
-    <svg viewBox="0 0 24 24" width="18" height="18" className={className} {...iconProps}>
-      <path d={dir === 'left' ? 'M15 5l-7 7 7 7' : 'M9 5l7 7-7 7'} />
-    </svg>
-  );
-}
 
 /** Trigger looks like an input (§25.3): 44px, 6px radius, #475569 border, `body`. */
 export const triggerClass =

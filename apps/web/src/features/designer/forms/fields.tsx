@@ -1,9 +1,10 @@
 import { useId, useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Select, type SelectOption } from '../../../components/Select';
-import { CloseIcon, cx } from '../../../components/ui';
+import { cx } from '../../../components/ui';
 import type { ColumnInfo } from '../../../engine/protocol';
 import type { DesignIssue } from '../../../engine/design';
+import { CloseIcon } from '../../../components/icons';
 
 /**
  * Form building blocks of the Designer panels: v2 frame (6px radius, #475569 border, teal focus

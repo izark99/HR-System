@@ -1,5 +1,6 @@
 import { useTranslation } from 'react-i18next';
-import { CheckIcon, cx } from '../../../components/ui';
+import { cx } from '../../../components/ui';
+import { CheckIcon } from '../../../components/icons';
 
 const STEPS = ['params', 'upload', 'run', 'result'] as const;
 

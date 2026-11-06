@@ -27,7 +27,7 @@ import { useUnsavedChanges } from '../auth/idle/activity';
 import { FlowCard, NoteCard, type FlowCardNode, type NoteCardNode } from './canvas/nodes';
 import { groupOf, inputPortsOf, outputPortsOf, typeKey } from './catalog';
 import { ConfigPanel, type PanelTab } from './ConfigPanel';
-import { CopyIcon, IconButton, PasteIcon, RedoIcon, TrashIcon, UndoIcon } from './ToolbarIcons';
+import { IconButton } from './ToolbarIcons';
 import {
   addNode,
   addNote,
@@ -57,6 +57,7 @@ import { upstreamSignature } from './preview-signature';
 import { DRAG_MIME, Palette } from './Palette';
 import { StatusBar } from './StatusBar';
 import { useDesignCheck } from './use-design-check';
+import { CopyIcon, PasteIcon, RedoIcon, TrashIcon, UndoIcon } from '../../components/icons';
 
 /** In-app clipboard (configuration only, never data; spec §15.3). Shared between Designers. */
 let clipboard: Clip | null = null;

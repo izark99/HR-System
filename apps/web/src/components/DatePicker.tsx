@@ -11,9 +11,7 @@ import {
 } from './calendar';
 import type { PickerProps } from './MonthPicker';
 import {
-  CalendarIcon,
   cellClass,
-  ChevronIcon,
   footerButtonClass,
   navButtonClass,
   PickerPanel,
@@ -21,6 +19,7 @@ import {
   usePickerPopover,
 } from './picker-shared';
 import { cx } from './ui';
+import { CalendarIcon, ChevronIcon } from './icons';
 
 const WEEKDAYS = [1, 2, 3, 4, 5, 6, 7] as const;
 const pad = (n: number) => String(n).padStart(2, '0');

@@ -18,7 +18,8 @@ import {
   type SelectGroup,
   type SelectOption,
 } from './select-logic';
-import { CheckIcon, cx, floatClass, inputClass } from './ui';
+import { cx, floatClass, inputClass } from './ui';
+import { CheckIcon, ChevronDownIcon } from './icons';
 
 export type { SelectGroup, SelectOption } from './select-logic';
 
@@ -44,25 +45,6 @@ export interface SelectProps {
 
 const TYPEAHEAD_RESET_MS = 700;
 const PANEL_MIN_WIDTH = 240;
-
-function ChevronDown({ className }: { className?: string }) {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      width="18"
-      height="18"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth={2}
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden
-      className={className}
-    >
-      <path d="M6 9l6 6 6-6" />
-    </svg>
-  );
-}
 
 /**
  * Dropdown (spec §25.3 "Select (dropdown)", MEMORY 2026-10-27 17:50): replaces the browser's
@@ -273,7 +255,7 @@ export function Select({
         <span className={cx('truncate', !selected && 'text-muted')}>
           {selected ? selected.label : (placeholder ?? t('select.placeholder'))}
         </span>
-        <ChevronDown
+        <ChevronDownIcon
           className={cx('shrink-0 text-muted transition-transform', open && 'rotate-180')}
         />
       </button>

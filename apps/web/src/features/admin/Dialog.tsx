@@ -1,6 +1,7 @@
 import { useEffect, useId, useRef, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
-import { CloseIcon, cx, floatClass } from '../../components/ui';
+import { cx, floatClass } from '../../components/ui';
+import { CloseIcon } from '../../components/icons';
 
 /**
  * Modal dialog on the native <dialog> element: focus trap, Escape and inert background come

@@ -6,7 +6,6 @@ import { useTranslation } from 'react-i18next';
 import { Link, useNavigate } from '@tanstack/react-router';
 import { DatePicker } from '../../components/DatePicker';
 import { Tooltip } from '../../components/Tooltip';
-import { LayersIcon } from '../../components/icons';
 import {
   RowActions,
   rowActionsCellClass,
@@ -42,6 +41,7 @@ import {
 import { Dialog } from './Dialog';
 import { useAdminApi, useAdminQuery } from './use-admin';
 import { LoadingRegion, TableCardSkeleton } from '../../components/Skeleton';
+import { LayersIcon } from '../../components/icons';
 
 const MAX_JSON_BYTES = 1024 * 1024;
 const CODE_PATTERN = /^[a-z0-9][a-z0-9-]{1,62}[a-z0-9]$/;

@@ -2,15 +2,7 @@ import { Link, useNavigate, useParams } from '@tanstack/react-router';
 import { useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { TFunction } from 'i18next';
-import {
-  ArrowLeftIcon,
-  Button,
-  buttonClass,
-  Callout,
-  cx,
-  LockIcon,
-  PageHeader,
-} from '../../components/ui';
+import { Button, buttonClass, Callout, cx, PageHeader } from '../../components/ui';
 import { formatMonth } from '../../lib/format';
 import { asOfParam } from './as-of';
 import { ParamsCard } from './components/ParamsCard';
@@ -22,6 +14,7 @@ import { readiness, type Readiness } from './readiness';
 import { useRunState, useRunStore } from './run-context';
 import type { SessionState } from './run-store';
 import { LoadingRegion, PageSkeleton } from '../../components/Skeleton';
+import { ArrowLeftIcon, LockIcon } from '../../components/icons';
 
 function currentStep(state: SessionState, ready: Readiness): number {
   const s = state.run.status;

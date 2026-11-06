@@ -1,7 +1,6 @@
 import { useId, useRef, useState, type FormEvent, type KeyboardEvent, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Select } from '../../components/Select';
-import { PencilIcon } from '../../components/icons';
 import {
   RowActions,
   rowActionsCellClass,
@@ -39,6 +38,7 @@ import {
 import { Dialog } from './Dialog';
 import { useAdminApi, useAdminQuery } from './use-admin';
 import { LoadingRegion, TableCardSkeleton } from '../../components/Skeleton';
+import { PencilIcon } from '../../components/icons';
 
 interface PageData {
   users: AdminUser[];

@@ -1,11 +1,12 @@
 import { useRouterState } from '@tanstack/react-router';
 import { useState, type FormEvent } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Button, Callout, LockIcon, type Tone } from '../../components/ui';
+import { Button, Callout, type Tone } from '../../components/ui';
 import { useAuth, useAuthService } from './auth-context';
 import { AuthLayout, authCardClass, authInputClass } from './AuthLayout';
 import type { AuthErrorKey } from './credentials';
 import type { SignedOutReason } from './guard';
+import { LockIcon } from '../../components/icons';
 
 function isReason(v: string | null): v is SignedOutReason {
   return v !== null && Object.hasOwn(REASON_TONE, v);
