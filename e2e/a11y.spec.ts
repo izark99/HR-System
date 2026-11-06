@@ -178,9 +178,26 @@ test('keyboard only: params, file pickers, run, tabs, filter and download', asyn
   await expect(page.locator(`[id="${controls}"]`)).toHaveAttribute('role', 'tabpanel');
   await page.keyboard.press('ArrowRight'); // back to "Lệch"
   await expect(page.getByRole('tab', { selected: true })).toHaveText('Lệch (9)');
-  await tabTo(page, /^Chi nhánh/);
+  // Tab to the filter Select itself: the "Chi nhánh" column sort button has the same name, and
+  // under parallel load the first Tab after switching tabs could start past the filter.
+  for (let i = 0; i < 80; i++) {
+    await page.keyboard.press('Tab');
+    if (await page.evaluate(() => document.activeElement?.id === 'filter-chi_nhanh')) break;
+  }
+  await expect(page.getByRole('combobox', { name: 'Chi nhánh' })).toBeFocused();
   await page.keyboard.press('ArrowDown'); // opens the list on "Tất cả"
+  // Next key only once the list is open (under parallel load the second ArrowDown could reach
+  // the closed trigger and reopen the list on "Tất cả").
+  const branches = page.getByRole('listbox', { name: 'Chi nhánh' });
+  await expect(branches).toBeVisible();
+  const activeOption = () =>
+    page.evaluate(() => {
+      const id = document.activeElement?.getAttribute('aria-activedescendant');
+      return id ? (document.getElementById(id)?.textContent?.trim() ?? '') : '';
+    });
+  await expect.poll(activeOption).toBe('Tất cả');
   await page.keyboard.press('ArrowDown'); // first branch
+  await expect.poll(activeOption).toContain('CN01');
   await page.keyboard.press('Enter');
   await expect(page.getByLabel('Chi nhánh')).toHaveAttribute('data-value', 'CN01');
   await expect(page.getByRole('region', { name: 'Lệch' }).getByRole('row')).toHaveCount(1 + 3);
