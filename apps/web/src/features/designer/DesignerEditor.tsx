@@ -12,8 +12,17 @@ import {
   type NodeChange,
 } from '@xyflow/react';
 import { Link, useBlocker } from '@tanstack/react-router';
-import { useCallback, useEffect, useMemo, useRef, useState, type DragEvent } from 'react';
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  useSyncExternalStore,
+  type DragEvent,
+} from 'react';
 import { useTranslation } from 'react-i18next';
+import { Tooltip } from '../../components/Tooltip';
 import { Button, Callout, Chip, cx, OneLine } from '../../components/ui';
 import type { DesignIssue } from '../../engine/design';
 import type { RunWarningInfo } from '../../engine/protocol';
@@ -61,6 +70,7 @@ import { DRAG_MIME, Palette } from './Palette';
 import { StatusBar } from './StatusBar';
 import { useDesignCheck } from './use-design-check';
 import {
+  ArrowLeftIcon,
   CopyIcon,
   DownloadIcon,
   LayoutIcon,
@@ -102,6 +112,15 @@ function isEditable(target: EventTarget | null): boolean {
   const type = (target as HTMLInputElement).type;
   return !['checkbox', 'radio', 'button', 'submit'].includes(type);
 }
+
+/** Below Tailwind `xl` (1280px) the top bar is compact: the back link shows its arrow only. */
+const COMPACT_HEADER = '(max-width: 1279.98px)';
+function subscribeCompact(onChange: () => void): () => void {
+  const mq = window.matchMedia(COMPACT_HEADER);
+  mq.addEventListener('change', onChange);
+  return () => mq.removeEventListener('change', onChange);
+}
+const compactNow = () => window.matchMedia(COMPACT_HEADER).matches;
 
 function inMonaco(target: EventTarget | null): boolean {
   return target instanceof Element && target.closest('.monaco-editor') !== null;
@@ -688,16 +707,23 @@ export function DesignerEditor(props: DesignerEditorProps) {
       : null;
   const hasSelection = selection.nodes.length + selection.notes.length + selection.edges.length > 0;
 
+  const compactHeader = useSyncExternalStore(subscribeCompact, compactNow, () => false);
+
   return (
     <div className="hr-designer flex h-[calc(100dvh-64px)] min-h-150 flex-col">
       <header className="flex flex-wrap items-center gap-3 border-b border-line bg-card px-4 py-2 lg:flex-nowrap">
-        <Link
-          to="/admin/flows/$flowCode/versions"
-          params={{ flowCode: props.flowCode }}
-          className="min-h-target shrink-0 content-center rounded-card px-3 text-caption font-semibold whitespace-nowrap text-teal-strong no-underline hover:bg-page"
-        >
-          {t('toolbar.back')}
-        </Link>
+        {/* Below 1280px only the arrow shows (name unchanged, text in a tooltip), leaving the
+            flow name room to stay readable (AC-UI-78 rule 2). */}
+        <Tooltip text={compactHeader ? t('toolbar.back') : null} className="inline-flex shrink-0">
+          <Link
+            to="/admin/flows/$flowCode/versions"
+            params={{ flowCode: props.flowCode }}
+            className="inline-flex min-h-target min-w-target items-center justify-center gap-2 rounded-card px-3 text-caption font-semibold whitespace-nowrap text-teal-strong no-underline hover:bg-page max-xl:px-0"
+          >
+            <ArrowLeftIcon className="xl:hidden" />
+            <span className="max-xl:sr-only">{t('toolbar.back')}</span>
+          </Link>
+        </Tooltip>
         {/* Takes the room left by the toolbar, never below a readable 192px: the name is cut with
             "…" + tooltip, version and status chip always fit (AC-UI-78 rule 2). */}
         <h1 className="m-0 flex min-w-48 flex-1 items-center gap-2 text-title-sm text-ink">
