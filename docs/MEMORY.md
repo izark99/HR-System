@@ -235,6 +235,8 @@
 
 ## Kỹ thuật & tổ chức
 
+2026-11-06 13:05 - Theo phản hồi của Harold về panel phải Designer: control trong form dense cao 44px như bản thường (bỏ 42px, chỉ chữ 14px); tab trong `Tabs dense` chia đều bề ngang, cùng kích thước; `layout-lint` thêm luật: mọi control tương tác trong một panel/card/dialog cùng chiều cao (trừ nút nhỏ 36px có đánh dấu) và tab trong một nhóm cùng kích thước.
+
 2026-11-06 12:32 - Lỗi bố cục UI (control cùng hàng lệch chiều cao/không thẳng hàng, tràn khỏi khung, chồng lấn, khoảng cách không đều, tab lệch kích thước, nhãn xuống dòng làm lệch hàng) không được lặp lại: thêm bộ kiểm hình học tự động trong E2E (`e2e/layout-lint`) chạy trên mọi màn, mọi trạng thái chụp ảnh và mọi form/tab cấu hình node của Designer, ở 1280×800, 1024×768 và 390×844 (màn User); vi phạm → E2E fail. Mọi vòng đổi UI phải pass bộ này; session chính tự soi ảnh từng màn trước khi gửi Harold duyệt.
 
 2026-11-06 08:24 - Vòng B bộ khung UI/UX: bảng "Lần chạy gần đây" (Danh sách flow) chuyển sang `DataTable`; báo cáo kiểm tra file (`ValidationReport`) giữ bảng dense riêng (14px, như bảng Kết quả), thêm vào danh sách cho phép.
