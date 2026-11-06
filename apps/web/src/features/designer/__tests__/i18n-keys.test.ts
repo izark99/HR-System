@@ -51,6 +51,11 @@ describe('designer i18n', () => {
   });
 
   it('no symbols that the font may lack (spec §25.4)', () => {
-    expect(JSON.stringify(designer)).not.toMatch(/[≤≥→×−]/);
+    // The one exception: `connectMenu.done` is screen-reader only text (`sr-only`, never drawn),
+    // "Đã nối A → B" (MEMORY 2026-11-06 12:32).
+    const { connectMenu, ...rest } = designer;
+    const { done, ...menuRest } = connectMenu;
+    expect(done).toBe('Đã nối {{from}} → {{to}}.');
+    expect(JSON.stringify({ ...rest, connectMenu: menuRest })).not.toMatch(/[≤≥→×−]/);
   });
 });

@@ -44,21 +44,19 @@ async function clickNode(page: Page, id: string) {
   await expect(canvasNode(page, id)).toHaveClass(/selected/);
 }
 
-test.describe('KNOWN BUG: Ctrl+E is taken from text fields (DesignerEditor onKey checks it before onCanvas)', () => {
-  test.fail(
-    'Ctrl+E typed in a text field of the config panel does not open the list nor move focus',
-    async ({ page, supabase }) => {
-      withDraft(supabase);
-      await open(page);
-      await clickNode(page, 'in_luong');
-      const name = page.getByLabel('Tên node', { exact: true });
-      await name.click();
-      await expect(name).toBeFocused();
-      await page.keyboard.press('Control+E');
-      await expect(menu(page)).toHaveCount(0);
-      await expect(name).toBeFocused();
-    },
-  );
+test('Ctrl+E typed in a text field of the config panel does not open the list nor move focus', async ({
+  page,
+  supabase,
+}) => {
+  withDraft(supabase);
+  await open(page);
+  await clickNode(page, 'in_luong');
+  const name = page.getByLabel('Tên node', { exact: true });
+  await name.click();
+  await expect(name).toBeFocused();
+  await page.keyboard.press('Control+E');
+  await expect(menu(page)).toHaveCount(0);
+  await expect(name).toBeFocused();
 });
 
 test('selecting another node while the list is open closes it; reopening starts over', async ({
@@ -123,27 +121,25 @@ test('fuzz: connect, undo while the list is open, connect again — one edge, no
   expect(ids.length).toBeLessThanOrEqual(2);
 });
 
-test.describe('KNOWN BUG: Ctrl+E is taken from the Monaco editor', () => {
-  test.fail(
-    'Ctrl+E typed in the Monaco SQL editor does not open the list nor move focus',
-    async ({ page, supabase }) => {
-      withDraft(supabase);
-      const row = supabase.versions.find((v) => v.id === DRAFT_ID)!;
-      const def = row.definition as { nodes: unknown[]; edges: unknown[] };
-      def.nodes.push({
-        id: 'sql_1',
-        type: 'code.sql',
-        label: 'Câu SQL',
-        config: { inputs: [{ port: 'luong' }], sql: 'SELECT ma_nv\nFROM luong' },
-      });
-      await open(page);
-      await clickNode(page, 'sql_1');
-      const editor = page.getByTestId('sql-editor');
-      await editor.locator('.view-lines').click();
-      await expect(editor.locator('.monaco-editor.focused')).toBeVisible();
-      await page.keyboard.press('Control+E');
-      await expect(menu(page)).toHaveCount(0);
-      await expect(editor.locator('.monaco-editor.focused')).toBeVisible();
-    },
-  );
+test('Ctrl+E typed in the Monaco SQL editor does not open the list nor move focus', async ({
+  page,
+  supabase,
+}) => {
+  withDraft(supabase);
+  const row = supabase.versions.find((v) => v.id === DRAFT_ID)!;
+  const def = row.definition as { nodes: unknown[]; edges: unknown[] };
+  def.nodes.push({
+    id: 'sql_1',
+    type: 'code.sql',
+    label: 'Câu SQL',
+    config: { inputs: [{ port: 'luong' }], sql: 'SELECT ma_nv\nFROM luong' },
+  });
+  await open(page);
+  await clickNode(page, 'sql_1');
+  const editor = page.getByTestId('sql-editor');
+  await editor.locator('.view-lines').click();
+  await expect(editor.locator('.monaco-editor.focused')).toBeVisible();
+  await page.keyboard.press('Control+E');
+  await expect(menu(page)).toHaveCount(0);
+  await expect(editor.locator('.monaco-editor.focused')).toBeVisible();
 });

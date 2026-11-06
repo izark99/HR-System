@@ -94,6 +94,10 @@ function isEditable(target: EventTarget | null): boolean {
   return !['checkbox', 'radio', 'button', 'submit'].includes(type);
 }
 
+function inMonaco(target: EventTarget | null): boolean {
+  return target instanceof Element && target.closest('.monaco-editor') !== null;
+}
+
 /** Document nodes + what React Flow measured / is dragging. */
 function mergeRf(built: Node[], state: readonly Node[]): Node[] {
   const old = new Map(state.map((n) => [n.id, n]));
@@ -597,6 +601,8 @@ export function DesignerEditor(props: DesignerEditorProps) {
       if (modalOpen || document.querySelector('dialog[open]')) return;
       if (mod && k === 'e' && !e.shiftKey && !e.altKey) {
         // "Nối tới…" (AC-UI-76); the button stays disabled without exactly one node selected.
+        // Never taken from a text field or the Monaco editor (the key is theirs there).
+        if (isEditable(e.target) || inMonaco(e.target)) return;
         e.preventDefault();
         keys.current.openConnect();
         return;

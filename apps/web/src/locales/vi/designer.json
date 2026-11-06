@@ -785,6 +785,6 @@
     "targets": "Cổng vào nối được",
     "empty": "Không còn cổng vào nào nối được (đã nối hoặc sẽ tạo vòng lặp).",
     "noResults": "Không có kết quả",
-    "done": "Đã nối {{from}} tới {{to}}."
+    "done": "Đã nối {{from}} → {{to}}."
   }
 }

@@ -166,7 +166,7 @@ test('the acceptance flow wired with the keyboard only saves the same JSON as wi
     await expect(connectButton(page)).toBeFocused();
     await expect(edge(page, e)).toHaveCount(1);
     await expect(page.locator('[data-connect-announce]')).toHaveText(
-      `Đã nối ${LABEL[e.from]}.${e.fromPort} tới ${LABEL[e.to]}.${e.toPort}.`,
+      `Đã nối ${LABEL[e.from]}.${e.fromPort} → ${LABEL[e.to]}.${e.toPort}.`,
     );
     await expect(dirtyBadge(page)).toBeVisible();
 
