@@ -29,7 +29,16 @@ const pad = (n: number) => String(n).padStart(2, '0');
  * with month/year header and a Monday-first 7-column grid (arrows, Home/End = week,
  * PageUp/PageDown = month, Shift+PageUp/PageDown = year, Enter/Space select, Escape closes).
  */
-export function DatePicker({ id, labelId, value, onChange, required, disabled }: PickerProps) {
+export function DatePicker({
+  id,
+  labelId,
+  value,
+  onChange,
+  required,
+  disabled,
+  describedBy,
+  invalid,
+}: PickerProps) {
   const { t } = useTranslation();
   const triggerRef = useRef<HTMLButtonElement>(null);
   const gridRef = useRef<HTMLDivElement>(null);
@@ -83,6 +92,8 @@ export function DatePicker({ id, labelId, value, onChange, required, disabled }:
         aria-haspopup="dialog"
         aria-expanded={open}
         aria-labelledby={`${labelId} ${valueId}`}
+        aria-describedby={describedBy}
+        aria-invalid={invalid || undefined}
         onClick={toggle}
         className={triggerClass}
       >

@@ -188,6 +188,9 @@
   --text-title-sm--line-height: 25px;
   --text-title-sm--letter-spacing: -0.5px;
   --text-title-sm--font-weight: 700;
+  --text-title-xs: 18px; /* empty-state title (§25.5 "EmptyState": 18px / 600) */
+  --text-title-xs--line-height: 26px;
+  --text-title-xs--font-weight: 600;
   --text-body-lg: 18px; /* DEPRECATED (see display-xl above) */
   --text-body-lg--line-height: 27px;
   --text-body: 16px;
@@ -360,6 +363,28 @@
       animation: none;
       display: none;
     }
+  }
+}
+
+/*
+ * Toast (spec §25.5 "ToastProvider", AC-UI-67): slides in from below; no movement when the user
+ * asks for reduced motion.
+ */
+@layer components {
+  .hr-toast {
+    animation: hr-toast-in 180ms ease-out;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .hr-toast {
+      animation: none;
+    }
+  }
+}
+
+@keyframes hr-toast-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
   }
 }
 

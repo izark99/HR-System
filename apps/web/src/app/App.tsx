@@ -1,5 +1,6 @@
 import { RouterProvider } from '@tanstack/react-router';
 import { useTranslation } from 'react-i18next';
+import { ToastProvider } from '../components/Toast';
 import { AuthProvider } from '../features/auth/auth-context';
 import { RunStoreProvider } from '../features/runner/run-context';
 import { router } from './router';
@@ -23,7 +24,10 @@ export function App() {
   return (
     <AuthProvider service={services.auth}>
       <RunStoreProvider source={services.source} logger={services.logger}>
-        <RouterProvider router={router} context={{ auth: services.auth }} />
+        {/* One toast region for the whole app (spec §25.5). */}
+        <ToastProvider>
+          <RouterProvider router={router} context={{ auth: services.auth }} />
+        </ToastProvider>
       </RunStoreProvider>
     </AuthProvider>
   );

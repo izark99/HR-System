@@ -1,0 +1,140 @@
+import { useRef, type KeyboardEvent, type ReactNode } from 'react';
+import { useTranslation } from 'react-i18next';
+import { tabIds, tabKeyTarget } from './tabs-logic';
+import { cx, toneText, toneTint, type Tone } from './ui';
+
+export { tabIds } from './tabs-logic';
+
+export interface TabItem {
+  id: string;
+  label: string;
+  /** Shown after the label: "Lệch (9)". */
+  count?: number;
+  /** Colour of the selected pill (default teal). */
+  tone?: Tone;
+  /** Small extra element after the label (e.g. a "Chỉ xem" badge). */
+  badge?: ReactNode;
+  disabled?: boolean;
+}
+
+/**
+ * Pill tabs (spec §25.3 "Tab", §25.5, AC-UI-64) following the WAI-ARIA APG tabs pattern with
+ * automatic activation: one Tab stop (the selected tab), ArrowLeft / ArrowRight move and select
+ * (wrapping), Home / End jump to the ends. Each tab names its panel (`TabPanel` with the same
+ * `id`). `panels="selected"` (default) when only the selected panel is in the DOM, `"all"` when
+ * every panel stays mounted (hidden): `aria-controls` then points at each of them.
+ *
+ * `dense`: 14px variant for the Designer side panels (MEMORY 2026-10-30 13:29).
+ */
+export function Tabs({
+  id,
+  label,
+  items,
+  selected,
+  onChange,
+  dense = false,
+  panels = 'selected',
+  className,
+}: {
+  /** Base of the tab / panel ids; unique on the page. */
+  id: string;
+  /** Accessible name of the tab list. */
+  label: string;
+  items: TabItem[];
+  selected: string;
+  onChange: (id: string) => void;
+  dense?: boolean;
+  panels?: 'selected' | 'all';
+  className?: string;
+}) {
+  const { t } = useTranslation();
+  const refs = useRef<Record<string, HTMLButtonElement | null>>({});
+  const current = Math.max(
+    0,
+    items.findIndex((i) => i.id === selected),
+  );
+  const onKeyDown = (e: KeyboardEvent<HTMLDivElement>) => {
+    const target = tabKeyTarget(e.key, current, items.length, (i) => !!items[i]!.disabled);
+    if (target === null) return;
+    e.preventDefault();
+    const next = items[target]!;
+    if (next.id !== selected) onChange(next.id);
+    refs.current[next.id]?.focus();
+  };
+  return (
+    <div
+      role="tablist"
+      aria-label={label}
+      aria-orientation="horizontal"
+      onKeyDown={onKeyDown}
+      data-tabs={dense ? 'dense' : 'default'}
+      className={cx('flex flex-wrap', dense ? 'gap-1' : 'gap-2', className)}
+    >
+      {items.map((item, i) => {
+        const active = i === current;
+        const ids = tabIds(id, item.id);
+        const tone = item.tone ?? 'teal';
+        return (
+          <button
+            key={item.id}
+            ref={(el) => {
+              refs.current[item.id] = el;
+            }}
+            id={ids.tab}
+            type="button"
+            role="tab"
+            aria-selected={active}
+            aria-controls={active || panels === 'all' ? ids.panel : undefined}
+            tabIndex={active ? 0 : -1}
+            disabled={item.disabled}
+            onClick={() => onChange(item.id)}
+            className={cx(
+              'inline-flex min-h-target items-center gap-2 rounded-pill px-4 font-semibold whitespace-nowrap',
+              dense ? 'text-dense' : 'text-body',
+              active
+                ? cx(toneTint[tone], toneText[tone])
+                : 'text-muted hover:bg-neutral disabled:cursor-not-allowed disabled:hover:bg-transparent',
+            )}
+          >
+            {item.count === undefined
+              ? item.label
+              : t('common.tabCount', { label: item.label, count: item.count })}
+            {item.badge}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+/** Panel of one tab: named by its tab, focusable (APG) unless it starts with a control. */
+export function TabPanel({
+  tabsId,
+  item,
+  hidden = false,
+  focusable = true,
+  className,
+  children,
+}: {
+  tabsId: string;
+  item: string;
+  /** For `panels="all"`: keep the panel mounted but hidden. */
+  hidden?: boolean;
+  focusable?: boolean;
+  className?: string;
+  children: ReactNode;
+}) {
+  const ids = tabIds(tabsId, item);
+  return (
+    <div
+      role="tabpanel"
+      id={ids.panel}
+      aria-labelledby={ids.tab}
+      tabIndex={focusable ? 0 : undefined}
+      hidden={hidden}
+      className={className}
+    >
+      {children}
+    </div>
+  );
+}

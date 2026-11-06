@@ -61,7 +61,8 @@ export default defineConfig(({ mode }) => ({
   test: {
     // Engine is pure TS and must run in Node (no DOM).
     environment: 'node',
-    include: ['src/**/*.test.ts'],
+    // Component tests (.tsx) render to static markup in Node: no DOM library needed.
+    include: ['src/**/*.test.ts', 'src/**/__tests__/**/*.test.tsx'],
     testTimeout: 30_000,
   },
 }));

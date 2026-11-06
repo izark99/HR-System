@@ -37,6 +37,8 @@ export interface SelectProps {
   disabled?: boolean;
   required?: boolean;
   invalid?: boolean;
+  /** ids of the field's hint / error (`FormField`). */
+  describedBy?: string;
   /** Extra classes for the trigger (width). */
   className?: string;
   /** Designer side form: 14px text, 42px trigger (MEMORY 2026-10-30 13:29). */
@@ -69,6 +71,7 @@ export function Select({
   disabled,
   required,
   invalid,
+  describedBy,
   className,
   dense = false,
 }: SelectProps) {
@@ -235,6 +238,7 @@ export function Select({
         aria-activedescendant={open && !searchable && active >= 0 ? optionId(active) : undefined}
         aria-required={required || undefined}
         aria-invalid={invalid || undefined}
+        aria-describedby={describedBy}
         data-value={value}
         disabled={disabled}
         onClick={() => (open ? close(false) : openList())}

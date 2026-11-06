@@ -29,6 +29,9 @@ export interface PickerProps {
   onChange: (value: string) => void;
   required?: boolean;
   disabled?: boolean;
+  /** ids of the field's hint / error (`FormField`). */
+  describedBy?: string;
+  invalid?: boolean;
 }
 
 const MONTHS = Array.from({ length: 12 }, (_, i) => i + 1);
@@ -38,7 +41,16 @@ const MONTHS = Array.from({ length: 12 }, (_, i) => i + 1);
  * a year header and a 4×3 month grid (roving tabindex; arrows, Home/End, PageUp/PageDown = year,
  * Enter/Space select, Escape closes and returns focus).
  */
-export function MonthPicker({ id, labelId, value, onChange, required, disabled }: PickerProps) {
+export function MonthPicker({
+  id,
+  labelId,
+  value,
+  onChange,
+  required,
+  disabled,
+  describedBy,
+  invalid,
+}: PickerProps) {
   const { t } = useTranslation();
   const triggerRef = useRef<HTMLButtonElement>(null);
   const gridRef = useRef<HTMLDivElement>(null);
@@ -96,6 +108,8 @@ export function MonthPicker({ id, labelId, value, onChange, required, disabled }
         aria-haspopup="dialog"
         aria-expanded={open}
         aria-labelledby={`${labelId} ${valueId}`}
+        aria-describedby={describedBy}
+        aria-invalid={invalid || undefined}
         onClick={toggle}
         className={triggerClass}
       >

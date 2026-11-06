@@ -18,7 +18,17 @@
     "no": "Không",
     "required": "bắt buộc",
     "moreActions": "Thao tác khác",
-    "moreActionsFor": "Thao tác khác cho {{name}}"
+    "moreActionsFor": "Thao tác khác cho {{name}}",
+    "close": "Đóng",
+    "cancel": "Hủy",
+    "retry": "Thử lại",
+    "errorLabel": "Lỗi:",
+    "soon": "Sắp có",
+    "tabCount": "{{label}} ({{count, number}})",
+    "stepDone": "Đã xong",
+    "notifications": "Thông báo",
+    "closeNotification": "Đóng thông báo",
+    "emptyTitle": "Chưa có dữ liệu"
   },
   "flows": {
     "eyebrow": "Flow của bạn",

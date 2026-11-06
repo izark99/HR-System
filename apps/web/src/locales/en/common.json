@@ -6,7 +6,17 @@
   },
   "common": {
     "moreActions": "More actions",
-    "moreActionsFor": "More actions for {{name}}"
+    "moreActionsFor": "More actions for {{name}}",
+    "close": "Close",
+    "cancel": "Cancel",
+    "retry": "Try again",
+    "errorLabel": "Error:",
+    "soon": "Coming soon",
+    "tabCount": "{{label}} ({{count, number}})",
+    "stepDone": "Done",
+    "notifications": "Notifications",
+    "closeNotification": "Close notification",
+    "emptyTitle": "No data yet"
   },
   "admin": {
     "flows": {

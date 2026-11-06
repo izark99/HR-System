@@ -41,24 +41,30 @@ export function RowActions({
 }
 
 /**
- * Cell classes for the action column: no wrap, vertically centred, and pinned to the right edge
- * of the scrolling table region (sticky), so the actions stay in view when a narrow card makes
+ * Pinned to the right edge of the scrolling table region (sticky), with its own left separator: a
+ * collapsed-table border stays behind when the cell sticks.
+ */
+export const pinnedRightClass =
+  'sticky right-0 before:absolute before:inset-y-0 before:left-0 before:w-px before:bg-line';
+
+/**
+ * Cell classes for the action column without vertical padding (DataTable sets the row height):
+ * no wrap, vertically centred, pinned right, so the actions stay in view when a narrow card makes
  * the other columns scroll. The cell takes the row background (`bg-inherit`): rows must set one
  * (`bg-card` or a tint).
  */
-export const rowActionsCellClass =
-  'sticky right-0 border-b border-line bg-inherit px-4 py-2 align-middle whitespace-nowrap ' +
-  // Separator drawn by the cell itself: a collapsed-table border stays behind when the cell sticks.
-  'before:absolute before:inset-y-0 before:left-0 before:w-px before:bg-line ' +
+export const rowActionsCellBaseClass = cx(
+  pinnedRightClass,
+  'border-b border-line bg-inherit px-4 align-middle whitespace-nowrap',
   // A sticky cell is a stacking context: lift the one holding an open menu above the next rows.
-  'has-[[role=menu]]:z-20 has-[[data-tooltip]]:z-20';
+  'has-[[role=menu]]:z-20 has-[[data-tooltip]]:z-20',
+);
+
+/** Action cell of the hand-written admin tables (8px vertical padding). */
+export const rowActionsCellClass = cx(rowActionsCellBaseClass, 'py-2');
 
 /** Header cell of the action column (right-aligned and pinned like the cells). */
-export const rowActionsHeadClass = cx(
-  thClass.replace('text-left', 'text-right'),
-  'sticky right-0',
-  'before:absolute before:inset-y-0 before:left-0 before:w-px before:bg-line',
-);
+export const rowActionsHeadClass = cx(thClass.replace('text-left', 'text-right'), pinnedRightClass);
 
 /** Icon-only row action (AC-UI-58): 36x36 text-style button, ink icon, hover neutral. */
 export const rowIconClass = cx(buttonClass('text', 'sm'), 'w-control-sm px-0! no-underline');
