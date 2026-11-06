@@ -235,6 +235,8 @@
 
 ## Kỹ thuật & tổ chức
 
+2026-11-06 18:27 - Bổ sung chống lỗi bố cục (theo yêu cầu "không để lỗi UI tương tự"): mọi nhóm tab (thường và dense) và lưới field không để 1 phần tử nằm lẻ ở hàng cuối; control xếp dọc trong một cột form/toolbar cùng bề rộng; nhãn checkbox cũng 1 dòng (nhãn dài rút gọn, phần chi tiết đưa vào (i)); nút (i) sát chữ nhãn (≤ 8px); chỉ 1 popover (i) mở mỗi lúc, Esc chỉ đóng popover không đóng dialog; tên file dài cắt "…" kèm tooltip; minimap Designer ẩn khi canvas thấp; node mới thêm không đè node có sẵn; lỗi cấu hình node không lộ key nội bộ và không lặp tên node.
+
 2026-11-06 14:48 - Thanh cuộn của panel giữ như cũ (chỉ hiện khi cần, không chừa chỗ sẵn). Lỗi ở tab Input slot là 2 thanh cuộn lồng nhau (khung ngoài cuộn thêm vì nội dung panel vượt chiều cao khung): sửa tận gốc để mỗi vùng chỉ có 1 thanh cuộn theo mỗi chiều; `layout-lint` chặn vùng cuộn lồng nhau cùng chiều.
 
 ~~2026-11-06 14:45 - Mọi vùng cuộn trong app luôn chừa chỗ thanh cuộn (`scrollbar-gutter: stable`) để đổi tab/nội dung dài ngắn không làm lệch bố cục.~~ → thay bởi 2026-11-06 14:48
