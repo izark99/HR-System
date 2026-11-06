@@ -1,6 +1,6 @@
 # HANDOFF — Trạng thái dự án để mở session mới
 
-> Cập nhật: 2026-11-04 (sau vòng nâng tooling; bộ khung UI/UX đã chốt, chờ vòng A). Đọc file này sau `CLAUDE.md` và `docs/MEMORY.md`.
+> Cập nhật: 2026-11-06 (sau vòng A của bộ khung UI/UX; chờ vòng B). Đọc file này sau `CLAUDE.md` và `docs/MEMORY.md`.
 
 ## 1. Đã xong
 
@@ -13,7 +13,8 @@
 | Bước 3: DuckDB-WASM + 8 node transform/SQL + `output.preview`, Flow Designer (React Flow, Monaco, xem trước từng node), màn Version & hiệu lực + diff, tự đăng xuất 8 giờ, Select tự làm, engine dạng cột + đọc/ghi .xlsx theo luồng (1 triệu × 30 cột chạy được) — lên `main` 2026-10-30 (`2ffa225`) | ✅ |
 | Bước 4 – R1: node `transform.formula` (41 hàm Excel → SQL DuckDB, decimal chính xác, onError theo cột, Designer Monaco + bảng hàm + Xem SQL, cảnh báo dòng lỗi trên canvas, chạy chuỗi cột dài theo nhóm bảng tạm), golden test 182 case khớp Excel thật (`fixtures/formula-golden/golden-excel.xlsx`), chống zip bomb .xlsx (2 GiB/entry, tỉ lệ 1:200 cho entry > 16 MiB, ngân sách theo file; sync dùng `fflate`, async dùng `DecompressionStream`) — lên `main` 2026-10-31 | ✅ |
 | Giao diện bản 2 (spec §25, §28; AC-UI-01..59): token theo `docs/design-reference.md` (chỉ cấu trúc, giữ màu teal/coral/amber/blue + Be Vietnam Pro), nút 5 loại, card phẳng, thang chữ lớn (ngoại lệ 14px canvas/Monaco/bảng xem trước), màn Kết quả có tiêu đề kết luận + KPI + card tối, tiêu đề tên dài 1 dòng cắt "…", bảng Admin đủ chữ + kéo ngang + cột Thao tác biểu tượng cố định phải + menu "⋯" (APG), dialog tạo tài khoản, skeleton khi tải, thanh cuộn đồng bộ, toolbar/palette Designer gọn, `@axe-core/playwright` quét a11y, ngân sách CSS — lên `main` 2026-11-03 | ✅ |
-| Test: Vitest (~1090 test), Playwright E2E (~365 test, Supabase được mock; test nặng opt-in `HEAVY_E2E=1`, `HRFLOW_PERF=1`) | ✅ |
+| Bộ khung UI/UX – vòng A (spec §29.1–29.2, AC-UI-60..69): token mới (`page-title`, `page-title-showcase`, `kpi`, `title-xs`, khoảng cách `page-x`/`page-top`/`section`/`stack`/`inline`), nút/input 44px chữ 16px; `components/layout/` (`PageShell`, `SideNavLayout`, `PageHeader`, `Section`, `Toolbar`, `StickyActionBar`), `Tabs`, `DataTable`, `FormField`, `EmptyState`, toast, `Dialog`/`ConfirmDialog` (chuyển vào `components/`), `KpiCard`/`ConclusionCard`, `Stepper`, icon gom ở `components/icons/`; luật khung trong `design-tokens.test.ts` kèm `PENDING_ROUND_B`; trang showcase chỉ trong bản build E2E (`apps/web/e2e-showcase.html`, `e2e/ui-frame*.spec.ts`) — lên `main` 2026-11-06 | ✅ |
+| Test: Vitest (~1150 test), Playwright E2E (~380 test, Supabase được mock; test nặng opt-in `HEAVY_E2E=1`, `HRFLOW_PERF=1`) | ✅ |
 
 ## 2. Môi trường
 
@@ -46,6 +47,8 @@
 9. Giao diện bản 2 (MINOR): skeleton lúc chờ tải chunk route (Designer) chỉ kiểm bằng đọc code; menu "⋯" không tự đóng khi nút của nó bị cuộn khuất (vẫn nổi ở mép); bản `en` chỉ có các key mới, phần còn lại dựa vào ngôn ngữ dự phòng; ảnh chụp E2E không hiện thanh cuộn (Chromium headless ẩn).
 10. Vòng nâng tooling (MINOR, verifier 2026-11-04): `check-bundle-size.mjs` chỉ cộng chunk khai báo `<link rel="modulepreload">` (hiện trùng đúng đồ thị import tĩnh của entry; nếu Vite đổi cách phát preload có thể lọt chunk). Cảnh báo direct `eval` của Rolldown trong `duckdb-browser-blocking.mjs` là có sẵn từ thư viện; CSP không có `'unsafe-eval'`, đường chạy thật không dùng tới.
 
+11. Bộ khung UI/UX vòng A (MINOR/ghi chú cho vòng B, verifier 2026-11-06): `ConfirmDialog` khi `busy` chỉ khóa nút, Esc vẫn đóng và gọi `onCancel` — vòng B chặn sự kiện `cancel` lúc busy và thêm E2E (Khóa/Retire); DatePicker qua `FormField` chưa kiểm trên DOM thật; token cũ `display-xl`/`display-lg`/`body-lg` còn (deprecated), xóa ở vòng B; `PENDING_ROUND_B` (61 vi phạm / 49 file) phải rỗng khi xong vòng B; tiêu đề màn cũ vẫn 48px tới vòng B.
+
 ## 5. Bước tiếp theo
 
 - ~~Đổi giao diện theo design language bản 2~~ → xong 2026-11-03.
@@ -68,6 +71,8 @@
 | Giao diện bản 2: Version giống Flows, sửa focus menu, bảng đủ chữ + kéo ngang, thanh cuộn | session chính (không subagent) | — |
 | Nâng tooling (session song song, trùng việc với `fbc21f0`) + so ảnh pixel (hoãn, lưu patch) | session chính | — |
 | Nâng tooling kiểm gói hẹp (session song song) | verifier | ≈ 75k |
+| Bộ khung UI/UX vòng A | developer | ≈ 239k |
+| Bộ khung UI/UX vòng A kiểm (PASS, 2 MINOR session chính tự sửa) | verifier | ≈ 148k |
 
 Ghi chú vòng giao diện: tốn nhiều vòng do yêu cầu UI chốt dần qua ảnh chụp; lần sau với thay đổi UI nên dựng **trang mẫu tương tác (Artifact) để Harold duyệt trước khi code** (đã làm ở cuối vòng, hiệu quả). Trang ảnh duyệt: https://claude.ai/artifact/F8Zq7ULN6RSgJFfEgFcmhB; mẫu bảng: https://claude.ai/artifact/AwjFJEPc5YndnE6Z1tf56B.
 
