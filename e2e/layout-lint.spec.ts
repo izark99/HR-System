@@ -327,7 +327,7 @@ test.describe('layout-lint self-test', () => {
   test.use({ signedInAs: null, viewport: DESKTOP });
 
   test('each rule catches its deliberate fault, a clean page has none', async ({ page }) => {
-    const css = `body{margin:0;font:16px sans-serif} .card{border:1px solid #ccc;width:300px;padding:8px;margin:8px}
+    const css = `body{margin:0;font:16px/20px sans-serif} .card{border:1px solid #ccc;width:300px;padding:8px;margin:8px}
       .row{display:flex;gap:8px;align-items:flex-start} input,button{box-sizing:border-box;height:44px;margin:0}
       .grid{display:grid;grid-template-columns:1fr 1fr;gap:8px} .f{display:flex;flex-direction:column;gap:4px;min-width:0}`;
     await page.setContent(`<style>${css}</style>
@@ -343,10 +343,12 @@ test.describe('layout-lint self-test', () => {
       <div class="card"><div class="grid"><div class="f"><label for="x1">Nhãn rất dài rất dài rất dài rất dài xuống dòng</label><input id="x1"></div><div class="f"><label for="x2">Ngắn</label><input id="x2"></div></div></div>
       <div class="card"><div style="width:80px;overflow:hidden;white-space:nowrap">r7 chữ dài bị cắt mất không có dấu</div></div>
       <div class="card" data-card><input aria-label="r8 ô"><p>r8</p><button style="height:40px">r8 nút 40</button><button data-size="sm" style="height:36px">r8 nhỏ</button></div>
-      <div class="card"><div role="tablist" data-tabs="dense" class="row"><button role="tab" style="height:44px">r9 a</button><button role="tab" style="height:44px">r9 tab dài hơn</button></div></div>`);
+      <div class="card"><div role="tablist" data-tabs="dense" class="row"><button role="tab" style="height:44px">r9 a</button><button role="tab" style="height:44px">r9 tab dài hơn</button></div></div>
+      <div class="card" data-card><label><input type="checkbox" style="width:20px;height:20px">r10 a</label><label><input type="checkbox" style="width:14px;height:14px">r10 b</label></div>
+      <div class="card"><div style="display:flex;flex-direction:column;gap:16px"><div data-form-field>r11 a</div><div data-form-field style="margin-bottom:8px">r11 b</div><div data-checkbox>r11 c</div><h3 style="margin:0">r11 nhóm</h3><div data-form-field>r11 d</div></div></div>`);
     const found = await layoutLint(page);
     const rules = new Set(found.map((v) => v.rule));
-    expect([...rules].sort()).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9]);
+    expect([...rules].sort((a, b) => a - b)).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]);
     const r8 = found.filter((v) => v.rule === 8).map((v) => v.detail);
     expect(r8.some((d) => d.includes('"r8 nút 40"') && d.includes('h=40px'))).toBe(true);
     // The marked small button (36px) is not a fault.
@@ -354,6 +356,12 @@ test.describe('layout-lint self-test', () => {
     const r9 = found.find((v) => v.rule === 9)!.detail;
     expect(r9).toMatch(/widths .* \/ /);
     expect(r9).toMatch(/tabs span/);
+    expect(found.find((v) => v.rule === 10)!.detail).toMatch(/20pxx20px .*14pxx14px/);
+    const r11 = found.filter((v) => v.rule === 11);
+    expect(r11).toHaveLength(1);
+    // 16px then 24px (a margin added under r11 b); the heading before r11 d is not a field block.
+    expect(r11[0]!.detail).toMatch(/16px between .*24px between/);
+    expect(r11[0]!.detail).not.toContain('r11 nhóm');
     expect(found.find((v) => v.rule === 1)!.detail).toContain('differ by 8px');
     expect(found.find((v) => v.rule === 4)!.detail).toMatch(/uneven gaps 4px \/ 12px/);
     expect(found.find((v) => v.rule === 6)!.target).toContain('Nhãn rất dài');

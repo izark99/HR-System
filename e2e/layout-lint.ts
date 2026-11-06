@@ -14,7 +14,14 @@
  *      button) not 44px high; only a small button marked as such (`data-size="sm"` from
  *      `<Button size="sm">`, or the `*-control-sm` height token) may be 36px;
  *  (9) tabs of a dense tablist (`Tabs dense`) not sharing its width equally (one size, filling
- *      the row) or with their text off centre.
+ *      the row) or with their text off centre;
+ *  (10) checkboxes / radios of one panel / card / dialog of different sizes (> 0.5px);
+ *  (11) uneven vertical gaps (> 1px) between adjacent field blocks of one form column, or a gap
+ *      off the token (`stack` 16px; Designer dense forms `stack-dense` 12px). Measured from the
+ *      bottom of what a block shows (text lines and controls, hint / error included; empty padding
+ *      of its box does not count) to the top of the next; only field blocks
+ *      (`FormField`, `FieldGrid`, checkbox, `[data-field-block]`) count, so group headings, nested
+ *      cards and an add button at the end of a list are left out.
  * Only rows of one flex/grid parent are compared; hidden / zero-size elements are skipped.
  * Exceptions live in `LAYOUT_ALLOW` only, each with its reason.
  */
@@ -23,7 +30,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { expect, type Page } from './fixtures';
 
-export type LayoutRule = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9;
+export type LayoutRule = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11;
 
 export interface LayoutViolation {
   rule: LayoutRule;
@@ -514,6 +521,91 @@ function measure(
         target: name(list),
         detail: `dense tabs do not share the row equally: ${problems.join('; ')}`,
         ids: tabs.map(idOf),
+      });
+  }
+
+  // ---- one checkbox size per panel (rule 10) ---------------------------------------------------
+  const boxes = new Map<Element, Element[]>();
+  for (const el of all) {
+    if (!el.matches('input[type="checkbox"], input[type="radio"]') || allowed(el, 10)) continue;
+    const panel = el.closest(PANEL);
+    if (!panel) continue;
+    boxes.set(panel, [...(boxes.get(panel) ?? []), el]);
+  }
+  for (const [panel, list] of boxes) {
+    if (list.length < 2) continue;
+    const rs = list.map((b) => b.getBoundingClientRect());
+    const spread = (a: number[]) => Math.max(...a) - Math.min(...a);
+    if (spread(rs.map((r) => r.width)) > 0.5 || spread(rs.map((r) => r.height)) > 0.5)
+      out.push({
+        rule: 10,
+        target: name(panel),
+        detail: `checkbox / radio sizes differ: ${list.map((b, i) => `${name(b.closest('label') ?? b)} ${px(rs[i]!.width)}x${px(rs[i]!.height)}`).join(' | ')}`,
+        ids: list.map(idOf),
+      });
+  }
+
+  // ---- vertical rhythm of a form column (rule 11) -------------------------------------------
+  const BLOCK =
+    '[data-form-field], [data-field-grid], [data-field-block], [data-check-field], [data-checkbox]';
+  for (const parent of all) {
+    if (parent instanceof SVGElement || allowed(parent, 11)) continue;
+    const cs = getComputedStyle(parent);
+    if (!/flex/.test(cs.display) || !cs.flexDirection.startsWith('column')) continue;
+    const items = kids(parent).filter((c) => visible(c) && inFlow(c));
+    const want = parent.closest('.hr-designer') ? 12 : 16;
+    // What the eye sees of a block: its text lines and controls, not empty padding of its box.
+    const ink = (block: Element): { top: number; bottom: number } => {
+      let top = Infinity;
+      let bottom = -Infinity;
+      const add = (r: DOMRect) => {
+        if (r.width <= 0 || r.height <= 0) return;
+        top = Math.min(top, r.top);
+        bottom = Math.max(bottom, r.bottom);
+      };
+      const walker = document.createTreeWalker(block, NodeFilter.SHOW_TEXT);
+      for (let n = walker.nextNode(); n; n = walker.nextNode()) {
+        if (
+          !n.textContent!.trim() ||
+          !visible(n.parentElement!) ||
+          n.parentElement!.closest('.sr-only')
+        )
+          continue;
+        const range = document.createRange();
+        range.selectNodeContents(n);
+        // Each line as its line box (line-height), not the glyph box.
+        const lh = parseFloat(getComputedStyle(n.parentElement!).lineHeight);
+        for (const r of Array.from(range.getClientRects())) {
+          const mid = (r.top + r.bottom) / 2;
+          const half = Number.isFinite(lh) ? lh / 2 : r.height / 2;
+          add(new DOMRect(r.left, mid - half, r.width, half * 2));
+        }
+      }
+      block.querySelectorAll('input, textarea, select, button, [role="combobox"]').forEach((c) => {
+        if (visible(c)) add(c.getBoundingClientRect());
+      });
+      if (top === Infinity) {
+        const r = block.getBoundingClientRect();
+        return { top: r.top, bottom: r.bottom };
+      }
+      return { top, bottom };
+    };
+    const gaps: { g: number; a: Element; b: Element }[] = [];
+    for (let i = 1; i < items.length; i++) {
+      const a = items[i - 1]!;
+      const b = items[i]!;
+      if (!a.matches(BLOCK) || !b.matches(BLOCK) || allowed(a, 11) || allowed(b, 11)) continue;
+      gaps.push({ g: ink(b).top - ink(a).bottom, a, b });
+    }
+    if (gaps.length === 0) continue;
+    const gs = gaps.map(({ g }) => g);
+    const off = gaps.filter(({ g }) => Math.abs(g - want) > TOL);
+    if (off.length > 0 || Math.max(...gs) - Math.min(...gs) > TOL)
+      out.push({
+        rule: 11,
+        target: name(parent),
+        detail: `field blocks not ${want}px apart: ${gaps.map(({ g, a, b }) => `${px(g)} between ${name(a)} and ${name(b)}`).join('; ')}`,
+        ids: [idOf(parent)],
       });
   }
 
