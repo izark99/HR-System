@@ -50,6 +50,18 @@ export default defineConfig(({ mode }) => ({
   define: mode === 'e2e' ? E2E_ENV : {},
   build: {
     sourcemap: false,
+    // E2E build only: a page showing the shared UI components (e2e/ui-frame.spec.ts). The
+    // production build has no such page, so no extra route ever reaches users.
+    ...(mode === 'e2e'
+      ? {
+          rolldownOptions: {
+            input: {
+              index: resolve(import.meta.dirname, 'index.html'),
+              showcase: resolve(import.meta.dirname, 'e2e-showcase.html'),
+            },
+          },
+        }
+      : {}),
   },
   worker: {
     format: 'es',
