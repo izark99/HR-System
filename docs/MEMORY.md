@@ -139,7 +139,9 @@
 
 ## Flow & xử lý
 
-2026-11-04 15:34 - Designer: nối cạnh bằng bàn phím làm trong vòng B của bộ khung UI/UX (cách thao tác cụ thể chốt trước khi giao vòng B, spec Q27); bước 3 chỉ nối bằng chuột.
+2026-11-06 08:24 - Designer: nối cạnh bằng bàn phím (vòng B của bộ khung UI/UX): chọn node → nút "Nối tới…" trên thanh công cụ (kèm phím tắt) mở danh sách cổng đích có tìm kiếm (Select tự làm), Enter để nối; thông báo cho trình đọc màn hình "Đã nối A → B"; nối bằng chuột giữ nguyên.
+
+~~2026-11-04 15:34 - Designer: nối cạnh bằng bàn phím làm trong vòng B của bộ khung UI/UX (cách thao tác cụ thể chốt trước khi giao vòng B, spec Q27); bước 3 chỉ nối bằng chuột.~~ → thay bởi 2026-11-06 08:24
 
 2026-10-30 17:32 - `transform.formula`: cảnh báo dòng lỗi (`rowErrors`) hiện cả trên node ở canvas (không chỉ panel xem trước); sửa trong vòng sửa R1.
 
@@ -230,6 +232,12 @@
 2026-10-26 08:20 - Flow có Draft/Published, lưu lịch sử version, rollback; quản lý hiệu lực theo effective date (effective_from / effective_to), không chồng lấn.
 
 ## Kỹ thuật & tổ chức
+
+2026-11-06 08:24 - Vòng B bộ khung UI/UX: bảng "Lần chạy gần đây" (Danh sách flow) chuyển sang `DataTable`; báo cáo kiểm tra file (`ValidationReport`) giữ bảng dense riêng (14px, như bảng Kết quả), thêm vào danh sách cho phép.
+
+2026-11-06 08:24 - Vòng B bộ khung UI/UX: component dùng chung cũ (`Select`, `Tooltip`, `Menu`, picker, `Skeleton`, `ui.tsx`) sửa khoảng cách về thang 4·8·12·16·24·32·48·64 (lệch ≤ 2px), kiểm bằng ảnh duyệt tay.
+
+2026-11-06 08:24 - Khoảng cách trong Designer (canvas, node, form cạnh canvas, panel dữ liệu) là ngoại lệ dense, ghi vào danh sách cho phép kèm lý do; phần khung Designer (thanh công cụ, dialog, toast) theo thang chuẩn.
 
 2026-11-04 15:16 - Ngân sách bundle: JS tải ban đầu (gzip) = entry chunk + các chunk tải ngay cùng entry (`<link rel="modulepreload">`, vì Vite 8/Rolldown tách phần dùng chung ra khỏi entry) không tăng quá 10% so với cuối bước 2 (commit `d079f6b`, baseline giữ nguyên); build tự kiểm tra và báo lỗi khi vượt.
 
