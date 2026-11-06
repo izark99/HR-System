@@ -124,6 +124,208 @@ function scan(): Hit[] {
   return hits;
 }
 
+// ---- frame rules (spec §25.5, §29.1 AC-UI-61) ---------------------------------------------
+
+/** Spacing utilities (gap / padding / margin / space-between) and the values of the §25.5 scale. */
+const SPACING_UTIL = '-?(?:p[xytrblse]?|m[xytrblse]?|gap(?:-[xy])?|space-[xy])';
+const SPACING_OK = new Set([
+  '0',
+  '0.5',
+  '1',
+  '2',
+  '3',
+  '4',
+  '6',
+  '8',
+  '12',
+  '16',
+  'px',
+  'auto',
+  // Semantic tokens of index.css (§25.5).
+  'page-x',
+  'page-top',
+  'section',
+  'stack',
+  'inline',
+]);
+const SPACING_CLASS = new RegExp(
+  `(?<![\\w-])(?:[a-z0-9-]+:)*(${SPACING_UTIL})-(\\[[^\\]]*\\]|[a-z0-9.-]+)!?(?![\\w.-])`,
+  'g',
+);
+
+/** Off-scale spacing classes in one string literal (`px-3.5`, `gap-5`, `p-[10px]`). */
+function offScaleSpacing(literal: string): string[] {
+  const out: string[] = [];
+  for (const m of literal.matchAll(SPACING_CLASS)) {
+    const value = m[2]!;
+    if (!SPACING_OK.has(value)) out.push(m[0]);
+  }
+  return out;
+}
+
+interface FrameRule {
+  id: string;
+  why: string;
+  /** File (relative to src/) allowed to do it: the component that owns the pattern. */
+  owner: (file: string) => boolean;
+  /** Matches in the comment-free source of one file. */
+  find: (source: string) => string[];
+}
+
+const DEPRECATED_TEXT =
+  /(?<![\w-])(?:[a-z0-9-]+:)*text-(?:display-xl|display-lg|body-lg)(?![\w-])/g;
+
+const FRAME_RULES: FrameRule[] = [
+  {
+    id: 'spacing',
+    why: 'gap/padding/margin outside the 4·8·12·16·24·32·48·64 scale',
+    owner: () => false,
+    find: (src) => (src.match(STRING) ?? []).flatMap(offScaleSpacing),
+  },
+  {
+    id: 'main',
+    why: '<main> outside PageShell',
+    owner: (f) => f === 'components/layout/PageShell.tsx',
+    find: (src) => src.match(/<main\b/g) ?? [],
+  },
+  {
+    id: 'tablist',
+    why: 'role="tablist" outside Tabs',
+    owner: (f) => f === 'components/Tabs.tsx',
+    find: (src) => src.match(/role=["'{`]+tablist/g) ?? [],
+  },
+  {
+    id: 'table',
+    why: '<table> outside DataTable (dense/diff tables are allowed below)',
+    owner: (f) => f === 'components/DataTable.tsx',
+    find: (src) => src.match(/<table\b/g) ?? [],
+  },
+  {
+    id: 'deprecated-text',
+    why: 'text-display-xl / text-display-lg / text-body-lg (AC-UI-60, deleted in round B)',
+    owner: () => false,
+    find: (src) => (src.match(STRING) ?? []).flatMap((l) => l.match(DEPRECATED_TEXT) ?? []),
+  },
+  {
+    id: 'svg',
+    why: 'icon SVG outside components/icons (AC-UI-69)',
+    owner: (f) => f.startsWith('components/icons/'),
+    find: (src) => src.match(/<svg\b/g) ?? [],
+  },
+];
+
+/**
+ * Permanent exceptions to the frame rules, each with its reason; `only` limits an exception to
+ * those matches (the rest of the file still follows the rule). Keep this list short.
+ */
+const FRAME_ALLOW: { file: string; rule: string; reason: string; only?: string[] }[] = [
+  {
+    file: 'features/runner/components/ResultTable.tsx',
+    rule: 'table',
+    reason: 'dense, virtualised result sheet (§25.5: large data tables keep their own component)',
+  },
+  {
+    file: 'features/designer/DataPanel.tsx',
+    rule: 'table',
+    reason: 'dense Designer preview table (§25.1 high-density exception)',
+  },
+  {
+    file: 'features/admin/versions/DiffView.tsx',
+    rule: 'table',
+    reason: 'side-by-side JSON diff of two versions, not an admin list',
+  },
+  {
+    file: 'features/designer/formula/FormulaForm.tsx',
+    rule: 'table',
+    reason: 'dense reference table of supported functions beside the canvas',
+  },
+  {
+    file: 'components/ui.tsx',
+    rule: 'spacing',
+    reason:
+      'OneLine: -my-5 py-5 keeps stacked Vietnamese marks inside the clipping box (cancels out, no layout change)',
+    only: ['-my-5', 'py-5'],
+  },
+];
+
+/**
+ * TEMPORARY: screens (and older shared pieces) that still break a frame rule because round A only
+ * built the components. ROUND B MUST EMPTY THIS LIST: each screen moved to PageShell / Tabs /
+ * DataTable / the new tokens leaves it, and the test fails when an entry no longer has a hit
+ * (stale) or when a file NOT listed here breaks a rule.
+ */
+const PENDING_ROUND_B: { file: string; rules: string[] }[] = [
+  { file: 'app/App.tsx', rules: ['main', 'deprecated-text'] },
+  { file: 'app/AppShell.tsx', rules: ['spacing'] },
+  { file: 'app/UserMenu.tsx', rules: ['spacing'] },
+  { file: 'components/Menu.tsx', rules: ['spacing'] },
+  { file: 'components/MonthPicker.tsx', rules: ['spacing'] },
+  { file: 'components/Select.tsx', rules: ['spacing'] },
+  { file: 'components/Skeleton.tsx', rules: ['spacing'] },
+  { file: 'components/Tooltip.tsx', rules: ['spacing'] },
+  { file: 'components/picker-shared.tsx', rules: ['spacing'] },
+  { file: 'components/ui.tsx', rules: ['spacing', 'deprecated-text'] },
+  { file: 'features/admin/AdminFlowsPage.tsx', rules: ['spacing', 'table'] },
+  { file: 'features/admin/AdminLayout.tsx', rules: ['spacing', 'main'] },
+  { file: 'features/admin/AdminUsersPage.tsx', rules: ['spacing', 'tablist', 'table'] },
+  { file: 'features/admin/versions/DiffView.tsx', rules: ['spacing'] },
+  {
+    file: 'features/admin/versions/FlowVersionsPage.tsx',
+    rules: ['spacing', 'table', 'deprecated-text'],
+  },
+  { file: 'features/auth/AuthLayout.tsx', rules: ['spacing', 'main'] },
+  { file: 'features/auth/ChangePasswordPage.tsx', rules: ['spacing', 'deprecated-text'] },
+  { file: 'features/auth/LoginPage.tsx', rules: ['spacing', 'deprecated-text'] },
+  { file: 'features/auth/idle/IdleLogout.tsx', rules: ['deprecated-text'] },
+  { file: 'features/designer/ConfigPanel.tsx', rules: ['spacing', 'tablist'] },
+  { file: 'features/designer/DataPanel.tsx', rules: ['spacing', 'tablist'] },
+  { file: 'features/designer/DesignerEditor.tsx', rules: ['spacing', 'deprecated-text'] },
+  { file: 'features/designer/DesignerPage.tsx', rules: ['spacing', 'deprecated-text'] },
+  { file: 'features/designer/Palette.tsx', rules: ['spacing'] },
+  { file: 'features/designer/StatusBar.tsx', rules: ['spacing'] },
+  { file: 'features/designer/canvas/nodes.tsx', rules: ['spacing'] },
+  { file: 'features/designer/forms/NodeForms.tsx', rules: ['spacing'] },
+  { file: 'features/designer/forms/ParamsForm.tsx', rules: ['spacing'] },
+  { file: 'features/designer/forms/SlotForm.tsx', rules: ['spacing'] },
+  { file: 'features/designer/forms/fields.tsx', rules: ['spacing'] },
+  { file: 'features/designer/formula/FormulaForm.tsx', rules: ['spacing'] },
+  { file: 'features/runner/FlowListPage.tsx', rules: ['spacing', 'main', 'table'] },
+  {
+    file: 'features/runner/ResultPage.tsx',
+    rules: ['spacing', 'main', 'tablist', 'deprecated-text'],
+  },
+  { file: 'features/runner/RunPage.tsx', rules: ['spacing', 'main'] },
+  { file: 'features/runner/components/ParamsCard.tsx', rules: ['spacing'] },
+  { file: 'features/runner/components/ResultTable.tsx', rules: ['spacing'] },
+  { file: 'features/runner/components/RunProgress.tsx', rules: ['spacing'] },
+  { file: 'features/runner/components/SlotCard.tsx', rules: ['spacing'] },
+  { file: 'features/runner/components/Steps.tsx', rules: ['spacing'] },
+  { file: 'features/runner/components/ValidationReport.tsx', rules: ['table'] },
+];
+
+interface FrameHit {
+  file: string;
+  rule: string;
+  matches: string[];
+}
+
+function scanFrame(): FrameHit[] {
+  const hits: FrameHit[] = [];
+  for (const path of tsxFiles(SRC)) {
+    const file = relative(SRC, path).split('\\').join('/');
+    const src = stripComments(readFileSync(path, 'utf8'));
+    for (const rule of FRAME_RULES) {
+      if (rule.owner(file)) continue;
+      let matches = rule.find(src);
+      for (const a of FRAME_ALLOW.filter((x) => x.file === file && x.rule === rule.id))
+        matches = a.only ? matches.filter((m) => !a.only!.includes(m)) : [];
+      if (matches.length === 0) continue;
+      hits.push({ file, rule: rule.id, matches });
+    }
+  }
+  return hits;
+}
+
 describe('design tokens (index.css @theme)', () => {
   const theme = /@theme\s*\{([\s\S]*?)\n\}/.exec(css)?.[1] ?? '';
 
@@ -255,5 +457,76 @@ describe('components use tokens only (AC-UI-02)', () => {
         ok,
       ).toEqual([]);
     }
+  });
+});
+
+describe('frame rules (AC-UI-61)', () => {
+  const hits = scanFrame();
+  const pending = (file: string, rule: string) =>
+    PENDING_ROUND_B.some((p) => p.file === file && p.rules.includes(rule));
+
+  it('no file outside PENDING_ROUND_B breaks a frame rule', () => {
+    const fresh = hits
+      .filter((h) => !pending(h.file, h.rule))
+      .map((h) => {
+        const why = FRAME_RULES.find((r) => r.id === h.rule)!.why;
+        return `${h.file} ${h.rule} (${why}): ${[...new Set(h.matches)].join(' ')}`;
+      });
+    expect(fresh).toEqual([]);
+  });
+
+  it('PENDING_ROUND_B has no stale entry (remove a file once it is moved)', () => {
+    const stale = PENDING_ROUND_B.flatMap((p) =>
+      p.rules
+        .filter((rule) => !hits.some((h) => h.file === p.file && h.rule === rule))
+        .map((rule) => `${p.file} ${rule}`),
+    );
+    expect(stale).toEqual([]);
+  });
+
+  it('every permanent exception names a real file and gives a reason', () => {
+    for (const a of FRAME_ALLOW) {
+      expect(tsxFiles(SRC).some((p) => relative(SRC, p).split('\\').join('/') === a.file)).toBe(
+        true,
+      );
+      expect(a.reason.length).toBeGreaterThan(10);
+      expect(FRAME_RULES.some((r) => r.id === a.rule)).toBe(true);
+    }
+  });
+
+  it('the frame scanner catches each pattern', () => {
+    const rule = (id: string) => FRAME_RULES.find((r) => r.id === id)!;
+    for (const bad of [
+      "'px-3.5'",
+      "'gap-2.5'",
+      "'mt-1.5'",
+      "'p-5'",
+      "'py-7'",
+      "'-mx-9'",
+      "'gap-10'",
+      "'pb-11'",
+      "'md:px-5'",
+      "'gap-[10px]'",
+      "'p-[3px]'",
+      "'px-20'",
+      "'space-y-5'",
+    ])
+      expect(rule('spacing').find(bad), bad).not.toEqual([]);
+    for (const ok of [
+      "'px-4 py-2 gap-0.5 m-0 mx-auto'",
+      "'gap-section px-page-x pt-page-top gap-stack gap-inline'",
+      "'md:px-8 -my-1 px-0! pb-12 p-16'",
+      "'h-10.5 w-62 size-5 min-w-40 top-1.5'",
+    ])
+      expect(rule('spacing').find(ok), ok).toEqual([]);
+    expect(rule('main').find('<main id="main">')).toHaveLength(1);
+    expect(rule('tablist').find('<div role="tablist">')).toHaveLength(1);
+    expect(rule('table').find('<table className="w-full">')).toHaveLength(1);
+    expect(rule('deprecated-text').find("'m-0 text-display-lg'")).toHaveLength(1);
+    expect(rule('deprecated-text').find("'max-md:text-body-lg'")).toHaveLength(1);
+    expect(rule('deprecated-text').find("'text-body text-page-title'")).toHaveLength(0);
+    expect(rule('svg').find('<svg viewBox="0 0 24 24">')).toHaveLength(1);
+    expect(rule('main').owner('components/layout/PageShell.tsx')).toBe(true);
+    expect(rule('table').owner('features/admin/AdminUsersPage.tsx')).toBe(false);
   });
 });
