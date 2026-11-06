@@ -250,7 +250,7 @@ export async function floatChecks(layer: Locator): Promise<void> {
   expect(s.shadow).toContain(FLOAT_SHADOW);
 }
 
-/** Text-like controls (AC-UI-04): 48px, 6px radius, 1px #475569 border. */
+/** Text-like controls (AC-UI-04, AC-UI-62): 44px, 6px radius, 1px #475569 border, 16px text. */
 export async function inputChecks(controls: Locator): Promise<void> {
   const n = await controls.count();
   expect(n, 'controls').toBeGreaterThan(0);
@@ -259,21 +259,17 @@ export async function inputChecks(controls: Locator): Promise<void> {
     if (!(await c.isVisible())) continue;
     const s = await style(c);
     const label = (await c.getAttribute('aria-label')) ?? (await c.getAttribute('id')) ?? `${i}`;
-    expect(Math.round(s.height), `height ${label}`).toBe(48);
+    expect(Math.round(s.height), `height ${label}`).toBe(44);
     expect(s.radius, `radius ${label}`).toBe('6px');
     const invalid = (await c.getAttribute('aria-invalid')) === 'true';
     expect(s.borderLeft, `border ${label}`).toBe(
       `1px solid ${invalid ? C.coralText : C.lineInput}`,
     );
-    expect(s.fontSize, `font ${label}`).toBe(isMobile(page(c)) ? '16px' : '18px');
+    expect(s.fontSize, `font ${label}`).toBe('16px');
   }
 }
 
-function page(loc: Locator): Page {
-  return loc.page();
-}
-
-/** Standard buttons (AC-UI-05/10): 48px, radius 12px, `button` type 18px/600 (16px mobile). */
+/** Standard buttons (AC-UI-05/10, AC-UI-62): 44px, radius 12px, `button` type 16px/600. */
 export async function buttonChecks(buttons: Locator): Promise<void> {
   const n = await buttons.count();
   expect(n, 'buttons').toBeGreaterThan(0);
@@ -282,10 +278,10 @@ export async function buttonChecks(buttons: Locator): Promise<void> {
     if (!(await b.isVisible())) continue;
     const s = await style(b);
     const label = (await b.textContent())?.trim().slice(0, 30);
-    expect(Math.round(s.height), `height ${label}`).toBeGreaterThanOrEqual(48);
+    expect(Math.round(s.height), `height ${label}`).toBeGreaterThanOrEqual(44);
     expect(s.radius, `radius ${label}`).toBe('12px');
     expect(s.fontWeight, `weight ${label}`).toBe('600');
-    expect(s.fontSize, `size ${label}`).toBe(isMobile(page(b)) ? '16px' : '18px');
+    expect(s.fontSize, `size ${label}`).toBe('16px');
   }
 }
 

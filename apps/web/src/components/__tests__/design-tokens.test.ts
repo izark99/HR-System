@@ -45,7 +45,7 @@ const RULES: Rule[] = [
   { id: 'v1-shadow', re: T('shadow-(?:card|soft|header)'), why: 'v1 shadow token' },
   {
     id: 'v1-text',
-    re: T('text-(?:page-title|kpi|copy|small|section)'),
+    re: T('text-(?:copy|small|section)'),
     why: 'v1 type token',
   },
   { id: 'v1-sky', re: T('(?:from|via|to|bg)-sky-tint'), why: 'v1 login gradient colour' },
@@ -128,19 +128,24 @@ describe('design tokens (index.css @theme)', () => {
   const theme = /@theme\s*\{([\s\S]*?)\n\}/.exec(css)?.[1] ?? '';
 
   it.each([
-    ['--text-display-xl', '56px'],
-    ['--text-display-lg', '48px'],
+    ['--text-kpi', '40px'],
+    ['--text-kpi--line-height', '44px'],
+    ['--text-kpi--font-weight', '600'],
+    ['--text-page-title-showcase', '32px'],
+    ['--text-page-title-showcase--line-height', '40px'],
+    ['--text-page-title-showcase--font-weight', '600'],
+    ['--text-page-title', '28px'],
+    ['--text-page-title--line-height', '36px'],
+    ['--text-page-title--font-weight', '600'],
     ['--text-title-md', '24px'],
     ['--text-title-sm', '20px'],
-    ['--text-body-lg', '18px'],
     ['--text-body', '16px'],
     ['--text-label', '16px'],
     ['--text-caption', '14px'],
     ['--text-eyebrow', '14px'],
-    ['--text-button', '18px'],
+    ['--text-button', '16px'],
+    ['--text-button--line-height', '24px'],
     ['--text-button-sm', '14.4px'],
-    ['--text-display-xl--font-weight', '500'],
-    ['--text-display-lg--line-height', '48px'],
     ['--text-title-sm--font-weight', '700'],
     ['--text-eyebrow--font-weight', '500'],
     ['--text-code', '14px'],
@@ -152,21 +157,32 @@ describe('design tokens (index.css @theme)', () => {
     ['--color-line-input', '#475569'],
     ['--color-ink', '#1f2a44'],
     ['--color-line', '#e2e8f0'],
-    ['--spacing-control', '48px'],
+    ['--spacing-control', '44px'],
     ['--spacing-control-sm', '36px'],
+    ['--spacing-row', '48px'],
+    ['--spacing-page-x', '32px'],
+    ['--spacing-page-top', '24px'],
+    ['--spacing-section', '24px'],
+    ['--spacing-stack', '16px'],
+    ['--spacing-inline', '8px'],
   ])('%s is %s', (name, value) => {
     expect(theme).toMatch(new RegExp(`\\n\\s*${name}:\\s*${value.replace(/[().]/g, '\\$&')};`));
   });
 
   it('declares the mobile (< 768px) type scale', () => {
     const mobile = /@media \(max-width: 767px\)\s*\{([\s\S]*?)\n\}/.exec(css)?.[1] ?? '';
-    expect(mobile).toMatch(/--text-display-xl:\s*36px;/);
-    expect(mobile).toMatch(/--text-display-lg:\s*32px;/);
+    expect(mobile).toMatch(/--text-kpi:\s*32px;/);
+    expect(mobile).toMatch(/--text-kpi--line-height:\s*36px;/);
+    expect(mobile).toMatch(/--text-page-title-showcase:\s*24px;/);
+    expect(mobile).toMatch(/--text-page-title-showcase--line-height:\s*32px;/);
+    expect(mobile).toMatch(/--text-page-title:\s*24px;/);
+    expect(mobile).toMatch(/--text-page-title--line-height:\s*32px;/);
     expect(mobile).toMatch(/--text-title-md:\s*20px;/);
     expect(mobile).toMatch(/--text-title-sm:\s*18px;/);
-    expect(mobile).toMatch(/--text-body-lg:\s*16px;/);
     expect(mobile).toMatch(/--text-eyebrow:\s*13px;/);
-    expect(mobile).toMatch(/--text-button:\s*16px;/);
+    expect(mobile).toMatch(/--spacing-page-x:\s*16px;/);
+    expect(mobile).toMatch(/--spacing-page-top:\s*16px;/);
+    expect(mobile).toMatch(/--spacing-section:\s*16px;/);
   });
 
   it('has no v1 token left', () => {
@@ -178,8 +194,6 @@ describe('design tokens (index.css @theme)', () => {
       '--shadow-card',
       '--shadow-soft',
       '--shadow-header',
-      '--text-page-title',
-      '--text-kpi',
       '--text-copy',
       '--text-small',
       '--text-section',
@@ -213,7 +227,6 @@ describe('components use tokens only (AC-UI-02)', () => {
       ["'rounded-control px-3'", 'v1-radius'],
       ["'p-6 shadow-card'", 'v1-shadow'],
       ["'hover:shadow-soft'", 'v1-shadow'],
-      ["'text-page-title'", 'v1-text'],
       ["'text-small text-muted'", 'v1-text'],
       ["'font-extrabold'", 'weight'],
       ["'text-[40px]'", 'arbitrary-text'],
@@ -230,7 +243,13 @@ describe('components use tokens only (AC-UI-02)', () => {
       expect(rule.re.test(literal), `${id} should catch ${literal}`).toBe(true);
     }
     // New tokens with similar names are allowed.
-    for (const ok of ["'rounded-card'", "'text-body-lg'", "'text-caption'", "'shadow-float'"]) {
+    for (const ok of [
+      "'rounded-card'",
+      "'text-page-title'",
+      "'text-kpi'",
+      "'text-caption'",
+      "'shadow-float'",
+    ]) {
       expect(
         RULES.filter((r) => r.re.test(ok)).map((r) => r.id),
         ok,

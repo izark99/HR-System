@@ -102,7 +102,7 @@
 /*
  * Design tokens — "bright executive" v2, flat style (spec §25, MEMORY 2026-10-30 13:26). This is
  * the ONLY place colours, radii, shadows and the type scale are defined; components use the
- * generated utilities (bg-teal-strong, rounded-card, text-display-lg …). Tailwind's default
+ * generated utilities (bg-teal-strong, rounded-card, text-page-title …). Tailwind's default
  * palette, radii, shadows, font sizes and weights are removed on purpose so off-system values
  * cannot creep in; `design-tokens.test.ts` also rejects v1 class names and arbitrary values.
  */
@@ -160,10 +160,24 @@
   --font-weight-bold: 700;
 
   --text-*: initial;
-  --text-display-xl: 56px; /* KPI numbers */
+  --text-kpi: 40px; /* KPI numbers (§25.1, MEMORY 2026-11-04 14:12) */
+  --text-kpi--line-height: 44px;
+  --text-kpi--font-weight: 600;
+  --text-page-title-showcase: 32px; /* showcase page title: Result, flow list, sign-in */
+  --text-page-title-showcase--line-height: 40px;
+  --text-page-title-showcase--letter-spacing: -0.4px;
+  --text-page-title-showcase--font-weight: 600;
+  --text-page-title: 28px; /* workspace page title: Admin, change password, forms */
+  --text-page-title--line-height: 36px;
+  --text-page-title--letter-spacing: -0.4px;
+  --text-page-title--font-weight: 600;
+  /* DEPRECATED (AC-UI-60): display-xl, display-lg and body-lg are replaced by kpi, page-title /
+     page-title-showcase and body. Screens still on them are listed in PENDING_ROUND_B of
+     design-tokens.test.ts; round B moves them over and deletes these three tokens. */
+  --text-display-xl: 56px;
   --text-display-xl--line-height: 56px;
   --text-display-xl--font-weight: 500;
-  --text-display-lg: 48px; /* page title */
+  --text-display-lg: 48px;
   --text-display-lg--line-height: 48px;
   --text-display-lg--font-weight: 500;
   --text-title-md: 24px; /* section / card title */
@@ -174,7 +188,7 @@
   --text-title-sm--line-height: 25px;
   --text-title-sm--letter-spacing: -0.5px;
   --text-title-sm--font-weight: 700;
-  --text-body-lg: 18px; /* lead paragraph, input text */
+  --text-body-lg: 18px; /* DEPRECATED (see display-xl above) */
   --text-body-lg--line-height: 27px;
   --text-body: 16px;
   --text-body--line-height: 24px;
@@ -187,8 +201,8 @@
   --text-eyebrow--line-height: 14px;
   --text-eyebrow--letter-spacing: 1px;
   --text-eyebrow--font-weight: 500;
-  --text-button: 18px;
-  --text-button--line-height: 27px;
+  --text-button: 16px; /* standard button (§25.1, MEMORY 2026-11-04 14:12) */
+  --text-button--line-height: 24px;
   --text-button--font-weight: 600;
   --text-button-sm: 14.4px;
   --text-button-sm--line-height: 14.4px;
@@ -216,15 +230,29 @@
 
   /* Sizes */
   --spacing-target: 44px; /* minimum touch target (WCAG 2.5.5) */
-  --spacing-control: 48px; /* input, Select trigger, standard button */
+  --spacing-control: 44px; /* input, Select/picker trigger, standard button */
   --spacing-control-sm: 36px; /* small button (tables, toolbars) */
-  --spacing-row: 44px;
+  --spacing-row: 48px; /* admin table body row (header row: 44px = target) */
+
+  /* Semantic spacing (§25.5); mobile values in the media query below. Every other gap, padding
+     and margin uses the 4 · 8 · 12 · 16 · 24 · 32 · 48 · 64 scale (design-tokens.test.ts). */
+  --spacing-page-x: 32px; /* page side padding */
+  --spacing-page-top: 24px; /* space above the page header */
+  --spacing-section: 24px; /* between blocks of a page */
+  --spacing-stack: 16px; /* between fields / blocks inside a card */
+  --spacing-inline: 8px; /* between items on one row */
 }
 
 /* Mobile type scale (§25.1, < 768px). Utilities read these variables, so overriding them here
    resizes every text-* class without a responsive variant on each element. */
 @media (max-width: 767px) {
   :root {
+    --text-kpi: 32px;
+    --text-kpi--line-height: 36px;
+    --text-page-title-showcase: 24px;
+    --text-page-title-showcase--line-height: 32px;
+    --text-page-title: 24px;
+    --text-page-title--line-height: 32px;
     --text-display-xl: 36px;
     --text-display-xl--line-height: 36px;
     --text-display-lg: 32px;
@@ -237,7 +265,9 @@
     --text-body-lg--line-height: 24px;
     --text-eyebrow: 13px;
     --text-eyebrow--line-height: 13px;
-    --text-button: 16px;
+    --spacing-page-x: 16px;
+    --spacing-page-top: 16px;
+    --spacing-section: 16px;
   }
 }
 

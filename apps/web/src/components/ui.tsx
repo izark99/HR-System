@@ -38,11 +38,11 @@ export const cardClass = 'rounded-card border border-line bg-card';
 export const floatClass = 'rounded-card border border-line bg-card shadow-float';
 
 /**
- * Text-like control (§25.3 Input): 48px, 6px radius, 1px #475569 border, `body-lg`; focus = teal
+ * Text-like control (§25.3 Input): 44px, 6px radius, 1px #475569 border, `body`; focus = teal
  * border + 3px #DDF5EF ring; `aria-invalid` = coral border.
  */
 const inputFrame =
-  'min-w-0 rounded-input border border-line-input bg-card px-3.5 text-body-lg text-ink ' +
+  'min-w-0 rounded-input border border-line-input bg-card px-3.5 text-body text-ink ' +
   'focus:border-teal-strong focus:ring-3 focus:ring-teal-tint focus:outline-none ' +
   'aria-invalid:border-coral-text disabled:bg-neutral disabled:text-muted';
 export const inputClass = `h-control ${inputFrame}`;
@@ -115,7 +115,7 @@ const buttonBase =
   // white text on a pale mid-transition teal (contrast below WCAG AA) for a moment.
   'transition-none hover:transition-colors active:transition-colors disabled:cursor-not-allowed';
 
-/** Height + type per size (§25.3): md 48px / `button`, sm 36px / `button-sm` (tables, toolbars). */
+/** Height + type per size (§25.3): md 44px / `button`, sm 36px / `button-sm` (tables, toolbars). */
 export const buttonSize = {
   md: 'min-h-control px-6 text-button',
   sm: 'min-h-control-sm px-4 text-button-sm',

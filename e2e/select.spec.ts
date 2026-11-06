@@ -27,8 +27,8 @@ test.describe('custom Select', () => {
     await expect(t).toHaveAttribute('aria-haspopup', 'listbox');
     await expect(t).toHaveAttribute('aria-expanded', 'false');
     const box = await t.boundingBox();
-    // Design v2 (spec §25.3): 48px, 6px radius, #475569 border.
-    expect(Math.round(box!.height)).toBe(48);
+    // Spec §25.3 (AC-UI-62): 44px, 6px radius, #475569 border.
+    expect(Math.round(box!.height)).toBe(44);
     await expect(t).toHaveCSS('border-top-left-radius', '6px');
     await expect(t).toHaveCSS('border-top-color', 'rgb(71, 85, 105)');
 

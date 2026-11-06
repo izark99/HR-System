@@ -263,7 +263,7 @@ export function Select({
         }}
         className={cx(
           'inline-flex min-w-48 items-center justify-between gap-3 rounded-input border bg-card text-left text-ink',
-          dense ? 'h-10.5 px-3 text-dense' : 'h-control px-3.5 text-body-lg',
+          dense ? 'h-10.5 px-3 text-dense' : 'h-control px-3.5 text-body',
           'hover:border-teal-strong focus-visible:border-teal-strong focus-visible:ring-3 focus-visible:ring-teal-tint focus-visible:outline-none',
           'disabled:cursor-not-allowed disabled:bg-neutral disabled:text-muted',
           invalid ? 'border-coral-text' : 'border-line-input',
