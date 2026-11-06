@@ -175,7 +175,7 @@ export function MenuButton({
           role="menu"
           aria-labelledby={`${id}-button`}
           onKeyDown={onMenuKey}
-          className={cx(floatClass, 'fixed top-0 left-0 z-50 flex min-w-56 flex-col p-1.5')}
+          className={cx(floatClass, 'fixed top-0 left-0 z-50 flex min-w-56 flex-col p-2')}
         >
           {items.map((item, i) => (
             <Fragment key={item.key}>

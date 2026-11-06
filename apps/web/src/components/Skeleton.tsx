@@ -71,9 +71,9 @@ export function LoadingRegion({
 /** Eyebrow + page title (+ subtitle) block, the shape of `PageHeader`. */
 export function HeaderSkeleton({ subtitle = true }: { subtitle?: boolean }) {
   return (
-    <div className="flex flex-col gap-3">
+    <div className="flex flex-col gap-2">
       <Skeleton className="h-3.5 w-40" />
-      <Skeleton className="h-12 w-full max-w-2xl max-md:h-8" />
+      <Skeleton className="h-9 w-full max-w-2xl max-md:h-8" />
       {subtitle && <Skeleton className="h-5 w-full max-w-xl" />}
     </div>
   );
@@ -84,7 +84,7 @@ export function TableSkeleton({ rows = 4, columns = 5 }: { rows?: number; column
   const widths = ['w-24', 'w-36', 'w-20', 'w-28', 'w-16', 'w-32'];
   return (
     <div className="flex flex-col">
-      <div className="flex gap-6 border-b border-line bg-neutral px-4 py-3.5">
+      <div className="flex gap-6 border-b border-line bg-neutral px-4 py-4">
         {Array.from({ length: columns }, (_, c) => (
           <Skeleton key={c} tone="line" className={cx('h-3.5', widths[c % widths.length])} />
         ))}
@@ -114,7 +114,7 @@ export function TableCardSkeleton({ rows, columns }: { rows?: number; columns?: 
 /** Flow cards in the same grid as the flow list. */
 export function FlowCardsSkeleton({ count = 3 }: { count?: number }) {
   return (
-    <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-3">
+    <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 xl:grid-cols-3">
       {Array.from({ length: count }, (_, i) => (
         <div key={i} className={cx(cardClass, 'flex flex-col gap-3 p-6')}>
           <Skeleton shape="pill" className="h-6 w-24" />
@@ -158,13 +158,13 @@ export function PageSkeleton({ className }: { className?: string }) {
 export function DesignerSkeleton() {
   return (
     <div className="flex h-[calc(100dvh-64px)] min-h-150 flex-col">
-      <div className="flex items-center gap-3 border-b border-line bg-card px-3.5 py-3">
+      <div className="flex items-center gap-3 border-b border-line bg-card px-4 py-3">
         <Skeleton className="h-5 w-32" />
         <Skeleton className="h-6 w-72" />
         <Skeleton shape="card" className="ml-auto h-9 w-80" />
       </div>
       <div className="flex min-h-0 flex-1">
-        <div className="flex w-62 flex-col gap-3 border-r border-line p-3.5">
+        <div className="flex w-62 flex-col gap-3 border-r border-line p-4">
           <Skeleton className="h-10 w-full" />
           {Array.from({ length: 6 }, (_, i) => (
             <Skeleton key={i} shape="card" className="h-15 w-full" />

@@ -79,8 +79,23 @@ test('FormField: name + description from label, hint and error; sizes 44px', asy
   await expect(group).toHaveAttribute('aria-invalid', 'true');
   const period = page.getByRole('button', { name: /Period/ });
   await expect(period).toHaveAccessibleDescription('Month of the run');
+  // DatePicker through FormField on the real DOM (round B): named by the label (+ value), hint
+  // then error as its description, invalid and required on the trigger.
+  const start = page.getByRole('button', { name: /^Start date/ });
+  await expect(start).toHaveAccessibleDescription('First day of validity Pick a date');
+  await expect(start).toHaveAttribute('aria-invalid', 'true');
+  await expect(page.locator('label', { hasText: 'Start date' })).toHaveAttribute(
+    'for',
+    (await start.getAttribute('id'))!,
+  );
+  await start.click();
+  const calendar = page.locator('[role="dialog"][aria-modal="false"]');
+  await expect(calendar).toBeVisible();
+  await expect(calendar).toHaveAccessibleName(/Start date/);
+  await page.keyboard.press('Escape');
+  await expect(start).toBeFocused();
   await expect(page.getByRole('checkbox', { name: 'Keep' })).toBeVisible();
-  for (const control of [name, group, period]) {
+  for (const control of [name, group, period, start]) {
     expect(Math.round((await control.boundingBox())!.height)).toBe(44);
     await expect(control).toHaveCSS('font-size', '16px');
   }

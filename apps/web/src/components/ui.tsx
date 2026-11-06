@@ -42,12 +42,12 @@ export const floatClass = 'rounded-card border border-line bg-card shadow-float'
  * border + 3px #DDF5EF ring; `aria-invalid` = coral border.
  */
 const inputFrame =
-  'min-w-0 rounded-input border border-line-input bg-card px-3.5 text-body text-ink ' +
+  'min-w-0 rounded-input border border-line-input bg-card px-4 text-body text-ink ' +
   'focus:border-teal-strong focus:ring-3 focus:ring-teal-tint focus:outline-none ' +
   'aria-invalid:border-coral-text disabled:bg-neutral disabled:text-muted';
 export const inputClass = `h-control ${inputFrame}`;
 /** Multi-line variant of `inputClass` (height from `rows`). */
-export const textareaClass = `py-2.5 ${inputFrame}`;
+export const textareaClass = `py-3 ${inputFrame}`;
 
 /**
  * Dense variant for the Designer side form (MEMORY 2026-10-30 13:29: 14px text there); same frame
@@ -64,7 +64,7 @@ export const denseInputClass =
  */
 export function navItemClass(active: boolean): string {
   return cx(
-    'flex min-h-target items-center rounded-input border-l-3 px-3.5 text-body whitespace-nowrap no-underline',
+    'flex min-h-target items-center rounded-input border-l-3 px-4 text-body whitespace-nowrap no-underline',
     active
       ? 'border-teal-strong bg-teal-tint font-semibold text-teal-strong hover:text-teal-strong'
       : 'border-transparent text-ink-soft hover:bg-neutral hover:text-ink',
@@ -221,7 +221,7 @@ export function Callout({
     <div
       role={role}
       className={cx(
-        'flex items-start gap-2.5 rounded-card px-4 py-3 text-ink-soft',
+        'flex items-start gap-3 rounded-card px-4 py-3 text-ink-soft',
         size === 'body' ? 'text-body' : 'text-caption',
         toneTint[tone],
         className,
@@ -283,40 +283,5 @@ export function OneLine({
         {text}
       </As>
     </Tooltip>
-  );
-}
-
-export function PageHeader({
-  eyebrow,
-  eyebrowTone,
-  title,
-  oneLineTitle = false,
-  subtitle,
-  actions,
-}: {
-  eyebrow: ReactNode;
-  eyebrowTone?: Tone;
-  title: ReactNode;
-  /**
-   * The title holds a name chosen by a person (flow, version): keep it on one line, cut with "…"
-   * and show the full name on hover/focus (AC-UI-50). Needs a string `title`.
-   */
-  oneLineTitle?: boolean;
-  subtitle?: ReactNode;
-  actions?: ReactNode;
-}) {
-  return (
-    <div className="flex flex-wrap items-end justify-between gap-4">
-      <div className="flex max-w-full min-w-0 flex-col gap-3">
-        <Eyebrow {...(eyebrowTone ? { tone: eyebrowTone } : {})}>{eyebrow}</Eyebrow>
-        {oneLineTitle && typeof title === 'string' ? (
-          <OneLine as="h1" text={title} className="text-display-lg text-ink" />
-        ) : (
-          <h1 className="m-0 text-display-lg text-ink">{title}</h1>
-        )}
-        {subtitle && <p className="m-0 text-body-lg text-muted">{subtitle}</p>}
-      </div>
-      {actions && <div className="flex flex-wrap gap-3">{actions}</div>}
-    </div>
   );
 }

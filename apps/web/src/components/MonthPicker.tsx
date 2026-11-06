@@ -148,10 +148,10 @@ export function MonthPicker({
             role="grid"
             aria-labelledby={yearId}
             onKeyDown={onGridKey}
-            className="flex flex-col gap-1.5"
+            className="flex flex-col gap-2"
           >
             {[0, 1, 2].map((row) => (
-              <div key={row} role="row" className="grid grid-cols-4 gap-1.5">
+              <div key={row} role="row" className="grid grid-cols-4 gap-2">
                 {MONTHS.slice(row * MONTH_COLUMNS, row * MONTH_COLUMNS + MONTH_COLUMNS).map((m) => {
                   const isSelected = selected?.year === active.year && selected.month === m;
                   const isCurrent = now.year === active.year && now.month === m;

@@ -19,7 +19,7 @@ import { cx, floatClass } from './ui';
 /** Trigger looks like an input (§25.3): 44px, 6px radius, #475569 border, `body`. */
 export const triggerClass =
   'inline-flex h-control min-w-48 items-center justify-between gap-3 rounded-input border ' +
-  'border-line-input bg-card px-3.5 text-left text-body text-ink hover:border-teal-strong ' +
+  'border-line-input bg-card px-4 text-left text-body text-ink hover:border-teal-strong ' +
   'focus-visible:border-teal-strong focus-visible:ring-3 focus-visible:ring-teal-tint ' +
   'focus-visible:outline-none aria-invalid:border-coral-text ' +
   'disabled:cursor-not-allowed disabled:bg-neutral disabled:text-muted';

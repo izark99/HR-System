@@ -249,7 +249,7 @@ export function Select({
         }}
         className={cx(
           'inline-flex min-w-48 items-center justify-between gap-3 rounded-input border bg-card text-left text-ink',
-          dense ? 'h-10.5 px-3 text-dense' : 'h-control px-3.5 text-body',
+          dense ? 'h-10.5 px-3 text-dense' : 'h-control px-4 text-body',
           'hover:border-teal-strong focus-visible:border-teal-strong focus-visible:ring-3 focus-visible:ring-teal-tint focus-visible:outline-none',
           'disabled:cursor-not-allowed disabled:bg-neutral disabled:text-muted',
           invalid ? 'border-coral-text' : 'border-line-input',
@@ -270,10 +270,7 @@ export function Select({
             minWidth: `min(${PANEL_MIN_WIDTH}px, calc(100vw - 24px))`,
             maxWidth: 'calc(100vw - 24px)',
           }}
-          className={cx(
-            floatClass,
-            'absolute top-full z-50 mt-1.5 flex w-full flex-col gap-1.5 p-2',
-          )}
+          className={cx(floatClass, 'absolute top-full z-50 mt-2 flex w-full flex-col gap-2 p-2')}
           onBlur={(e) => {
             const next = e.relatedTarget as Node | null;
             if (next && !rootRef.current?.contains(next)) close(false);
@@ -301,7 +298,7 @@ export function Select({
           )}
           {/* Outside the listbox: a listbox may only contain options and groups. */}
           {shownFlat.length === 0 && (
-            <p role="status" className="m-0 px-3 py-2.5 text-caption text-muted">
+            <p role="status" className="m-0 px-3 py-3 text-caption text-muted">
               {t('select.noResults')}
             </p>
           )}

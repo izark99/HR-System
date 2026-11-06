@@ -291,29 +291,14 @@ const FRAME_ALLOW: { file: string; rule: string; reason: string; only?: string[]
   },
 ];
 
-/**
- * TEMPORARY: screens (and older shared pieces) that still break a frame rule because round A only
- * built the components. ROUND B MUST EMPTY THIS LIST: each screen moved to PageShell / Tabs /
- * DataTable / the new tokens leaves it, and the test fails when an entry no longer has a hit
- * (stale) or when a file NOT listed here breaks a rule.
- */
-const PENDING_ROUND_B: { file: string; rules: string[] }[] = [
-  { file: 'components/Menu.tsx', rules: ['spacing'] },
-  { file: 'components/MonthPicker.tsx', rules: ['spacing'] },
-  { file: 'components/Select.tsx', rules: ['spacing'] },
-  { file: 'components/Skeleton.tsx', rules: ['spacing'] },
-  { file: 'components/Tooltip.tsx', rules: ['spacing'] },
-  { file: 'components/picker-shared.tsx', rules: ['spacing'] },
-  { file: 'components/ui.tsx', rules: ['spacing', 'deprecated-text'] },
-];
-
 interface FrameHit {
   file: string;
   rule: string;
   matches: string[];
 }
 
-function scanFrame(): FrameHit[] {
+/** Frame-rule hits of every file; `allow = false` ignores FRAME_ALLOW (to find stale entries). */
+function scanFrame(allow = true): FrameHit[] {
   const hits: FrameHit[] = [];
   for (const path of tsxFiles(SRC)) {
     const file = relative(SRC, path).split('\\').join('/');
@@ -321,8 +306,9 @@ function scanFrame(): FrameHit[] {
     for (const rule of FRAME_RULES) {
       if (rule.owner(file)) continue;
       let matches = rule.find(src);
-      for (const a of FRAME_ALLOW.filter((x) => x.file === file && x.rule === rule.id))
-        matches = a.only ? matches.filter((m) => !a.only!.includes(m)) : [];
+      if (allow)
+        for (const a of FRAME_ALLOW.filter((x) => x.file === file && x.rule === rule.id))
+          matches = a.only ? matches.filter((m) => !a.only!.includes(m)) : [];
       if (matches.length === 0) continue;
       hits.push({ file, rule: rule.id, matches });
     }
@@ -405,6 +391,10 @@ describe('design tokens (index.css @theme)', () => {
       '--text-section',
       '--color-sky-tint',
       '--color-body:',
+      // Deleted in round B (AC-UI-60/77).
+      '--text-display-xl',
+      '--text-display-lg',
+      '--text-body-lg',
     ]) {
       expect(theme, v1).not.toContain(v1);
     }
@@ -466,25 +456,26 @@ describe('components use tokens only (AC-UI-02)', () => {
 
 describe('frame rules (AC-UI-61)', () => {
   const hits = scanFrame();
-  const pending = (file: string, rule: string) =>
-    PENDING_ROUND_B.some((p) => p.file === file && p.rules.includes(rule));
 
-  it('no file outside PENDING_ROUND_B breaks a frame rule', () => {
-    const fresh = hits
-      .filter((h) => !pending(h.file, h.rule))
-      .map((h) => {
-        const why = FRAME_RULES.find((r) => r.id === h.rule)!.why;
-        return `${h.file} ${h.rule} (${why}): ${[...new Set(h.matches)].join(' ')}`;
-      });
+  it('no file breaks a frame rule (round B emptied the temporary list; exceptions: FRAME_ALLOW)', () => {
+    const fresh = hits.map((h) => {
+      const why = FRAME_RULES.find((r) => r.id === h.rule)!.why;
+      return `${h.file} ${h.rule} (${why}): ${[...new Set(h.matches)].join(' ')}`;
+    });
     expect(fresh).toEqual([]);
   });
 
-  it('PENDING_ROUND_B has no stale entry (remove a file once it is moved)', () => {
-    const stale = PENDING_ROUND_B.flatMap((p) =>
-      p.rules
-        .filter((rule) => !hits.some((h) => h.file === p.file && h.rule === rule))
-        .map((rule) => `${p.file} ${rule}`),
-    );
+  it('FRAME_ALLOW has no stale entry (drop an exception once the file follows the rule)', () => {
+    const raw = scanFrame(false);
+    const stale = FRAME_ALLOW.filter(
+      (a) =>
+        !raw.some(
+          (h) =>
+            h.file === a.file &&
+            h.rule === a.rule &&
+            (!a.only || h.matches.some((m) => a.only!.includes(m))),
+        ),
+    ).map((a) => `${a.file} ${a.rule}`);
     expect(stale).toEqual([]);
   });
 

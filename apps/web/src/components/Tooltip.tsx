@@ -81,7 +81,7 @@ export function Tooltip({
           data-tooltip
           className={cx(
             floatClass,
-            'pointer-events-none fixed z-50 block w-max max-w-80 px-3 py-1.5',
+            'pointer-events-none fixed z-50 block w-max max-w-80 px-3 py-2',
             'top-0 left-0 text-left text-caption font-normal tracking-normal whitespace-normal text-ink normal-case',
           )}
         >

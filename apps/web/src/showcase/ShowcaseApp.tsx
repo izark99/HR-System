@@ -5,6 +5,7 @@ import { EmptyState } from '../components/EmptyState';
 import { FormField, Textarea, TextInput } from '../components/FormField';
 import { ConclusionCard, KpiCard, KpiRow } from '../components/KpiCard';
 import { PageHeader, PageShell, Section, StickyActionBar, Toolbar } from '../components/layout';
+import { DatePicker } from '../components/DatePicker';
 import { MonthPicker } from '../components/MonthPicker';
 import { Select } from '../components/Select';
 import { Stepper } from '../components/Stepper';
@@ -47,6 +48,7 @@ function Demo() {
   const [tab, setTab] = useState('first');
   const [group, setGroup] = useState('');
   const [month, setMonth] = useState('2026-09');
+  const [day, setDay] = useState('');
   const [name, setName] = useState('');
   const [confirm, setConfirm] = useState<'danger' | 'primary' | null>(null);
   const [confirmed, setConfirmed] = useState(0);
@@ -118,6 +120,19 @@ function Demo() {
               invalid={f.invalid}
               value={month}
               onChange={setMonth}
+            />
+          )}
+        </FormField>
+        <FormField label="Start date" hint="First day of validity" error="Pick a date" required>
+          {(f) => (
+            <DatePicker
+              id={f.id}
+              labelId={f.labelId}
+              describedBy={f.describedBy}
+              invalid={f.invalid}
+              required={f.required}
+              value={day}
+              onChange={setDay}
             />
           )}
         </FormField>
