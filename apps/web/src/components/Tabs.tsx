@@ -26,9 +26,10 @@ export interface TabItem {
  * every panel stays mounted (hidden): `aria-controls` then points at each of them.
  *
  * `dense`: 14px variant for the Designer side panels (MEMORY 2026-10-30 13:29); its tabs share the
- * width equally, one size, text centred (MEMORY 2026-11-06 13:05, AC-UI-78 rule 9). When a share
- * is too narrow for the longest label, they wrap into equal rows of fewer columns (measured, like
- * `FieldGrid`), never cutting a label.
+ * width equally, one size, text centred (MEMORY 2026-11-06 13:05, AC-UI-78 rule 9). Plain tabs keep
+ * their own widths on one row. When the row is too narrow (a dense share for the longest label, or
+ * plain tabs side by side), both wrap into an equal grid of fewer columns whose rows are all full
+ * (measured, like `FieldGrid`; MEMORY 2026-11-06 18:27, AC-UI-78 rule 15), never cutting a label.
  */
 export function Tabs({
   id,
@@ -54,11 +55,13 @@ export function Tabs({
   const { t } = useTranslation();
   const refs = useRef<Record<string, HTMLButtonElement | null>>({});
   const list = useRef<HTMLDivElement>(null);
+  // Columns of the equal grid (`items.length`: one row). Plain tabs keep their own widths while
+  // they fit on one row; else both kinds wrap into equal full rows (AC-UI-78 rules 9, 15).
   const [fit, setFit] = useState(items.length);
   useLayoutEffect(() => {
     const el = list.current;
-    if (!dense || !el) return;
-    const measure = () => setFit(denseColumns(el, items.length));
+    if (!el) return;
+    const measure = () => setFit((cur) => tabColumns(el, items.length, dense, cur >= items.length));
     measure();
     if (typeof ResizeObserver === 'undefined') return;
     const ro = new ResizeObserver(measure);
@@ -91,18 +94,19 @@ export function Tabs({
       aria-orientation="horizontal"
       onKeyDown={onKeyDown}
       data-tabs={dense ? 'dense' : 'default'}
+      data-tabs-cols={fit < items.length ? fit : undefined}
       className={cx(
         dense
           ? fit >= items.length
             ? 'grid auto-cols-fr grid-flow-col gap-1'
             : 'grid gap-1'
-          : 'flex flex-wrap gap-2',
+          : fit >= items.length
+            ? 'flex flex-wrap gap-2'
+            : 'grid w-full gap-2',
         className,
       )}
       style={
-        dense && fit < items.length
-          ? { gridTemplateColumns: `repeat(${fit}, minmax(0, 1fr))` }
-          : undefined
+        fit < items.length ? { gridTemplateColumns: `repeat(${fit}, minmax(0, 1fr))` } : undefined
       }
     >
       {items.map((item, i) => {
@@ -126,6 +130,7 @@ export function Tabs({
             className={cx(
               'inline-flex min-h-target items-center gap-2 rounded-pill font-semibold whitespace-nowrap',
               dense ? 'min-w-0 justify-center px-3 text-dense' : 'px-4 text-body',
+              !dense && fit < items.length && 'min-w-0 justify-center',
               active
                 ? cx(toneTint[tone], toneText[tone])
                 : 'text-muted hover:bg-neutral disabled:cursor-not-allowed disabled:hover:bg-transparent',
@@ -174,24 +179,39 @@ export function TabPanel({
   );
 }
 
-/** Gap of a dense tab list (`gap-1`). */
+/** Gaps of a tab list (`gap-1` dense, `gap-2` plain). */
 const DENSE_GAP = 4;
+const PLAIN_GAP = 8;
 
-/** Columns of a dense tab list whose equal share still holds the widest tab at one line. */
-function denseColumns(list: HTMLElement, count: number): number {
+/**
+ * Columns of a tab list: `count` (one row) when the tabs fit side by side — dense ones in equal
+ * shares, plain ones at their own widths — else the most columns whose equal share holds the
+ * widest tab on one line and that fill every row (`columnsFor`: no lone tab on the last row).
+ * Plain tabs on one row (`row`) are sized by their content: they no longer fit when they wrap; the
+ * grid then takes the full width and is measured again from there.
+ */
+function tabColumns(list: HTMLElement, count: number, dense: boolean, row: boolean): number {
   const width = list.clientWidth;
   if (width <= 0) return count;
+  const tabs = Array.from(list.querySelectorAll('[role="tab"]'));
+  if (!dense && row) {
+    const tops = tabs.map((tab) => Math.round(tab.getBoundingClientRect().top));
+    return tops.every((top) => top === tops[0]) ? count : count - 1;
+  }
+  const gap = dense ? DENSE_GAP : PLAIN_GAP;
   let need = 0;
-  list.querySelectorAll('[role="tab"]').forEach((tab) => {
+  let sum = 0;
+  tabs.forEach((tab) => {
     const cs = getComputedStyle(tab);
     const range = document.createRange();
     range.selectNodeContents(tab);
-    need = Math.max(
-      need,
+    const w =
       range.getBoundingClientRect().width +
-        (parseFloat(cs.paddingLeft) || 0) +
-        (parseFloat(cs.paddingRight) || 0),
-    );
+      (parseFloat(cs.paddingLeft) || 0) +
+      (parseFloat(cs.paddingRight) || 0);
+    need = Math.max(need, w);
+    sum += Math.ceil(w);
   });
-  return columnsFor(width, Math.ceil(need), count, DENSE_GAP, count);
+  if (!dense && sum + (count - 1) * gap <= width) return count;
+  return columnsFor(width, Math.ceil(need), count, gap, count);
 }
