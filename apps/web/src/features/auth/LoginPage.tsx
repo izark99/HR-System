@@ -1,9 +1,11 @@
 import { useRouterState } from '@tanstack/react-router';
 import { useState, type FormEvent } from 'react';
 import { useTranslation } from 'react-i18next';
+import { FormField, TextInput } from '../../components/FormField';
+import { PageHeader } from '../../components/layout';
 import { Button, Callout, type Tone } from '../../components/ui';
 import { useAuth, useAuthService } from './auth-context';
-import { AuthLayout, authCardClass, authInputClass } from './AuthLayout';
+import { AuthLayout, authCardClass } from './AuthLayout';
 import type { AuthErrorKey } from './credentials';
 import type { SignedOutReason } from './guard';
 import { LockIcon } from '../../components/icons';
@@ -57,10 +59,13 @@ export function LoginPage() {
 
   return (
     <AuthLayout>
+      <PageHeader
+        variant="showcase"
+        eyebrow={t('auth.eyebrow')}
+        title={t('auth.login.title')}
+        subtitle={t('auth.login.note')}
+      />
       <form className={authCardClass} onSubmit={(e) => void submit(e)} noValidate>
-        <h1 className="m-0 text-display-lg text-ink">{t('auth.login.title')}</h1>
-        <p className="m-0 text-body-lg text-muted">{t('auth.login.note')}</p>
-
         {reason && !error && (
           <Callout
             tone={REASON_TONE[reason]}
@@ -76,38 +81,33 @@ export function LoginPage() {
           </Callout>
         )}
 
-        <div className="flex flex-col gap-1.5">
-          <label htmlFor="login-username" className="text-label text-ink">
-            {t('auth.login.username')}
-          </label>
-          <input
-            id="login-username"
-            name="username"
-            type="text"
-            autoComplete="username"
-            autoCapitalize="none"
-            spellCheck={false}
-            required
-            value={username}
-            onChange={(e) => setUsername(e.target.value)}
-            className={authInputClass}
-          />
-        </div>
-        <div className="flex flex-col gap-1.5">
-          <label htmlFor="login-password" className="text-label text-ink">
-            {t('auth.login.password')}
-          </label>
-          <input
-            id="login-password"
-            name="password"
-            type="password"
-            autoComplete="current-password"
-            required
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            className={authInputClass}
-          />
-        </div>
+        <FormField label={t('auth.login.username')} id="login-username">
+          {(field) => (
+            <TextInput
+              {...field.input}
+              name="username"
+              autoComplete="username"
+              autoCapitalize="none"
+              spellCheck={false}
+              required
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+            />
+          )}
+        </FormField>
+        <FormField label={t('auth.login.password')} id="login-password">
+          {(field) => (
+            <TextInput
+              {...field.input}
+              name="password"
+              type="password"
+              autoComplete="current-password"
+              required
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+            />
+          )}
+        </FormField>
         <Button type="submit" variant="primary" disabled={busy}>
           {busy ? t('auth.login.submitting') : t('auth.login.submit')}
         </Button>

@@ -1,5 +1,6 @@
 import { RouterProvider } from '@tanstack/react-router';
 import { useTranslation } from 'react-i18next';
+import { PageShell } from '../components/layout';
 import { ToastProvider } from '../components/Toast';
 import { AuthProvider } from '../features/auth/auth-context';
 import { RunStoreProvider } from '../features/runner/run-context';
@@ -12,10 +13,12 @@ const services = createServices();
 function ConfigError() {
   const { t } = useTranslation();
   return (
-    <main id="main" className="mx-auto flex max-w-160 flex-col gap-3 px-4 py-16 font-sans text-ink">
-      <h1 className="m-0 text-display-lg">{t('config.title')}</h1>
-      <p className="m-0 text-body-lg text-muted">{t('config.text')}</p>
-    </main>
+    <div className="min-h-screen bg-page font-sans text-ink">
+      <PageShell width="narrow" className="pt-16">
+        <h1 className="m-0 text-page-title text-ink">{t('config.title')}</h1>
+        <p className="m-0 text-body text-muted">{t('config.text')}</p>
+      </PageShell>
+    </div>
   );
 }
 

@@ -1,9 +1,12 @@
 import { Link, useNavigate } from '@tanstack/react-router';
 import { useState, type FormEvent } from 'react';
 import { useTranslation } from 'react-i18next';
-import { buttonClass, Callout, cx, Eyebrow } from '../../components/ui';
+import { FormField, TextInput } from '../../components/FormField';
+import { ArrowLeftIcon } from '../../components/icons';
+import { PageHeader } from '../../components/layout';
+import { Button, Callout } from '../../components/ui';
 import { signOutAndReload, useAuth, useAuthService } from './auth-context';
-import { AuthLayout, authCardClass, authInputClass } from './AuthLayout';
+import { AuthLayout, authCardClass } from './AuthLayout';
 import {
   checkNewPassword,
   MIN_PASSWORD_LENGTH,
@@ -53,17 +56,30 @@ export function ChangePasswordPage() {
 
   return (
     <AuthLayout>
+      <PageHeader
+        eyebrow={forced ? t('auth.password.eyebrowFirst') : undefined}
+        eyebrowTone="amber"
+        back={
+          forced ? undefined : (
+            <Link
+              to="/"
+              className="inline-flex min-h-target items-center gap-2 self-start text-label"
+            >
+              <ArrowLeftIcon />
+              {t('run.back')}
+            </Link>
+          )
+        }
+        title={t('auth.password.title')}
+        subtitle={
+          <span id="password-rules">
+            {forced
+              ? t('auth.password.introFirst', { min: MIN_PASSWORD_LENGTH })
+              : t('auth.password.intro', { min: MIN_PASSWORD_LENGTH })}
+          </span>
+        }
+      />
       <form className={authCardClass} onSubmit={(e) => void submit(e)} noValidate>
-        <Eyebrow tone="amber">
-          {forced ? t('auth.password.eyebrowFirst') : t('auth.password.eyebrow')}
-        </Eyebrow>
-        <h1 className="m-0 text-display-lg text-ink">{t('auth.password.title')}</h1>
-        <p className="m-0 text-body-lg text-muted" id="password-rules">
-          {forced
-            ? t('auth.password.introFirst', { min: MIN_PASSWORD_LENGTH })
-            : t('auth.password.intro', { min: MIN_PASSWORD_LENGTH })}
-        </p>
-
         {message && (
           <Callout tone="coral" label={t('auth.errorLabel')} role="alert">
             {message}
@@ -75,53 +91,43 @@ export function ChangePasswordPage() {
           </Callout>
         )}
 
-        <div className="flex flex-col gap-1.5">
-          <label htmlFor="new-password" className="text-label text-ink">
-            {t('auth.password.new')}
-          </label>
-          <input
-            id="new-password"
-            type="password"
-            autoComplete="new-password"
-            aria-describedby="password-rules"
-            minLength={MIN_PASSWORD_LENGTH}
-            required
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            className={authInputClass}
-          />
+        <FormField label={t('auth.password.new')} id="new-password">
+          {(field) => (
+            <TextInput
+              {...field.input}
+              aria-describedby="password-rules"
+              type="password"
+              autoComplete="new-password"
+              minLength={MIN_PASSWORD_LENGTH}
+              required
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+            />
+          )}
+        </FormField>
+        <FormField label={t('auth.password.confirm')} id="confirm-password">
+          {(field) => (
+            <TextInput
+              {...field.input}
+              type="password"
+              autoComplete="new-password"
+              required
+              value={confirm}
+              onChange={(e) => setConfirm(e.target.value)}
+            />
+          )}
+        </FormField>
+        <div className="flex flex-wrap items-center justify-end gap-3">
+          {forced && (
+            <Button variant="outline" onClick={() => void signOutAndReload(auth)}>
+              {t('userMenu.signOut')}
+            </Button>
+          )}
+          {/* Dark button per wireframe (white text on #1F2A44 passes WCAG AA). */}
+          <Button type="submit" variant="dark" disabled={busy}>
+            {busy ? t('auth.password.saving') : t('auth.password.save')}
+          </Button>
         </div>
-        <div className="flex flex-col gap-1.5">
-          <label htmlFor="confirm-password" className="text-label text-ink">
-            {t('auth.password.confirm')}
-          </label>
-          <input
-            id="confirm-password"
-            type="password"
-            autoComplete="new-password"
-            required
-            value={confirm}
-            onChange={(e) => setConfirm(e.target.value)}
-            className={authInputClass}
-          />
-        </div>
-        {/* Dark button per wireframe (white text on #1F2A44 passes WCAG AA). */}
-        <button type="submit" disabled={busy} className={buttonClass('dark')}>
-          {busy ? t('auth.password.saving') : t('auth.password.save')}
-        </button>
-        {forced ? (
-          <button
-            type="button"
-            onClick={() => void signOutAndReload(auth)}
-            className={buttonClass('outline')}
-          >
-            {t('userMenu.signOut')}
-          </button>
-        ) : (
-          <Link to="/" className={cx(buttonClass('outline'), 'no-underline hover:text-ink')}>
-            {t('auth.password.back')}
-          </Link>
-        )}
       </form>
     </AuthLayout>
   );

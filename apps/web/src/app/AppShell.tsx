@@ -21,7 +21,7 @@ export function AppShell() {
           <Link
             to="/"
             aria-label={t('app.home')}
-            className="flex min-h-target items-center gap-2.5 text-title-sm text-ink no-underline hover:text-ink"
+            className="flex min-h-target items-center gap-3 text-title-sm text-ink no-underline hover:text-ink"
           >
             <img src="/favicon.svg" alt="" aria-hidden width={32} height={32} className="size-8" />
             <span className="max-sm:sr-only">{t('app.name')}</span>

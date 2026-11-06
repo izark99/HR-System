@@ -257,9 +257,6 @@ const FRAME_ALLOW: { file: string; rule: string; reason: string; only?: string[]
  * (stale) or when a file NOT listed here breaks a rule.
  */
 const PENDING_ROUND_B: { file: string; rules: string[] }[] = [
-  { file: 'app/App.tsx', rules: ['main', 'deprecated-text'] },
-  { file: 'app/AppShell.tsx', rules: ['spacing'] },
-  { file: 'app/UserMenu.tsx', rules: ['spacing'] },
   { file: 'components/Menu.tsx', rules: ['spacing'] },
   { file: 'components/MonthPicker.tsx', rules: ['spacing'] },
   { file: 'components/Select.tsx', rules: ['spacing'] },
@@ -275,10 +272,6 @@ const PENDING_ROUND_B: { file: string; rules: string[] }[] = [
     file: 'features/admin/versions/FlowVersionsPage.tsx',
     rules: ['spacing', 'table', 'deprecated-text'],
   },
-  { file: 'features/auth/AuthLayout.tsx', rules: ['spacing', 'main'] },
-  { file: 'features/auth/ChangePasswordPage.tsx', rules: ['spacing', 'deprecated-text'] },
-  { file: 'features/auth/LoginPage.tsx', rules: ['spacing', 'deprecated-text'] },
-  { file: 'features/auth/idle/IdleLogout.tsx', rules: ['deprecated-text'] },
   { file: 'features/designer/ConfigPanel.tsx', rules: ['spacing', 'tablist'] },
   { file: 'features/designer/DataPanel.tsx', rules: ['spacing', 'tablist'] },
   { file: 'features/designer/DesignerEditor.tsx', rules: ['spacing', 'deprecated-text'] },

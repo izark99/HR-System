@@ -212,11 +212,31 @@ export async function commonChecks(page: Page, opts: { darkCards?: number } = {}
   expect(report.bodyFont).toBe('16px');
 }
 
-/** Page title (AC-UI-10): 48px/500 on desktop, 32px on mobile; eyebrow above it (AC-UI-06). */
+/**
+ * Page title (§25.1, AC-UI-60/62): `PageHeader workspace` 28/36/600, `showcase` 32/40/600, both
+ * 24/32 on mobile; the variant is read from the header (`data-page-header`). Eyebrow above it
+ * (AC-UI-06) unless the header has a back link instead (`eyebrow: false`).
+ */
 export async function titleChecks(page: Page, opts: { eyebrow?: boolean } = {}): Promise<void> {
-  const h1 = await style(page.getByRole('heading', { level: 1 }).first());
-  expect(h1.fontSize).toBe(isMobile(page) ? '32px' : '48px');
-  expect(h1.fontWeight).toBe('500');
+  const header = page.locator('[data-page-header]').first();
+  await expect(header, 'PageHeader').toHaveAttribute('data-page-header', /^(workspace|showcase)$/);
+  const variant = await header.getAttribute('data-page-header');
+  const h1 = await style(header.getByRole('heading', { level: 1 }));
+  const mobile = isMobile(page);
+  const [size, lh] = mobile
+    ? ['24px', '32px']
+    : variant === 'showcase'
+      ? ['32px', '40px']
+      : ['28px', '36px'];
+  expect(h1.fontSize, `h1 ${variant}`).toBe(size);
+  expect(h1.lineHeight, `h1 ${variant}`).toBe(lh);
+  expect(h1.fontWeight).toBe('600');
+  // AC-UI-62: eyebrow + title + subtitle within 96px (a header with a 44px back link instead of
+  // the eyebrow is not that composition).
+  if (variant === 'workspace' && !mobile && (await header.locator('[data-eyebrow]').count()) > 0) {
+    const box = await header.boundingBox();
+    expect(box!.height, 'workspace header height (AC-UI-62)').toBeLessThanOrEqual(96);
+  }
   if (opts.eyebrow === false) return;
   const eyebrows = page.locator('main [data-eyebrow], body > div [data-eyebrow]');
   const count = await eyebrows.count();

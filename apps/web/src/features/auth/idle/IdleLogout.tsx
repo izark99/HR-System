@@ -133,7 +133,7 @@ function IdleWarningDialog({
         <h2 id="idle-title" className="m-0 text-title-sm text-ink">
           {children}
         </h2>
-        <p id="idle-text" className="m-0 text-body-lg text-ink-soft">
+        <p id="idle-text" className="m-0 text-body text-ink-soft">
           {t('idle.text')}{' '}
           <b className="font-semibold text-amber-text" aria-live="off">
             {formatCountdown(deadline - now)}

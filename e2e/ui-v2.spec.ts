@@ -150,7 +150,11 @@ for (const viewport of [DESKTOP, MOBILE]) {
       await page.goto('/change-password');
       await expect(page.getByRole('heading', { level: 1 })).toHaveText('Đặt mật khẩu mới');
       await commonChecks(page);
-      await titleChecks(page);
+      // Form workspace (§25.5): a link back to the flow list takes the eyebrow's place (AC-UI-71).
+      await titleChecks(page, { eyebrow: false });
+      await expect(
+        page.locator('[data-page-header]').getByRole('link', { name: 'Danh sách flow' }),
+      ).toBeVisible();
       await inputChecks(page.locator('form input'));
       await buttonChecks(page.locator('form button, form a'));
       // The save button is the dark variant (§25.3), the second one an outline button.
