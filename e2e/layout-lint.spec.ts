@@ -34,35 +34,12 @@ const size = (v: { width: number; height: number }) => `${v.width}x${v.height}`;
 const slug = (s: string) => s.replace(/[^a-z0-9]+/gi, '-').toLowerCase();
 
 /**
- * KNOWN BUG (AC-UI-78, found 2026-11-06 by the verifier): tests that fail on the current code
- * because of real layout violations. Each entry names the violation; the full measured list is
- * printed by the test and written to `<tmpdir>/layout-lint-<test>.txt`. Remove an entry once the
- * developer fixes it (Playwright then reports "expected to fail but passed").
+ * KNOWN BUG (AC-UI-78): tests that fail on the current code because of real layout violations,
+ * keyed by test title, each naming the violation; the full measured list is printed by the test
+ * and written to `<tmpdir>/layout-lint-<test>.txt`. Remove an entry once fixed (Playwright then
+ * reports "expected to fail but passed"). Empty since the fix round of 2026-11-06.
  */
-const KNOWN_BUG: Record<string, string> = {
-  'run: empty, validation 390x844':
-    'rule 2: Stepper label "Upload & kiểm tra" spills 83px out of its step and covers step 3',
-  'users: table, groups, create + temp password dialogs 1280x800':
-    'rule 7: Admin menu "Bảng tham chiếu" (Sắp có) cut with "…" and no tooltip',
-  'users: table, groups, create + temp password dialogs 1024x768':
-    'rule 7: Admin menu "Bảng tham chiếu" (Sắp có) cut with "…" and no tooltip',
-  'flows + versions (list, diff) 1280x800':
-    'rule 7: Admin menu "Bảng tham chiếu" (Sắp có) cut with "…" and no tooltip',
-  'flows + versions (list, diff) 1024x768':
-    'rule 7: Admin menu "Bảng tham chiếu" (Sắp có) cut with "…" and no tooltip',
-  'designer: flow tabs (Tham số, Input slot) 1280x800':
-    'rules 1/2/6/7: Input slot — Select 192px min width spills 2.5–28.5px out of its grid column (and out of the rule/column card); "Mục upload" Select 42px vs "Thêm mục upload" 36px; header-row inputs 20px out of line (label wraps); Select values cut without tooltip',
-  'designer: flow tabs (Tham số, Input slot) 1024x768':
-    'as 1280x800, plus rule 2: header — flow title squeezed to 59px, "Draft" chip spills 32px out of the h1',
-  'designer: node forms of the acceptance flow 1280x800':
-    'rules 2/7: compare metrics and formula "Kiểu kết quả" / "Khi một dòng tính lỗi" Selects spill 15.5px out of their column, 3.5px out of the card; Select values cut without tooltip',
-  'designer: node forms of the acceptance flow 1024x768':
-    'as 1280x800, plus rule 2: header h1 squeezed, "Draft" chip spills 32px',
-  'designer: every palette node type, wired and with a long name 1280x800':
-    'rule 2: Selects spill 15.5px out of their column in compare, formula, join, sort forms; rule 7 on formula Select value',
-  'designer: every palette node type, wired and with a long name 1024x768':
-    'as 1280x800, plus rule 2: with unsaved changes the toolbar ends 24px past the viewport (page scrolls sideways; "Lưu" at 989–1048px)',
-};
+const KNOWN_BUG: Record<string, string> = {};
 test.beforeEach(({ browserName }, testInfo) => {
   void browserName;
   const bug = KNOWN_BUG[testInfo.title];
@@ -354,7 +331,7 @@ test.describe('layout-lint self-test', () => {
       .row{display:flex;gap:8px;align-items:flex-start} input,button{box-sizing:border-box;height:44px;margin:0}
       .grid{display:grid;grid-template-columns:1fr 1fr;gap:8px} .f{display:flex;flex-direction:column;gap:4px;min-width:0}`;
     await page.setContent(`<style>${css}</style>
-      <div class="card" id="clean"><div class="row"><input aria-label="a"><button>OK</button></div></div>`);
+      <div class="card" data-card id="clean"><div class="row"><input aria-label="a"><button>OK</button></div></div>`);
     expect(await layoutLint(page)).toEqual([]);
 
     await page.setContent(`<style>${css}</style>
@@ -364,10 +341,19 @@ test.describe('layout-lint self-test', () => {
       <div class="card"><div class="row" style="gap:0"><button style="margin-right:4px">A</button><button style="margin-right:12px">B</button><button>C</button></div></div>
       <div class="card"><div role="tablist" class="row"><button role="tab">T1</button><button role="tab" style="height:40px">T2</button></div></div>
       <div class="card"><div class="grid"><div class="f"><label for="x1">Nhãn rất dài rất dài rất dài rất dài xuống dòng</label><input id="x1"></div><div class="f"><label for="x2">Ngắn</label><input id="x2"></div></div></div>
-      <div class="card"><div style="width:80px;overflow:hidden;white-space:nowrap">r7 chữ dài bị cắt mất không có dấu</div></div>`);
+      <div class="card"><div style="width:80px;overflow:hidden;white-space:nowrap">r7 chữ dài bị cắt mất không có dấu</div></div>
+      <div class="card" data-card><input aria-label="r8 ô"><p>r8</p><button style="height:40px">r8 nút 40</button><button data-size="sm" style="height:36px">r8 nhỏ</button></div>
+      <div class="card"><div role="tablist" data-tabs="dense" class="row"><button role="tab" style="height:44px">r9 a</button><button role="tab" style="height:44px">r9 tab dài hơn</button></div></div>`);
     const found = await layoutLint(page);
     const rules = new Set(found.map((v) => v.rule));
-    expect([...rules].sort()).toEqual([1, 2, 3, 4, 5, 6, 7]);
+    expect([...rules].sort()).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9]);
+    const r8 = found.filter((v) => v.rule === 8).map((v) => v.detail);
+    expect(r8.some((d) => d.includes('"r8 nút 40"') && d.includes('h=40px'))).toBe(true);
+    // The marked small button (36px) is not a fault.
+    expect(r8.some((d) => d.includes('r8 nhỏ'))).toBe(false);
+    const r9 = found.find((v) => v.rule === 9)!.detail;
+    expect(r9).toMatch(/widths .* \/ /);
+    expect(r9).toMatch(/tabs span/);
     expect(found.find((v) => v.rule === 1)!.detail).toContain('differ by 8px');
     expect(found.find((v) => v.rule === 4)!.detail).toMatch(/uneven gaps 4px \/ 12px/);
     expect(found.find((v) => v.rule === 6)!.target).toContain('Nhãn rất dài');

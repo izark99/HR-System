@@ -9,7 +9,12 @@
  *  (4) uneven gaps (> 1px) between the items of one row, or gaps off the §25.5 scale;
  *  (5) tabs of one tablist with different heights;
  *  (6) a long label or hint wrapping and pushing the controls of a row out of line;
- *  (7) text clipped without "…" and a tooltip.
+ *  (7) text clipped without "…" and a tooltip;
+ *  (8) in one panel / card / dialog, an interactive control (input, Select, picker, standard
+ *      button) not 44px high; only a small button marked as such (`data-size="sm"` from
+ *      `<Button size="sm">`, or the `*-control-sm` height token) may be 36px;
+ *  (9) tabs of a dense tablist (`Tabs dense`) not sharing its width equally (one size, filling
+ *      the row) or with their text off centre.
  * Only rows of one flex/grid parent are compared; hidden / zero-size elements are skipped.
  * Exceptions live in `LAYOUT_ALLOW` only, each with its reason.
  */
@@ -18,7 +23,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { expect, type Page } from './fixtures';
 
-export type LayoutRule = 1 | 2 | 3 | 4 | 5 | 6 | 7;
+export type LayoutRule = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9;
 
 export interface LayoutViolation {
   rule: LayoutRule;
@@ -66,6 +71,12 @@ export const LAYOUT_ALLOW: LayoutAllow[] = [
     rules: [2, 3],
     reason:
       'OneLine uses -my-5 py-5 so stacked Vietnamese marks are not clipped (cancels out, no layout change)',
+  },
+  {
+    selector: '[data-palette-item]',
+    rules: [8],
+    reason:
+      'Designer palette items are two-line list entries (name + description, MEMORY 2026-11-03 10:49: all items one size), not form controls',
   },
   {
     selector: '.sr-only',
@@ -343,7 +354,9 @@ function measure(
   // wider than its own box (e.g. a label wider than its button).
   for (const el of all) {
     if (allowed(el, 2) || !inFlow(el) || el instanceof SVGElement) continue;
-    const parent = el.parentElement;
+    // A `display: contents` wrapper has no box of its own: compare with the box around it.
+    let parent = el.parentElement;
+    while (parent && getComputedStyle(parent).display === 'contents') parent = parent.parentElement;
     if (parent && parent !== document.body && !isScroller(parent) && !allowed(parent, 2)) {
       const r = el.getBoundingClientRect();
       const p = parent.getBoundingClientRect();
@@ -437,6 +450,69 @@ function measure(
         rule: 5,
         target: name(list),
         detail: `tab heights/tops differ: ${tabs.map((t, i) => `${name(t)} h=${px(hs[i]!)} top=${px(tops[i]!)}`).join(' | ')}`,
+        ids: tabs.map(idOf),
+      });
+  }
+
+  // ---- one control height per panel / card / dialog (rule 8) ----------------------------------
+  const CONTROL_H = 44;
+  const SMALL_H = 36;
+  const PANEL = '[data-card], dialog, [role="dialog"], aside';
+  const markedSmall = (el: Element) =>
+    el.getAttribute('data-size') === 'sm' ||
+    /(^|\s)(min-h|h|size)-control-sm(\s|$)/.test(el.getAttribute('class') ?? '');
+  const perPanel = new Map<Element, { c: Element; h: number; want: number }[]>();
+  for (const el of all) {
+    if (!isControl(el) || allowed(el, 8) || el.parentElement?.closest(CONTROL)) continue;
+    const panel = el.closest(PANEL);
+    if (!panel) continue;
+    const h = el.getBoundingClientRect().height;
+    const want = markedSmall(el) ? SMALL_H : CONTROL_H;
+    if (Math.abs(h - want) <= TOL) continue;
+    const list = perPanel.get(panel) ?? [];
+    list.push({ c: el, h, want });
+    perPanel.set(panel, list);
+  }
+  for (const [panel, list] of perPanel)
+    out.push({
+      rule: 8,
+      target: name(panel),
+      detail: `controls not at the panel height (44px, marked small 36px): ${list.map(({ c, h, want }) => `${name(c)} h=${px(h)} want ${want}px`).join(' | ')}`,
+      ids: list.map(({ c }) => idOf(c)),
+    });
+
+  // ---- dense tabs share the width (rule 9) -------------------------------------------------------
+  for (const list of Array.from(document.querySelectorAll('[role="tablist"][data-tabs="dense"]'))) {
+    if (!visible(list) || allowed(list, 9)) continue;
+    const tabs = Array.from(list.querySelectorAll('[role="tab"]')).filter(visible);
+    if (tabs.length < 2) continue;
+    const rs = tabs.map((t) => t.getBoundingClientRect());
+    const ws = rs.map((r) => r.width);
+    const lr = list.getBoundingClientRect();
+    const lcs = getComputedStyle(list);
+    const inner = {
+      left: lr.left + list.clientLeft + (parseFloat(lcs.paddingLeft) || 0),
+      right: lr.left + list.clientLeft + list.clientWidth - (parseFloat(lcs.paddingRight) || 0),
+    };
+    const problems: string[] = [];
+    if (Math.max(...ws) - Math.min(...ws) > TOL) problems.push(`widths ${ws.map(px).join(' / ')}`);
+    const left = Math.min(...rs.map((r) => r.left));
+    const right = Math.max(...rs.map((r) => r.right));
+    if (left - inner.left > TOL || inner.right - right > TOL)
+      problems.push(`tabs span ${px(left)}–${px(right)} of ${px(inner.left)}–${px(inner.right)}`);
+    tabs.forEach((t, i) => {
+      const range = document.createRange();
+      range.selectNodeContents(t);
+      const tr = range.getBoundingClientRect();
+      const off = (tr.left + tr.right) / 2 - (rs[i]!.left + rs[i]!.right) / 2;
+      if (tr.width > 0 && Math.abs(off) > TOL)
+        problems.push(`${name(t)} text off centre by ${px(off)}`);
+    });
+    if (problems.length > 0)
+      out.push({
+        rule: 9,
+        target: name(list),
+        detail: `dense tabs do not share the row equally: ${problems.join('; ')}`,
         ids: tabs.map(idOf),
       });
   }
