@@ -235,7 +235,9 @@
 
 ## Kỹ thuật & tổ chức
 
-2026-11-06 14:45 - Mọi vùng cuộn trong app luôn chừa chỗ thanh cuộn (`scrollbar-gutter: stable`) để đổi tab/nội dung dài ngắn không làm lệch bố cục.
+2026-11-06 14:48 - Thanh cuộn của panel giữ như cũ (chỉ hiện khi cần, không chừa chỗ sẵn). Lỗi ở tab Input slot là 2 thanh cuộn lồng nhau (khung ngoài cuộn thêm vì nội dung panel vượt chiều cao khung): sửa tận gốc để mỗi vùng chỉ có 1 thanh cuộn theo mỗi chiều; `layout-lint` chặn vùng cuộn lồng nhau cùng chiều.
+
+~~2026-11-06 14:45 - Mọi vùng cuộn trong app luôn chừa chỗ thanh cuộn (`scrollbar-gutter: stable`) để đổi tab/nội dung dài ngắn không làm lệch bố cục.~~ → thay bởi 2026-11-06 14:48
 
 2026-11-06 14:45 - Gợi ý dưới field và đoạn giải thích trong form/card/panel (mọi màn) không hiện mặc định: hiện bằng nút (i) cạnh nhãn/tiêu đề, mở khi rê chuột, focus hoặc bấm (mobile: bấm); trình đọc màn hình vẫn đọc qua `aria-describedby`. Lỗi validate vẫn hiện tại chỗ. Mô tả dưới tiêu đề trang (`PageHeader`) giữ nguyên.
 
