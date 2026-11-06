@@ -44,7 +44,7 @@ export function Palette({ onAdd, disabled }: { onAdd: (type: string) => void; di
         value={query}
         placeholder={t('palette.search')}
         onChange={(e) => setQuery(e.target.value)}
-        className="h-10.5 shrink-0 rounded-input border border-line-input bg-card px-3 text-dense"
+        className="h-control shrink-0 rounded-input border border-line-input bg-card px-3 text-dense"
       />
       {NODE_GROUPS.map((group) => {
         const items = NODE_TYPES.filter((s) => s.group === group && match(s.type));

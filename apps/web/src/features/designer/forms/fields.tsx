@@ -13,7 +13,7 @@ import { CloseIcon } from '../../../components/icons';
  */
 
 export const inputClass =
-  'h-10.5 w-full min-w-0 rounded-input border bg-card px-3 text-dense text-ink ' +
+  'h-control w-full min-w-0 rounded-input border bg-card px-3 text-dense text-ink ' +
   'focus:border-teal-strong focus:ring-3 focus:ring-teal-tint focus:outline-none ' +
   'disabled:bg-neutral disabled:text-muted';
 export const labelClass = 'text-dense font-semibold text-ink';
@@ -513,6 +513,7 @@ export function ListEditor<T>({
           className="flex flex-col gap-2 rounded-card border border-line bg-page p-3"
         >
           <div className="flex items-center justify-between gap-2">
+            {/* Up / Down / Remove: one size, text centred (AC-UI-78 rule 8). */}
             <span className="text-caption font-semibold text-ink">{itemLabel(i)}</span>
             {!disabled && (
               <span className="flex gap-1">
@@ -521,7 +522,7 @@ export function ListEditor<T>({
                   disabled={i === 0}
                   aria-label={t('form.moveUp', { item: itemLabel(i) })}
                   onClick={() => move(i, i - 1)}
-                  className="inline-flex size-target items-center justify-center rounded-card text-dense hover:bg-card disabled:text-line-input"
+                  className="inline-flex h-target w-16 items-center justify-center rounded-card text-dense hover:bg-card disabled:text-line-input"
                 >
                   {t('form.up')}
                 </button>
@@ -530,7 +531,7 @@ export function ListEditor<T>({
                   disabled={i === items.length - 1}
                   aria-label={t('form.moveDown', { item: itemLabel(i) })}
                   onClick={() => move(i, i + 1)}
-                  className="inline-flex size-target items-center justify-center rounded-card text-dense hover:bg-card disabled:text-line-input"
+                  className="inline-flex h-target w-16 items-center justify-center rounded-card text-dense hover:bg-card disabled:text-line-input"
                 >
                   {t('form.down')}
                 </button>
@@ -538,7 +539,7 @@ export function ListEditor<T>({
                   type="button"
                   aria-label={t('form.removeItem', { item: itemLabel(i) })}
                   onClick={() => onChange(items.filter((_, k) => k !== i))}
-                  className="inline-flex size-target items-center justify-center rounded-card hover:bg-card"
+                  className="inline-flex h-target w-16 items-center justify-center rounded-card hover:bg-card"
                 >
                   <CloseIcon />
                 </button>

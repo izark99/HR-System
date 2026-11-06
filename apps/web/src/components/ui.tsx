@@ -4,6 +4,7 @@ import {
   useState,
   type ButtonHTMLAttributes,
   type ReactNode,
+  type RefObject,
 } from 'react';
 import { Tooltip } from './Tooltip';
 
@@ -51,10 +52,10 @@ export const textareaClass = `py-3 ${inputFrame}`;
 
 /**
  * Dense variant for the Designer side form (MEMORY 2026-10-30 13:29: 14px text there); same frame
- * (radius, border, focus) as `inputClass`.
+ * (radius, border, focus) and the same 44px height as `inputClass` (MEMORY 2026-11-06 13:05).
  */
 export const denseInputClass =
-  'h-10.5 min-w-0 rounded-input border border-line-input bg-card px-3 text-dense text-ink ' +
+  'h-control min-w-0 rounded-input border border-line-input bg-card px-3 text-dense text-ink ' +
   'focus:border-teal-strong focus:ring-3 focus:ring-teal-tint focus:outline-none ' +
   'aria-invalid:border-coral-text disabled:bg-neutral disabled:text-muted';
 
@@ -152,7 +153,15 @@ export function Button({
   type = 'button',
   ...props
 }: ButtonHTMLAttributes<HTMLButtonElement> & { variant?: ButtonVariant; size?: ButtonSize }) {
-  return <button type={type} className={cx(buttonClass(variant, size), className)} {...props} />;
+  // `data-size`: the small (36px) button is a marked exception of AC-UI-78 rule 8.
+  return (
+    <button
+      type={type}
+      data-size={size}
+      className={cx(buttonClass(variant, size), className)}
+      {...props}
+    />
+  );
 }
 
 export function Card({
@@ -244,6 +253,25 @@ export function Callout({
  * the font size; the 20px padding (cancelled by a negative margin, so layout is unchanged) keeps
  * them inside the clipping box.
  */
+/**
+ * Whether the one-line text of `ref` is cut (wider than its box); re-checked when the box resizes
+ * or `text` changes. For "…" + tooltip (AC-UI-78 rule 7).
+ */
+export function useTextCut(ref: RefObject<HTMLElement | null>, text: string): boolean {
+  const [cut, setCut] = useState(false);
+  useLayoutEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const check = () => setCut(el.scrollWidth > el.clientWidth + 1);
+    check();
+    if (typeof ResizeObserver === 'undefined') return;
+    const observer = new ResizeObserver(check);
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [ref, text]);
+  return cut;
+}
+
 export function OneLine({
   as: As = 'span',
   text,
@@ -256,17 +284,7 @@ export function OneLine({
   wrapperClassName?: string;
 }) {
   const ref = useRef<HTMLElement>(null);
-  const [cut, setCut] = useState(false);
-  useLayoutEffect(() => {
-    const el = ref.current;
-    if (!el) return;
-    const check = () => setCut(el.scrollWidth > el.clientWidth + 1);
-    check();
-    if (typeof ResizeObserver === 'undefined') return;
-    const observer = new ResizeObserver(check);
-    observer.observe(el);
-    return () => observer.disconnect();
-  }, [text]);
+  const cut = useTextCut(ref, text);
   return (
     <Tooltip
       text={cut ? text : null}

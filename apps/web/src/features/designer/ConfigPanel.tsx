@@ -106,9 +106,8 @@ function SlotsTab({
           </FormField>
         )}
         {!readOnly && (
-          <Button size="sm" onClick={add}>
-            {t('slot.add')}
-          </Button>
+          // 44px like the Select beside it (AC-UI-78 rules 1 and 8).
+          <Button onClick={add}>{t('slot.add')}</Button>
         )}
       </div>
       {slots.length === 0 && <p className="m-0 text-dense text-muted">{t('slot.empty')}</p>}

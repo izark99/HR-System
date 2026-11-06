@@ -18,7 +18,8 @@ import {
   type SelectGroup,
   type SelectOption,
 } from './select-logic';
-import { cx, floatClass, inputClass } from './ui';
+import { Tooltip } from './Tooltip';
+import { cx, floatClass, inputClass, useTextCut } from './ui';
 import { CheckIcon, ChevronDownIcon } from './icons';
 
 export type { SelectGroup, SelectOption } from './select-logic';
@@ -41,7 +42,10 @@ export interface SelectProps {
   describedBy?: string;
   /** Extra classes for the trigger (width). */
   className?: string;
-  /** Designer side form: 14px text, 42px trigger (MEMORY 2026-10-30 13:29). */
+  /**
+   * Designer side form: 14px text (MEMORY 2026-10-30 13:29), 44px trigger like every control
+   * (MEMORY 2026-11-06 13:05); no minimum width, so it fits its form column.
+   */
   dense?: boolean;
 }
 
@@ -88,6 +92,7 @@ export function Select({
   // The listbox is named like the field: the text of the trigger's <label for>.
   const [listLabel, setListLabel] = useState<string | undefined>(undefined);
   const typed = useRef({ text: '', at: 0 });
+  const valueRef = useRef<HTMLSpanElement>(null);
 
   const sections = useMemo(() => sectionsOf(options, groups), [options, groups]);
   const all = useMemo(() => flatten(sections), [sections]);
@@ -99,6 +104,9 @@ export function Select({
   const shownFlat = useMemo(() => flatten(shown), [shown]);
   const selected = all.find((o) => o.value === value);
   const optionId = (i: number) => `${listId}-o${i}`;
+  const shownText = selected ? selected.label : (placeholder ?? t('select.placeholder'));
+  // A value cut with "…" shows in full in a tooltip on hover / keyboard focus (AC-UI-78 rule 7).
+  const cut = useTextCut(valueRef, shownText);
 
   function openList(at?: number) {
     if (disabled) return;
@@ -226,43 +234,50 @@ export function Select({
 
   let index = -1;
   return (
-    <div ref={rootRef} className="relative inline-flex flex-col">
-      <button
-        ref={triggerRef}
-        id={id}
-        type="button"
-        role="combobox"
-        aria-haspopup="listbox"
-        aria-expanded={open}
-        aria-controls={open ? listId : undefined}
-        aria-activedescendant={open && !searchable && active >= 0 ? optionId(active) : undefined}
-        aria-required={required || undefined}
-        aria-invalid={invalid || undefined}
-        aria-describedby={describedBy}
-        data-value={value}
-        disabled={disabled}
-        onClick={() => (open ? close(false) : openList())}
-        onKeyDown={onKeyDown}
-        onBlur={(e) => {
-          const next = e.relatedTarget as Node | null;
-          if (open && next && !rootRef.current?.contains(next)) close(false);
-        }}
-        className={cx(
-          'inline-flex min-w-48 items-center justify-between gap-3 rounded-input border bg-card text-left text-ink',
-          dense ? 'h-10.5 px-3 text-dense' : 'h-control px-4 text-body',
-          'hover:border-teal-strong focus-visible:border-teal-strong focus-visible:ring-3 focus-visible:ring-teal-tint focus-visible:outline-none',
-          'disabled:cursor-not-allowed disabled:bg-neutral disabled:text-muted',
-          invalid ? 'border-coral-text' : 'border-line-input',
-          className,
-        )}
-      >
-        <span className={cx('truncate', !selected && 'text-muted')}>
-          {selected ? selected.label : (placeholder ?? t('select.placeholder'))}
-        </span>
-        <ChevronDownIcon
-          className={cx('shrink-0 text-muted transition-transform', open && 'rotate-180')}
-        />
-      </button>
+    <div ref={rootRef} className="relative flex min-w-0 flex-col">
+      <Tooltip text={cut && !open ? shownText : null} as="div" className="flex min-w-0 flex-col">
+        <button
+          ref={triggerRef}
+          id={id}
+          type="button"
+          role="combobox"
+          aria-haspopup="listbox"
+          aria-expanded={open}
+          aria-controls={open ? listId : undefined}
+          aria-activedescendant={open && !searchable && active >= 0 ? optionId(active) : undefined}
+          aria-required={required || undefined}
+          aria-invalid={invalid || undefined}
+          aria-describedby={describedBy}
+          data-value={value}
+          disabled={disabled}
+          onClick={() => (open ? close(false) : openList())}
+          onKeyDown={onKeyDown}
+          onBlur={(e) => {
+            const next = e.relatedTarget as Node | null;
+            if (open && next && !rootRef.current?.contains(next)) close(false);
+          }}
+          className={cx(
+            // Fills its field (a form column); the regular one keeps a 192px minimum in flex rows.
+            'inline-flex h-control w-full min-w-0 items-center justify-between gap-3 rounded-input border bg-card text-left text-ink',
+            dense ? 'px-3 text-dense' : 'min-w-48 px-4 text-body',
+            'hover:border-teal-strong focus-visible:border-teal-strong focus-visible:ring-3 focus-visible:ring-teal-tint focus-visible:outline-none',
+            'disabled:cursor-not-allowed disabled:bg-neutral disabled:text-muted',
+            invalid ? 'border-coral-text' : 'border-line-input',
+            className,
+          )}
+        >
+          <span
+            ref={valueRef}
+            data-cut={cut || undefined}
+            className={cx('min-w-0 truncate', !selected && 'text-muted')}
+          >
+            {shownText}
+          </span>
+          <ChevronDownIcon
+            className={cx('shrink-0 text-muted transition-transform', open && 'rotate-180')}
+          />
+        </button>
+      </Tooltip>
       {open && (
         <div
           style={{
@@ -293,7 +308,7 @@ export function Select({
                 setActive(0);
               }}
               onKeyDown={onKeyDown}
-              className={cx(inputClass, 'h-10.5 text-body')}
+              className={inputClass}
             />
           )}
           {/* Outside the listbox: a listbox may only contain options and groups. */}

@@ -208,7 +208,7 @@ export function ConnectMenu({
               setActive(0);
             }}
             onKeyDown={onKeyDown}
-            className="h-10.5 min-w-0 rounded-input border border-line-input bg-card px-3 text-dense text-ink focus:border-teal-strong focus:ring-3 focus:ring-teal-tint focus:outline-none"
+            className="h-control min-w-0 rounded-input border border-line-input bg-card px-3 text-dense text-ink focus:border-teal-strong focus:ring-3 focus:ring-teal-tint focus:outline-none"
           />
           {items.length === 0 && (
             <p role="status" className="m-0 px-3 py-2 text-caption text-muted">

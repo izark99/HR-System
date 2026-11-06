@@ -24,7 +24,8 @@ export interface TabItem {
  * `id`). `panels="selected"` (default) when only the selected panel is in the DOM, `"all"` when
  * every panel stays mounted (hidden): `aria-controls` then points at each of them.
  *
- * `dense`: 14px variant for the Designer side panels (MEMORY 2026-10-30 13:29).
+ * `dense`: 14px variant for the Designer side panels (MEMORY 2026-10-30 13:29); its tabs share the
+ * width equally, one size, text centred (MEMORY 2026-11-06 13:05, AC-UI-78 rule 9).
  */
 export function Tabs({
   id,
@@ -73,7 +74,10 @@ export function Tabs({
       aria-orientation="horizontal"
       onKeyDown={onKeyDown}
       data-tabs={dense ? 'dense' : 'default'}
-      className={cx('flex flex-wrap', dense ? 'gap-1' : 'gap-2', className)}
+      className={cx(
+        dense ? 'grid auto-cols-fr grid-flow-col gap-1' : 'flex flex-wrap gap-2',
+        className,
+      )}
     >
       {items.map((item, i) => {
         const active = i === current;
@@ -94,8 +98,8 @@ export function Tabs({
             disabled={item.disabled}
             onClick={() => onChange(item.id)}
             className={cx(
-              'inline-flex min-h-target items-center gap-2 rounded-pill px-4 font-semibold whitespace-nowrap',
-              dense ? 'text-dense' : 'text-body',
+              'inline-flex min-h-target items-center gap-2 rounded-pill font-semibold whitespace-nowrap',
+              dense ? 'min-w-0 justify-center px-3 text-dense' : 'px-4 text-body',
               active
                 ? cx(toneTint[tone], toneText[tone])
                 : 'text-muted hover:bg-neutral disabled:cursor-not-allowed disabled:hover:bg-transparent',
