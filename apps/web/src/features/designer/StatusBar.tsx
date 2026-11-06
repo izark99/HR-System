@@ -25,7 +25,7 @@ export function StatusBar({
   const warnings = check?.warningCount ?? 0;
   const issues = check?.issues ?? [];
   return (
-    <div className="relative flex min-h-target items-center gap-3 border-t border-line bg-card px-3.5 text-caption">
+    <div className="relative flex min-h-target items-center gap-3 border-t border-line bg-card px-4 text-caption">
       <span role="status" aria-live="polite" className="text-muted">
         {failed
           ? t('status.failed')
@@ -41,7 +41,7 @@ export function StatusBar({
         aria-controls={listId}
         disabled={issues.length === 0}
         onClick={() => setOpen((o) => !o)}
-        className="flex min-h-target items-center gap-2 rounded-card px-2.5 font-semibold hover:bg-page disabled:cursor-default"
+        className="flex min-h-target items-center gap-2 rounded-card px-3 font-semibold hover:bg-page disabled:cursor-default"
       >
         <span className={cx(errors > 0 ? 'text-coral-text' : 'text-teal-strong')}>
           {t('status.errors', { count: errors })}
@@ -65,7 +65,7 @@ export function StatusBar({
                     onJump(i);
                     setOpen(false);
                   }}
-                  className="flex min-h-target w-full items-start gap-2 rounded-card px-2.5 py-2 text-left text-caption hover:bg-page"
+                  className="flex min-h-target w-full items-start gap-2 rounded-card px-3 py-2 text-left text-caption hover:bg-page"
                 >
                   <span
                     className={cx(

@@ -30,10 +30,7 @@ export function Palette({ onAdd, disabled }: { onAdd: (type: string) => void; di
   };
 
   return (
-    <nav
-      aria-label={t('palette.title')}
-      className="flex h-full flex-col gap-3 overflow-y-auto p-3.5"
-    >
+    <nav aria-label={t('palette.title')} className="flex h-full flex-col gap-3 overflow-y-auto p-4">
       <h2 className="m-0 text-dense font-semibold text-ink">{t('palette.title')}</h2>
       <p id={hintId} className="sr-only">
         {t('palette.addHint')}
@@ -56,12 +53,12 @@ export function Palette({ onAdd, disabled }: { onAdd: (type: string) => void; di
           <section
             key={group}
             aria-label={t(`palette.groups.${group}`)}
-            className="flex flex-col gap-1.5"
+            className="flex flex-col gap-2"
           >
             <h3 data-eyebrow className="m-0 text-eyebrow text-muted uppercase">
               {t(`palette.groups.${group}`)}
             </h3>
-            <ul className="m-0 flex list-none flex-col gap-1.5 p-0">
+            <ul className="m-0 flex list-none flex-col gap-2 p-0">
               {items.map((s) => (
                 <li key={s.type}>
                   <Tooltip
@@ -77,7 +74,7 @@ export function Palette({ onAdd, disabled }: { onAdd: (type: string) => void; di
                       data-palette-item
                       aria-describedby={hintId}
                       className={cx(
-                        'flex h-15 w-full items-stretch gap-2.5 overflow-hidden rounded-card border border-line bg-card text-left',
+                        'flex h-15 w-full items-stretch gap-3 overflow-hidden rounded-card border border-line bg-card text-left',
                         'hover:border-teal-strong disabled:cursor-not-allowed disabled:text-muted',
                       )}
                     >

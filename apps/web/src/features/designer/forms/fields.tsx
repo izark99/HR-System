@@ -1,5 +1,6 @@
 import { useId, useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
+import { FormField } from '../../../components/FormField';
 import { Select, type SelectOption } from '../../../components/Select';
 import { cx } from '../../../components/ui';
 import type { ColumnInfo } from '../../../engine/protocol';
@@ -35,6 +36,10 @@ export function FieldErrors({ id, issues }: { id: string; issues: readonly Desig
   );
 }
 
+/**
+ * Labelled field of the Designer side form: the shared `FormField` in its `dense` variant (14px,
+ * spec §25.5) with the design-check issues of the field as its error.
+ */
 export function Field({
   label,
   htmlFor,
@@ -50,27 +55,26 @@ export function Field({
   children: (describedBy: string | undefined, invalid: boolean) => ReactNode;
   className?: string;
 }) {
-  const errId = useId();
-  const hintId = useId();
-  const invalid = issues.length > 0;
-  const describedBy = [invalid ? errId : '', hint ? hintId : ''].filter(Boolean).join(' ');
+  const generated = useId();
   return (
-    <div className={cx('flex min-w-0 flex-col gap-1.5', className)}>
-      {htmlFor ? (
-        <label htmlFor={htmlFor} className={labelClass}>
-          {label}
-        </label>
-      ) : (
-        <span className={labelClass}>{label}</span>
-      )}
-      {children(describedBy || undefined, invalid)}
-      {hint && (
-        <p id={hintId} className="m-0 text-caption text-muted">
-          {hint}
-        </p>
-      )}
-      <FieldErrors id={errId} issues={issues} />
-    </div>
+    <FormField
+      dense
+      id={htmlFor ?? generated}
+      label={label}
+      hint={hint}
+      error={
+        issues.length > 0
+          ? issues.map((i, k) => (
+              <span key={k} className="block">
+                {i.text}
+              </span>
+            ))
+          : undefined
+      }
+      {...(className ? { className } : {})}
+    >
+      {(f) => children(f.describedBy, f.invalid)}
+    </FormField>
   );
 }
 
@@ -200,7 +204,7 @@ export function CheckField({
     <div className="flex flex-col gap-1">
       <label
         htmlFor={id}
-        className="flex min-h-target cursor-pointer items-center gap-2.5 text-dense text-ink-soft"
+        className="flex min-h-target cursor-pointer items-center gap-3 text-dense text-ink-soft"
       >
         <input
           id={id}
@@ -408,7 +412,7 @@ export function ColumnListField({
   return (
     <Field label={label} hint={columns ? hint : t('form.columnsUnknown')} issues={listIssues}>
       {() => (
-        <div className="flex flex-col gap-1.5">
+        <div className="flex flex-col gap-2">
           {value.length > 0 && (
             <ul className="m-0 flex list-none flex-col gap-1 p-0">
               {value.map((key, i) => {
@@ -499,7 +503,7 @@ export function ListEditor<T>({
   };
   return (
     <fieldset className="m-0 flex min-w-0 flex-col gap-2 border-0 p-0">
-      <legend className={cx(labelClass, 'mb-1.5 p-0')}>{label}</legend>
+      <legend className={cx(labelClass, 'mb-2 p-0')}>{label}</legend>
       <FieldErrors id={errId} issues={listIssues} />
       {items.map((item, i) => (
         <div
@@ -548,7 +552,7 @@ export function ListEditor<T>({
         <button
           type="button"
           onClick={() => onChange([...items, create()])}
-          className="min-h-target self-start rounded-input border border-dashed border-line-input bg-card px-3.5 text-caption font-semibold text-teal-strong hover:bg-teal-tint-soft"
+          className="min-h-target self-start rounded-input border border-dashed border-line-input bg-card px-4 text-caption font-semibold text-teal-strong hover:bg-teal-tint-soft"
         >
           {addLabel}
         </button>

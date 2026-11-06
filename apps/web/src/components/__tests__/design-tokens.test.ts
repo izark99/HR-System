@@ -248,6 +248,41 @@ const FRAME_ALLOW: { file: string; rule: string; reason: string; only?: string[]
     reason: 'dense reference table of supported functions beside the canvas',
   },
   {
+    file: 'features/designer/canvas/nodes.tsx',
+    rule: 'spacing',
+    reason: 'node cards on the React Flow canvas: dense 14px layout around the port handles',
+  },
+  {
+    file: 'features/designer/ConfigPanel.tsx',
+    rule: 'spacing',
+    reason: 'form panel beside the canvas (dense 14px, MEMORY 2026-11-06 08:24)',
+  },
+  {
+    file: 'features/designer/DataPanel.tsx',
+    rule: 'spacing',
+    reason: 'data panel under the canvas: sample files and preview table (dense 14px)',
+  },
+  {
+    file: 'features/designer/forms/NodeForms.tsx',
+    rule: 'spacing',
+    reason: 'node config forms beside the canvas (dense 14px, MEMORY 2026-11-06 08:24)',
+  },
+  {
+    file: 'features/designer/forms/ParamsForm.tsx',
+    rule: 'spacing',
+    reason: 'flow params form beside the canvas (dense 14px, MEMORY 2026-11-06 08:24)',
+  },
+  {
+    file: 'features/designer/forms/SlotForm.tsx',
+    rule: 'spacing',
+    reason: 'input slot form beside the canvas (dense 14px, MEMORY 2026-11-06 08:24)',
+  },
+  {
+    file: 'features/designer/formula/FormulaForm.tsx',
+    rule: 'spacing',
+    reason: 'formula node form beside the canvas (dense 14px, MEMORY 2026-11-06 08:24)',
+  },
+  {
     file: 'components/ui.tsx',
     rule: 'spacing',
     reason:
@@ -270,18 +305,6 @@ const PENDING_ROUND_B: { file: string; rules: string[] }[] = [
   { file: 'components/Tooltip.tsx', rules: ['spacing'] },
   { file: 'components/picker-shared.tsx', rules: ['spacing'] },
   { file: 'components/ui.tsx', rules: ['spacing', 'deprecated-text'] },
-  { file: 'features/designer/ConfigPanel.tsx', rules: ['spacing', 'tablist'] },
-  { file: 'features/designer/DataPanel.tsx', rules: ['spacing', 'tablist'] },
-  { file: 'features/designer/DesignerEditor.tsx', rules: ['spacing', 'deprecated-text'] },
-  { file: 'features/designer/DesignerPage.tsx', rules: ['spacing', 'deprecated-text'] },
-  { file: 'features/designer/Palette.tsx', rules: ['spacing'] },
-  { file: 'features/designer/StatusBar.tsx', rules: ['spacing'] },
-  { file: 'features/designer/canvas/nodes.tsx', rules: ['spacing'] },
-  { file: 'features/designer/forms/NodeForms.tsx', rules: ['spacing'] },
-  { file: 'features/designer/forms/ParamsForm.tsx', rules: ['spacing'] },
-  { file: 'features/designer/forms/SlotForm.tsx', rules: ['spacing'] },
-  { file: 'features/designer/forms/fields.tsx', rules: ['spacing'] },
-  { file: 'features/designer/formula/FormulaForm.tsx', rules: ['spacing'] },
 ];
 
 interface FrameHit {

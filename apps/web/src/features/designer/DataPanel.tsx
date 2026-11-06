@@ -1,6 +1,7 @@
 import type { FlowParam } from '@hrflow/flow-schema';
-import { useEffect, useId, useRef, useState } from 'react';
+import { useEffect, useId, useRef, useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
+import { TabPanel, Tabs } from '../../components/Tabs';
 import { Button, Callout, Chip, cx } from '../../components/ui';
 import { formatIssue } from '../../engine/io/validation';
 import type { PreviewOutcome } from '../../engine/preview';
@@ -10,6 +11,8 @@ import { formatCell, formatInteger, isNumericType } from '../../lib/format';
 import { ParamsCard } from '../runner/components/ParamsCard';
 import { EngineClient } from '../runner/engine-client';
 import type { DesignerDoc, DNode, JsonObject } from './model';
+
+const TABS_ID = 'designer-data';
 
 /**
  * Bottom data panel of the Designer (spec §13.3, §15.3): sample file per slot (kept in the RAM
@@ -197,81 +200,89 @@ export function DataPanel({
       {current && (
         <section aria-label={t('data.resultLabel')} className="flex flex-col gap-2">
           {tables.length > 1 && (
-            <div
-              role="tablist"
-              aria-label={t('data.resultLabel')}
-              className="flex flex-wrap gap-1.5"
-            >
-              {tables.map((x, i) => (
-                <button
-                  key={x.name}
-                  type="button"
-                  role="tab"
-                  aria-selected={x === current}
-                  onClick={() => setTab(i)}
-                  className={cx(
-                    'min-h-target rounded-pill px-4 text-dense',
-                    x === current
-                      ? 'bg-teal-tint font-semibold text-teal-strong'
-                      : 'font-semibold text-muted hover:bg-page',
-                  )}
-                >
-                  {t('data.tab', { name: portName(x.name), count: x.total })}
-                </button>
-              ))}
-            </div>
+            <Tabs
+              id={TABS_ID}
+              dense
+              label={t('data.resultLabel')}
+              selected={current.name}
+              onChange={(name) => setTab(tables.findIndex((x) => x.name === name))}
+              items={tables.map((x) => ({
+                id: x.name,
+                label: t('data.tab', { name: portName(x.name), count: x.total }),
+              }))}
+            />
           )}
-          <p className="m-0 text-caption text-muted" aria-live="polite">
-            {t('data.shown', {
-              shown: formatInteger(current.rows.length),
-              total: formatInteger(current.total),
-            })}
-          </p>
-          <div
-            role="region"
-            aria-label={current.name}
-            tabIndex={0}
-            className="max-h-72 overflow-auto rounded-card border border-line"
-          >
-            <table className="w-max min-w-full border-collapse text-caption text-ink-soft">
-              <thead className="sticky top-0 bg-page">
-                <tr>
-                  {current.columns.map((c) => (
-                    <th
-                      key={c.key}
-                      scope="col"
-                      className={cx(
-                        'border-b border-line px-2 py-2 font-semibold text-muted',
-                        isNumericType(c.type) ? 'text-right' : 'text-left',
-                      )}
-                    >
-                      {c.title}
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {current.rows.map((r, i) => (
-                  <tr key={i} className="border-b border-line">
-                    {current.columns.map((c, ci) => (
-                      <td
+          <PanelBody tabbed={tables.length > 1} item={current.name}>
+            <p className="m-0 text-caption text-muted" aria-live="polite">
+              {t('data.shown', {
+                shown: formatInteger(current.rows.length),
+                total: formatInteger(current.total),
+              })}
+            </p>
+            <div
+              role="region"
+              aria-label={current.name}
+              tabIndex={0}
+              className="max-h-72 overflow-auto rounded-card border border-line"
+            >
+              <table className="w-max min-w-full border-collapse text-caption text-ink-soft">
+                <thead className="sticky top-0 bg-page">
+                  <tr>
+                    {current.columns.map((c) => (
+                      <th
                         key={c.key}
+                        scope="col"
                         className={cx(
-                          'px-2 py-1.5 whitespace-nowrap',
-                          isNumericType(c.type) && 'text-right tabular-nums',
+                          'border-b border-line px-2 py-2 font-semibold text-muted',
+                          isNumericType(c.type) ? 'text-right' : 'text-left',
                         )}
                       >
-                        {formatCell(r[ci] ?? null, c.type, tc)}
-                      </td>
+                        {c.title}
+                      </th>
                     ))}
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+                <tbody>
+                  {current.rows.map((r, i) => (
+                    <tr key={i} className="border-b border-line">
+                      {current.columns.map((c, ci) => (
+                        <td
+                          key={c.key}
+                          className={cx(
+                            'px-2 py-1.5 whitespace-nowrap',
+                            isNumericType(c.type) && 'text-right tabular-nums',
+                          )}
+                        >
+                          {formatCell(r[ci] ?? null, c.type, tc)}
+                        </td>
+                      ))}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </PanelBody>
         </section>
       )}
     </div>
+  );
+}
+
+/** The shown table: a tab panel when there are several output tables, a plain block otherwise. */
+function PanelBody({
+  tabbed,
+  item,
+  children,
+}: {
+  tabbed: boolean;
+  item: string;
+  children: ReactNode;
+}) {
+  if (!tabbed) return <div className="flex flex-col gap-2">{children}</div>;
+  return (
+    <TabPanel tabsId={TABS_ID} item={item} focusable={false} className="flex flex-col gap-2">
+      {children}
+    </TabPanel>
   );
 }
 

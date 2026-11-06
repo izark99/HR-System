@@ -20,7 +20,8 @@ import type { RunWarningInfo } from '../../engine/protocol';
 import type { Json } from '../../lib/database.types';
 import { saveFile } from '../../lib/download';
 import { errorKeyOf, type AdminVersionDetail } from '../admin/admin-api';
-import { Dialog } from '../../components/Dialog';
+import { Dialog, DialogFooter } from '../../components/Dialog';
+import { useToast } from '../../components/Toast';
 import { useAdminApi } from '../admin/use-admin';
 import { VERSION_STATUS_TONE } from '../admin/versions/FlowVersionsPage';
 import { useUnsavedChanges } from '../auth/idle/activity';
@@ -169,8 +170,28 @@ export function DesignerEditor(props: DesignerEditorProps) {
   const [selection, setSelection] = useState<Selection>(NONE);
   const [tab, setTab] = useState<PanelTab>('params');
   const [slotIndex, setSlotIndex] = useState(0);
-  const [toast, setToast] = useState<{ tone: 'coral' | 'teal' | 'amber'; text: string } | null>(
-    null,
+  // Save / copy / connect results as app toasts (spec §25.5); one at a time, as the former
+  // message bar: a new message (or a successful connection) replaces the last one.
+  const toasts = useToast();
+  const lastToast = useRef<number | null>(null);
+  const setToast = useCallback(
+    (m: { tone: 'coral' | 'teal' | 'amber'; text: string } | null) => {
+      if (lastToast.current !== null) toasts.dismiss(lastToast.current);
+      const label =
+        m?.tone === 'coral'
+          ? t('toast.errorLabel')
+          : m?.tone === 'amber'
+            ? t('toast.noteLabel')
+            : t('toast.okLabel');
+      lastToast.current = m ? toasts.show({ tone: m.tone, message: `${label} ${m.text}` }) : null;
+    },
+    [toasts, t],
+  );
+  useEffect(
+    () => () => {
+      if (lastToast.current !== null) toasts.dismiss(lastToast.current);
+    },
+    [toasts],
   );
   const [saving, setSaving] = useState(false);
   const [conflict, setConflict] = useState<{ at: string } | null>(null);
@@ -395,7 +416,7 @@ export function DesignerEditor(props: DesignerEditorProps) {
       setToast(null);
       apply(result.doc);
     },
-    [apply, doc, ro, t],
+    [apply, doc, ro, setToast, t],
   );
 
   // ---- commands -------------------------------------------------------------------------------
@@ -441,7 +462,7 @@ export function DesignerEditor(props: DesignerEditorProps) {
         text: t('canvas.copied', { count: clip.nodes.length + clip.notes.length }),
       });
     }
-  }, [doc, selection, t]);
+  }, [doc, selection, setToast, t]);
 
   const pasteClip = useCallback(() => {
     if (ro || !clipboard) return;
@@ -508,6 +529,7 @@ export function DesignerEditor(props: DesignerEditorProps) {
     props.version.id,
     ro,
     saving,
+    setToast,
     t,
     tc,
     updatedAt,
@@ -610,11 +632,11 @@ export function DesignerEditor(props: DesignerEditorProps) {
 
   return (
     <div className="hr-designer flex h-[calc(100dvh-64px)] min-h-150 flex-col">
-      <header className="flex flex-wrap items-center gap-2.5 border-b border-line bg-card px-3.5 py-2 lg:flex-nowrap">
+      <header className="flex flex-wrap items-center gap-3 border-b border-line bg-card px-4 py-2 lg:flex-nowrap">
         <Link
           to="/admin/flows/$flowCode/versions"
           params={{ flowCode: props.flowCode }}
-          className="min-h-target shrink-0 content-center rounded-card px-2.5 text-caption font-semibold whitespace-nowrap text-teal-strong no-underline hover:bg-page"
+          className="min-h-target shrink-0 content-center rounded-card px-3 text-caption font-semibold whitespace-nowrap text-teal-strong no-underline hover:bg-page"
         >
           {t('toolbar.back')}
         </Link>
@@ -641,7 +663,7 @@ export function DesignerEditor(props: DesignerEditorProps) {
         <div
           role="toolbar"
           aria-label={t('toolbar.label')}
-          className="ml-auto flex shrink-0 items-center gap-1.5"
+          className="ml-auto flex shrink-0 items-center gap-2"
         >
           {!ro && (
             <>
@@ -714,7 +736,7 @@ export function DesignerEditor(props: DesignerEditorProps) {
       </header>
 
       {ro && (
-        <div className="border-b border-line bg-card px-3.5 py-2">
+        <div className="border-b border-line bg-card px-4 py-2">
           <Callout tone="blue" label={t('readOnly.label')} role="status">
             {t('readOnly.text')}{' '}
             <Button
@@ -728,24 +750,6 @@ export function DesignerEditor(props: DesignerEditorProps) {
           </Callout>
         </div>
       )}
-      {toast && (
-        <div className="border-b border-line bg-card px-3.5 py-1.5">
-          <Callout
-            tone={toast.tone}
-            label={
-              toast.tone === 'coral'
-                ? t('toast.errorLabel')
-                : toast.tone === 'amber'
-                  ? t('toast.noteLabel')
-                  : t('toast.okLabel')
-            }
-            role={toast.tone === 'coral' ? 'alert' : 'status'}
-          >
-            {toast.text}
-          </Callout>
-        </div>
-      )}
-
       <div className="flex min-h-0 flex-1">
         {!ro && (
           <aside className="w-62 shrink-0 border-r border-line bg-card">
@@ -786,7 +790,7 @@ export function DesignerEditor(props: DesignerEditorProps) {
             </ReactFlow>
             {doc.nodes.length === 0 && (
               <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
-                <p className="m-0 max-w-90 rounded-card border border-line bg-card px-5 py-4 text-center text-dense text-muted">
+                <p className="m-0 max-w-90 rounded-card border border-line bg-card px-6 py-4 text-center text-dense text-muted">
                   {ro ? t('canvas.emptyReadOnly') : t('canvas.empty')}
                 </p>
               </div>
@@ -802,7 +806,7 @@ export function DesignerEditor(props: DesignerEditorProps) {
                 type="button"
                 aria-expanded={dataOpen}
                 onClick={() => setDataOpen((o) => !o)}
-                className="flex min-h-target w-full items-center px-3.5 text-left text-dense font-semibold text-ink hover:bg-page"
+                className="flex min-h-target w-full items-center px-4 text-left text-dense font-semibold text-ink hover:bg-page"
               >
                 {t('data.title')}
               </button>
@@ -849,13 +853,13 @@ export function DesignerEditor(props: DesignerEditorProps) {
         onClose={() => blocker.reset?.()}
         title={t('leave.title')}
       >
-        <p className="m-0 text-body-lg text-ink-soft">{t('leave.text')}</p>
-        <div className="flex flex-wrap justify-end gap-3">
+        <p className="m-0 text-body text-ink-soft">{t('leave.text')}</p>
+        <DialogFooter>
           <Button onClick={() => blocker.reset?.()}>{t('leave.stay')}</Button>
           <Button variant="primary" onClick={() => blocker.proceed?.()}>
             {t('leave.leave')}
           </Button>
-        </div>
+        </DialogFooter>
       </Dialog>
 
       <Dialog
@@ -863,13 +867,13 @@ export function DesignerEditor(props: DesignerEditorProps) {
         onClose={() => setConflict(null)}
         title={t('conflict.title')}
       >
-        <p className="m-0 text-body-lg text-ink-soft">
+        <p className="m-0 text-body text-ink-soft">
           {conflict?.at
             ? t('conflict.text', { time: formatTime(conflict.at) })
             : t('conflict.textNoTime')}
         </p>
         <p className="m-0 text-caption text-muted">{t('conflict.hint')}</p>
-        <div className="flex flex-wrap justify-end gap-3">
+        <DialogFooter>
           <Button onClick={exportJson}>{t('conflict.export')}</Button>
           <Button
             variant="primary"
@@ -880,7 +884,7 @@ export function DesignerEditor(props: DesignerEditorProps) {
           >
             {t('conflict.reload')}
           </Button>
-        </div>
+        </DialogFooter>
       </Dialog>
     </div>
   );

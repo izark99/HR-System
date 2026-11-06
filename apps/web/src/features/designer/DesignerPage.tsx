@@ -8,7 +8,7 @@ import { useTranslation } from 'react-i18next';
 import { Button, Callout } from '../../components/ui';
 import { saveFile } from '../../lib/download';
 import { errorKeyOf, type AdminErrorKey, type FlowVersions } from '../admin/admin-api';
-import { Dialog } from '../../components/Dialog';
+import { Dialog, DialogFooter } from '../../components/Dialog';
 import { useAdminApi } from '../admin/use-admin';
 import { DesignerEditor, type SavedState } from './DesignerEditor';
 import { DesignerErrorBoundary } from './ErrorBoundary';
@@ -120,7 +120,7 @@ export function DesignerPage() {
   if (error) {
     return (
       <div className="flex flex-col gap-3 p-6">
-        <h1 className="m-0 text-display-lg text-ink">{t('page.title')}</h1>
+        <h1 className="m-0 text-page-title text-ink">{t('page.title')}</h1>
         <Callout tone="coral" label={tc('admin.errorLabel')} role="alert">
           {tc(`admin.errors.${error}`)}
         </Callout>
@@ -137,7 +137,7 @@ export function DesignerPage() {
   if (data === null || !version || !initial) {
     return (
       <div className="flex flex-col gap-3 p-6">
-        <h1 className="m-0 text-display-lg text-ink">{t('page.title')}</h1>
+        <h1 className="m-0 text-page-title text-ink">{t('page.title')}</h1>
         <Callout tone="coral" label={tc('admin.errorLabel')} role="alert">
           {data === null ? tc('admin.versions.notFound') : t('page.noVersion')}
         </Callout>
@@ -151,7 +151,7 @@ export function DesignerPage() {
   return (
     <ReactFlowProvider key={`${version.id}:${tick}`}>
       {createError && (
-        <div className="px-3.5 pt-2">
+        <div className="px-4 pt-2">
           <Callout tone="amber" label={t('toast.noteLabel')} role="alert">
             {createError}
             {draft && (
@@ -182,7 +182,7 @@ export function DesignerPage() {
                   (saved.current?.json ?? JSON.stringify(toDefinition(initial)))
               }
             />
-            <h1 className="m-0 text-display-lg text-ink">{t('crash.title')}</h1>
+            <h1 className="m-0 text-page-title text-ink">{t('crash.title')}</h1>
             <Callout tone="coral" label={t('toast.errorLabel')} role="alert">
               {t('crash.text')}
             </Callout>
@@ -248,13 +248,13 @@ function CrashGuard({ dirty }: { dirty: boolean }) {
       onClose={() => blocker.reset?.()}
       title={t('leave.title')}
     >
-      <p className="m-0 text-body-lg text-ink-soft">{t('leave.text')}</p>
-      <div className="flex flex-wrap justify-end gap-3">
+      <p className="m-0 text-body text-ink-soft">{t('leave.text')}</p>
+      <DialogFooter>
         <Button onClick={() => blocker.reset?.()}>{t('leave.stay')}</Button>
         <Button variant="primary" onClick={() => blocker.proceed?.()}>
           {t('leave.leave')}
         </Button>
-      </div>
+      </DialogFooter>
     </Dialog>
   );
 }

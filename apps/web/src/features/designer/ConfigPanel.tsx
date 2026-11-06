@@ -1,7 +1,9 @@
-import { useId, useRef, type KeyboardEvent } from 'react';
+import { useId } from 'react';
 import { useTranslation } from 'react-i18next';
+import { FormField } from '../../components/FormField';
 import { Select } from '../../components/Select';
-import { Button, Callout, cx } from '../../components/ui';
+import { TabPanel, Tabs } from '../../components/Tabs';
+import { Button, Callout } from '../../components/ui';
 import type { DesignCheckResult, DesignIssue } from '../../engine/design';
 import { typeKey } from './catalog';
 import { NodeConfigForm } from './forms/NodeForms';
@@ -35,48 +37,6 @@ export interface ConfigPanelProps {
 
 export type PanelTab = 'params' | 'slots';
 type Tab = PanelTab;
-
-/** Tabs (APG pattern): arrow keys move between tabs, the panel follows. */
-function Tabs({ tab, onTab }: { tab: Tab; onTab: (t: Tab) => void }) {
-  const { t } = useTranslation('designer');
-  const tabs: Tab[] = ['params', 'slots'];
-  const refs = useRef<(HTMLButtonElement | null)[]>([]);
-  const onKeyDown = (e: KeyboardEvent, i: number) => {
-    if (e.key !== 'ArrowRight' && e.key !== 'ArrowLeft') return;
-    e.preventDefault();
-    const next = (i + (e.key === 'ArrowRight' ? 1 : tabs.length - 1)) % tabs.length;
-    onTab(tabs[next]!);
-    refs.current[next]?.focus();
-  };
-  return (
-    <div role="tablist" aria-label={t('panel.flowSettings')} className="flex gap-1.5">
-      {tabs.map((x, i) => (
-        <button
-          key={x}
-          ref={(el) => {
-            refs.current[i] = el;
-          }}
-          type="button"
-          role="tab"
-          id={`designer-tab-${x}`}
-          aria-selected={tab === x}
-          aria-controls={`designer-panel-${x}`}
-          tabIndex={tab === x ? 0 : -1}
-          onClick={() => onTab(x)}
-          onKeyDown={(e) => onKeyDown(e, i)}
-          className={cx(
-            'min-h-target rounded-pill px-4 text-dense',
-            tab === x
-              ? 'bg-teal-tint font-semibold text-teal-strong'
-              : 'font-semibold text-ink-soft hover:bg-page',
-          )}
-        >
-          {t(`panel.tabs.${x}`)}
-        </button>
-      ))}
-    </div>
-  );
-}
 
 function SlotsTab({
   doc,
@@ -127,24 +87,23 @@ function SlotsTab({
       <p className="m-0 text-caption text-muted">{t('slot.intro')}</p>
       <div className="flex flex-wrap items-end gap-2">
         {slots.length > 0 && (
-          <div className="flex min-w-0 flex-1 flex-col gap-1.5">
-            <label htmlFor={pickId} className="text-caption font-semibold text-ink-soft">
-              {t('slot.pick')}
-            </label>
-            <Select
-              dense
-              id={pickId}
-              value={String(current)}
-              onChange={(v) => setIndex(Number(v))}
-              options={slots.map((s, i) => ({
-                value: String(i),
-                label:
-                  `${typeof s.label === 'string' && s.label ? s.label : String(s.key)}` +
-                  (errorsOf(i) > 0 ? ` - ${t('status.errors', { count: errorsOf(i) })}` : ''),
-              }))}
-              className="w-full"
-            />
-          </div>
+          <FormField dense id={pickId} label={t('slot.pick')} className="flex-1">
+            {(f) => (
+              <Select
+                dense
+                id={f.id}
+                value={String(current)}
+                onChange={(v) => setIndex(Number(v))}
+                options={slots.map((s, i) => ({
+                  value: String(i),
+                  label:
+                    `${typeof s.label === 'string' && s.label ? s.label : String(s.key)}` +
+                    (errorsOf(i) > 0 ? ` - ${t('status.errors', { count: errorsOf(i) })}` : ''),
+                }))}
+                className="w-full"
+              />
+            )}
+          </FormField>
         )}
         {!readOnly && (
           <Button size="sm" onClick={add}>
@@ -202,18 +161,18 @@ export function ConfigPanel(p: ConfigPanelProps) {
         <h2 id={`${id}-title`} className="m-0 text-title-sm">
           {t('panel.note')}
         </h2>
-        <label htmlFor={id} className="text-caption font-semibold text-ink-soft">
-          {t('panel.noteText')}
-        </label>
-        <textarea
-          id={id}
-          rows={6}
-          value={p.note.text}
-          disabled={p.readOnly}
-          onChange={(e) => p.onNote(p.note!.id, e.target.value)}
-          className="w-full rounded-input border border-line-input bg-card px-3 py-2 text-dense"
-        />
-        <p className="m-0 text-caption text-muted">{t('panel.noteHint')}</p>
+        <FormField dense id={id} label={t('panel.noteText')} hint={t('panel.noteHint')}>
+          {(f) => (
+            <textarea
+              {...f.input}
+              rows={6}
+              value={p.note!.text}
+              disabled={p.readOnly}
+              onChange={(e) => p.onNote(p.note!.id, e.target.value)}
+              className="w-full rounded-input border border-line-input bg-card px-3 py-2 text-dense"
+            />
+          )}
+        </FormField>
         {!p.readOnly && (
           <Button variant="danger" size="sm" className="self-start" onClick={p.onDeleteSelection}>
             {t('panel.deleteNote')}
@@ -284,13 +243,15 @@ export function ConfigPanel(p: ConfigPanelProps) {
 
   return (
     <section aria-label={t('panel.flowSettings')} className="flex flex-col gap-3.5">
-      <Tabs tab={tab} onTab={setTab} />
-      <div
-        role="tabpanel"
-        id={`designer-panel-${tab}`}
-        aria-labelledby={`designer-tab-${tab}`}
-        className="flex flex-col gap-3.5"
-      >
+      <Tabs
+        id="designer"
+        dense
+        label={t('panel.flowSettings')}
+        selected={tab}
+        onChange={(x) => setTab(x as Tab)}
+        items={(['params', 'slots'] as const).map((x) => ({ id: x, label: t(`panel.tabs.${x}`) }))}
+      />
+      <TabPanel tabsId="designer" item={tab} focusable={false} className="flex flex-col gap-3.5">
         {tab === 'params' ? (
           <ParamsForm
             doc={p.doc}
@@ -308,7 +269,7 @@ export function ConfigPanel(p: ConfigPanelProps) {
             setIndex={p.onSlotIndex}
           />
         )}
-      </div>
+      </TabPanel>
     </section>
   );
 }
