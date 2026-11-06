@@ -235,6 +235,12 @@
 
 ## Kỹ thuật & tổ chức
 
+2026-11-06 14:45 - Mọi vùng cuộn trong app luôn chừa chỗ thanh cuộn (`scrollbar-gutter: stable`) để đổi tab/nội dung dài ngắn không làm lệch bố cục.
+
+2026-11-06 14:45 - Gợi ý dưới field và đoạn giải thích trong form/card/panel (mọi màn) không hiện mặc định: hiện bằng nút (i) cạnh nhãn/tiêu đề, mở khi rê chuột, focus hoặc bấm (mobile: bấm); trình đọc màn hình vẫn đọc qua `aria-describedby`. Lỗi validate vẫn hiện tại chỗ. Mô tả dưới tiêu đề trang (`PageHeader`) giữ nguyên.
+
+2026-11-06 14:45 - Nhãn field luôn 1 dòng, không xuống dòng: lưới form tự giảm số cột khi cột không đủ chỗ cho nhãn; ô số không hiện nút tăng/giảm mặc định của trình duyệt.
+
 2026-11-06 13:05 - Theo phản hồi của Harold về panel phải Designer: control trong form dense cao 44px như bản thường (bỏ 42px, chỉ chữ 14px); tab trong `Tabs dense` chia đều bề ngang, cùng kích thước; `layout-lint` thêm luật: mọi control tương tác trong một panel/card/dialog cùng chiều cao (trừ nút nhỏ 36px có đánh dấu) và tab trong một nhóm cùng kích thước.
 
 2026-11-06 12:32 - Lỗi bố cục UI (control cùng hàng lệch chiều cao/không thẳng hàng, tràn khỏi khung, chồng lấn, khoảng cách không đều, tab lệch kích thước, nhãn xuống dòng làm lệch hàng) không được lặp lại: thêm bộ kiểm hình học tự động trong E2E (`e2e/layout-lint`) chạy trên mọi màn, mọi trạng thái chụp ảnh và mọi form/tab cấu hình node của Designer, ở 1280×800, 1024×768 và 390×844 (màn User); vi phạm → E2E fail. Mọi vòng đổi UI phải pass bộ này; session chính tự soi ảnh từng màn trước khi gửi Harold duyệt.
