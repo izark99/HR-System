@@ -221,7 +221,7 @@ export function FlowListPage() {
                 <Eyebrow>{f.category}</Eyebrow>
                 <h2 className="m-0 text-title-md break-words text-ink">{f.name}</h2>
                 <p className="m-0 text-body text-muted">{f.description}</p>
-                <p className="m-0 text-caption text-muted">
+                <p data-note className="m-0 text-caption text-muted">
                   {t('flows.inputs', { count: f.inputCount })}
                   {f.versionLabel ? ` · ${t('flows.version', { version: f.versionLabel })}` : ''}
                 </p>

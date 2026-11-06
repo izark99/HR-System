@@ -6,7 +6,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ConfirmDialog, confirmInitialFocus, DialogFooter } from '../Dialog';
 import { DataTable } from '../DataTable';
 import { EmptyState } from '../EmptyState';
-import { FormField, TextInput, fieldIds } from '../FormField';
+import { Checkbox, FormField, TextInput, columnsFor, fieldIds } from '../FormField';
+import { InfoTip } from '../InfoTip';
 import { ConclusionCard, KpiCard, KpiRow } from '../KpiCard';
 import { MonthPicker } from '../MonthPicker';
 import { Select } from '../Select';
@@ -76,6 +77,16 @@ describe('PageShell / PageHeader / Section / Toolbar / StickyActionBar (AC-UI-63
     expect(section).toContain('data-card');
     expect(attr(h2, 'class')).toMatch(/text-title-sm/);
     expect(tags(html(<Section title="T" plain />), '', 'section')[0]).not.toContain('data-card');
+  });
+
+  it('Section description sits behind an (i) button beside the heading, not as a paragraph', () => {
+    const m = html(<Section title="Lần chạy gần đây" description="Chỉ lưu thông tin" />);
+    const button = tags(m, 'data-infotip-button', 'button')[0]!;
+    expect(attr(button, 'aria-label')).toBe('Giải thích: Lần chạy gần đây');
+    const text = attr(button, 'aria-describedby')!;
+    expect(tags(m, `id="${text}"`, 'span')[0]).toMatch(/sr-only/);
+    expect(tags(m, '', 'p')).toEqual([]);
+    expect(m.indexOf('<h2')).toBeLessThan(m.indexOf('data-infotip-button'));
   });
 
   it('Toolbar and StickyActionBar lay out both sides', () => {
@@ -237,6 +248,81 @@ describe('FormField (AC-UI-66)', () => {
     expect(hasId(p, 'kl-label')).toBe(true);
     expect(attr(btn, 'aria-describedby')).toBe('kl-hint');
     expect(attr(btn, 'aria-invalid')).toBeUndefined();
+  });
+
+  it('hint behind an (i) button beside the one-line label, still the accessible description', () => {
+    const m = html(
+      <FormField label="Mã" hint="Chữ thường không dấu" error="Sai" id="ma">
+        {(f) => <TextInput {...f.input} />}
+      </FormField>,
+    );
+    const input = tags(m, '', 'input')[0]!;
+    expect(attr(input, 'aria-describedby')).toBe('ma-hint ma-error');
+    // The hint text: screen-reader copy with the hint id, marked as a hint; never a paragraph.
+    const hint = tags(m, 'id="ma-hint"', 'span')[0]!;
+    expect(attr(hint, 'class')).toBe('sr-only');
+    expect(hint).toContain('data-hint');
+    expect(m).toContain('Chữ thường không dấu');
+    expect(tags(m, 'text-muted', 'p')).toEqual([]);
+    const button = tags(m, 'data-infotip-button', 'button')[0]!;
+    expect(attr(button, 'aria-label')).toBe('Giải thích: Mã');
+    expect(attr(button, 'aria-describedby')).toBe('ma-hint');
+    expect(attr(button, 'aria-expanded')).toBe('false');
+    // Label row: label then (i); the label never wraps. The error stays under the control.
+    expect(m.indexOf('<label')).toBeLessThan(m.indexOf('data-infotip-button'));
+    expect(m.indexOf('data-infotip-button')).toBeLessThan(m.indexOf('<input'));
+    expect(attr(tags(m, '', 'label')[0]!, 'class')).toMatch(/whitespace-nowrap/);
+    expect(m.indexOf('<input')).toBeLessThan(m.indexOf('id="ma-error"'));
+  });
+
+  it('non-text label: the (i) button takes its name from hintLabel', () => {
+    const m = html(
+      <FormField label={<>Username *</>} hintLabel="Username" hint="Chữ thường">
+        {(f) => <TextInput {...f.input} />}
+      </FormField>,
+    );
+    expect(attr(tags(m, 'data-infotip-button', 'button')[0]!, 'aria-label')).toBe(
+      'Giải thích: Username',
+    );
+  });
+
+  it('Checkbox hint: (i) after the label, the checkbox described by the hint text', () => {
+    const m = html(<Checkbox label="Bắt buộc upload" hint="Tắt: được chạy khi chưa có file" />);
+    const input = tags(m, 'type="checkbox"', 'input')[0]!;
+    const id = attr(input, 'aria-describedby')!;
+    expect(tags(m, `id="${id}"`, 'span')[0]).toContain('data-hint');
+    expect(attr(tags(m, 'data-infotip-button', 'button')[0]!, 'aria-label')).toBe(
+      'Giải thích: Bắt buộc upload',
+    );
+    expect(m.indexOf('</label>')).toBeLessThan(m.indexOf('data-infotip-button'));
+    expect(m).toContain('data-checkbox');
+    // Without a hint: the plain row, no (i).
+    expect(html(<Checkbox label="A" />)).not.toContain('data-infotip');
+  });
+
+  it('InfoTip: icon button in a 44px target, closed popover not rendered', () => {
+    const m = html(
+      <InfoTip label="Tham số" id="x">
+        Giải thích
+      </InfoTip>,
+    );
+    const button = tags(m, 'data-infotip-button', 'button')[0]!;
+    expect(attr(button, 'type')).toBe('button');
+    expect(attr(button, 'class')).toMatch(/size-target/);
+    expect(attr(button, 'class')).toMatch(/-my-3/);
+    expect(m).toContain('<svg');
+    expect(m).not.toContain('data-infotip-pop');
+    expect(hasId(m, 'x')).toBe(true);
+  });
+
+  it('FieldGrid drops columns when a column cannot hold the widest label row', () => {
+    // 388px wide (Designer panel), 8px gap: 3 columns are 124px, 2 are 190px.
+    expect(columnsFor(388, 120, 3)).toBe(3);
+    expect(columnsFor(388, 150, 3)).toBe(2);
+    expect(columnsFor(388, 190, 3)).toBe(2);
+    expect(columnsFor(388, 191, 3)).toBe(1);
+    expect(columnsFor(388, 120, 2)).toBe(2);
+    expect(columnsFor(100, 500, 2)).toBe(1);
   });
 
   it('checkbox inline: control before its label; dense uses 14px', () => {

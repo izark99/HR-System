@@ -143,7 +143,7 @@ export function DataPanel({
   const current = tables[Math.min(tab, tables.length - 1)];
 
   return (
-    <div className="flex max-h-[42vh] flex-col gap-3.5 overflow-y-auto px-3.5 pb-3.5">
+    <div className="flex max-h-[42vh] flex-col gap-3 overflow-y-auto px-4 pb-4">
       <Callout tone="teal" label={t('data.safeLabel')}>
         {t('data.safe')}
       </Callout>
@@ -223,10 +223,11 @@ export function DataPanel({
               role="region"
               aria-label={current.name}
               tabIndex={0}
-              className="max-h-72 overflow-auto rounded-card border border-line"
+              // Sideways only: the panel itself is the one vertical scroll area (AC-UI-78 rule 13).
+              className="overflow-x-auto rounded-card border border-line"
             >
               <table className="w-max min-w-full border-collapse text-caption text-ink-soft">
-                <thead className="sticky top-0 bg-page">
+                <thead className="bg-page">
                   <tr>
                     {current.columns.map((c) => (
                       <th
@@ -324,7 +325,7 @@ function SampleCard({
       />
       {state?.busy && <p className="m-0 text-caption text-muted">{t('data.checking')}</p>}
       {v && (
-        <div className="flex flex-wrap items-center gap-1.5" role="status">
+        <div className="flex flex-wrap items-center gap-2" role="status">
           <Chip tone="neutral">{t('data.rows', { count: v.rowCount })}</Chip>
           <Chip tone={v.report.errorCount > 0 ? 'coral' : 'teal'}>
             {t('data.errors', { count: v.report.errorCount })}
@@ -335,7 +336,7 @@ function SampleCard({
         </div>
       )}
       {issues.length > 0 && (
-        <ul className="m-0 flex max-h-32 list-none flex-col gap-1 overflow-y-auto p-0 text-caption">
+        <ul className="m-0 flex list-none flex-col gap-1 p-0 text-caption">
           {issues.slice(0, MAX_ISSUES).map((i, k) => (
             <li key={k} className={i.severity === 'error' ? 'text-coral-text' : 'text-amber-text'}>
               {formatIssue(i, te)}

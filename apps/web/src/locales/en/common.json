@@ -5,6 +5,7 @@
     "status": "Under construction (Phase 1)"
   },
   "common": {
+    "infoTip": "Explain: {{label}}",
     "moreActions": "More actions",
     "moreActionsFor": "More actions for {{name}}",
     "close": "Close",

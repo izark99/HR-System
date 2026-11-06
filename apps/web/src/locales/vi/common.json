@@ -13,6 +13,7 @@
     "changePassword": "Đổi mật khẩu"
   },
   "common": {
+    "infoTip": "Giải thích: {{label}}",
     "loading": "Đang tải…",
     "yes": "Có",
     "no": "Không",

@@ -710,7 +710,7 @@ export function DesignerEditor(props: DesignerEditorProps) {
   const compactHeader = useSyncExternalStore(subscribeCompact, compactNow, () => false);
 
   return (
-    <div className="hr-designer flex h-[calc(100dvh-64px)] min-h-150 flex-col">
+    <div className="hr-designer flex h-[calc(100dvh-64px)] flex-col">
       <header className="flex flex-wrap items-center gap-3 border-b border-line bg-card px-4 py-2 lg:flex-nowrap">
         {/* Below 1280px only the arrow shows (name unchanged, text in a tooltip), leaving the
             flow name room to stay readable (AC-UI-78 rule 2). */}

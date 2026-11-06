@@ -7,6 +7,7 @@ import { Link, useNavigate } from '@tanstack/react-router';
 import { DataTable, type DataTableColumn } from '../../components/DataTable';
 import { DatePicker } from '../../components/DatePicker';
 import { Dialog, DialogFooter } from '../../components/Dialog';
+import { InfoTip } from '../../components/InfoTip';
 import { Checkbox, FormField, Textarea, TextInput } from '../../components/FormField';
 import { PageHeader, Toolbar } from '../../components/layout';
 import { RowActions, RowIcon, rowIconClass } from '../../components/RowActions';
@@ -235,6 +236,7 @@ function ImportForm({
       id={id}
       required={opts.required}
       hint={opts.hint}
+      hintLabel={label}
       label={
         <>
           {label}
@@ -290,7 +292,11 @@ function ImportForm({
               />
             )}
           </FormField>
-          <FormField id="import-to" label={t('admin.import.effectiveTo')}>
+          <FormField
+            id="import-to"
+            label={t('admin.import.effectiveTo')}
+            hint={t('admin.import.rangeHint')}
+          >
             {(f) => (
               <DatePicker
                 id={f.id}
@@ -301,7 +307,6 @@ function ImportForm({
             )}
           </FormField>
         </div>
-        <p className="m-0 text-caption text-muted">{t('admin.import.rangeHint')}</p>
       </div>
       {openVersion && (
         <Checkbox
@@ -391,7 +396,13 @@ function CreateFlowForm({ onCreated }: { onCreated: (code: string) => void }) {
     set: (v: string) => void,
     opts: { invalid?: string | false; hint?: string; area?: boolean; mono?: boolean } = {},
   ) => (
-    <FormField id={id} label={label} hint={opts.hint} error={opts.invalid || undefined}>
+    <FormField
+      id={id}
+      label={label}
+      hint={opts.hint}
+      hintLabel={label}
+      error={opts.invalid || undefined}
+    >
       {(f) =>
         opts.area ? (
           <Textarea {...f.input} value={value} onChange={(e) => set(e.target.value)} />
@@ -409,7 +420,6 @@ function CreateFlowForm({ onCreated }: { onCreated: (code: string) => void }) {
 
   return (
     <form onSubmit={(e) => void submit(e)} noValidate className="flex flex-col gap-4">
-      <p className="m-0 text-caption text-muted">{t('admin.flows.create.intro')}</p>
       {field('new-flow-code', t('admin.flows.create.code'), code, (v) => setCode(v.trim()), {
         mono: true,
         hint: t('admin.flows.create.codeHint'),
@@ -568,9 +578,14 @@ export function AdminFlowsPage() {
           className={cx(cardClass, 'flex min-w-0 flex-col overflow-hidden')}
         >
           <Toolbar>
-            <h2 id="flows-title" className="m-0 text-title-sm font-semibold text-ink">
-              {t('admin.flows.listTitle', { count: data.length })}
-            </h2>
+            <div className="flex min-w-0 items-center">
+              <h2 id="flows-title" className="m-0 text-title-sm font-semibold text-ink">
+                {t('admin.flows.listTitle', { count: data.length })}
+              </h2>
+              <InfoTip label={t('admin.flows.listTitle', { count: data.length })}>
+                {t('admin.flows.note')}
+              </InfoTip>
+            </div>
           </Toolbar>
           <DataTable
             caption={t('admin.flows.tableLabel')}
@@ -612,9 +627,6 @@ export function AdminFlowsPage() {
               ),
             }}
           />
-          <p className="m-0 border-t border-line px-4 py-3 text-caption text-muted">
-            {t('admin.flows.note')}
-          </p>
         </section>
       )}
 
@@ -622,6 +634,7 @@ export function AdminFlowsPage() {
         open={creating}
         onClose={() => setCreating(false)}
         title={t('admin.flows.create.title')}
+        hint={t('admin.flows.create.intro')}
       >
         {creating && (
           <CreateFlowForm

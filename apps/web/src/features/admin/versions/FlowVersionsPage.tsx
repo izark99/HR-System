@@ -753,6 +753,7 @@ function PublishForm({
           <FormField
             id="publish-to"
             label={t('admin.versions.publishDialog.to')}
+            hint={t('admin.versions.publishDialog.toHint')}
             error={has('range') ? t('admin.versions.publishDialog.errors.range') : undefined}
           >
             {(f) => (
@@ -767,7 +768,6 @@ function PublishForm({
             )}
           </FormField>
         </div>
-        <p className="m-0 text-caption text-muted">{t('admin.versions.publishDialog.toHint')}</p>
       </div>
       {previous && (
         <Checkbox

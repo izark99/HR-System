@@ -242,6 +242,7 @@ function CreateUserForm({
           </>
         }
         hint={t('admin.create.usernameHint')}
+        hintLabel={t('admin.users.username')}
       >
         {(field) => (
           <TextInput

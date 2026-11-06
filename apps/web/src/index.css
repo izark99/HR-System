@@ -297,6 +297,28 @@
       scrollbar-color: var(--color-line-input) var(--color-neutral);
     }
   }
+  /*
+   * Every in-app scroll area is the containing block of the absolutely positioned elements inside
+   * it (screen-reader text `.sr-only`, the hint copy of an (i) button…). Without it such an element
+   * far down a scrolled panel is placed against the page instead and makes the page itself scroll:
+   * a second scrollbar around the panel (MEMORY 2026-11-06 14:48, AC-UI-78 rule 13). Base layer:
+   * `absolute` / `fixed` / `sticky` utilities still win.
+   */
+  .overflow-auto,
+  .overflow-x-auto,
+  .overflow-y-auto {
+    position: relative;
+  }
+  /* Number inputs: no browser spin buttons (MEMORY 2026-11-06 14:45); typing and arrow keys work. */
+  input[type='number'] {
+    appearance: textfield;
+    -moz-appearance: textfield;
+  }
+  input[type='number']::-webkit-inner-spin-button,
+  input[type='number']::-webkit-outer-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+  }
   html {
     background-color: var(--color-page);
   }
@@ -390,7 +412,7 @@
   display: grid;
   grid-template-rows: subgrid;
 }
-:is(.hr-field-grid, .hr-field-grid > .contents) > [data-form-field] > label {
+:is(.hr-field-grid, .hr-field-grid > .contents) > [data-form-field] > [data-field-label-row] {
   align-self: end;
 }
 :is(.hr-field-grid, .hr-field-grid > .contents) > [data-form-field] > :last-child {

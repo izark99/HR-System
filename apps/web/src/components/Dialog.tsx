@@ -1,5 +1,6 @@
 import { useEffect, useId, useRef, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
+import { InfoTip } from './InfoTip';
 import { CloseIcon } from './icons';
 import { Button, cx, floatClass } from './ui';
 
@@ -14,6 +15,7 @@ export function Dialog({
   title,
   initialFocusId,
   locked = false,
+  hint,
   children,
 }: {
   open: boolean;
@@ -29,6 +31,8 @@ export function Dialog({
    * the dialog, else the browser's choice (the close button).
    */
   initialFocusId?: string;
+  /** Explanation of the dialog, behind an (i) button beside the title (`InfoTip`). */
+  hint?: ReactNode;
   children: ReactNode;
 }) {
   const { t } = useTranslation();
@@ -49,11 +53,13 @@ export function Dialog({
       d.showModal();
       const target = initialFocusId
         ? d.querySelector<HTMLElement>(`#${CSS.escape(initialFocusId)}`)
-        : d.querySelector<HTMLElement>('[data-autofocus]');
+        : (d.querySelector<HTMLElement>('[data-autofocus]') ??
+          // The close button, as the browser would pick when no (i) button comes first.
+          (hint ? d.querySelector<HTMLElement>('[data-dialog-close]') : null));
       target?.focus();
     }
     if (!open && d.open) d.close();
-  }, [open, initialFocusId]);
+  }, [open, initialFocusId, hint]);
 
   return (
     <dialog
@@ -88,11 +94,15 @@ export function Dialog({
       {open && (
         <div className="flex flex-col gap-4 p-6 max-sm:p-4">
           <div className="flex items-start justify-between gap-3">
-            <h2 id={titleId} className="m-0 text-title-sm text-ink">
-              {title}
-            </h2>
+            <div className="flex min-w-0 items-center">
+              <h2 id={titleId} className="m-0 text-title-sm text-ink">
+                {title}
+              </h2>
+              {hint && <InfoTip label={title}>{hint}</InfoTip>}
+            </div>
             <button
               type="button"
+              data-dialog-close
               aria-label={t('common.close')}
               disabled={locked}
               onClick={onClose}

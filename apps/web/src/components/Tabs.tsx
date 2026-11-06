@@ -1,4 +1,5 @@
-import { useRef, type KeyboardEvent, type ReactNode } from 'react';
+import { useLayoutEffect, useRef, useState, type KeyboardEvent, type ReactNode } from 'react';
+import { columnsFor } from './FormField';
 import { useTranslation } from 'react-i18next';
 import { tabIds, tabKeyTarget } from './tabs-logic';
 import { cx, toneText, toneTint, type Tone } from './ui';
@@ -25,7 +26,9 @@ export interface TabItem {
  * every panel stays mounted (hidden): `aria-controls` then points at each of them.
  *
  * `dense`: 14px variant for the Designer side panels (MEMORY 2026-10-30 13:29); its tabs share the
- * width equally, one size, text centred (MEMORY 2026-11-06 13:05, AC-UI-78 rule 9).
+ * width equally, one size, text centred (MEMORY 2026-11-06 13:05, AC-UI-78 rule 9). When a share
+ * is too narrow for the longest label, they wrap into equal rows of fewer columns (measured, like
+ * `FieldGrid`), never cutting a label.
  */
 export function Tabs({
   id,
@@ -50,6 +53,19 @@ export function Tabs({
 }) {
   const { t } = useTranslation();
   const refs = useRef<Record<string, HTMLButtonElement | null>>({});
+  const list = useRef<HTMLDivElement>(null);
+  const [fit, setFit] = useState(items.length);
+  useLayoutEffect(() => {
+    const el = list.current;
+    if (!dense || !el) return;
+    const measure = () => setFit(denseColumns(el, items.length));
+    measure();
+    if (typeof ResizeObserver === 'undefined') return;
+    const ro = new ResizeObserver(measure);
+    ro.observe(el);
+    void document.fonts?.ready.then(measure);
+    return () => ro.disconnect();
+  });
   // Unknown `selected`: fall back to the first enabled tab, so the tab list keeps a Tab stop.
   const found = items.findIndex((i) => i.id === selected);
   const current =
@@ -69,15 +85,25 @@ export function Tabs({
   };
   return (
     <div
+      ref={list}
       role="tablist"
       aria-label={label}
       aria-orientation="horizontal"
       onKeyDown={onKeyDown}
       data-tabs={dense ? 'dense' : 'default'}
       className={cx(
-        dense ? 'grid auto-cols-fr grid-flow-col gap-1' : 'flex flex-wrap gap-2',
+        dense
+          ? fit >= items.length
+            ? 'grid auto-cols-fr grid-flow-col gap-1'
+            : 'grid gap-1'
+          : 'flex flex-wrap gap-2',
         className,
       )}
+      style={
+        dense && fit < items.length
+          ? { gridTemplateColumns: `repeat(${fit}, minmax(0, 1fr))` }
+          : undefined
+      }
     >
       {items.map((item, i) => {
         const active = i === current;
@@ -146,4 +172,26 @@ export function TabPanel({
       {children}
     </div>
   );
+}
+
+/** Gap of a dense tab list (`gap-1`). */
+const DENSE_GAP = 4;
+
+/** Columns of a dense tab list whose equal share still holds the widest tab at one line. */
+function denseColumns(list: HTMLElement, count: number): number {
+  const width = list.clientWidth;
+  if (width <= 0) return count;
+  let need = 0;
+  list.querySelectorAll('[role="tab"]').forEach((tab) => {
+    const cs = getComputedStyle(tab);
+    const range = document.createRange();
+    range.selectNodeContents(tab);
+    need = Math.max(
+      need,
+      range.getBoundingClientRect().width +
+        (parseFloat(cs.paddingLeft) || 0) +
+        (parseFloat(cs.paddingRight) || 0),
+    );
+  });
+  return columnsFor(width, Math.ceil(need), count, DENSE_GAP);
 }

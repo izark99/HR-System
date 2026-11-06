@@ -6,6 +6,7 @@ import { cx } from '../../../components/ui';
 import type { ColumnInfo } from '../../../engine/protocol';
 import type { DesignIssue } from '../../../engine/design';
 import { CloseIcon } from '../../../components/icons';
+import { InfoTip } from '../../../components/InfoTip';
 
 /**
  * Form building blocks of the Designer panels: v2 frame (6px radius, #475569 border, teal focus
@@ -198,7 +199,6 @@ export function CheckField({
   issues?: readonly DesignIssue[];
 }) {
   const id = useId();
-  const hintId = useId();
   const errId = useId();
   return (
     <div data-check-field className="flex flex-col gap-1">
@@ -206,19 +206,13 @@ export function CheckField({
         dense
         id={id}
         label={label}
+        hint={hint}
         checked={checked}
         disabled={disabled}
-        aria-describedby={
-          [hint ? hintId : '', issues.length ? errId : ''].join(' ').trim() || undefined
-        }
+        aria-describedby={issues.length ? errId : undefined}
         aria-invalid={issues.length > 0 || undefined}
         onChange={(e) => onChange(e.target.checked)}
       />
-      {hint && (
-        <p id={hintId} className="m-0 text-caption text-muted">
-          {hint}
-        </p>
-      )}
       <FieldErrors id={errId} issues={issues} />
     </div>
   );
@@ -475,8 +469,11 @@ export function ListEditor<T>({
   itemLabel,
   disabled,
   issues = [],
+  hint,
 }: {
   label: ReactNode;
+  /** Explanation of the whole list, behind an (i) button beside its legend. */
+  hint?: ReactNode;
   items: readonly T[];
   onChange: (items: T[]) => void;
   render: (item: T, i: number, set: (item: T) => void) => ReactNode;
@@ -497,7 +494,10 @@ export function ListEditor<T>({
   };
   return (
     <fieldset data-field-block className="m-0 flex min-w-0 flex-col gap-stack-dense border-0 p-0">
-      <legend className={cx(labelClass, 'mb-2 p-0')}>{label}</legend>
+      <legend className={cx(labelClass, 'mb-2 flex items-center p-0')}>
+        {label}
+        {hint && <InfoTip label={typeof label === 'string' ? label : ''}>{hint}</InfoTip>}
+      </legend>
       <FieldErrors id={errId} issues={listIssues} />
       {items.map((item, i) => (
         <div

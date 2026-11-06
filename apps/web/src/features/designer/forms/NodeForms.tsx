@@ -1,4 +1,5 @@
 import { FieldGrid } from '../../../components/FormField';
+import { InfoTip } from '../../../components/InfoTip';
 import { lazy, Suspense, useMemo, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Callout } from '../../../components/ui';
@@ -586,6 +587,7 @@ function SortForm(p: NodeFormProps) {
     <Section>
       <ListEditor
         label={t('node.sort.by')}
+        hint={t('node.sort.hint')}
         items={by}
         onChange={(v) => set({ by: v }, 'by')}
         issues={at('by')}
@@ -628,7 +630,6 @@ function SortForm(p: NodeFormProps) {
           </>
         )}
       />
-      <p className="m-0 text-caption text-muted">{t('node.sort.hint')}</p>
     </Section>
   );
 }
@@ -841,6 +842,7 @@ function GroupByForm(p: NodeFormProps) {
       />
       <ListEditor
         label={t('node.groupBy.aggregations')}
+        hint={t('node.groupBy.hint')}
         items={aggs}
         onChange={(v) => set({ aggregations: v }, 'aggregations')}
         issues={at('aggregations')}
@@ -901,7 +903,6 @@ function GroupByForm(p: NodeFormProps) {
           );
         }}
       />
-      <p className="m-0 text-caption text-muted">{t('node.groupBy.hint')}</p>
     </Section>
   );
 }
@@ -929,6 +930,7 @@ function DedupeForm(p: NodeFormProps) {
           { value: 'first', label: t('node.dedupe.first') },
           { value: 'last', label: t('node.dedupe.last') },
         ]}
+        hint={t('node.dedupe.hint')}
         disabled={ro}
       />
       <CheckField
@@ -938,7 +940,6 @@ function DedupeForm(p: NodeFormProps) {
         hint={t('node.join.normalizeKeysHint')}
         disabled={ro}
       />
-      <p className="m-0 text-caption text-muted">{t('node.dedupe.hint')}</p>
     </Section>
   );
 }
@@ -1001,8 +1002,16 @@ function CodeSqlForm(p: NodeFormProps) {
         )}
       />
       <div data-field-block className="flex flex-col gap-1">
-        <span id={`${sqlId}-label`} className="text-caption font-semibold text-ink-soft">
-          {t('node.sql.sql')}
+        <span className="flex items-center">
+          <span
+            id={`${sqlId}-label`}
+            className="text-caption font-semibold whitespace-nowrap text-ink-soft"
+          >
+            {t('node.sql.sql')}
+          </span>
+          <InfoTip id={`${sqlId}-hint`} label={t('node.sql.sql')}>
+            {t('node.sql.editorHint')}
+          </InfoTip>
         </span>
         <Suspense
           fallback={
@@ -1028,9 +1037,6 @@ function CodeSqlForm(p: NodeFormProps) {
             completion={completion}
           />
         </Suspense>
-        <p id={`${sqlId}-hint`} className="m-0 text-caption text-muted">
-          {t('node.sql.editorHint')}
-        </p>
         <FieldErrors id={`${sqlId}-errors`} issues={sqlIssues} />
       </div>
     </Section>

@@ -84,10 +84,15 @@ function SlotsTab({
   };
   return (
     <div className="flex flex-col gap-stack-dense">
-      <p className="m-0 text-caption text-muted">{t('slot.intro')}</p>
       <div className="flex flex-wrap items-end gap-2">
         {slots.length > 0 && (
-          <FormField dense id={pickId} label={t('slot.pick')} className="flex-1">
+          <FormField
+            dense
+            id={pickId}
+            label={t('slot.pick')}
+            hint={t('slot.intro')}
+            className="flex-1"
+          >
             {(f) => (
               <Select
                 dense
@@ -195,7 +200,7 @@ export function ConfigPanel(p: ConfigPanelProps) {
           <h2 id="node-panel-title" className="m-0 text-title-sm">
             {node.label || node.id}
           </h2>
-          <p className="m-0 text-caption text-muted">
+          <p data-note className="m-0 text-caption text-muted">
             {t(`types.node.${typeKey(node.type)}`)} · <span className="font-mono">{node.id}</span>
           </p>
         </div>

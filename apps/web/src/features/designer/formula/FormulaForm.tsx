@@ -1,4 +1,5 @@
 import { FieldGrid } from '../../../components/FormField';
+import { InfoTip } from '../../../components/InfoTip';
 import { lazy, Suspense, useId, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { FUNCTIONS, FUNCTION_GROUPS } from '../../../engine/formula/functions';
@@ -144,7 +145,10 @@ export function FormulaForm(p: NodeFormProps) {
           aria-label={t('node.formula.sqlTitle')}
           className="flex flex-col gap-1.5"
         >
-          <h3 className={labelClass + ' m-0'}>{t('node.formula.sqlTitle')}</h3>
+          <div className="flex items-center">
+            <h3 className={labelClass + ' m-0'}>{t('node.formula.sqlTitle')}</h3>
+            <InfoTip label={t('node.formula.sqlTitle')}>{t('node.formula.sqlHint')}</InfoTip>
+          </div>
           <GeneratedSql input={input} items={items} params={params} t={t} />
         </section>
       )}
@@ -240,7 +244,12 @@ function FormulaColumn({
         />
       </FieldGrid>
       <div data-field-block className="flex flex-col gap-1">
-        <span className={labelClass}>{t('node.formula.formula')}</span>
+        <span className="flex items-center">
+          <span className={labelClass + ' whitespace-nowrap'}>{t('node.formula.formula')}</span>
+          <InfoTip id={`${editorId}-hint`} label={t('node.formula.formula')}>
+            {t('node.formula.editorHint')}
+          </InfoTip>
+        </span>
         <Suspense
           fallback={
             <textarea
@@ -269,9 +278,6 @@ function FormulaColumn({
             testId={`formula-editor-${index}`}
           />
         </Suspense>
-        <p id={`${editorId}-hint`} className="m-0 text-caption text-muted">
-          {t('node.formula.editorHint')}
-        </p>
         <FieldErrors id={`${editorId}-errors`} issues={formulaIssues} />
       </div>
       <FieldGrid dense>
@@ -325,11 +331,10 @@ function GeneratedSql({
       <pre
         data-testid="formula-sql"
         tabIndex={0}
-        className="m-0 max-h-80 overflow-auto rounded-card border border-line bg-page p-3 font-mono text-caption whitespace-pre-wrap text-ink"
+        className="m-0 overflow-x-auto rounded-card border border-line bg-page p-3 font-mono text-caption whitespace-pre-wrap text-ink"
       >
         {r.sql}
       </pre>
-      <p className="m-0 text-caption text-muted">{t('node.formula.sqlHint')}</p>
     </>
   );
 }

@@ -442,7 +442,7 @@ export function SlotForm({
           />
         )}
       </FieldGrid>
-      <FieldGrid dense cols={3} hint={t('slot.rowsHint')}>
+      <FieldGrid dense cols={3}>
         <NumberField
           label={t('slot.headerRow')}
           value={num(slot.headerRow) ?? 1}
@@ -470,6 +470,7 @@ export function SlotForm({
               : set({ dataStartRow: v }, 'dataStartRow')
           }
           issues={at('dataStartRow')}
+          hint={t('slot.rowsHint')}
           disabled={ro}
         />
       </FieldGrid>
