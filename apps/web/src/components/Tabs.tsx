@@ -49,10 +49,15 @@ export function Tabs({
 }) {
   const { t } = useTranslation();
   const refs = useRef<Record<string, HTMLButtonElement | null>>({});
-  const current = Math.max(
-    0,
-    items.findIndex((i) => i.id === selected),
-  );
+  // Unknown `selected`: fall back to the first enabled tab, so the tab list keeps a Tab stop.
+  const found = items.findIndex((i) => i.id === selected);
+  const current =
+    found >= 0
+      ? found
+      : Math.max(
+          0,
+          items.findIndex((i) => !i.disabled),
+        );
   const onKeyDown = (e: KeyboardEvent<HTMLDivElement>) => {
     const target = tabKeyTarget(e.key, current, items.length, (i) => !!items[i]!.disabled);
     if (target === null) return;

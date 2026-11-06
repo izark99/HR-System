@@ -128,10 +128,10 @@ describe('toast store edge cases', () => {
   });
 });
 
-describe('KNOWN BUG', () => {
-  // Tabs.tsx: an unknown `selected` falls back to index 0 even when that tab is disabled, so the
-  // only Tab stop (tabindex=0) is a disabled button and the tab list cannot be reached by keyboard.
-  it.fails('unknown selection with the first tab disabled keeps an enabled Tab stop', () => {
+describe('Tabs fallback', () => {
+  // An unknown `selected` falls back to the first enabled tab, so the only Tab stop
+  // (tabindex=0) is never a disabled button and the tab list stays reachable by keyboard.
+  it('unknown selection with the first tab disabled keeps an enabled Tab stop', () => {
     const m = html(
       <Tabs
         id="t"

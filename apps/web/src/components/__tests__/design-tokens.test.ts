@@ -30,6 +30,8 @@ function stripComments(source: string): string {
 
 /** Quoted string literals ('…', "…", `…`) on one line: where class names and styles live. */
 const STRING = /'[^'\n]*'|"[^"\n]*"|`[^`\n]*`/g;
+/** Same, but a template literal may span lines (className={`…⏎ px-7`}): for whole-file rules. */
+const STRING_ML = /'[^'\n]*'|"[^"\n]*"|`[^`]*`/g;
 
 interface Rule {
   id: string;
@@ -180,7 +182,7 @@ const FRAME_RULES: FrameRule[] = [
     id: 'spacing',
     why: 'gap/padding/margin outside the 4·8·12·16·24·32·48·64 scale',
     owner: () => false,
-    find: (src) => (src.match(STRING) ?? []).flatMap(offScaleSpacing),
+    find: (src) => (src.match(STRING_ML) ?? []).flatMap(offScaleSpacing),
   },
   {
     id: 'main',
@@ -204,7 +206,7 @@ const FRAME_RULES: FrameRule[] = [
     id: 'deprecated-text',
     why: 'text-display-xl / text-display-lg / text-body-lg (AC-UI-60, deleted in round B)',
     owner: () => false,
-    find: (src) => (src.match(STRING) ?? []).flatMap((l) => l.match(DEPRECATED_TEXT) ?? []),
+    find: (src) => (src.match(STRING_ML) ?? []).flatMap((l) => l.match(DEPRECATED_TEXT) ?? []),
   },
   {
     id: 'svg',
