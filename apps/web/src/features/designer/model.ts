@@ -580,3 +580,67 @@ export function autoLayout(doc: DesignerDoc, origin: XY = [80, 80]): Record<stri
   });
   return out;
 }
+
+// ---- placing a new node -------------------------------------------------------------------------
+
+export interface Rect {
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+}
+
+/** Space kept between a new node and the ones around it. */
+const FREE_MARGIN = 24;
+/** Step of the search grid (flow units). */
+const FREE_STEP = 40;
+
+/**
+ * Top-left corner nearest to `start` where a `size` box overlaps none of `taken` (with a margin),
+ * searched on a grid in growing square rings around `start` (MEMORY 2026-11-06 18:27: a node
+ * added from the palette never covers one already there), inside `bounds` (the visible canvas)
+ * when there is room there. Gives `start` back when nothing is free within `maxRings` rings.
+ */
+export function freeSpot(
+  taken: readonly Rect[],
+  start: XY,
+  size: XY,
+  bounds?: Rect,
+  maxRings = 40,
+): XY {
+  const [w, h] = size;
+  const inside = (x: number, y: number) =>
+    !bounds ||
+    (x >= bounds.x &&
+      y >= bounds.y &&
+      x + w <= bounds.x + bounds.w &&
+      y + h <= bounds.y + bounds.h);
+  const clear = (x: number, y: number) =>
+    taken.every(
+      (r) =>
+        x + w + FREE_MARGIN <= r.x ||
+        r.x + r.w + FREE_MARGIN <= x ||
+        y + h + FREE_MARGIN <= r.y ||
+        r.y + r.h + FREE_MARGIN <= y,
+    );
+  const free = (x: number, y: number) => inside(x, y) && clear(x, y);
+  if (free(start[0], start[1])) return start;
+  for (let ring = 1; ring <= maxRings; ring++) {
+    let best: XY | null = null;
+    let bestD = Infinity;
+    for (let i = -ring; i <= ring; i++)
+      for (let j = -ring; j <= ring; j++) {
+        if (Math.max(Math.abs(i), Math.abs(j)) !== ring) continue;
+        const x = start[0] + i * FREE_STEP;
+        const y = start[1] + j * FREE_STEP;
+        const d = Math.hypot(x - start[0], y - start[1]);
+        if (d < bestD && free(x, y)) {
+          best = [x, y];
+          bestD = d;
+        }
+      }
+    if (best) return best;
+  }
+  // The visible area is full: nearest free spot anywhere (the caller brings it into view).
+  return bounds ? freeSpot(taken, start, size, undefined, maxRings) : start;
+}

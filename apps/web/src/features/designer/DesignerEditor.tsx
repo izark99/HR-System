@@ -15,6 +15,7 @@ import { Link, useBlocker } from '@tanstack/react-router';
 import {
   useCallback,
   useEffect,
+  useLayoutEffect,
   useMemo,
   useRef,
   useState,
@@ -48,8 +49,10 @@ import {
   copySelection,
   edgeId,
   history,
+  freeSpot,
   moveElements,
   NODE_WIDTH,
+  nodeHeight,
   paste,
   redo,
   removeElements,
@@ -58,6 +61,7 @@ import {
   updateNode,
   updateNote,
   type Clip,
+  type Rect,
   type DEdge,
   type DesignerDoc,
   type History,
@@ -93,6 +97,8 @@ interface Selection {
   edges: string[];
 }
 const NONE: Selection = { nodes: [], notes: [], edges: [] };
+/** Lowest canvas that still shows the minimap (below it, it would crowd the zoom buttons). */
+const MINIMAP_MIN_HEIGHT = 360;
 
 /** Focus on the canvas (a node, an edge, the pane) or nowhere in particular (body). */
 function onCanvas(target: EventTarget | null): boolean {
@@ -505,6 +511,19 @@ export function DesignerEditor(props: DesignerEditorProps) {
     [doc.inputSlots, t],
   );
 
+  // Minimap only on a canvas at least MINIMAP_MIN_HEIGHT high (MEMORY 2026-11-06 18:27).
+  const [canvasTall, setCanvasTall] = useState(true);
+  useLayoutEffect(() => {
+    const el = wrapperRef.current;
+    if (!el) return;
+    const measure = () => setCanvasTall(el.clientHeight >= MINIMAP_MIN_HEIGHT);
+    measure();
+    if (typeof ResizeObserver === 'undefined') return;
+    const ro = new ResizeObserver(measure);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+
   const centre = useCallback((): XY => {
     const r = wrapperRef.current?.getBoundingClientRect();
     if (!r) return [80, 80];
@@ -520,6 +539,58 @@ export function DesignerEditor(props: DesignerEditorProps) {
       setSelection({ nodes: [r.id], notes: [], edges: [] });
     },
     [apply, doc, ro, texts],
+  );
+
+  /** Free spot nearest to `pos` for a new node of `type` (no overlap with nodes / notes). */
+  const placeFree = useCallback(
+    (type: string, pos: XY): XY => {
+      const taken: Rect[] = rf.getNodes().map((n) => ({
+        x: n.position.x,
+        y: n.position.y,
+        w: n.measured?.width ?? n.width ?? NODE_WIDTH,
+        h: n.measured?.height ?? n.height ?? 120,
+      }));
+      // Screen boxes in flow units: the visible canvas, and the minimap / zoom buttons over it.
+      const toFlow = (r: DOMRect): Rect => {
+        const a = rf.screenToFlowPosition({ x: r.left, y: r.top });
+        const b = rf.screenToFlowPosition({ x: r.right, y: r.bottom });
+        return { x: a.x, y: a.y, w: b.x - a.x, h: b.y - a.y };
+      };
+      const wrap = wrapperRef.current;
+      wrap
+        ?.querySelectorAll('.react-flow__minimap, .react-flow__controls')
+        .forEach((el) => taken.push(toFlow(el.getBoundingClientRect())));
+      const bounds = wrap ? toFlow(wrap.getBoundingClientRect()) : undefined;
+      const probe = addNode(doc, type, pos, texts());
+      const node = probe.doc.nodes.find((n) => n.id === probe.id);
+      const h = node ? nodeHeight(node) : 120;
+      const spot = freeSpot(taken, pos, [NODE_WIDTH, h], bounds);
+      const shown =
+        !bounds ||
+        (spot[0] >= bounds.x &&
+          spot[1] >= bounds.y &&
+          spot[0] + NODE_WIDTH <= bounds.x + bounds.w &&
+          spot[1] + h <= bounds.y + bounds.h);
+      // Visible canvas full: zoom out so every node and the new one are in view.
+      if (!shown) {
+        const nodes = rf.getNodes();
+        const xs = [spot[0], ...nodes.map((n) => n.position.x)];
+        const ys = [spot[1], ...nodes.map((n) => n.position.y)];
+        const x2 = Math.max(
+          spot[0] + NODE_WIDTH,
+          ...nodes.map((n) => n.position.x + (n.measured?.width ?? NODE_WIDTH)),
+        );
+        const y2 = Math.max(
+          spot[1] + h,
+          ...nodes.map((n) => n.position.y + (n.measured?.height ?? 120)),
+        );
+        const x = Math.min(...xs);
+        const y = Math.min(...ys);
+        void rf.fitBounds({ x, y, width: x2 - x, height: y2 - y }, { padding: 0.2 });
+      }
+      return spot;
+    },
+    [doc, rf, texts],
   );
 
   const deleteSelection = useCallback(() => {
@@ -870,7 +941,7 @@ export function DesignerEditor(props: DesignerEditorProps) {
       <div className="flex min-h-0 flex-1">
         {!ro && (
           <aside className="w-62 shrink-0 border-r border-line bg-card">
-            <Palette onAdd={(type) => addAt(type, centre())} disabled={ro} />
+            <Palette onAdd={(type) => addAt(type, placeFree(type, centre()))} disabled={ro} />
           </aside>
         )}
         <div className="flex min-w-0 flex-1 flex-col">
@@ -902,7 +973,8 @@ export function DesignerEditor(props: DesignerEditorProps) {
               ariaLabelConfig={ariaConfig}
             >
               <Background gap={20} />
-              <MiniMap pannable zoomable ariaLabel={t('canvas.minimap')} />
+              {/* A low canvas (data panel open) has no room for it beside the zoom buttons. */}
+              {canvasTall && <MiniMap pannable zoomable ariaLabel={t('canvas.minimap')} />}
               <Controls showInteractive={false} />
             </ReactFlow>
             {doc.nodes.length === 0 && (
