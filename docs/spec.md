@@ -1132,6 +1132,7 @@ Font duy nhất `Be Vietnam Pro` (400, 500, 600, 700), fallback `Arial, sans-ser
 | `page-title` | 28px / 600 / lh 36px / ls −0.4px | 24px / lh 32px | Tiêu đề trang workspace: Admin (Users, Flows, Version), Đổi mật khẩu, form (thay `display-lg` 48px, chốt 2026-11-04 14:12) |
 | `title-md` | 24px / 600 / lh 30px / ls −0.6px | 20px / lh 26px | Tiêu đề section, tiêu đề card |
 | `title-sm` | 20px / 700 / lh 25px / ls −0.5px | 18px | Tiêu đề nhỏ trong card, tiêu đề dialog |
+| `title-xs` | 18px / 600 / lh 26px | 18px | Tiêu đề `EmptyState` (thêm ở vòng A, 2026-11-06) |
 | `body` | 16px / 400 / lh 24px | 16px | Chữ mặc định, mô tả dưới tiêu đề trang, chữ trong input, ô dữ liệu trong bảng (`body-lg` 18px bỏ, chốt 2026-11-04 14:12) |
 | `label` | 16px / 600 / lh 24px | 16px | Nhãn form, chữ in đậm trong câu |
 | `caption` | 14px / 400 / lh 21px | 14px | Chú thích, header bảng (600), thông tin phụ |
@@ -1218,10 +1219,10 @@ Mục tiêu: mọi màn lắp từ **một** bộ layout + pattern trong `apps/w
 
 | Component | Quy cách |
 |-----------|----------|
-| `PageShell` | Render `<main id="main">` + padding `page-top`/`page-x`, đáy 48px, gap `section`. `width`: `content` (tối đa 1280px, căn giữa: mọi màn User), `fluid` (màn Admin cạnh menu trái), `narrow` (tối đa 488px: Đăng nhập, Đổi mật khẩu, form đơn). Designer là ngoại lệ full-bleed |
+| `PageShell` | Render `<main id="main">` + padding `page-top`/`page-x`, đáy 48px, gap `section`. `width`: `content` (tối đa 1280px, căn giữa: mọi màn User), `fluid` (màn Admin cạnh menu trái), `narrow` (tối đa 488px: Đăng nhập, Đổi mật khẩu, form đơn), `bleed` (full-bleed, không padding: chỉ Designer) |
 | `SideNavLayout` | Menu trái 240px (item theo §25.3 "Menu trái", "Sắp có") + `PageShell fluid`; chỉ dùng cho Admin. Mobile: menu thu thành nút mở |
 | `PageHeader` | `variant`: `workspace` (`page-title`) / `showcase` (`page-title-showcase`); eyebrow (bắt buộc, trừ khi có `back`) + `h1` + subtitle `body` `#475569` 1 dòng; tùy chọn `back` (link quay lại, thay eyebrow), `meta` (chip trạng thái), `actions` cùng hàng tiêu đề (căn đáy, xuống dòng khi hẹp). `oneLineTitle` giữ hành vi AC-UI-50 |
-| `Section` | Card (hoặc không card với `plain`) gồm tiêu đề `title-sm` 20px/600 + mô tả `caption` + `actions` bên phải + nội dung, gap `stack` |
+| `Section` | Card (hoặc không card với `plain`) gồm tiêu đề `title-sm` cỡ 20px nhưng weight 600 (khác `title-sm` mặc định 700) + mô tả `caption` + `actions` bên phải + nội dung, gap `stack` |
 | `Toolbar` | Hàng trên bảng trong card: tabs/lọc/tìm kiếm bên trái, số đếm hoặc 1 nút bên phải; padding 16px, viền dưới |
 | `StickyActionBar` | Thanh dính đáy màn (nền trắng, viền trên, padding 12px `page-x`): ghi chú trái, nút phải, nút chính ngoài cùng; dùng cho màn Wizard |
 
