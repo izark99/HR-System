@@ -21,7 +21,16 @@
  *      bottom of what a block shows (text lines and controls, hint / error included; empty padding
  *      of its box does not count) to the top of the next; only field blocks
  *      (`FormField`, `FieldGrid`, checkbox, `[data-field-block]`) count, so group headings, nested
- *      cards and an add button at the end of a list are left out.
+ *      cards and an add button at the end of a list are left out;
+ *  (12) a field label (`FormField` label, `[data-field-label]`) taller than one line;
+ *  (13) two nested scroll areas scrolling the same way: an element that scrolls (overflow auto /
+ *      scroll and content larger than its box) inside another one that scrolls on the same axis;
+ *      on the full-bleed Designer the page itself scrolling counts as the outer one. Floating
+ *      layers (fixed / absolute popovers, dialogs, listboxes) start a new stack;
+ *  (14) a hint / explanation shown as text in a form, card, panel or dialog: an element marked
+ *      `data-hint` (only allowed as screen-reader text or inside an open (i) popover), or a
+ *      paragraph that looks like one (muted colour, ≤ 14px, not a status / live region, not marked
+ *      `data-note` as status / metadata text).
  * Only rows of one flex/grid parent are compared; hidden / zero-size elements are skipped.
  * Exceptions live in `LAYOUT_ALLOW` only, each with its reason.
  */
@@ -30,7 +39,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { expect, type Page } from './fixtures';
 
-export type LayoutRule = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11;
+export type LayoutRule = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 | 13 | 14;
 
 export interface LayoutViolation {
   rule: LayoutRule;
@@ -84,6 +93,12 @@ export const LAYOUT_ALLOW: LayoutAllow[] = [
     rules: [8],
     reason:
       'Designer palette items are two-line list entries (name + description, MEMORY 2026-11-03 10:49: all items one size), not form controls',
+  },
+  {
+    selector: '[data-infotip-button]',
+    rules: [2],
+    reason:
+      'InfoTip (i): a transparent 44px touch target over a one-line label (-my-3, like the enlarged checkbox area); only the 20px icon is painted, nothing shows outside the line',
   },
   {
     selector: '.sr-only',
@@ -170,9 +185,13 @@ function measure(
 
   const CONTROL =
     'input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="hidden"]):not([type="range"]), select, button, [role="combobox"]';
+  // The (i) button of an InfoTip is not a form control: a 44px target over a one-line label
+  // (checked by the a11y touch-target test), not part of the row of controls.
   const isControl = (el: Element) =>
     el.matches(CONTROL) &&
-    !el.matches('[role="tab"], [role="option"], [role="menuitem"], [role="menuitemradio"]');
+    !el.matches(
+      '[role="tab"], [role="option"], [role="menuitem"], [role="menuitemradio"], [data-infotip-button]',
+    );
   /** The one control a row item stands for: itself, or the single control of a form field. */
   const controlOf = (item: Element): Element | null => {
     if (isControl(item)) return item;
@@ -310,7 +329,9 @@ function measure(
     if (allowed(el, 2)) continue;
     if (
       !inFlow(el) &&
-      !el.matches('dialog, [role="dialog"], [role="listbox"], [data-connect-menu]')
+      !el.matches(
+        'dialog, [role="dialog"], [role="listbox"], [data-connect-menu], [data-infotip-pop]',
+      )
     )
       continue;
     // The box holding it: nearest ancestor card / panel / dialog / scroll or clip area.
@@ -568,7 +589,7 @@ function measure(
         if (
           !n.textContent!.trim() ||
           !visible(n.parentElement!) ||
-          n.parentElement!.closest('.sr-only')
+          n.parentElement!.closest('.sr-only, [data-infotip-pop], [data-tooltip]')
         )
           continue;
         const range = document.createRange();
@@ -581,8 +602,11 @@ function measure(
           add(new DOMRect(r.left, mid - half, r.width, half * 2));
         }
       }
-      block.querySelectorAll('input, textarea, select, button, [role="combobox"]').forEach((c) => {
-        if (visible(c)) add(c.getBoundingClientRect());
+      // The (i) button's 44px target reaches over its line on purpose; its label line counts.
+      const INK =
+        'input, textarea, select, button, [role="combobox"], [data-testid^="formula-editor"], [data-testid="sql-editor"]';
+      block.querySelectorAll(INK).forEach((c) => {
+        if (visible(c) && !c.matches('[data-infotip-button]')) add(c.getBoundingClientRect());
       });
       if (top === Infinity) {
         const r = block.getBoundingClientRect();
@@ -607,6 +631,116 @@ function measure(
         detail: `field blocks not ${want}px apart: ${gaps.map(({ g, a, b }) => `${px(g)} between ${name(a)} and ${name(b)}`).join('; ')}`,
         ids: [idOf(parent)],
       });
+  }
+
+  // ---- one-line field labels (rule 12) ---------------------------------------------------------
+  for (const el of all) {
+    if (!el.matches('[data-form-field] label, [data-field-label]') || allowed(el, 12)) continue;
+    const lh = parseFloat(getComputedStyle(el).lineHeight);
+    const range = document.createRange();
+    range.selectNodeContents(el);
+    const tops = new Set<number>();
+    for (const r of Array.from(range.getClientRects()))
+      if (r.width > 0 && r.height > 0 && !(r.width <= 1 && r.height <= 1))
+        tops.add(Math.round(r.top));
+    const h = el.getBoundingClientRect().height;
+    const lines = Array.from(tops).sort((a, b) => a - b);
+    const multi =
+      (Number.isFinite(lh) && h > lh * 1.5) ||
+      (lines.length > 1 &&
+        lines[lines.length - 1]! - lines[0]! > (Number.isFinite(lh) ? lh / 2 : 8));
+    if (multi)
+      out.push({
+        rule: 12,
+        target: name(el),
+        detail: `field label wraps: ${px(h)} high, line height ${px(lh)}`,
+        ids: [idOf(el)],
+      });
+  }
+
+  // ---- nested scroll areas on one axis (rule 13) --------------------------------------------
+  const scrolls = (el: Element, axis: 'x' | 'y') => {
+    const cs = getComputedStyle(el);
+    const o = axis === 'y' ? cs.overflowY : cs.overflowX;
+    if (!/(auto|scroll)/.test(o)) return false;
+    return axis === 'y'
+      ? el.scrollHeight > el.clientHeight + TOL
+      : el.scrollWidth > el.clientWidth + TOL;
+  };
+  const layer = (el: Element) => {
+    const p = getComputedStyle(el).position;
+    return (
+      p === 'fixed' ||
+      p === 'absolute' ||
+      el.matches('dialog, [role="dialog"], [role="listbox"], [role="menu"], [data-connect-menu]')
+    );
+  };
+  const fullBleed = document.querySelector('.hr-designer') !== null;
+  const docEl = document.scrollingElement ?? document.documentElement;
+  for (const el of all) {
+    if (el instanceof SVGElement || allowed(el, 13)) continue;
+    for (const axis of ['y', 'x'] as const) {
+      if (!scrolls(el, axis)) continue;
+      let outer: Element | null = null;
+      let a: Element | null = layer(el) ? null : el.parentElement;
+      while (a && a !== document.body && a !== document.documentElement) {
+        if (scrolls(a, axis) && !allowed(a, 13)) {
+          outer = a;
+          break;
+        }
+        if (layer(a)) break;
+        a = a.parentElement;
+      }
+      const reached = a === document.body || a === document.documentElement || a === null;
+      const page =
+        !outer &&
+        reached &&
+        !layer(el) &&
+        fullBleed &&
+        (axis === 'y'
+          ? docEl.scrollHeight > docEl.clientHeight + TOL
+          : docEl.scrollWidth > docEl.clientWidth + TOL);
+      if (outer || page)
+        out.push({
+          rule: 13,
+          target: name(el),
+          detail: `scrolls ${axis === 'y' ? 'vertically' : 'sideways'} inside ${outer ? name(outer) : 'the page'}, which also scrolls that way (${axis === 'y' ? `${px(el.scrollHeight)} in ${px(el.clientHeight)}` : `${px(el.scrollWidth)} in ${px(el.clientWidth)}`})`,
+          ids: outer ? [idOf(el), idOf(outer)] : [idOf(el)],
+        });
+    }
+  }
+
+  // ---- no hint shown as text (rule 14) ------------------------------------------------------
+  const HOLDER = '[data-card], dialog, [role="dialog"], aside, form, fieldset, [data-form-field]';
+  const MUTED = ['rgb(71, 85, 105)'];
+  for (const el of all) {
+    if (allowed(el, 14) || el.closest('[data-infotip-pop], [data-tooltip], .sr-only')) continue;
+    if (el.matches('[data-hint]')) {
+      out.push({
+        rule: 14,
+        target: name(el),
+        detail: 'hint shown as text (use the (i) button: InfoTip)',
+        ids: [idOf(el)],
+      });
+      continue;
+    }
+    if (!el.matches('p') || !el.closest(HOLDER)) continue;
+    if (
+      el.closest(
+        '[data-note], [role="status"], [role="alert"], [aria-live], [data-empty-state], [role="listbox"], [role="menu"], [data-connect-menu]',
+      )
+    )
+      continue;
+    const cs = getComputedStyle(el);
+    if (!MUTED.includes(cs.color) || parseFloat(cs.fontSize) > 14.5) continue;
+    if (!(el.textContent ?? '').trim()) continue;
+    out.push({
+      rule: 14,
+      target: name(el),
+      detail:
+        'looks like a hint paragraph shown by default (muted, small); move it behind an (i) button or mark status / metadata text `data-note`',
+      ids: [idOf(el)],
+    });
   }
 
   // ---- clipped text (rule 7) ------------------------------------------------------------------

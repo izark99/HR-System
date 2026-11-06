@@ -9,6 +9,7 @@ import { ADMIN, expect, test, type Page } from './fixtures';
 import {
   employees,
   fixtures,
+  rowAction,
   openCreateAccount,
   payroll,
   payrollInput,
@@ -124,6 +125,9 @@ for (const viewport of [DESKTOP, LAPTOP, MOBILE]) {
       await ready(page);
       await expect(page.getByText('2 đầu vào · Phiên bản v3')).toBeVisible();
       await r.check('flow list');
+      // (i) of "Lần chạy gần đây": opened by a tap / click, inside the viewport.
+      await openInfoTip(page, page.getByRole('button', { name: 'Giải thích: Lần chạy gần đây' }));
+      await r.check('flow list (i) open');
       r.assertClean(`flow-list-${size(viewport)}`);
     });
 
@@ -208,6 +212,29 @@ for (const viewport of [DESKTOP, LAPTOP]) {
         }),
       ).toBeVisible();
       await r.check('versions list + diff');
+      await rowAction(
+        page
+          .getByRole('table', { name: 'Danh sách phiên bản' })
+          .getByRole('row', { name: /^v2\b/ }),
+        'Publish v2',
+      );
+      const publish = page.getByRole('dialog', { name: 'Publish v2' });
+      await expect(publish.getByLabel(/^Ghi chú thay đổi/)).toBeVisible();
+      await r.check('publish dialog');
+      await openInfoTip(page, publish.getByRole('button', { name: /^Giải thích: / }).first());
+      await r.check('publish dialog (i) open');
+      await page.keyboard.press('Escape');
+      await expect(page.locator('[data-infotip-pop]')).toHaveCount(0);
+      await page.keyboard.press('Escape');
+      await expect(publish).toHaveCount(0);
+      await page.goto('/admin/flows');
+      await ready(page);
+      await page.getByRole('button', { name: 'Tạo flow mới' }).click();
+      const create = page.getByRole('dialog', { name: 'Tạo flow mới' });
+      await expect(create.getByLabel('Mã flow', { exact: true })).toBeVisible();
+      await r.check('create flow dialog');
+      await openInfoTip(page, create.getByRole('button', { name: 'Giải thích: Tạo flow mới' }));
+      await r.check('create flow dialog (i) open');
       r.assertClean(`admin-flows-versions-${size(viewport)}`);
     });
 
@@ -221,13 +248,62 @@ for (const viewport of [DESKTOP, LAPTOP]) {
       const panel = page.getByRole('complementary', { name: 'Cấu hình' });
       await panel.getByRole('tab', { name: 'Tham số' }).click();
       await r.check('designer flow tab Tham số');
+      const shot = async (name: string) => {
+        if (process.env.LL_SHOTS)
+          await page.screenshot({
+            path: `${process.env.LL_SHOTS}/tab-${name}-${size(viewport)}.png`,
+          });
+      };
+      await shot('tham-so');
       await panel.getByRole('tab', { name: 'Input slot' }).click();
       await expect(panel.getByRole('tab', { name: 'Input slot' })).toHaveAttribute(
         'aria-selected',
         'true',
       );
       await r.check('designer flow tab Input slot');
+      await shot('input-slot');
+      // The longest state of the tab: scrolled to the end of the slot form.
+      await page
+        .getByRole('complementary', { name: 'Cấu hình' })
+        .evaluate((el) => el.scrollTo(0, el.scrollHeight));
+      await r.check('designer flow tab Input slot scrolled to the end');
+      await shot('input-slot-end');
+      await openInfoTip(
+        page,
+        panel.getByRole('button', { name: 'Giải thích: Mục upload đang sửa' }),
+      );
+      await r.check('designer flow tab Input slot (i) open');
       r.assertClean(`designer-tabs-${size(viewport)}`);
+    });
+
+    test(`designer: data panel with a compare preview ${size(viewport)}`, async ({
+      page,
+      supabase,
+    }) => {
+      test.setTimeout(120_000);
+      withDraft(supabase);
+      const r = new LayoutReport(page);
+      await openDesigner(page);
+      await page.getByRole('button', { name: 'Dữ liệu mẫu và xem trước' }).click();
+      const data = page.getByRole('region', { name: 'Dữ liệu mẫu và xem trước' });
+      await data
+        .getByLabel('File mẫu cho Bảng lương (nhiều chi nhánh)')
+        .setInputFiles(fixtures('bang_luong_'));
+      await data
+        .getByLabel('File mẫu cho Chấm công (nhiều chi nhánh)')
+        .setInputFiles(fixtures('cham_cong_'));
+      await expect(data.getByRole('status').filter({ hasText: '75 dòng' })).toHaveCount(2, {
+        timeout: 30_000,
+      });
+      await pickMonth(page, '2026-09', data.getByRole('button', { name: /Kỳ lương/ }));
+      await selectNode(page, 'cmp');
+      await data.getByRole('button', { name: /^Xem trước / }).click();
+      await expect(data.getByRole('tab', { name: /^Lệch/ })).toBeVisible({ timeout: 30_000 });
+      await data.getByRole('tab', { name: /^Lệch/ }).click();
+      await r.check('designer data panel preview');
+      if (process.env.LL_SHOTS)
+        await page.screenshot({ path: `${process.env.LL_SHOTS}/data-panel-${size(viewport)}.png` });
+      r.assertClean(`designer-data-${size(viewport)}`);
     });
 
     test(`designer: node forms of the acceptance flow ${size(viewport)}`, async ({
@@ -310,6 +386,24 @@ async function openDesigner(page: Page) {
   await page.evaluate(() => document.fonts.ready);
 }
 
+/** Opens an (i) popover by a click and checks it is fully inside the viewport. */
+async function openInfoTip(page: Page, button: ReturnType<Page['locator']>) {
+  await button.scrollIntoViewIfNeeded();
+  await button.click();
+  const pop = page.locator('[data-infotip-pop]');
+  await expect(pop).toBeVisible();
+  const box = (await pop.boundingBox())!;
+  const vp = page.viewportSize()!;
+  expect(box.x).toBeGreaterThanOrEqual(0);
+  expect(box.y).toBeGreaterThanOrEqual(0);
+  expect(box.x + box.width).toBeLessThanOrEqual(vp.width);
+  expect(box.y + box.height).toBeLessThanOrEqual(vp.height);
+  if (process.env.LL_SHOTS)
+    await page.screenshot({
+      path: `${process.env.LL_SHOTS}/infotip-${slug((await button.getAttribute('aria-label'))!)}-${size(vp)}.png`,
+    });
+}
+
 async function selectNode(page: Page, id: string) {
   const node = page.getByTestId(`rf__node-${id}`);
   await node.scrollIntoViewIfNeeded().catch(() => undefined);
@@ -345,10 +439,15 @@ test.describe('layout-lint self-test', () => {
       <div class="card" data-card><input aria-label="r8 ô"><p>r8</p><button style="height:40px">r8 nút 40</button><button data-size="sm" style="height:36px">r8 nhỏ</button></div>
       <div class="card"><div role="tablist" data-tabs="dense" class="row"><button role="tab" style="height:44px">r9 a</button><button role="tab" style="height:44px">r9 tab dài hơn</button></div></div>
       <div class="card" data-card><label><input type="checkbox" style="width:20px;height:20px">r10 a</label><label><input type="checkbox" style="width:14px;height:14px">r10 b</label></div>
-      <div class="card"><div style="display:flex;flex-direction:column;gap:16px"><div data-form-field>r11 a</div><div data-form-field style="margin-bottom:8px">r11 b</div><div data-checkbox>r11 c</div><h3 style="margin:0">r11 nhóm</h3><div data-form-field>r11 d</div></div></div>`);
+      <div class="card"><div style="display:flex;flex-direction:column;gap:16px"><div data-form-field>r11 a</div><div data-form-field style="margin-bottom:8px">r11 b</div><div data-checkbox>r11 c</div><h3 style="margin:0">r11 nhóm</h3><div data-form-field>r11 d</div></div></div>
+      <div class="card"><div data-form-field style="width:90px"><label data-field-label>r12 nhãn dài xuống dòng</label></div></div>
+      <div class="card"><div id="r13-outer" style="height:60px;overflow-y:auto"><div id="r13-inner" style="height:100px;overflow-y:auto"><div style="height:200px">r13</div></div></div></div>
+      <div class="card" data-card><p data-hint>r14 gợi ý đánh dấu</p><p style="color:#475569;font-size:14px;margin:0">r14 đoạn giải thích</p><p data-note style="color:#475569;font-size:14px;margin:0">r14 meta</p></div>`);
     const found = await layoutLint(page);
     const rules = new Set(found.map((v) => v.rule));
-    expect([...rules].sort((a, b) => a - b)).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]);
+    expect([...rules].sort((a, b) => a - b)).toEqual([
+      1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14,
+    ]);
     const r8 = found.filter((v) => v.rule === 8).map((v) => v.detail);
     expect(r8.some((d) => d.includes('"r8 nút 40"') && d.includes('h=40px'))).toBe(true);
     // The marked small button (36px) is not a fault.
@@ -365,5 +464,28 @@ test.describe('layout-lint self-test', () => {
     expect(found.find((v) => v.rule === 1)!.detail).toContain('differ by 8px');
     expect(found.find((v) => v.rule === 4)!.detail).toMatch(/uneven gaps 4px \/ 12px/);
     expect(found.find((v) => v.rule === 6)!.target).toContain('Nhãn rất dài');
+    expect(found.find((v) => v.rule === 12)!.target).toContain('r12 nhãn');
+    const r13 = found.filter((v) => v.rule === 13);
+    expect(r13).toHaveLength(1);
+    expect(r13[0]!.detail).toMatch(/scrolls vertically inside div/);
+    const r14 = found.filter((v) => v.rule === 14).map((v) => v.target);
+    expect(r14).toHaveLength(2);
+    expect(r14.some((x) => x.includes('r14 gợi ý đánh dấu'))).toBe(true);
+    expect(r14.some((x) => x.includes('r14 đoạn giải thích'))).toBe(true);
+
+    // Rule 13 on the full-bleed Designer: screen-reader text far down a panel that is not its
+    // containing block makes the page scroll around the scrolling panel (the bug of 2026-11-06).
+    const bleed = (fixed: boolean) => `<style>body{margin:0}</style>
+      <div class="hr-designer" style="height:100vh;display:flex">
+        <aside style="height:100%;overflow-y:auto;width:300px${fixed ? ';position:relative' : ''}">
+          <div style="height:2000px">panel</div>
+          <span style="position:absolute;width:1px;height:1px;overflow:hidden">sr</span>
+        </aside></div>`;
+    await page.setContent(bleed(false));
+    const page13 = (await layoutLint(page)).filter((v) => v.rule === 13);
+    expect(page13).toHaveLength(1);
+    expect(page13[0]!.detail).toMatch(/inside the page/);
+    await page.setContent(bleed(true));
+    expect(await layoutLint(page)).toEqual([]);
   });
 });
