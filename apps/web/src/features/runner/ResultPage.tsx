@@ -53,7 +53,7 @@ function Filters({
     <div
       role="group"
       aria-label={t('result.filtersLabel')}
-      className="flex flex-wrap items-end gap-3"
+      className="flex flex-wrap items-end gap-3 max-sm:flex-col max-sm:items-stretch max-sm:gap-4"
     >
       {options.map((o) => (
         <FormField key={o.column} label={o.title} id={`filter-${o.column}`}>
@@ -140,13 +140,18 @@ function SheetPanel({ sheet, tabsId }: { sheet: SheetInfo; tabsId: string }) {
 
   return (
     <TabPanel tabsId={tabsId} item={sheet.id} focusable={false} className="flex flex-col">
-      <div className="flex flex-wrap items-end justify-between gap-3 px-4 pt-4 pb-3">
+      {/* Stacked on a phone: every control of the column one width (AC-UI-78 rule 16). */}
+      <div className="flex flex-wrap items-end justify-between gap-3 px-4 pt-4 pb-3 max-sm:flex-col max-sm:items-stretch max-sm:gap-4">
         <Filters
           options={options}
           values={values}
           onChange={(column, value) => setValues((v) => ({ ...v, [column]: value }))}
         />
-        <FormField label={t('result.search')} id={searchId} className="w-60 max-w-full">
+        <FormField
+          label={t('result.search')}
+          id={searchId}
+          className="w-60 max-w-full max-sm:w-full"
+        >
           {(field) => (
             <TextInput
               {...field.input}
