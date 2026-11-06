@@ -48,7 +48,12 @@ export function Stepper({
             key={step.id}
             aria-current={state === 'current' ? 'step' : undefined}
             data-step={state}
-            className={cx('flex items-center gap-2', i > 0 ? 'min-w-0 flex-1' : 'shrink-0')}
+            // The current step never shrinks below its label (on a phone the only label shown);
+            // the rules of the other steps give way instead (AC-UI-78 rule 2).
+            className={cx(
+              'flex items-center gap-2',
+              i === 0 ? 'shrink-0' : cx('flex-1', state !== 'current' && 'min-w-0'),
+            )}
           >
             {/* The rule joining this step to the previous one (decorative). */}
             {i > 0 && <span aria-hidden className="h-px min-w-4 flex-1 bg-line" />}

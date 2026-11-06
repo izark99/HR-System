@@ -275,3 +275,26 @@ export function ConnectIcon({ size = 18, className }: IconProps) {
     </Icon>
   );
 }
+
+/** "Thêm ghi chú": a sticky note with a folded corner. */
+export function NoteIcon({ size = 18, className }: IconProps) {
+  return (
+    <Icon size={size} className={className}>
+      <path d="M4 4h16v10l-6 6H4z" />
+      <path d="M14 20v-6h6" />
+      <path d="M8 9h8M8 13h4" />
+    </Icon>
+  );
+}
+
+/** "Tự sắp xếp": boxes laid out on a grid. */
+export function LayoutIcon({ size = 18, className }: IconProps) {
+  return (
+    <Icon size={size} className={className}>
+      <rect x="3" y="3" width="7" height="7" rx="1.5" />
+      <rect x="14" y="3" width="7" height="7" rx="1.5" />
+      <rect x="3" y="14" width="7" height="7" rx="1.5" />
+      <rect x="14" y="14" width="7" height="7" rx="1.5" />
+    </Icon>
+  );
+}

@@ -2,7 +2,7 @@ import { Link, type LinkProps } from '@tanstack/react-router';
 import { useId, useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { MenuIcon } from '../icons';
-import { buttonClass, cx, navItemClass } from '../ui';
+import { buttonClass, cx, navItemClass, OneLine } from '../ui';
 import { PageShell } from './PageShell';
 
 export interface SideNavItem {
@@ -72,7 +72,8 @@ export function SideNavLayout({
                 'justify-between gap-2 text-muted hover:bg-transparent hover:text-muted',
               )}
             >
-              <span className="min-w-0 truncate">{item.label}</span>
+              {/* Cut with "…" + tooltip when the "Sắp có" badge leaves too little room. */}
+              <OneLine text={item.label} />
               <span className="shrink-0 rounded-pill bg-neutral px-2 py-0.5 text-caption whitespace-nowrap">
                 {t('common.soon')}
               </span>

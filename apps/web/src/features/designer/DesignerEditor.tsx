@@ -60,7 +60,16 @@ import { upstreamSignature } from './preview-signature';
 import { DRAG_MIME, Palette } from './Palette';
 import { StatusBar } from './StatusBar';
 import { useDesignCheck } from './use-design-check';
-import { CopyIcon, PasteIcon, RedoIcon, TrashIcon, UndoIcon } from '../../components/icons';
+import {
+  CopyIcon,
+  DownloadIcon,
+  LayoutIcon,
+  NoteIcon,
+  PasteIcon,
+  RedoIcon,
+  TrashIcon,
+  UndoIcon,
+} from '../../components/icons';
 
 /** In-app clipboard (configuration only, never data; spec §15.3). Shared between Designers. */
 let clipboard: Clip | null = null;
@@ -689,7 +698,9 @@ export function DesignerEditor(props: DesignerEditorProps) {
         >
           {t('toolbar.back')}
         </Link>
-        <h1 className="m-0 flex min-w-0 items-center gap-2 text-title-sm text-ink">
+        {/* Takes the room left by the toolbar, never below a readable 192px: the name is cut with
+            "…" + tooltip, version and status chip always fit (AC-UI-78 rule 2). */}
+        <h1 className="m-0 flex min-w-48 flex-1 items-center gap-2 text-title-sm text-ink">
           <OneLine text={props.flowName} />
           <span className="shrink-0 text-dense whitespace-nowrap text-muted">
             v{props.version.versionNo}
@@ -767,17 +778,28 @@ export function DesignerEditor(props: DesignerEditorProps) {
                 onOpenChange={(o) => setConnectFor(o ? (selectedNode?.id ?? null) : null)}
                 onConnect={connectByKeyboard}
               />
-              <Button size="sm" onClick={addNoteCmd}>
-                {t('toolbar.note')}
-              </Button>
-              <Button size="sm" onClick={layout} disabled={doc.nodes.length === 0}>
-                {t('toolbar.layout')}
-              </Button>
+              {/* Icon buttons (with tooltip) so the toolbar fits 1024px (AC-UI-78 rule 2). */}
+              <IconButton
+                label={t('toolbar.note')}
+                tooltip={t('toolbar.note')}
+                icon={<NoteIcon />}
+                onClick={addNoteCmd}
+              />
+              <IconButton
+                label={t('toolbar.layout')}
+                tooltip={t('toolbar.layout')}
+                icon={<LayoutIcon />}
+                onClick={layout}
+                disabled={doc.nodes.length === 0}
+              />
             </>
           )}
-          <Button size="sm" onClick={exportJson}>
-            {t('toolbar.export')}
-          </Button>
+          <IconButton
+            label={t('toolbar.export')}
+            tooltip={t('toolbar.export')}
+            icon={<DownloadIcon />}
+            onClick={exportJson}
+          />
           {!ro && (
             <Button
               variant="primary"
