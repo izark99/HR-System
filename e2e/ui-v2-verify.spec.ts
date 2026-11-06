@@ -41,8 +41,10 @@ test.describe('row action menu (AC-UI-54)', () => {
     page,
   }) => {
     await openUsers(page);
-    const a = menuButton(page, USER.username);
-    const b = menuButton(page, ADMIN.username);
+    // `a` is the lower row: its menu opens downwards and does not cover the other row's button
+    // (round B: the shorter header leaves room below the table, so the menu no longer flips up).
+    const a = menuButton(page, ADMIN.username);
+    const b = menuButton(page, USER.username);
     await a.click();
     await expect(page.getByRole('menu')).toHaveCount(1);
     await expect(page.getByRole('menu').getByRole('menuitem').first()).toBeFocused();

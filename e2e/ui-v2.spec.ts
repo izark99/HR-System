@@ -370,6 +370,38 @@ test.describe('admin screens 1280x800', () => {
     await shot(page, '07-admin-users', 'temp-password-dialog');
   });
 
+  test('users: 10 accounts, at least 9 rows in view without scrolling the page (AC-UI-62)', async ({
+    page,
+    supabase,
+  }) => {
+    for (let i = 1; i <= 8; i++) {
+      supabase.users.push({
+        id: `00000000-0000-4000-8000-${String(900 + i).padStart(12, '0')}`,
+        username: `hr.gia${String(i).padStart(2, '0')}`,
+        full_name: `Nhân viên Giả ${i}`,
+        role: 'user',
+        is_active: true,
+        must_change_password: false,
+        password: 'khong-dung-123',
+      });
+    }
+    await page.goto('/admin/users');
+    const table = page.getByRole('table', { name: 'Danh sách tài khoản' });
+    await expect(table.locator('tbody tr')).toHaveCount(10);
+    const header = page.locator('[data-page-header]');
+    expect((await header.boundingBox())!.height, 'workspace header').toBeLessThanOrEqual(96);
+    const inView = await table.evaluate((t) => {
+      const bottom = window.innerHeight;
+      return Array.from(t.querySelectorAll('tbody tr')).filter(
+        (r) => r.getBoundingClientRect().bottom <= bottom,
+      ).length;
+    });
+    expect(inView, 'rows fully in view at 1280x800').toBeGreaterThanOrEqual(9);
+    expect(await page.evaluate(() => window.scrollY)).toBe(0);
+    await tableRowChecks(table, { noScroll: true });
+    await shot(page, '07-admin-users', 'ten-accounts');
+  });
+
   test('flows list', async ({ page, supabase }) => {
     withDraft(supabase);
     await page.goto('/admin/flows');
@@ -393,7 +425,8 @@ test.describe('admin screens 1280x800', () => {
     await page.goto(VERSIONS);
     await expect(page.getByRole('table', { name: 'Danh sách phiên bản' })).toBeVisible();
     await commonChecks(page);
-    await titleChecks(page);
+    // List template with a back link to the flow list in the eyebrow's place.
+    await titleChecks(page, { eyebrow: false });
     await cardChecks(page.locator('main [data-card]'));
     const table = page.getByRole('table', { name: 'Danh sách phiên bản' });
     await adminTableChecks(table);

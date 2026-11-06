@@ -282,7 +282,10 @@ test.describe('Version & validity screen', () => {
 
     await rowAction(row(page, 1), 'Tạo draft từ version này v1');
     // Numbering is max + 1 (the discarded v2 number is reused, as in the database trigger).
-    await expect(page.getByRole('status')).toContainText('đã tạo bản nháp v2 từ v1.');
+    // The result is a toast now (AC-UI-73); the diff card has its own status line, so filter.
+    await expect(page.getByRole('status').filter({ hasText: 'Đã xong:' })).toContainText(
+      'đã tạo bản nháp v2 từ v1.',
+    );
     await expect(row(page, 2)).toContainText('Draft');
     const clone = supabase.versions.find((v) => v.status === 'draft')!;
     expect(clone.definition).toEqual(supabase.versions[0]!.definition);

@@ -1,6 +1,6 @@
-import { Link, Outlet, useRouterState } from '@tanstack/react-router';
+import { Outlet, useRouterState } from '@tanstack/react-router';
 import { useTranslation } from 'react-i18next';
-import { cx, navItemClass } from '../../components/ui';
+import { PageShell, SideNavLayout, type SideNavItem } from '../../components/layout';
 import { appConfig } from '../../lib/env';
 
 type NavItem = { key: string; to?: '/admin/flows' | '/admin/users' };
@@ -18,66 +18,32 @@ const ITEMS: NavItem[] = [
 export function AdminLayout() {
   const { t } = useTranslation();
   const path = useRouterState({ select: (s) => s.location.pathname });
+  const content =
+    appConfig.mode === 'supabase' ? (
+      <Outlet />
+    ) : (
+      <p className="m-0 text-muted">{t('admin.localMode')}</p>
+    );
 
   // The Designer needs the whole width (desktop only, spec §15.3): no side menu, no padding.
   if (/^\/admin\/flows\/[^/]+\/designer\/?$/.test(path)) {
-    return (
-      <main id="main" className="flex min-w-0 flex-col">
-        {appConfig.mode === 'supabase' ? (
-          <Outlet />
-        ) : (
-          <p className="m-0 p-6 text-muted">{t('admin.localMode')}</p>
-        )}
-      </main>
-    );
+    return <PageShell width="bleed">{content}</PageShell>;
   }
 
-  return (
-    <div className="flex flex-wrap">
-      <nav
-        aria-label={t('admin.nav.label')}
-        className="flex max-w-68 flex-[1_1_240px] flex-col gap-1.5 px-3.5 py-6"
-      >
-        {ITEMS.map((item) => {
+  const items: SideNavItem[] = ITEMS.map((item) => ({
+    key: item.key,
+    label: t(`admin.nav.${item.key}`),
+    ...(item.to
+      ? {
+          to: item.to,
           // Sub-pages (e.g. /admin/flows/:code/versions) keep their section highlighted.
-          const active =
-            item.to !== undefined && (path === item.to || path.startsWith(`${item.to}/`));
-          return item.to ? (
-            <Link
-              key={item.key}
-              to={item.to}
-              aria-current={active ? 'page' : undefined}
-              className={navItemClass(active)}
-            >
-              {t(`admin.nav.${item.key}`)}
-            </Link>
-          ) : (
-            <span
-              key={item.key}
-              aria-disabled="true"
-              className={cx(
-                navItemClass(false),
-                'justify-between gap-2 text-muted hover:bg-transparent hover:text-muted',
-              )}
-            >
-              <span className="min-w-0 truncate">{t(`admin.nav.${item.key}`)}</span>
-              <span className="shrink-0 rounded-pill bg-neutral px-2 py-0.5 text-caption whitespace-nowrap">
-                {t('admin.nav.soon')}
-              </span>
-            </span>
-          );
-        })}
-      </nav>
-      <main
-        id="main"
-        className="flex min-w-0 flex-[999_1_560px] flex-col gap-6 px-4 pt-8 pb-12 md:pr-8 md:pl-4"
-      >
-        {appConfig.mode === 'supabase' ? (
-          <Outlet />
-        ) : (
-          <p className="m-0 text-muted">{t('admin.localMode')}</p>
-        )}
-      </main>
-    </div>
+          active: path === item.to || path.startsWith(`${item.to}/`),
+        }
+      : {}),
+  }));
+  return (
+    <SideNavLayout label={t('admin.nav.label')} items={items}>
+      {content}
+    </SideNavLayout>
   );
 }

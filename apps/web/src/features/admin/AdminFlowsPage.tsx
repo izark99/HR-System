@@ -4,30 +4,15 @@ import type { TFunction } from 'i18next';
 import { useRef, useState, type FormEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, useNavigate } from '@tanstack/react-router';
+import { DataTable, type DataTableColumn } from '../../components/DataTable';
 import { DatePicker } from '../../components/DatePicker';
+import { Dialog, DialogFooter } from '../../components/Dialog';
+import { FormField, Textarea, TextInput } from '../../components/FormField';
+import { PageHeader, Toolbar } from '../../components/layout';
+import { RowActions, RowIcon, rowIconClass } from '../../components/RowActions';
+import { useToast } from '../../components/Toast';
 import { Tooltip } from '../../components/Tooltip';
-import {
-  RowActions,
-  rowActionsCellClass,
-  rowActionsHeadClass,
-  RowIcon,
-  rowIconClass,
-} from '../../components/RowActions';
-import {
-  Button,
-  Callout,
-  Card,
-  Chip,
-  cx,
-  inputClass,
-  labelClass,
-  PageHeader,
-  CellText,
-  tdLineClass,
-  textareaClass,
-  thLineClass,
-  type Tone,
-} from '../../components/ui';
+import { Button, Callout, cardClass, CellText, Chip, cx, type Tone } from '../../components/ui';
 import type { Json, VersionStatus } from '../../lib/database.types';
 import { todayIso } from '../runner/as-of';
 import { EngineClient } from '../runner/engine-client';
@@ -38,7 +23,6 @@ import {
   type AdminFlow,
   type AdminFlowVersion,
 } from './admin-api';
-import { Dialog } from '../../components/Dialog';
 import { useAdminApi, useAdminQuery } from './use-admin';
 import { LoadingRegion, TableCardSkeleton } from '../../components/Skeleton';
 import { LayersIcon } from '../../components/icons';
@@ -151,7 +135,7 @@ function VersionList({ versions }: { versions: AdminFlowVersion[] }) {
           ))}
         </ul>
         {shown.map((v, i) => (
-          <span key={v.id} aria-hidden className="flex items-center gap-1.5">
+          <span key={v.id} aria-hidden className="flex items-center gap-2">
             {i > 0 && <span className="text-muted">·</span>}
             <span className="font-semibold">v{v.versionNo}</span>
             <Chip tone={STATUS_TONE[v.status]}>{t(`admin.flows.status.${v.status}`)}</Chip>
@@ -245,24 +229,25 @@ function ImportForm({
     label: string,
     value: string,
     set: (v: string) => void,
-    required = false,
+    opts: { required?: boolean; hint?: string } = {},
   ) => (
-    <div className="flex flex-col gap-1.5">
-      <label htmlFor={id} className={labelClass}>
-        {label}
-        {required && (
-          <>
-            <span aria-hidden> *</span>
-            <span className="sr-only"> ({t('common.required')})</span>
-          </>
-        )}
-      </label>
-      <input id={id} value={value} onChange={(e) => set(e.target.value)} className={inputClass} />
-    </div>
+    <FormField
+      id={id}
+      required={opts.required}
+      hint={opts.hint}
+      label={
+        <>
+          {label}
+          {opts.required && <span aria-hidden> *</span>}
+        </>
+      }
+    >
+      {(f) => <TextInput {...f.input} value={value} onChange={(e) => set(e.target.value)} />}
+    </FormField>
   );
 
   return (
-    <form onSubmit={(e) => void submit(e)} noValidate className="flex flex-col gap-3.5">
+    <form onSubmit={(e) => void submit(e)} noValidate className="flex flex-col gap-4">
       <p className="m-0 text-caption text-muted">
         {t('admin.import.file', { name: candidate.fileName })}
       </p>
@@ -271,46 +256,53 @@ function ImportForm({
           {candidate.notices.join(' ')}
         </Callout>
       )}
-      {field('import-code', t('admin.import.code'), code, setCode, true)}
-      <p className="-mt-2 m-0 text-caption text-muted">{t('admin.import.codeHint')}</p>
+      {field('import-code', t('admin.import.code'), code, setCode, {
+        required: true,
+        hint: t('admin.import.codeHint'),
+      })}
       {existing ? (
         <Callout tone="blue" label={t('admin.import.existingLabel')}>
           {t('admin.import.existing', { name: existing.name })}
         </Callout>
       ) : null}
-      {field('import-name', t('admin.import.name'), name, setName, true)}
+      {field('import-name', t('admin.import.name'), name, setName, { required: true })}
       {field('import-category', t('admin.import.category'), category, setCategory)}
       {field('import-description', t('admin.import.description'), description, setDescription)}
       {field('import-instructions', t('admin.import.instructions'), instructions, setInstructions)}
       <div className="flex flex-wrap gap-4">
-        <div className="flex flex-col gap-1.5">
-          <label id="import-from-label" htmlFor="import-from" className={labelClass}>
-            {t('admin.import.effectiveFrom')} <span aria-hidden>*</span>
-            <span className="sr-only">({t('common.required')})</span>
-          </label>
-          <DatePicker
-            id="import-from"
-            labelId="import-from-label"
-            value={effectiveFrom}
-            required
-            onChange={setEffectiveFrom}
-          />
-        </div>
-        <div className="flex flex-col gap-1.5">
-          <label id="import-to-label" htmlFor="import-to" className={labelClass}>
-            {t('admin.import.effectiveTo')}
-          </label>
-          <DatePicker
-            id="import-to"
-            labelId="import-to-label"
-            value={effectiveTo}
-            onChange={setEffectiveTo}
-          />
-        </div>
+        <FormField
+          id="import-from"
+          required
+          label={
+            <>
+              {t('admin.import.effectiveFrom')} <span aria-hidden>*</span>
+            </>
+          }
+        >
+          {(f) => (
+            <DatePicker
+              id={f.id}
+              labelId={f.labelId}
+              value={effectiveFrom}
+              required
+              onChange={setEffectiveFrom}
+            />
+          )}
+        </FormField>
+        <FormField id="import-to" label={t('admin.import.effectiveTo')}>
+          {(f) => (
+            <DatePicker
+              id={f.id}
+              labelId={f.labelId}
+              value={effectiveTo}
+              onChange={setEffectiveTo}
+            />
+          )}
+        </FormField>
       </div>
       <p className="-mt-2 m-0 text-caption text-muted">{t('admin.import.rangeHint')}</p>
       {openVersion && (
-        <label className="flex min-h-target items-center gap-2.5 text-body text-ink-soft">
+        <label className="flex min-h-target items-center gap-3 text-body text-ink-soft">
           <input
             type="checkbox"
             className="size-4.5 accent-teal-strong"
@@ -323,7 +315,9 @@ function ImportForm({
           })}
         </label>
       )}
-      {field('import-note', t('admin.import.changeNote'), changeNote, setChangeNote, true)}
+      {field('import-note', t('admin.import.changeNote'), changeNote, setChangeNote, {
+        required: true,
+      })}
       {error && (
         <Callout tone="coral" label={t('admin.errorLabel')} role="alert">
           {t(
@@ -336,9 +330,11 @@ function ImportForm({
           )}
         </Callout>
       )}
-      <Button type="submit" variant="primary" disabled={busy} className="self-end">
-        {busy ? t('admin.import.publishing') : t('admin.import.publish')}
-      </Button>
+      <DialogFooter>
+        <Button type="submit" variant="primary" disabled={busy}>
+          {busy ? t('admin.import.publishing') : t('admin.import.publish')}
+        </Button>
+      </DialogFooter>
     </form>
   );
 }
@@ -397,42 +393,24 @@ function CreateFlowForm({ onCreated }: { onCreated: (code: string) => void }) {
     set: (v: string) => void,
     opts: { invalid?: string | false; hint?: string; area?: boolean; mono?: boolean } = {},
   ) => (
-    <div className="flex flex-col gap-1.5">
-      <label htmlFor={id} className={labelClass}>
-        {label}
-      </label>
-      {opts.area ? (
-        <textarea
-          id={id}
-          rows={3}
-          value={value}
-          onChange={(e) => set(e.target.value)}
-          className={textareaClass}
-        />
-      ) : (
-        <input
-          id={id}
-          type="text"
-          value={value}
-          aria-invalid={opts.invalid ? true : undefined}
-          aria-describedby={opts.hint || opts.invalid ? `${id}-desc` : undefined}
-          onChange={(e) => set(e.target.value)}
-          className={cx(inputClass, opts.mono && 'font-mono')}
-        />
-      )}
-      {(opts.hint || opts.invalid) && (
-        <p
-          id={`${id}-desc`}
-          className={cx('m-0 text-caption', opts.invalid ? 'text-coral-text' : 'text-muted')}
-        >
-          {opts.invalid || opts.hint}
-        </p>
-      )}
-    </div>
+    <FormField id={id} label={label} hint={opts.hint} error={opts.invalid || undefined}>
+      {(f) =>
+        opts.area ? (
+          <Textarea {...f.input} value={value} onChange={(e) => set(e.target.value)} />
+        ) : (
+          <TextInput
+            {...f.input}
+            value={value}
+            onChange={(e) => set(e.target.value)}
+            className={cx(opts.mono && 'font-mono')}
+          />
+        )
+      }
+    </FormField>
   );
 
   return (
-    <form onSubmit={(e) => void submit(e)} noValidate className="flex flex-col gap-3.5">
+    <form onSubmit={(e) => void submit(e)} noValidate className="flex flex-col gap-4">
       <p className="m-0 text-caption text-muted">{t('admin.flows.create.intro')}</p>
       {field('new-flow-code', t('admin.flows.create.code'), code, (v) => setCode(v.trim()), {
         mono: true,
@@ -464,9 +442,11 @@ function CreateFlowForm({ onCreated }: { onCreated: (code: string) => void }) {
           {error}
         </Callout>
       )}
-      <Button type="submit" variant="primary" disabled={busy} className="self-end">
-        {busy ? t('admin.flows.create.creating') : t('admin.flows.create.submit')}
-      </Button>
+      <DialogFooter>
+        <Button type="submit" variant="primary" disabled={busy}>
+          {busy ? t('admin.flows.create.creating') : t('admin.flows.create.submit')}
+        </Button>
+      </DialogFooter>
     </form>
   );
 }
@@ -478,7 +458,7 @@ export function AdminFlowsPage() {
   const [checking, setChecking] = useState(false);
   const [candidate, setCandidate] = useState<Candidate | null>(null);
   const [readError, setReadError] = useState<Exclude<ReadResult, { ok: true }> | null>(null);
-  const [message, setMessage] = useState('');
+  const toast = useToast();
   const [creating, setCreating] = useState(false);
   const navigate = useNavigate();
 
@@ -486,7 +466,6 @@ export function AdminFlowsPage() {
     if (!file) return;
     setChecking(true);
     setReadError(null);
-    setMessage('');
     const result = await readFlowFile(file, t);
     setChecking(false);
     if (fileRef.current) fileRef.current.value = '';
@@ -494,13 +473,46 @@ export function AdminFlowsPage() {
     else setReadError(result);
   }
 
+  const columns: DataTableColumn<AdminFlow>[] = [
+    {
+      id: 'name',
+      header: t('admin.flows.name'),
+      rowHeader: true,
+      cell: (f) => (
+        <span className="flex min-w-0 items-center gap-2">
+          <CellText text={f.name} />
+          {f.isArchived && (
+            <span className="shrink-0">
+              <Chip tone="neutral">{t('admin.flows.archived')}</Chip>
+            </span>
+          )}
+        </span>
+      ),
+    },
+    {
+      id: 'code',
+      header: t('admin.flows.code'),
+      cell: (f) => <CellText text={f.code} className="font-mono" />,
+    },
+    {
+      id: 'category',
+      header: t('admin.flows.category'),
+      cell: (f) => <CellText text={f.category || '-'} />,
+    },
+    {
+      id: 'versions',
+      header: t('admin.flows.versions'),
+      cell: (f) => <VersionList versions={f.versions} />,
+    },
+  ];
+
   return (
     <>
       <PageHeader
         eyebrow={t('admin.flows.eyebrow')}
         eyebrowTone="blue"
         title={t('admin.flows.title')}
-        subtitle={t('admin.flows.subtitle')}
+        subtitle={t('admin.flows.subtitleShort')}
         actions={
           <>
             <input
@@ -521,16 +533,11 @@ export function AdminFlowsPage() {
         }
       />
 
-      {message && (
-        <Callout tone="teal" label={t('admin.import.doneLabel')} role="status">
-          {message}
-        </Callout>
-      )}
       {readError && (
         <Callout tone="coral" label={t('admin.import.invalidLabel')} role="alert">
           {t(`admin.import.read.${readError.key}`)}
           {readError.problems && readError.problems.length > 0 && (
-            <ul className="mt-2 mb-0 pl-5">
+            <ul className="mt-2 mb-0 pl-6">
               {readError.problems.slice(0, 20).map((p, i) => (
                 <li key={i} className="font-mono text-caption">
                   {p}
@@ -541,9 +548,14 @@ export function AdminFlowsPage() {
         </Callout>
       )}
       {error && (
-        <Callout tone="coral" label={t('admin.errorLabel')} role="alert">
-          {t(`admin.errors.${error}`)}
-        </Callout>
+        <div className="flex flex-col items-start gap-3">
+          <Callout tone="coral" label={t('admin.errorLabel')} role="alert">
+            {t(`admin.errors.${error}`)}
+          </Callout>
+          <Button size="sm" onClick={reload}>
+            {t('common.retry')}
+          </Button>
+        </div>
       )}
       {!data && !error && (
         <LoadingRegion>
@@ -552,104 +564,60 @@ export function AdminFlowsPage() {
       )}
 
       {data && (
-        <Card aria-labelledby="flows-title" className="flex flex-col gap-4">
-          <h2 id="flows-title" className="m-0 text-title-md text-ink">
-            {t('admin.flows.listTitle', { count: data.length })}
-          </h2>
-          {data.length === 0 ? (
-            <p className="m-0 rounded-card bg-neutral px-4 py-6 text-center text-body text-muted">
-              {t('admin.flows.empty')}
-            </p>
-          ) : (
-            <div
-              className="overflow-x-auto"
-              role="region"
-              tabIndex={0}
-              aria-label={t('admin.flows.tableLabel')}
-            >
-              <table className="w-full border-collapse text-body text-ink-soft">
-                <thead>
-                  <tr>
-                    <th scope="col" className={thLineClass}>
-                      {t('admin.flows.name')}
-                    </th>
-                    <th scope="col" className={thLineClass}>
-                      {t('admin.flows.code')}
-                    </th>
-                    <th scope="col" className={thLineClass}>
-                      {t('admin.flows.category')}
-                    </th>
-                    <th scope="col" className={thLineClass}>
-                      {t('admin.flows.versions')}
-                    </th>
-                    <th scope="col" className={rowActionsHeadClass}>
-                      {t('admin.flows.actions')}
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {data.map((f) => (
-                    <tr key={f.id} className="bg-card">
-                      <th
-                        scope="row"
-                        className={cx(tdLineClass, 'text-left font-semibold text-ink')}
+        <section
+          aria-labelledby="flows-title"
+          data-card
+          className={cx(cardClass, 'flex min-w-0 flex-col overflow-hidden')}
+        >
+          <Toolbar>
+            <h2 id="flows-title" className="m-0 text-title-sm font-semibold text-ink">
+              {t('admin.flows.listTitle', { count: data.length })}
+            </h2>
+          </Toolbar>
+          <DataTable
+            caption={t('admin.flows.tableLabel')}
+            columns={columns}
+            rows={data}
+            rowKey={(f) => f.id}
+            empty={{ title: t('admin.flows.emptyTitle'), text: t('admin.flows.empty') }}
+            actions={{
+              header: t('admin.flows.actions'),
+              cell: (f) => (
+                <RowActions
+                  rowName={f.name}
+                  visible={
+                    <RowIcon label={t('admin.flows.openVersions')}>
+                      <Link
+                        to="/admin/flows/$flowCode/versions"
+                        params={{ flowCode: f.code }}
+                        aria-label={t('admin.flows.openVersionsFor', { name: f.name })}
+                        className={cx(rowIconClass, 'hover:text-ink')}
                       >
-                        <span className="flex min-w-0 items-center gap-2">
-                          <CellText text={f.name} />
-                          {f.isArchived && (
-                            <span className="shrink-0">
-                              <Chip tone="neutral">{t('admin.flows.archived')}</Chip>
-                            </span>
-                          )}
-                        </span>
-                      </th>
-                      <td className={tdLineClass}>
-                        <CellText text={f.code} className="font-mono" />
-                      </td>
-                      <td className={tdLineClass}>
-                        <CellText text={f.category || '-'} />
-                      </td>
-                      <td className={tdLineClass}>
-                        <VersionList versions={f.versions} />
-                      </td>
-                      <td className={rowActionsCellClass}>
-                        <RowActions
-                          rowName={f.name}
-                          visible={
-                            <RowIcon label={t('admin.flows.openVersions')}>
-                              <Link
-                                to="/admin/flows/$flowCode/versions"
-                                params={{ flowCode: f.code }}
-                                aria-label={t('admin.flows.openVersionsFor', { name: f.name })}
-                                className={cx(rowIconClass, 'hover:text-ink')}
-                              >
-                                <LayersIcon />
-                              </Link>
-                            </RowIcon>
-                          }
-                          items={[
-                            {
-                              key: 'designer',
-                              label: t('admin.versions.openDesigner'),
-                              ariaLabel: t('admin.flows.openDesignerFor', { name: f.name }),
-                              onSelect: () =>
-                                void navigate({
-                                  to: '/admin/flows/$flowCode/designer',
-                                  params: { flowCode: f.code },
-                                  search: {},
-                                }),
-                            },
-                          ]}
-                        />
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-          <p className="m-0 text-caption text-muted">{t('admin.flows.note')}</p>
-        </Card>
+                        <LayersIcon />
+                      </Link>
+                    </RowIcon>
+                  }
+                  items={[
+                    {
+                      key: 'designer',
+                      label: t('admin.versions.openDesigner'),
+                      ariaLabel: t('admin.flows.openDesignerFor', { name: f.name }),
+                      onSelect: () =>
+                        void navigate({
+                          to: '/admin/flows/$flowCode/designer',
+                          params: { flowCode: f.code },
+                          search: {},
+                        }),
+                    },
+                  ]}
+                />
+              ),
+            }}
+          />
+          <p className="m-0 border-t border-line px-4 py-3 text-caption text-muted">
+            {t('admin.flows.note')}
+          </p>
+        </section>
       )}
 
       <Dialog
@@ -681,7 +649,7 @@ export function AdminFlowsPage() {
             flows={data}
             onDone={(msg) => {
               setCandidate(null);
-              setMessage(msg);
+              toast.show({ tone: 'teal', message: `${t('admin.import.doneLabel')} ${msg}` });
               reload();
             }}
           />

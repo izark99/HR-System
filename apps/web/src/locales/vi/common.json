@@ -401,6 +401,7 @@
     "users": {
       "eyebrow": "Users & Groups",
       "title": "Quản lý tài khoản và quyền chạy flow",
+      "subtitle": "Tạo tài khoản, gom nhóm và gán flow cho từng người hoặc nhóm.",
       "createButton": "+ Tạo tài khoản",
       "listLabel": "Tài khoản và nhóm",
       "tabsLabel": "Danh sách",
@@ -420,7 +421,9 @@
       "editNamed": "Sửa tài khoản {{username}}",
       "resetNamed": "Reset mật khẩu {{username}}",
       "lockNamed": "Khóa tài khoản {{username}}",
-      "unlockNamed": "Mở khóa tài khoản {{username}}"
+      "unlockNamed": "Mở khóa tài khoản {{username}}",
+      "none": "Chưa có tài khoản nào.",
+      "noneHint": "Bấm \"+ Tạo tài khoản\" để cấp tài khoản đầu tiên."
     },
     "status": {
       "active": "Hoạt động",
@@ -464,6 +467,7 @@
     },
     "groups": {
       "none": "Chưa có nhóm nào.",
+      "noneHint": "Tạo nhóm đầu tiên ở mục \"Tạo nhóm\" bên dưới.",
       "caption": "Danh sách nhóm",
       "name": "Tên nhóm",
       "description": "Mô tả",
@@ -495,7 +499,9 @@
       "eyebrow": "Flows",
       "title": "Flow và phiên bản",
       "subtitle": "Nhập flow từ file JSON; mỗi lần nhập tạo một phiên bản published với ngày hiệu lực.",
+      "subtitleShort": "Nhập flow từ JSON hoặc tạo mới; mỗi phiên bản có ngày hiệu lực.",
       "listTitle": "Danh sách flow ({{count}})",
+      "emptyTitle": "Chưa có flow nào",
       "empty": "Chưa có flow nào. Bấm \"Nhập flow JSON\" để thêm flow đầu tiên.",
       "name": "Tên flow",
       "code": "Mã",
@@ -691,7 +697,19 @@
         "after": "v{{version}} (mới)"
       },
       "viewInDesigner": "Xem trong Designer",
-      "tableLabel": "Bảng phiên bản"
+      "tableLabel": "Bảng phiên bản",
+      "emptyTitle": "Chưa có phiên bản nào",
+      "emptyText": "Nhập flow từ file JSON hoặc tạo bản nháp trong Designer."
+    },
+    "toast": {
+      "created": "Đã tạo tài khoản {{username}}.",
+      "saved": "Đã lưu tài khoản {{username}}.",
+      "reset": "Đã reset mật khẩu {{username}}.",
+      "locked": "Đã khóa tài khoản {{username}}.",
+      "unlocked": "Đã mở khóa tài khoản {{username}}.",
+      "groupCreated": "Đã tạo nhóm {{name}}.",
+      "groupSaved": "Đã lưu nhóm {{name}}.",
+      "groupDeleted": "Đã xóa nhóm {{name}}."
     }
   },
   "idle": {

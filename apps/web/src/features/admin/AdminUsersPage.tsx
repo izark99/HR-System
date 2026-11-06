@@ -1,27 +1,14 @@
-import { useId, useRef, useState, type FormEvent, type KeyboardEvent, type ReactNode } from 'react';
+import { useRef, useState, type FormEvent, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
+import { DataTable, type DataTableColumn } from '../../components/DataTable';
+import { Dialog, DialogFooter } from '../../components/Dialog';
+import { FormField, TextInput } from '../../components/FormField';
+import { PageHeader, Section, Toolbar } from '../../components/layout';
+import { RowActions, RowIcon, rowIconClass } from '../../components/RowActions';
 import { Select } from '../../components/Select';
-import {
-  RowActions,
-  rowActionsCellClass,
-  rowActionsHeadClass,
-  RowIcon,
-  rowIconClass,
-} from '../../components/RowActions';
-import {
-  Button,
-  Callout,
-  Card,
-  cardClass,
-  Chip,
-  cx,
-  inputClass,
-  labelClass,
-  PageHeader,
-  CellText,
-  tdLineClass,
-  thLineClass,
-} from '../../components/ui';
+import { TabPanel, Tabs } from '../../components/Tabs';
+import { useToast } from '../../components/Toast';
+import { Button, Callout, cardClass, CellText, Chip, cx, labelClass } from '../../components/ui';
 import type { Role } from '../../lib/database.types';
 import { signOutAndReload, useAuth, useAuthService } from '../auth/auth-context';
 import { normalizeUsername, USERNAME_PATTERN } from '../auth/credentials';
@@ -35,8 +22,9 @@ import {
   type AdminUser,
   type Assignment,
 } from './admin-api';
-import { Dialog } from '../../components/Dialog';
+import { AdminConfirm, type ConfirmRequest } from './AdminConfirm';
 import { useAdminApi, useAdminQuery } from './use-admin';
+import { EmptyState } from '../../components/EmptyState';
 import { LoadingRegion, TableCardSkeleton } from '../../components/Skeleton';
 import { PencilIcon } from '../../components/icons';
 
@@ -65,64 +53,6 @@ function ErrorText({ code }: { code: AdminErrorKey | null }) {
       {t(`admin.errors.${code}`)}
     </Callout>
   );
-}
-
-// ---- tabs (APG: arrow keys move between tabs, automatic activation) ------------------------
-
-function Tabs<K extends string>({
-  base,
-  label,
-  tabs,
-  active,
-  onChange,
-}: {
-  base: string;
-  label: string;
-  tabs: { key: K; label: string }[];
-  active: K;
-  onChange: (k: K) => void;
-}) {
-  const refs = useRef<Record<string, HTMLButtonElement | null>>({});
-  function onKey(e: KeyboardEvent, index: number) {
-    const delta = e.key === 'ArrowRight' ? 1 : e.key === 'ArrowLeft' ? -1 : 0;
-    const target =
-      e.key === 'Home' ? 0 : e.key === 'End' ? tabs.length - 1 : delta ? index + delta : null;
-    if (target === null) return;
-    e.preventDefault();
-    const next = tabs[(target + tabs.length) % tabs.length]!;
-    onChange(next.key);
-    refs.current[next.key]?.focus();
-  }
-  return (
-    <div role="tablist" aria-label={label} className="flex flex-wrap gap-1.5">
-      {tabs.map((tab, i) => (
-        <button
-          key={tab.key}
-          ref={(el) => {
-            refs.current[tab.key] = el;
-          }}
-          type="button"
-          role="tab"
-          id={`${base}-${tab.key}`}
-          aria-selected={active === tab.key}
-          aria-controls={`${base}-${tab.key}-panel`}
-          tabIndex={active === tab.key ? 0 : -1}
-          onClick={() => onChange(tab.key)}
-          onKeyDown={(e) => onKey(e, i)}
-          className={cx(
-            'min-h-target rounded-pill px-4 text-body font-semibold',
-            active === tab.key ? 'bg-teal-tint text-teal-strong' : 'text-muted hover:bg-neutral',
-          )}
-        >
-          {tab.label}
-        </button>
-      ))}
-    </div>
-  );
-}
-
-function tabPanelProps(base: string, key: string) {
-  return { role: 'tabpanel', id: `${base}-${key}-panel`, 'aria-labelledby': `${base}-${key}` };
 }
 
 // ---- temp password ----------------------------------------------------------------------
@@ -176,65 +106,17 @@ function TempPasswordDialog({ secret, onClose }: { secret: Secret | null; onClos
           {t(`admin.warnings.${secret.warning}`)}
         </Callout>
       )}
-      <Button
-        variant="primary"
-        className="self-end"
-        onClick={() => {
-          setCopied(false);
-          onClose();
-        }}
-      >
-        {t('admin.temp.done')}
-      </Button>
-    </Dialog>
-  );
-}
-
-// ---- confirm ----------------------------------------------------------------------------
-
-interface Confirm {
-  title: string;
-  body: ReactNode;
-  action: string;
-  run: () => Promise<void>;
-}
-
-function ConfirmDialog({ confirm, onClose }: { confirm: Confirm | null; onClose: () => void }) {
-  const { t } = useTranslation();
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<AdminErrorKey | null>(null);
-  function close() {
-    setError(null);
-    onClose();
-  }
-  return (
-    <Dialog open={confirm !== null} onClose={close} title={confirm?.title ?? ''}>
-      <div className="text-body text-ink-soft">{confirm?.body}</div>
-      <ErrorText code={error} />
-      <div className="flex flex-wrap justify-end gap-3">
-        <Button onClick={close}>{t('admin.cancel')}</Button>
+      <DialogFooter>
         <Button
           variant="primary"
-          disabled={busy}
           onClick={() => {
-            if (!confirm) return;
-            setBusy(true);
-            setError(null);
-            confirm.run().then(
-              () => {
-                setBusy(false);
-                close();
-              },
-              (e: unknown) => {
-                setBusy(false);
-                setError(errorKeyOf(e));
-              },
-            );
+            setCopied(false);
+            onClose();
           }}
         >
-          {confirm?.action}
+          {t('admin.temp.done')}
         </Button>
-      </div>
+      </DialogFooter>
     </Dialog>
   );
 }
@@ -255,15 +137,12 @@ function GroupCheckboxes({
   const { t } = useTranslation();
   return (
     <fieldset className="m-0 flex flex-col gap-1 border-0 p-0">
-      <legend className={cx(labelClass, 'mb-1.5')}>{legend}</legend>
+      <legend className={cx(labelClass, 'mb-2')}>{legend}</legend>
       {groups.length === 0 && (
         <p className="m-0 text-caption text-muted">{t('admin.groups.none')}</p>
       )}
       {groups.map((g) => (
-        <label
-          key={g.id}
-          className="flex min-h-target items-center gap-2.5 text-body text-ink-soft"
-        >
+        <label key={g.id} className="flex min-h-target items-center gap-3 text-body text-ink-soft">
           <input
             type="checkbox"
             className="size-4.5 accent-teal-strong"
@@ -291,7 +170,7 @@ function RoleRadios({
   const { t } = useTranslation();
   return (
     <fieldset className="m-0 flex flex-wrap gap-4 border-0 p-0">
-      <legend className={cx(labelClass, 'mb-1.5')}>{t('admin.users.role')}</legend>
+      <legend className={cx(labelClass, 'mb-2')}>{t('admin.users.role')}</legend>
       {(['user', 'admin'] as const).map((r) => (
         <label key={r} className="flex min-h-target items-center gap-2 text-body text-ink-soft">
           <input
@@ -359,38 +238,38 @@ function CreateUserForm({
       noValidate
       className="flex flex-col gap-4"
     >
-      <div className="flex flex-col gap-1.5">
-        <label htmlFor="new-username" className={labelClass}>
-          {t('admin.users.username')} <span aria-hidden>*</span>
-          <span className="sr-only">({t('common.required')})</span>
-        </label>
-        <input
-          id="new-username"
-          autoComplete="off"
-          autoCapitalize="none"
-          spellCheck={false}
-          required
-          aria-describedby="new-username-hint"
-          value={username}
-          onChange={(e) => setUsername(e.target.value)}
-          className={inputClass}
-        />
-        <span id="new-username-hint" className="text-caption text-muted">
-          {t('admin.create.usernameHint')}
-        </span>
-      </div>
-      <div className="flex flex-col gap-1.5">
-        <label htmlFor="new-fullname" className={labelClass}>
-          {t('admin.users.fullName')}
-        </label>
-        <input
-          id="new-fullname"
-          autoComplete="off"
-          value={fullName}
-          onChange={(e) => setFullName(e.target.value)}
-          className={inputClass}
-        />
-      </div>
+      <FormField
+        id="new-username"
+        required
+        label={
+          <>
+            {t('admin.users.username')} <span aria-hidden>*</span>
+          </>
+        }
+        hint={t('admin.create.usernameHint')}
+      >
+        {(field) => (
+          <TextInput
+            {...field.input}
+            autoComplete="off"
+            autoCapitalize="none"
+            spellCheck={false}
+            required
+            value={username}
+            onChange={(e) => setUsername(e.target.value)}
+          />
+        )}
+      </FormField>
+      <FormField id="new-fullname" label={t('admin.users.fullName')}>
+        {(field) => (
+          <TextInput
+            {...field.input}
+            autoComplete="off"
+            value={fullName}
+            onChange={(e) => setFullName(e.target.value)}
+          />
+        )}
+      </FormField>
       <RoleRadios name="new-role" value={role} onChange={setRole} />
       <GroupCheckboxes
         groups={groups}
@@ -402,9 +281,11 @@ function CreateUserForm({
         {t('admin.create.temp')}
       </Callout>
       <ErrorText code={error} />
-      <Button type="submit" variant="primary" disabled={busy}>
-        {busy ? t('admin.create.submitting') : t('admin.create.submit')}
-      </Button>
+      <DialogFooter>
+        <Button type="submit" variant="primary" disabled={busy}>
+          {busy ? t('admin.create.submitting') : t('admin.create.submit')}
+        </Button>
+      </DialogFooter>
     </form>
   );
 }
@@ -483,18 +364,16 @@ function EditUserForm({
   }
 
   return (
-    <form onSubmit={(e) => void submit(e)} className="flex flex-col gap-3.5">
-      <div className="flex flex-col gap-1.5">
-        <label htmlFor="edit-fullname" className={labelClass}>
-          {t('admin.users.fullName')}
-        </label>
-        <input
-          id="edit-fullname"
-          value={fullName}
-          onChange={(e) => setFullName(e.target.value)}
-          className={inputClass}
-        />
-      </div>
+    <form onSubmit={(e) => void submit(e)} className="flex flex-col gap-4">
+      <FormField id="edit-fullname" label={t('admin.users.fullName')}>
+        {(field) => (
+          <TextInput
+            {...field.input}
+            value={fullName}
+            onChange={(e) => setFullName(e.target.value)}
+          />
+        )}
+      </FormField>
       <RoleRadios
         name="edit-role"
         value={role}
@@ -515,9 +394,11 @@ function EditUserForm({
         legend={t('admin.users.groups')}
       />
       <ErrorText code={error} />
-      <Button type="submit" variant="primary" disabled={busy} className="self-end">
-        {selfDemote && demoteConfirmed ? t('admin.self.demoteAction') : t('admin.edit.save')}
-      </Button>
+      <DialogFooter>
+        <Button type="submit" variant="primary" disabled={busy}>
+          {selfDemote && demoteConfirmed ? t('admin.self.demoteAction') : t('admin.edit.save')}
+        </Button>
+      </DialogFooter>
     </form>
   );
 }
@@ -542,115 +423,99 @@ function UsersTable({
 }) {
   const { t } = useTranslation();
   const groupName = new Map(data.groups.map((g) => [g.id, g.name]));
+  const columns: DataTableColumn<AdminUser>[] = [
+    {
+      id: 'username',
+      header: t('admin.users.username'),
+      rowHeader: true,
+      cell: (u) => <CellText text={u.username} />,
+    },
+    {
+      id: 'fullName',
+      header: t('admin.users.fullName'),
+      cell: (u) => <CellText text={u.fullName || '-'} />,
+    },
+    {
+      id: 'role',
+      header: t('admin.users.role'),
+      cell: (u) => (
+        <Chip tone={u.role === 'admin' ? 'blue' : 'neutral'}>{t(`userMenu.role.${u.role}`)}</Chip>
+      ),
+    },
+    {
+      id: 'groups',
+      header: t('admin.users.groups'),
+      cell: (u) => (
+        <CellText
+          text={
+            u.groupIds
+              .map((id) => groupName.get(id))
+              .filter(Boolean)
+              .join(', ') || '-'
+          }
+        />
+      ),
+    },
+    { id: 'status', header: t('admin.users.status'), cell: (u) => <StatusChip user={u} /> },
+  ];
   return (
-    <div
-      className="overflow-x-auto"
-      role="region"
-      tabIndex={0}
-      aria-label={t('admin.users.caption')}
-    >
-      <table className="w-full border-collapse text-body text-ink-soft">
-        <caption className="sr-only">{t('admin.users.caption')}</caption>
-        <thead>
-          <tr>
-            <th scope="col" className={thLineClass}>
-              {t('admin.users.username')}
-            </th>
-            <th scope="col" className={thLineClass}>
-              {t('admin.users.fullName')}
-            </th>
-            <th scope="col" className={thLineClass}>
-              {t('admin.users.role')}
-            </th>
-            <th scope="col" className={thLineClass}>
-              {t('admin.users.groups')}
-            </th>
-            <th scope="col" className={thLineClass}>
-              {t('admin.users.status')}
-            </th>
-            <th scope="col" className={rowActionsHeadClass}>
-              {t('admin.users.actions')}
-            </th>
-          </tr>
-        </thead>
-        <tbody>
-          {data.users.map((u) => {
-            return (
-              <tr
-                key={u.id}
-                className={u.isActive && u.mustChangePassword ? 'bg-amber-tint' : 'bg-card'}
-              >
-                <th scope="row" className={cx(tdLineClass, 'text-left font-semibold text-ink')}>
-                  <CellText text={u.username} />
-                </th>
-                <td className={tdLineClass}>
-                  <CellText text={u.fullName || '-'} />
-                </td>
-                <td className={tdLineClass}>
-                  <Chip tone={u.role === 'admin' ? 'blue' : 'neutral'}>
-                    {t(`userMenu.role.${u.role}`)}
-                  </Chip>
-                </td>
-                <td className={tdLineClass}>
-                  <CellText
-                    text={
-                      u.groupIds
-                        .map((id) => groupName.get(id))
-                        .filter(Boolean)
-                        .join(', ') || '-'
-                    }
-                  />
-                </td>
-                <td className={tdLineClass}>
-                  <StatusChip user={u} />
-                </td>
-                <td className={rowActionsCellClass}>
-                  <RowActions
-                    rowName={u.username}
-                    visible={
-                      <RowIcon label={t('admin.users.edit')}>
-                        <button
-                          type="button"
-                          className={rowIconClass}
-                          aria-label={t('admin.users.editNamed', { username: u.username })}
-                          onClick={() => onEdit(u)}
-                        >
-                          <PencilIcon />
-                        </button>
-                      </RowIcon>
-                    }
-                    items={[
-                      {
-                        key: 'reset',
-                        label: t('admin.users.reset'),
-                        ariaLabel: t('admin.users.resetNamed', { username: u.username }),
-                        onSelect: () => onReset(u),
-                      },
-                      {
-                        key: u.isActive ? 'lock' : 'unlock',
-                        label: u.isActive ? t('admin.users.lock') : t('admin.users.unlock'),
-                        ariaLabel: t(
-                          u.isActive ? 'admin.users.lockNamed' : 'admin.users.unlockNamed',
-                          { username: u.username },
-                        ),
-                        danger: u.isActive,
-                        onSelect: () => onToggleActive(u),
-                      },
-                    ]}
-                  />
-                </td>
-              </tr>
-            );
-          })}
-        </tbody>
-      </table>
-    </div>
+    <DataTable
+      caption={t('admin.users.caption')}
+      columns={columns}
+      rows={data.users}
+      rowKey={(u) => u.id}
+      rowTone={(u) => (u.isActive && u.mustChangePassword ? 'amber' : undefined)}
+      empty={{ title: t('admin.users.none'), text: t('admin.users.noneHint') }}
+      actions={{
+        header: t('admin.users.actions'),
+        cell: (u) => (
+          <RowActions
+            rowName={u.username}
+            visible={
+              <RowIcon label={t('admin.users.edit')}>
+                <button
+                  type="button"
+                  className={rowIconClass}
+                  aria-label={t('admin.users.editNamed', { username: u.username })}
+                  onClick={() => onEdit(u)}
+                >
+                  <PencilIcon />
+                </button>
+              </RowIcon>
+            }
+            items={[
+              {
+                key: 'reset',
+                label: t('admin.users.reset'),
+                ariaLabel: t('admin.users.resetNamed', { username: u.username }),
+                onSelect: () => onReset(u),
+              },
+              {
+                key: u.isActive ? 'lock' : 'unlock',
+                label: u.isActive ? t('admin.users.lock') : t('admin.users.unlock'),
+                ariaLabel: t(u.isActive ? 'admin.users.lockNamed' : 'admin.users.unlockNamed', {
+                  username: u.username,
+                }),
+                danger: u.isActive,
+                onSelect: () => onToggleActive(u),
+              },
+            ]}
+          />
+        ),
+      }}
+    />
   );
 }
 
 // ---- groups -----------------------------------------------------------------------------
 
-function GroupForm({ group, onDone }: { group: AdminGroup | null; onDone: () => void }) {
+function GroupForm({
+  group,
+  onDone,
+}: {
+  group: AdminGroup | null;
+  onDone: (name: string) => void;
+}) {
   const { t } = useTranslation();
   const api = useAdminApi();
   const [name, setName] = useState(group?.name ?? '');
@@ -674,7 +539,7 @@ function GroupForm({ group, onDone }: { group: AdminGroup | null; onDone: () => 
         setName('');
         setDescription('');
       }
-      onDone();
+      onDone(name.trim());
     } catch (err) {
       setError(errorKeyOf(err));
     } finally {
@@ -683,37 +548,42 @@ function GroupForm({ group, onDone }: { group: AdminGroup | null; onDone: () => 
   }
 
   return (
-    <form onSubmit={(e) => void submit(e)} noValidate className="flex flex-col gap-3.5">
-      <div className="flex flex-col gap-1.5">
-        <label htmlFor={`${prefix}-name`} className={labelClass}>
-          {t('admin.groups.name')} <span aria-hidden>*</span>
-          <span className="sr-only">({t('common.required')})</span>
-        </label>
-        <input
-          id={`${prefix}-name`}
-          required
-          maxLength={80}
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          className={inputClass}
-        />
-      </div>
-      <div className="flex flex-col gap-1.5">
-        <label htmlFor={`${prefix}-description`} className={labelClass}>
-          {t('admin.groups.description')}
-        </label>
-        <input
-          id={`${prefix}-description`}
-          maxLength={500}
-          value={description}
-          onChange={(e) => setDescription(e.target.value)}
-          className={inputClass}
-        />
-      </div>
+    <form onSubmit={(e) => void submit(e)} noValidate className="flex flex-col gap-4">
+      <FormField
+        id={`${prefix}-name`}
+        required
+        label={
+          <>
+            {t('admin.groups.name')} <span aria-hidden>*</span>
+          </>
+        }
+      >
+        {(field) => (
+          <TextInput
+            {...field.input}
+            required
+            maxLength={80}
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+          />
+        )}
+      </FormField>
+      <FormField id={`${prefix}-description`} label={t('admin.groups.description')}>
+        {(field) => (
+          <TextInput
+            {...field.input}
+            maxLength={500}
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+          />
+        )}
+      </FormField>
       <ErrorText code={error} />
-      <Button type="submit" variant="primary" disabled={busy}>
-        {group ? t('admin.groups.save') : t('admin.groups.create')}
-      </Button>
+      <div className="flex justify-end">
+        <Button type="submit" variant="primary" disabled={busy}>
+          {group ? t('admin.groups.save') : t('admin.groups.create')}
+        </Button>
+      </div>
     </form>
   );
 }
@@ -730,75 +600,57 @@ function GroupsTable({
   const { t } = useTranslation();
   const counts = new Map<string, number>();
   for (const u of data.users) for (const g of u.groupIds) counts.set(g, (counts.get(g) ?? 0) + 1);
-  if (data.groups.length === 0) {
-    return <p className="m-0 text-muted">{t('admin.groups.none')}</p>;
-  }
+  const columns: DataTableColumn<AdminGroup>[] = [
+    {
+      id: 'name',
+      header: t('admin.groups.name'),
+      rowHeader: true,
+      cell: (g) => <CellText text={g.name} />,
+    },
+    {
+      id: 'description',
+      header: t('admin.groups.description'),
+      cell: (g) => <CellText text={g.description || '-'} />,
+    },
+    { id: 'members', header: t('admin.groups.members'), cell: (g) => counts.get(g.id) ?? 0 },
+  ];
   return (
-    <div
-      className="overflow-x-auto"
-      role="region"
-      tabIndex={0}
-      aria-label={t('admin.groups.caption')}
-    >
-      <table className="w-full border-collapse text-body text-ink-soft">
-        <caption className="sr-only">{t('admin.groups.caption')}</caption>
-        <thead>
-          <tr>
-            <th scope="col" className={thLineClass}>
-              {t('admin.groups.name')}
-            </th>
-            <th scope="col" className={thLineClass}>
-              {t('admin.groups.description')}
-            </th>
-            <th scope="col" className={thLineClass}>
-              {t('admin.groups.members')}
-            </th>
-            <th scope="col" className={rowActionsHeadClass}>
-              {t('admin.users.actions')}
-            </th>
-          </tr>
-        </thead>
-        <tbody>
-          {data.groups.map((g) => (
-            <tr key={g.id} className="bg-card">
-              <th scope="row" className={cx(tdLineClass, 'text-left font-semibold text-ink')}>
-                <CellText text={g.name} />
-              </th>
-              <td className={tdLineClass}>
-                <CellText text={g.description || '-'} />
-              </td>
-              <td className={tdLineClass}>{counts.get(g.id) ?? 0}</td>
-              <td className={rowActionsCellClass}>
-                <RowActions
-                  rowName={g.name}
-                  visible={
-                    <RowIcon label={t('admin.users.edit')}>
-                      <button
-                        type="button"
-                        className={rowIconClass}
-                        aria-label={t('admin.groups.editNamed', { name: g.name })}
-                        onClick={() => onEdit(g)}
-                      >
-                        <PencilIcon />
-                      </button>
-                    </RowIcon>
-                  }
-                  items={[
-                    {
-                      key: 'delete',
-                      label: t('admin.groups.delete'),
-                      ariaLabel: t('admin.groups.deleteNamed', { name: g.name }),
-                      danger: true,
-                      onSelect: () => onDelete(g),
-                    },
-                  ]}
-                />
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
+    <DataTable
+      caption={t('admin.groups.caption')}
+      columns={columns}
+      rows={data.groups}
+      rowKey={(g) => g.id}
+      empty={{ title: t('admin.groups.none'), text: t('admin.groups.noneHint') }}
+      actions={{
+        header: t('admin.users.actions'),
+        cell: (g) => (
+          <RowActions
+            rowName={g.name}
+            visible={
+              <RowIcon label={t('admin.users.edit')}>
+                <button
+                  type="button"
+                  className={rowIconClass}
+                  aria-label={t('admin.groups.editNamed', { name: g.name })}
+                  onClick={() => onEdit(g)}
+                >
+                  <PencilIcon />
+                </button>
+              </RowIcon>
+            }
+            items={[
+              {
+                key: 'delete',
+                label: t('admin.groups.delete'),
+                ariaLabel: t('admin.groups.deleteNamed', { name: g.name }),
+                danger: true,
+                onSelect: () => onDelete(g),
+              },
+            ]}
+          />
+        ),
+      }}
+    />
   );
 }
 
@@ -810,9 +662,15 @@ function AssignmentsCard({ data, onChanged }: { data: PageData; onChanged: () =>
   const [target, setTarget] = useState<string>(() =>
     data.groups[0] ? `g:${data.groups[0].id}` : data.users[0] ? `u:${data.users[0].id}` : '',
   );
+  const toast = useToast();
   const [busyFlow, setBusyFlow] = useState<string | null>(null);
   const [error, setError] = useState<AdminErrorKey | null>(null);
-  const [status, setStatus] = useState('');
+  // The last "Đã gán / Đã gỡ" toast: replaced by the next one, dropped when the target changes.
+  const lastToast = useRef<number | null>(null);
+  function dropToast() {
+    if (lastToast.current !== null) toast.dismiss(lastToast.current);
+    lastToast.current = null;
+  }
   const kind = target.startsWith('g:') ? 'group' : 'user';
   const targetId = target.slice(2);
   const targetName =
@@ -833,7 +691,11 @@ function AssignmentsCard({ data, onChanged }: { data: PageData; onChanged: () =>
       } else if (!on && existing) {
         await api.unassign(existing.id);
       }
-      setStatus(t(on ? 'admin.assign.added' : 'admin.assign.removed', { flow: flow.name }));
+      dropToast();
+      lastToast.current = toast.show({
+        tone: 'teal',
+        message: t(on ? 'admin.assign.added' : 'admin.assign.removed', { flow: flow.name }),
+      });
       onChanged();
     } catch (err) {
       setError(errorKeyOf(err));
@@ -843,39 +705,40 @@ function AssignmentsCard({ data, onChanged }: { data: PageData; onChanged: () =>
   }
 
   return (
-    <Card aria-labelledby="assign-title" className="flex flex-col gap-3">
-      <h2 id="assign-title" className="m-0 text-title-md text-ink">
-        {targetName
+    <Section
+      title={
+        targetName
           ? t(kind === 'group' ? 'admin.assign.titleGroup' : 'admin.assign.titleUser', {
               name: targetName,
             })
-          : t('admin.assign.title')}
-      </h2>
-      <div className="flex flex-col gap-1.5">
-        <label htmlFor="assign-target" className={labelClass}>
-          {t('admin.assign.target')}
-        </label>
-        <Select
-          id="assign-target"
-          value={target}
-          onChange={(v) => {
-            setTarget(v);
-            setStatus('');
-          }}
-          groups={[
-            {
-              label: t('admin.assign.groups'),
-              options: data.groups.map((g) => ({ value: `g:${g.id}`, label: g.name })),
-            },
-            {
-              label: t('admin.assign.users'),
-              options: data.users.map((u) => ({ value: `u:${u.id}`, label: u.username })),
-            },
-          ]}
-          className="w-full max-w-90"
-        />
-      </div>
-      {flows.length === 0 && <p className="m-0 text-muted">{t('admin.assign.noFlows')}</p>}
+          : t('admin.assign.title')
+      }
+      description={t('admin.assign.note')}
+    >
+      <FormField id="assign-target" label={t('admin.assign.target')}>
+        {(field) => (
+          <Select
+            id={field.id}
+            value={target}
+            onChange={(v) => {
+              setTarget(v);
+              dropToast();
+            }}
+            groups={[
+              {
+                label: t('admin.assign.groups'),
+                options: data.groups.map((g) => ({ value: `g:${g.id}`, label: g.name })),
+              },
+              {
+                label: t('admin.assign.users'),
+                options: data.users.map((u) => ({ value: `u:${u.id}`, label: u.username })),
+              },
+            ]}
+            className="w-full max-w-90"
+          />
+        )}
+      </FormField>
+      {flows.length === 0 && <EmptyState variant="inline" title={t('admin.assign.noFlows')} />}
       {target && (
         <fieldset className="m-0 flex flex-col gap-1 border-0 p-0">
           <legend className="sr-only">{t('admin.assign.flowsLegend')}</legend>
@@ -886,7 +749,7 @@ function AssignmentsCard({ data, onChanged }: { data: PageData; onChanged: () =>
             return (
               <label
                 key={f.id}
-                className="flex min-h-target items-center gap-2.5 text-body text-ink-soft"
+                className="flex min-h-target items-center gap-3 text-body text-ink-soft"
               >
                 <input
                   type="checkbox"
@@ -901,14 +764,12 @@ function AssignmentsCard({ data, onChanged }: { data: PageData; onChanged: () =>
           })}
         </fieldset>
       )}
-      <p role="status" className="m-0 min-h-5 text-caption text-teal-strong">
-        {status}
-      </p>
       <ErrorText code={error} />
-      <p className="m-0 text-caption text-muted">{t('admin.assign.note')}</p>
-    </Card>
+    </Section>
   );
 }
+
+const TABS_ID = 'admin-users-tabs';
 
 // ---- page -------------------------------------------------------------------------------
 
@@ -917,18 +778,19 @@ export function AdminUsersPage() {
   const api = useAdminApi();
   const auth = useAuth();
   const authService = useAuthService();
+  const toast = useToast();
   const selfId = auth.status === 'signedIn' ? auth.user.id : null;
   const { data, error, reload } = useAdminQuery(loadAll);
   const [tab, setTab] = useState<'users' | 'groups'>('users');
   const [secret, setSecret] = useState<Secret | null>(null);
   /** The Admin reset their own password: sign out once the temp password has been noted. */
   const [selfReset, setSelfReset] = useState(false);
-  const [confirm, setConfirm] = useState<Confirm | null>(null);
+  const [confirm, setConfirm] = useState<ConfirmRequest | null>(null);
   const [editing, setEditing] = useState<AdminUser | null>(null);
   const [editingGroup, setEditingGroup] = useState<AdminGroup | null>(null);
   /** "+ Tạo tài khoản" dialog (AC-UI-55): the tables keep the full width of the page. */
   const [creating, setCreating] = useState(false);
-  const tabsBase = useId();
+  const done = (message: string) => toast.show({ tone: 'teal', message });
 
   /** Body of a confirm dialog, with an explicit warning when the Admin targets themself. */
   function confirmBody(text: string, selfWarning: string | null): ReactNode {
@@ -949,6 +811,8 @@ export function AdminUsersPage() {
       title: t('admin.reset.title', { username: u.username }),
       body: confirmBody(t('admin.reset.body'), self ? t('admin.self.reset') : null),
       action: t('admin.reset.action'),
+      // The temporary password itself stays in its dialog (AC-UI-73), never in a toast.
+      success: t('admin.toast.reset', { username: u.username }),
       run: async () => {
         const r = await api.resetPassword(u.id);
         if (self) setSelfReset(true);
@@ -971,6 +835,14 @@ export function AdminUsersPage() {
         selfLock ? t('admin.self.lock') : null,
       ),
       action: t(u.isActive ? 'admin.users.lock' : 'admin.users.unlock'),
+      tone: u.isActive ? 'danger' : 'primary',
+      ...(selfLock
+        ? {}
+        : {
+            success: t(u.isActive ? 'admin.toast.locked' : 'admin.toast.unlocked', {
+              username: u.username,
+            }),
+          }),
       run: async () => {
         await api.setActive(u.id, !u.isActive);
         // Own sessions are revoked: leave the app now instead of failing on the next request.
@@ -985,6 +857,8 @@ export function AdminUsersPage() {
       title: t('admin.groups.deleteTitle', { name: g.name }),
       body: t('admin.groups.deleteBody'),
       action: t('admin.groups.delete'),
+      tone: 'danger',
+      success: t('admin.toast.groupDeleted', { name: g.name }),
       run: async () => {
         await api.deleteGroup(g.id);
         reload();
@@ -998,6 +872,7 @@ export function AdminUsersPage() {
         eyebrow={t('admin.users.eyebrow')}
         eyebrowTone="blue"
         title={t('admin.users.title')}
+        subtitle={t('admin.users.subtitle')}
         actions={
           <Button
             variant="primary"
@@ -1012,7 +887,14 @@ export function AdminUsersPage() {
         }
       />
 
-      <ErrorText code={error} />
+      {error && (
+        <div className="flex flex-col items-start gap-3">
+          <ErrorText code={error} />
+          <Button size="sm" onClick={reload}>
+            {t('common.retry')}
+          </Button>
+        </div>
+      )}
       {!data && !error && (
         <LoadingRegion>
           <TableCardSkeleton columns={5} />
@@ -1021,21 +903,27 @@ export function AdminUsersPage() {
 
       {data && (
         <>
-          <Card className="flex min-w-0 flex-col gap-3.5" aria-label={t('admin.users.listLabel')}>
-            <Tabs
-              base={tabsBase}
-              label={t('admin.users.tabsLabel')}
-              active={tab}
-              onChange={setTab}
-              tabs={[
-                { key: 'users', label: t('admin.users.tabUsers', { count: data.users.length }) },
-                {
-                  key: 'groups',
-                  label: t('admin.users.tabGroups', { count: data.groups.length }),
-                },
-              ]}
-            />
-            <div {...tabPanelProps(tabsBase, tab)}>
+          <section
+            aria-label={t('admin.users.listLabel')}
+            data-card
+            className={cx(cardClass, 'flex min-w-0 flex-col overflow-hidden')}
+          >
+            <Toolbar>
+              <Tabs
+                id={TABS_ID}
+                label={t('admin.users.tabsLabel')}
+                selected={tab}
+                onChange={(id) => setTab(id as 'users' | 'groups')}
+                items={[
+                  { id: 'users', label: t('admin.users.tabUsers', { count: data.users.length }) },
+                  {
+                    id: 'groups',
+                    label: t('admin.users.tabGroups', { count: data.groups.length }),
+                  },
+                ]}
+              />
+            </Toolbar>
+            <TabPanel tabsId={TABS_ID} item={tab} focusable={false}>
               {tab === 'users' ? (
                 <UsersTable
                   data={data}
@@ -1046,20 +934,20 @@ export function AdminUsersPage() {
               ) : (
                 <GroupsTable data={data} onEdit={setEditingGroup} onDelete={askDeleteGroup} />
               )}
-            </div>
-          </Card>
+            </TabPanel>
+          </section>
           {tab === 'groups' && (
-            <section
-              aria-labelledby="create-group-title"
-              className={cx(cardClass, 'flex flex-col gap-4 p-6')}
-            >
-              <h2 id="create-group-title" className="m-0 text-title-md text-ink">
-                {t('admin.groups.createTitle')}
-              </h2>
+            <Section title={t('admin.groups.createTitle')}>
               <div className="max-w-140">
-                <GroupForm group={null} onDone={reload} />
+                <GroupForm
+                  group={null}
+                  onDone={(name) => {
+                    reload();
+                    done(t('admin.toast.groupCreated', { name }));
+                  }}
+                />
               </div>
-            </section>
+            </Section>
           )}
 
           <AssignmentsCard data={data} onChanged={reload} />
@@ -1079,6 +967,7 @@ export function AdminUsersPage() {
               setCreating(false);
               reload();
               setSecret(s);
+              done(t('admin.toast.created', { username: s.username }));
             }}
           />
         )}
@@ -1090,13 +979,14 @@ export function AdminUsersPage() {
           if (selfReset) void signOutAndReload(authService);
         }}
       />
-      <ConfirmDialog confirm={confirm} onClose={() => setConfirm(null)} />
+      <AdminConfirm confirm={confirm} onClose={() => setConfirm(null)} />
       <EditUserDialog
         user={editing}
         self={editing?.id === selfId}
         groups={data?.groups ?? []}
         onClose={() => setEditing(null)}
         onSaved={() => {
+          if (editing) done(t('admin.toast.saved', { username: editing.username }));
           setEditing(null);
           reload();
         }}
@@ -1110,9 +1000,10 @@ export function AdminUsersPage() {
           <GroupForm
             key={editingGroup.id}
             group={editingGroup}
-            onDone={() => {
+            onDone={(name) => {
               setEditingGroup(null);
               reload();
+              done(t('admin.toast.groupSaved', { name }));
             }}
           />
         )}

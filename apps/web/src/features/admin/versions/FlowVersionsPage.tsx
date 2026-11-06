@@ -1,28 +1,23 @@
 import { Link, useParams } from '@tanstack/react-router';
-import { useCallback, useEffect, useId, useMemo, useState, type FormEvent } from 'react';
+import { useCallback, useEffect, useId, useMemo, useRef, useState, type FormEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import { DatePicker } from '../../../components/DatePicker';
 import type { MenuItem } from '../../../components/Menu';
-import {
-  RowActions,
-  rowActionsCellClass,
-  rowActionsHeadClass,
-  RowIcon,
-  rowIconClass,
-} from '../../../components/RowActions';
+import { DataTable, type DataTableColumn } from '../../../components/DataTable';
+import { Dialog, DialogFooter } from '../../../components/Dialog';
+import { FormField, Textarea } from '../../../components/FormField';
+import { PageHeader, Toolbar } from '../../../components/layout';
+import { RowActions, RowIcon, rowIconClass } from '../../../components/RowActions';
 import { Select } from '../../../components/Select';
+import { useToast } from '../../../components/Toast';
 import {
   Button,
   Callout,
   Card,
+  cardClass,
+  CellText,
   Chip,
   cx,
-  labelClass,
-  PageHeader,
-  tdLineClass,
-  CellText,
-  textareaClass,
-  thLineClass,
   type Tone,
 } from '../../../components/ui';
 import type { Json, VersionStatus } from '../../../lib/database.types';
@@ -36,7 +31,7 @@ import {
   type AdminVersionDetail,
   type FlowVersions,
 } from '../admin-api';
-import { Dialog } from '../../../components/Dialog';
+import { AdminConfirm, type ConfirmRequest } from '../AdminConfirm';
 import { useAdminApi } from '../use-admin';
 import { DiffView } from './DiffView';
 import {
@@ -91,8 +86,6 @@ function gapText(t: T, g: Gap): string {
 
 type DialogState =
   | { kind: 'publish'; version: AdminVersionDetail }
-  | { kind: 'retire'; version: AdminVersionDetail }
-  | { kind: 'discard'; version: AdminVersionDetail }
   | { kind: 'end'; version: AdminVersionDetail }
   | null;
 
@@ -122,8 +115,18 @@ export function FlowVersionsPage() {
   const [data, setData] = useState<FlowVersions | null | undefined>(undefined);
   const [loadError, setLoadError] = useState<AdminErrorKey | null>(null);
   const [tick, setTick] = useState(0);
-  const [message, setMessage] = useState<{ tone: Tone; label: string; text: string } | null>(null);
+  const toast = useToast();
+  // One result message at a time (as the former callout): a new one replaces the last toast.
+  const lastToast = useRef<number | null>(null);
+  const setMessage = useCallback(
+    (m: { tone: 'teal' | 'coral'; label: string; text: string } | null) => {
+      if (lastToast.current !== null) toast.dismiss(lastToast.current);
+      lastToast.current = m ? toast.show({ tone: m.tone, message: `${m.label} ${m.text}` }) : null;
+    },
+    [toast],
+  );
   const [dialog, setDialog] = useState<DialogState>(null);
+  const [confirm, setConfirm] = useState<ConfirmRequest | null>(null);
   const [compare, setCompare] = useState<{ from: string; to: string } | null>(null);
   const reload = useCallback(() => setTick((n) => n + 1), []);
 
@@ -208,9 +211,14 @@ export function FlowVersionsPage() {
 
   if (loadError) {
     return (
-      <Callout tone="coral" label={t('admin.errorLabel')} role="alert">
-        {t(`admin.errors.${loadError}`)}
-      </Callout>
+      <div className="flex flex-col items-start gap-3">
+        <Callout tone="coral" label={t('admin.errorLabel')} role="alert">
+          {t(`admin.errors.${loadError}`)}
+        </Callout>
+        <Button size="sm" onClick={reload}>
+          {t('common.retry')}
+        </Button>
+      </div>
     );
   }
   if (data === undefined) {
@@ -235,6 +243,82 @@ export function FlowVersionsPage() {
   const gaps = findGaps(versions);
   const action = (label: string, v: AdminVersionDetail) =>
     t('admin.versions.actionFor', { action: label, version: v.versionNo });
+
+  function askRetire(v: AdminVersionDetail) {
+    setConfirm({
+      title: t('admin.versions.retireDialog.title', { version: v.versionNo }),
+      body: t('admin.versions.retireDialog.body', {
+        range: rangeText(t, v.effectiveFrom, v.effectiveTo),
+      }),
+      action: t('admin.versions.retire'),
+      tone: 'danger',
+      run: async () => {
+        await api.retireVersion(v.id);
+        done(t('admin.versions.retired', { version: v.versionNo }));
+      },
+    });
+  }
+
+  function askDiscard(v: AdminVersionDetail) {
+    setConfirm({
+      title: t('admin.versions.discardDialog.title', { version: v.versionNo }),
+      body: t('admin.versions.discardDialog.body'),
+      action: t('admin.versions.discardDialog.action'),
+      tone: 'danger',
+      run: async () => {
+        await api.discardDraft(v.id);
+        done(t('admin.versions.discarded', { version: v.versionNo }));
+      },
+    });
+  }
+
+  const columns: DataTableColumn<AdminVersionDetail>[] = [
+    {
+      id: 'version',
+      header: t('admin.versions.col.version'),
+      rowHeader: true,
+      cell: (v) => `v${v.versionNo}`,
+    },
+    {
+      id: 'status',
+      header: t('admin.versions.col.status'),
+      cell: (v) => (
+        <span className="flex gap-2">
+          <Chip tone={VERSION_STATUS_TONE[v.status]}>{t(`admin.flows.status.${v.status}`)}</Chip>
+          {current?.id === v.id && <Chip tone="teal">{t('admin.versions.current')}</Chip>}
+        </span>
+      ),
+    },
+    {
+      id: 'range',
+      header: t('admin.versions.col.range'),
+      cell: (v) => <CellText text={rangeText(t, v.effectiveFrom, v.effectiveTo)} />,
+    },
+    {
+      id: 'note',
+      header: t('admin.versions.col.note'),
+      cell: (v) => <CellText text={v.changeNote || '-'} />,
+    },
+    {
+      id: 'published',
+      header: t('admin.versions.col.published'),
+      cell: (v) => (
+        <CellText
+          className="text-caption"
+          text={
+            v.publishedAt
+              ? v.publishedBy
+                ? t('admin.versions.publishedBy', {
+                    user: v.publishedBy,
+                    time: formatDateTime(v.publishedAt),
+                  })
+                : formatDateTime(v.publishedAt)
+              : '-'
+          }
+        />
+      ),
+    },
+  ];
 
   /** Row menu (AC-UI-54): everything but the visible buttons; destructive items last. */
   const versionMenu = (v: AdminVersionDetail): MenuItem[] => {
@@ -269,34 +353,18 @@ export function FlowVersionsPage() {
       items.push(item('export', t('admin.versions.export'), () => exportJson(v)));
     }
     if (v.status === 'published') {
-      items.push(
-        item(
-          'retire',
-          t('admin.versions.retire'),
-          () => setDialog({ kind: 'retire', version: v }),
-          true,
-        ),
-      );
+      items.push(item('retire', t('admin.versions.retire'), () => askRetire(v), true));
     }
     if (v.status === 'draft') {
-      items.push(
-        item(
-          'discard',
-          t('admin.versions.discard'),
-          () => setDialog({ kind: 'discard', version: v }),
-          true,
-        ),
-      );
+      items.push(item('discard', t('admin.versions.discard'), () => askDiscard(v), true));
     }
     return items;
   };
 
   return (
     <>
-      <BackLink />
       <PageHeader
-        eyebrow={t('admin.versions.eyebrow')}
-        eyebrowTone="blue"
+        back={<BackLink />}
         title={
           current
             ? t('admin.versions.titleActive', { name: data.flow.name, version: current.versionNo })
@@ -306,122 +374,63 @@ export function FlowVersionsPage() {
         subtitle={t('admin.versions.subtitle')}
       />
 
-      {message && (
-        <Callout
-          tone={message.tone}
-          label={message.label}
-          role={message.tone === 'coral' ? 'alert' : 'status'}
-        >
-          {message.text}
-        </Callout>
-      )}
-
       <Timeline versions={versions} gaps={gaps} today={today} />
 
-      <Card aria-labelledby="versions-title" className="flex flex-col gap-4">
-        <h2 id="versions-title" className="m-0 text-title-md text-ink">
-          {t('admin.versions.listTitle', { count: versions.length })}
-        </h2>
-        <div
-          className="overflow-x-auto"
-          role="region"
-          tabIndex={0}
-          aria-label={t('admin.versions.tableLabel')}
-        >
-          <table className="w-full border-collapse text-body text-ink-soft">
-            <caption className="sr-only">{t('admin.versions.caption')}</caption>
-            <thead>
-              <tr>
-                {(['version', 'status', 'range', 'note', 'published', 'actions'] as const).map(
-                  (c) => (
-                    <th
-                      key={c}
-                      scope="col"
-                      className={c === 'actions' ? rowActionsHeadClass : thLineClass}
-                    >
-                      {t(`admin.versions.col.${c}`)}
-                    </th>
-                  ),
-                )}
-              </tr>
-            </thead>
-            <tbody>
-              {versions.map((v) => {
-                const isCurrent = current?.id === v.id;
-                return (
-                  <tr key={v.id} className={isCurrent ? 'bg-teal-tint-soft' : 'bg-card'}>
-                    <th scope="row" className={cx(tdLineClass, 'text-left font-semibold text-ink')}>
-                      v{v.versionNo}
-                    </th>
-                    <td className={tdLineClass}>
-                      <span className="flex gap-1.5">
-                        <Chip tone={VERSION_STATUS_TONE[v.status]}>
-                          {t(`admin.flows.status.${v.status}`)}
-                        </Chip>
-                        {isCurrent && <Chip tone="teal">{t('admin.versions.current')}</Chip>}
-                      </span>
-                    </td>
-                    <td className={tdLineClass}>
-                      <CellText text={rangeText(t, v.effectiveFrom, v.effectiveTo)} />
-                    </td>
-                    <td className={tdLineClass}>
-                      <CellText text={v.changeNote || '-'} />
-                    </td>
-                    <td className={tdLineClass}>
-                      <CellText
-                        className="text-caption"
-                        text={
-                          v.publishedAt
-                            ? v.publishedBy
-                              ? t('admin.versions.publishedBy', {
-                                  user: v.publishedBy,
-                                  time: formatDateTime(v.publishedAt),
-                                })
-                              : formatDateTime(v.publishedAt)
-                            : '-'
-                        }
-                      />
-                    </td>
-                    <td className={rowActionsCellClass}>
-                      <RowActions
-                        rowName={`v${v.versionNo}`}
-                        visible={
-                          v.status === 'draft' ? (
-                            <RowIcon label={t('admin.versions.openDesigner')}>
-                              <Link
-                                to="/admin/flows/$flowCode/designer"
-                                params={{ flowCode }}
-                                search={{}}
-                                aria-label={action(t('admin.versions.openDesigner'), v)}
-                                className={cx(rowIconClass, 'hover:text-ink')}
-                              >
-                                <PencilIcon />
-                              </Link>
-                            </RowIcon>
-                          ) : (
-                            <RowIcon label={t('admin.versions.viewInDesigner')}>
-                              <Link
-                                to="/admin/flows/$flowCode/designer"
-                                params={{ flowCode }}
-                                search={{ version: v.id }}
-                                aria-label={action(t('admin.versions.viewInDesigner'), v)}
-                                className={cx(rowIconClass, 'hover:text-ink')}
-                              >
-                                <EyeIcon />
-                              </Link>
-                            </RowIcon>
-                          )
-                        }
-                        items={versionMenu(v)}
-                      />
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
-      </Card>
+      <section
+        aria-labelledby="versions-title"
+        data-card
+        className={cx(cardClass, 'flex min-w-0 flex-col overflow-hidden')}
+      >
+        <Toolbar>
+          <h2 id="versions-title" className="m-0 text-title-sm font-semibold text-ink">
+            {t('admin.versions.listTitle', { count: versions.length })}
+          </h2>
+        </Toolbar>
+        <DataTable
+          caption={t('admin.versions.caption')}
+          columns={columns}
+          rows={versions}
+          rowKey={(v) => v.id}
+          rowTone={(v) => (current?.id === v.id ? 'teal' : undefined)}
+          empty={{ title: t('admin.versions.emptyTitle'), text: t('admin.versions.emptyText') }}
+          actions={{
+            header: t('admin.versions.col.actions'),
+            cell: (v) => (
+              <RowActions
+                rowName={`v${v.versionNo}`}
+                visible={
+                  v.status === 'draft' ? (
+                    <RowIcon label={t('admin.versions.openDesigner')}>
+                      <Link
+                        to="/admin/flows/$flowCode/designer"
+                        params={{ flowCode }}
+                        search={{}}
+                        aria-label={action(t('admin.versions.openDesigner'), v)}
+                        className={cx(rowIconClass, 'hover:text-ink')}
+                      >
+                        <PencilIcon />
+                      </Link>
+                    </RowIcon>
+                  ) : (
+                    <RowIcon label={t('admin.versions.viewInDesigner')}>
+                      <Link
+                        to="/admin/flows/$flowCode/designer"
+                        params={{ flowCode }}
+                        search={{ version: v.id }}
+                        aria-label={action(t('admin.versions.viewInDesigner'), v)}
+                        className={cx(rowIconClass, 'hover:text-ink')}
+                      >
+                        <EyeIcon />
+                      </Link>
+                    </RowIcon>
+                  )
+                }
+                items={versionMenu(v)}
+              />
+            ),
+          }}
+        />
+      </section>
 
       <Card aria-labelledby="diff-title" className="flex flex-col gap-4">
         <h2 id="diff-title" className="m-0 text-title-md text-ink">
@@ -489,45 +498,7 @@ export function FlowVersionsPage() {
         )}
       </Dialog>
 
-      <ConfirmDialog
-        open={dialog?.kind === 'retire'}
-        title={
-          dialog
-            ? t('admin.versions.retireDialog.title', { version: dialog.version.versionNo })
-            : ''
-        }
-        body={
-          dialog
-            ? t('admin.versions.retireDialog.body', {
-                range: rangeText(t, dialog.version.effectiveFrom, dialog.version.effectiveTo),
-              })
-            : ''
-        }
-        action={t('admin.versions.retire')}
-        onClose={() => setDialog(null)}
-        onConfirm={async () => {
-          const v = dialog!.version;
-          await api.retireVersion(v.id);
-          done(t('admin.versions.retired', { version: v.versionNo }));
-        }}
-      />
-
-      <ConfirmDialog
-        open={dialog?.kind === 'discard'}
-        title={
-          dialog
-            ? t('admin.versions.discardDialog.title', { version: dialog.version.versionNo })
-            : ''
-        }
-        body={t('admin.versions.discardDialog.body')}
-        action={t('admin.versions.discardDialog.action')}
-        onClose={() => setDialog(null)}
-        onConfirm={async () => {
-          const v = dialog!.version;
-          await api.discardDraft(v.id);
-          done(t('admin.versions.discarded', { version: v.versionNo }));
-        }}
-      />
+      <AdminConfirm confirm={confirm} onClose={() => setConfirm(null)} />
     </>
   );
 }
@@ -537,7 +508,7 @@ function BackLink() {
   return (
     <Link
       to="/admin/flows"
-      className="inline-flex min-h-target items-center gap-1.5 self-start text-label text-teal-strong"
+      className="inline-flex min-h-target items-center gap-2 self-start text-label text-teal-strong"
     >
       <ArrowLeftIcon />
       {t('admin.versions.back')}
@@ -612,47 +583,27 @@ function ComparePickers({
   }));
   return (
     <div className="flex flex-wrap gap-4">
-      <div className="flex flex-col gap-1.5">
-        <label htmlFor={fromId} className={labelClass}>
-          {t('admin.versions.diff.from')}
-        </label>
-        <Select
-          id={fromId}
-          options={options}
-          value={value.from}
-          onChange={(from) => onChange({ ...value, from })}
-        />
-      </div>
-      <div className="flex flex-col gap-1.5">
-        <label htmlFor={toId} className={labelClass}>
-          {t('admin.versions.diff.to')}
-        </label>
-        <Select
-          id={toId}
-          options={options}
-          value={value.to}
-          onChange={(to) => onChange({ ...value, to })}
-        />
-      </div>
+      <FormField id={fromId} label={t('admin.versions.diff.from')}>
+        {(f) => (
+          <Select
+            id={f.id}
+            options={options}
+            value={value.from}
+            onChange={(from) => onChange({ ...value, from })}
+          />
+        )}
+      </FormField>
+      <FormField id={toId} label={t('admin.versions.diff.to')}>
+        {(f) => (
+          <Select
+            id={f.id}
+            options={options}
+            value={value.to}
+            onChange={(to) => onChange({ ...value, to })}
+          />
+        )}
+      </FormField>
     </div>
-  );
-}
-
-function RequiredMark() {
-  const { t } = useTranslation();
-  return (
-    <>
-      <span aria-hidden> *</span>
-      <span className="sr-only"> ({t('common.required')})</span>
-    </>
-  );
-}
-
-function FieldError({ id, children }: { id: string; children: string }) {
-  return (
-    <p id={id} className="m-0 text-caption font-semibold text-coral-text">
-      {children}
-    </p>
   );
 }
 
@@ -755,7 +706,7 @@ function PublishForm({
           ? t('admin.import.read.engine')
           : t('admin.versions.publishDialog.problems')}
         {problems && (
-          <ul className="mt-2 mb-0 pl-5">
+          <ul className="mt-2 mb-0 pl-6">
             {problems.slice(0, 30).map((p, i) => (
               <li key={i} className="font-mono text-caption">
                 {p}
@@ -769,47 +720,55 @@ function PublishForm({
 
   const has = (k: PublishFieldError) => fieldErrors.includes(k);
   return (
-    <form onSubmit={(e) => void submit(e)} noValidate className="flex flex-col gap-3.5">
+    <form onSubmit={(e) => void submit(e)} noValidate className="flex flex-col gap-4">
       <div className="flex flex-wrap gap-4">
-        <div className="flex flex-col gap-1.5">
-          <label id="publish-from-label" htmlFor="publish-from" className={labelClass}>
-            {t('admin.versions.publishDialog.from')}
-            <RequiredMark />
-          </label>
-          <div className={cx('rounded-input', has('fromRequired') && 'ring-2 ring-coral-text')}>
+        <FormField
+          id="publish-from"
+          required
+          label={
+            <>
+              {t('admin.versions.publishDialog.from')}
+              <span aria-hidden> *</span>
+            </>
+          }
+          error={
+            has('fromRequired') ? t('admin.versions.publishDialog.errors.fromRequired') : undefined
+          }
+        >
+          {(f) => (
             <DatePicker
-              id="publish-from"
-              labelId="publish-from-label"
+              id={f.id}
+              labelId={f.labelId}
+              describedBy={f.describedBy}
+              invalid={f.invalid}
               value={from}
               required
               onChange={setFrom}
             />
-          </div>
-          {has('fromRequired') && (
-            <FieldError id="publish-from-error">
-              {t('admin.versions.publishDialog.errors.fromRequired')}
-            </FieldError>
           )}
-        </div>
-        <div className="flex flex-col gap-1.5">
-          <label id="publish-to-label" htmlFor="publish-to" className={labelClass}>
-            {t('admin.versions.publishDialog.to')}
-          </label>
-          <div className={cx('rounded-input', has('range') && 'ring-2 ring-coral-text')}>
-            <DatePicker id="publish-to" labelId="publish-to-label" value={to} onChange={setTo} />
-          </div>
-          {has('range') && (
-            <FieldError id="publish-to-error">
-              {t('admin.versions.publishDialog.errors.range')}
-            </FieldError>
+        </FormField>
+        <FormField
+          id="publish-to"
+          label={t('admin.versions.publishDialog.to')}
+          error={has('range') ? t('admin.versions.publishDialog.errors.range') : undefined}
+        >
+          {(f) => (
+            <DatePicker
+              id={f.id}
+              labelId={f.labelId}
+              describedBy={f.describedBy}
+              invalid={f.invalid}
+              value={to}
+              onChange={setTo}
+            />
           )}
-        </div>
+        </FormField>
       </div>
       <p className="-mt-2 m-0 text-caption text-muted">
         {t('admin.versions.publishDialog.toHint')}
       </p>
       {previous && (
-        <label className="flex min-h-target items-center gap-2.5 text-body text-ink-soft">
+        <label className="flex min-h-target items-center gap-3 text-body text-ink-soft">
           <input
             type="checkbox"
             className="size-4.5 accent-teal-strong"
@@ -822,27 +781,28 @@ function PublishForm({
           })}
         </label>
       )}
-      <div className="flex flex-col gap-1.5">
-        <label htmlFor={noteId} className={labelClass}>
-          {t('admin.versions.publishDialog.note')}
-          <RequiredMark />
-        </label>
-        <textarea
-          id={noteId}
-          rows={3}
-          maxLength={1000}
-          value={note}
-          aria-invalid={has('noteRequired') || undefined}
-          aria-describedby={has('noteRequired') ? 'publish-note-error' : undefined}
-          onChange={(e) => setNote(e.target.value)}
-          className={textareaClass}
-        />
-        {has('noteRequired') && (
-          <FieldError id="publish-note-error">
-            {t('admin.versions.publishDialog.errors.noteRequired')}
-          </FieldError>
+      <FormField
+        id={noteId}
+        required
+        label={
+          <>
+            {t('admin.versions.publishDialog.note')}
+            <span aria-hidden> *</span>
+          </>
+        }
+        error={
+          has('noteRequired') ? t('admin.versions.publishDialog.errors.noteRequired') : undefined
+        }
+      >
+        {(f) => (
+          <Textarea
+            {...f.input}
+            maxLength={1000}
+            value={note}
+            onChange={(e) => setNote(e.target.value)}
+          />
         )}
-      </div>
+      </FormField>
       {created.map((g) => (
         <Callout key={`${g.from}-${g.to ?? ''}`} tone="amber" label={t('admin.versions.gapLabel')}>
           {gapText(t, g)}
@@ -853,11 +813,13 @@ function PublishForm({
           {error}
         </Callout>
       )}
-      <Button type="submit" variant="primary" disabled={busy} className="self-end">
-        {busy
-          ? t('admin.versions.publishDialog.submitting')
-          : t('admin.versions.publishDialog.submit')}
-      </Button>
+      <DialogFooter>
+        <Button type="submit" variant="primary" disabled={busy}>
+          {busy
+            ? t('admin.versions.publishDialog.submitting')
+            : t('admin.versions.publishDialog.submit')}
+        </Button>
+      </DialogFooter>
     </form>
   );
 }
@@ -908,16 +870,13 @@ function EndDateForm({
   }
 
   return (
-    <form onSubmit={(e) => void submit(e)} noValidate className="flex flex-col gap-3.5">
+    <form onSubmit={(e) => void submit(e)} noValidate className="flex flex-col gap-4">
       <p className="m-0 text-body text-ink-soft">
         {rangeText(t, version.effectiveFrom, version.effectiveTo)}
       </p>
-      <div className="flex flex-col gap-1.5">
-        <label id="end-to-label" htmlFor="end-to" className={labelClass}>
-          {t('admin.versions.publishDialog.to')}
-        </label>
-        <DatePicker id="end-to" labelId="end-to-label" value={to} onChange={setTo} />
-      </div>
+      <FormField id="end-to" label={t('admin.versions.publishDialog.to')}>
+        {(f) => <DatePicker id={f.id} labelId={f.labelId} value={to} onChange={setTo} />}
+      </FormField>
       <p className="-mt-2 m-0 text-caption text-muted">
         {t('admin.versions.publishDialog.toHint')}
       </p>
@@ -931,62 +890,11 @@ function EndDateForm({
           {error}
         </Callout>
       )}
-      <Button type="submit" variant="primary" disabled={busy} className="self-end">
-        {t('admin.versions.endDialog.save')}
-      </Button>
-    </form>
-  );
-}
-
-function ConfirmDialog({
-  open,
-  title,
-  body,
-  action,
-  onClose,
-  onConfirm,
-}: {
-  open: boolean;
-  title: string;
-  body: string;
-  action: string;
-  onClose: () => void;
-  onConfirm: () => Promise<void>;
-}) {
-  const { t } = useTranslation();
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<AdminErrorKey | null>(null);
-  return (
-    <Dialog
-      open={open}
-      onClose={() => {
-        setError(null);
-        onClose();
-      }}
-      title={title}
-    >
-      <p className="m-0 text-body-lg text-ink-soft">{body}</p>
-      {error && (
-        <Callout tone="coral" label={t('admin.errorLabel')} role="alert">
-          {t(`admin.errors.${error}`)}
-        </Callout>
-      )}
-      <div className="flex flex-wrap justify-end gap-3">
-        <Button onClick={onClose}>{t('admin.cancel')}</Button>
-        <Button
-          variant="primary"
-          disabled={busy}
-          onClick={() => {
-            setBusy(true);
-            setError(null);
-            onConfirm()
-              .catch((e: unknown) => setError(errorKeyOf(e)))
-              .finally(() => setBusy(false));
-          }}
-        >
-          {action}
+      <DialogFooter>
+        <Button type="submit" variant="primary" disabled={busy}>
+          {t('admin.versions.endDialog.save')}
         </Button>
-      </div>
-    </Dialog>
+      </DialogFooter>
+    </form>
   );
 }

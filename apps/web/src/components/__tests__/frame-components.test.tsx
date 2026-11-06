@@ -367,6 +367,25 @@ describe('Dialog / ConfirmDialog (AC-UI-68)', () => {
     );
   });
 
+  it('busy: every way out is disabled and the dialog says it is busy (round B)', () => {
+    const m = html(
+      <ConfirmDialog
+        open
+        busy
+        tone="danger"
+        title="Khóa tài khoản hr.nv07?"
+        confirmLabel="Khóa"
+        onConfirm={() => {}}
+        onCancel={() => {}}
+      />,
+    );
+    expect(attr(tags(m, '', 'dialog')[0]!, 'aria-busy')).toBe('true');
+    const buttons = tags(m, '', 'button');
+    expect(buttons).toHaveLength(3); // close, Hủy, Khóa
+    for (const b of buttons) expect(b).toMatch(/\sdisabled(=""|\s|>)/);
+    expect(attr(tags(confirm('danger'), '', 'dialog')[0]!, 'aria-busy')).toBeUndefined();
+  });
+
   it('DialogFooter aligns its buttons right', () => {
     expect(html(<DialogFooter>x</DialogFooter>)).toMatch(/justify-end/);
   });

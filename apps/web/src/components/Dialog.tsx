@@ -13,11 +13,17 @@ export function Dialog({
   onClose,
   title,
   initialFocusId,
+  locked = false,
   children,
 }: {
   open: boolean;
   onClose: () => void;
   title: string;
+  /**
+   * An action started from the dialog is running: Escape and the close button do nothing (the
+   * dialog cannot be left half-way, e.g. while an account is being locked).
+   */
+  locked?: boolean;
   /**
    * Element focused when the dialog opens. Default: the element marked `data-autofocus` inside
    * the dialog, else the browser's choice (the close button).
@@ -29,6 +35,10 @@ export function Dialog({
   const ref = useRef<HTMLDialogElement>(null);
   const opener = useRef<HTMLElement | null>(null);
   const titleId = useId();
+  const lockedRef = useRef(locked);
+  useEffect(() => {
+    lockedRef.current = locked;
+  }, [locked]);
 
   useEffect(() => {
     const d = ref.current;
@@ -49,7 +59,17 @@ export function Dialog({
     <dialog
       ref={ref}
       aria-labelledby={titleId}
+      aria-busy={locked || undefined}
+      onCancel={(e) => {
+        if (lockedRef.current) e.preventDefault();
+      }}
       onClose={() => {
+        // Chromium lets a repeated Escape close the dialog even when `cancel` is prevented: while
+        // locked and still meant to be open, show it again instead of reporting a close.
+        if (lockedRef.current && open) {
+          ref.current?.showModal();
+          return;
+        }
         const back = opener.current;
         opener.current = null;
         onClose();
@@ -74,8 +94,9 @@ export function Dialog({
             <button
               type="button"
               aria-label={t('common.close')}
+              disabled={locked}
               onClick={onClose}
-              className="inline-flex size-target shrink-0 items-center justify-center rounded-card hover:bg-neutral"
+              className="inline-flex size-target shrink-0 items-center justify-center rounded-card hover:bg-neutral disabled:cursor-not-allowed disabled:text-muted"
             >
               <CloseIcon />
             </button>
@@ -134,7 +155,7 @@ export function ConfirmDialog({
   /** Default: "Hủy". */
   cancelLabel?: string;
   tone?: ConfirmTone;
-  /** The action is running: both buttons are disabled. */
+  /** The action is running: both buttons are disabled, Escape / close do nothing. */
   busy?: boolean;
   /** Failure of the action, shown inside the dialog (it stays open). */
   error?: string | null;
@@ -145,7 +166,14 @@ export function ConfirmDialog({
   const focus = confirmInitialFocus(tone);
   const errorId = useId();
   return (
-    <Dialog open={open} onClose={onCancel} title={title}>
+    <Dialog
+      open={open}
+      onClose={() => {
+        if (!busy) onCancel();
+      }}
+      title={title}
+      locked={busy}
+    >
       {description && <div className="m-0 text-body text-ink-soft">{description}</div>}
       {error && (
         <p id={errorId} role="alert" className="m-0 text-caption text-coral-text">

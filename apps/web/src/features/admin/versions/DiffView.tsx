@@ -85,7 +85,7 @@ function ItemList({
   const { t } = useTranslation();
   if (items.length === 0) return null;
   return (
-    <section className="flex flex-col gap-2.5">
+    <section className="flex flex-col gap-3">
       <h3 className="m-0 text-title-sm text-ink">
         {title} ({items.length})
       </h3>
@@ -134,7 +134,7 @@ export function DiffView({
     );
   }
   return (
-    <div className="flex flex-col gap-5" aria-live="polite">
+    <div className="flex flex-col gap-6" aria-live="polite">
       <ItemList
         title={t('admin.versions.diff.nodes')}
         items={diff.nodes}
@@ -142,11 +142,11 @@ export function DiffView({
         after={right}
       />
       {diff.edges.length > 0 && (
-        <section className="flex flex-col gap-2.5">
+        <section className="flex flex-col gap-3">
           <h3 className="m-0 text-title-sm text-ink">
             {t('admin.versions.diff.edges')} ({diff.edges.length})
           </h3>
-          <ul className="m-0 flex list-none flex-col gap-1.5 p-0">
+          <ul className="m-0 flex list-none flex-col gap-2 p-0">
             {diff.edges.map((e) => (
               <li key={`${e.kind}-${edgeText(e)}`} className="flex flex-wrap items-center gap-2">
                 <Chip tone={KIND_TONE[e.kind]}>{t(`admin.versions.diff.${e.kind}`)}</Chip>
