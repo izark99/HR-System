@@ -152,6 +152,12 @@ for (const viewport of [DESKTOP, LAPTOP, MOBILE]) {
           path: `${process.env.LL_SHOTS}/stepper-${size(viewport)}.png`,
         });
       await r.check('run validation');
+      // Long file names stay on one line ("…" in the middle + tooltip): every file row one height.
+      const heights = await page
+        .locator('main ul[aria-live] > li')
+        .evaluateAll((els) => els.map((el) => Math.round(el.getBoundingClientRect().height)));
+      expect(heights.length).toBeGreaterThanOrEqual(5);
+      expect(new Set(heights).size, `file row heights ${heights.join(', ')}`).toBe(1);
       r.assertClean(`run-${size(viewport)}`);
     });
 
@@ -301,6 +307,12 @@ for (const viewport of [DESKTOP, LAPTOP]) {
       await expect(data.getByRole('tab', { name: /^Lệch/ })).toBeVisible({ timeout: 30_000 });
       await data.getByRole('tab', { name: /^Lệch/ }).click();
       await r.check('designer data panel preview');
+      // Minimap only on a canvas at least 360px high (MEMORY 2026-11-06 18:27); zoom buttons stay.
+      const canvasH = await page
+        .getByRole('region', { name: 'Canvas của flow' })
+        .evaluate((el) => el.clientHeight);
+      await expect(page.locator('.react-flow__minimap')).toHaveCount(canvasH < 360 ? 0 : 1);
+      await expect(page.locator('.react-flow__controls')).toBeVisible();
       // Rule 15 on the real tab list: forced to 3 columns (the 3 + 1 of before 2026-11-06) it fails.
       const tabs = data
         .getByRole('tablist')
@@ -374,6 +386,22 @@ for (const viewport of [DESKTOP, LAPTOP]) {
         const selected = page.locator('.react-flow__node.selected');
         await expect(selected).toHaveCount(1);
         const id = (await selected.getAttribute('data-id'))!;
+        // A node added from the palette covers no node already there (MEMORY 2026-11-06 18:27).
+        const covered = await page.evaluate((newId) => {
+          const box = (el: Element) => el.getBoundingClientRect();
+          const all = Array.from(document.querySelectorAll('.react-flow__node'));
+          const mine = all.find((n) => n.getAttribute('data-id') === newId);
+          if (!mine) return ['missing'];
+          const a = box(mine);
+          return all
+            .filter((n) => n !== mine)
+            .filter((n) => {
+              const b = box(n);
+              return a.left < b.right && b.left < a.right && a.top < b.bottom && b.top < a.bottom;
+            })
+            .map((n) => n.getAttribute('data-id'));
+        }, id);
+        expect(covered, `new node ${id} covers`).toEqual([]);
         const panel = page.getByRole('complementary', { name: 'Cấu hình' });
         const longName = `Bước kiểm tra bố cục số ${i + 1} với tên hiển thị rất dài để xuống dòng`;
         await panel.getByLabel('Tên node', { exact: true }).fill(longName);
@@ -398,6 +426,12 @@ for (const viewport of [DESKTOP, LAPTOP]) {
             path: `${process.env.LL_SHOTS}/palette-${i}-${size(viewport)}.png`,
           });
         await r.check(`designer palette node ${slug(type)}`);
+        if (process.env.LL_SHOTS) {
+          await panel.evaluate((el) => el.scrollTo(0, el.scrollHeight));
+          await page.screenshot({
+            path: `${process.env.LL_SHOTS}/palette-${i}-end-${size(viewport)}.png`,
+          });
+        }
       }
       r.assertClean(`designer-palette-${size(viewport)}`);
     });
@@ -451,7 +485,9 @@ test.describe('layout-lint self-test', () => {
       .grid{display:grid;grid-template-columns:1fr 1fr;gap:8px} .f{display:flex;flex-direction:column;gap:4px;min-width:0}`;
     await page.setContent(`<style>${css}</style>
       <div class="card" data-card id="clean"><div class="row"><input aria-label="a"><button>OK</button></div>
-      <div class="grid" data-field-grid><div class="f">c1</div><div class="f">c2</div><div class="f">c3</div><div class="f">c4</div></div></div>`);
+      <div class="grid" data-field-grid><div class="f">c1</div><div class="f">c2</div><div class="f">c3</div><div class="f">c4</div></div>
+      <div data-form-field><input aria-label="c5" style="width:200px"></div><div data-form-field><input aria-label="c6" style="width:200px"></div>
+      <div data-checkbox style="display:flex"><label><input type="checkbox">c7</label><span data-infotip><button data-infotip-button aria-label="i" style="height:20px;width:44px;padding:0 0 0 4px;border:0;display:flex"><svg width="20" height="20"></svg></button></span></div></div>`);
     expect(await layoutLint(page)).toEqual([]);
 
     await page.setContent(`<style>${css}</style>
@@ -470,14 +506,33 @@ test.describe('layout-lint self-test', () => {
       <div class="card"><div id="r13-outer" style="height:60px;overflow-y:auto"><div id="r13-inner" style="height:100px;overflow-y:auto"><div style="height:200px">r13</div></div></div></div>
       <div class="card" data-card><p data-hint>r14 gợi ý đánh dấu</p><p style="color:#475569;font-size:14px;margin:0">r14 đoạn giải thích</p><p data-note style="color:#475569;font-size:14px;margin:0">r14 meta</p></div>
       <div class="card"><div role="tablist" data-tabs="dense" aria-label="r15 tabs" style="display:flex;flex-wrap:wrap;gap:8px;width:200px"><button role="tab" style="width:60px">a</button><button role="tab" style="width:60px">b</button><button role="tab" style="width:60px">c</button><button role="tab" style="width:60px">d</button></div></div>
-      <div class="card"><div class="grid" data-field-grid aria-label="r15 grid"><div class="f">g1</div><div class="f">g2</div><div class="f">g3</div></div></div>`);
+      <div class="card"><div class="grid" data-field-grid aria-label="r15 grid"><div class="f">g1</div><div class="f">g2</div><div class="f">g3</div></div></div>
+      <div class="card"><div role="tablist" aria-label="r15 plain" style="display:flex;flex-wrap:wrap;gap:8px;width:200px"><button role="tab" style="width:90px">p1</button><button role="tab" style="width:90px">p2</button><button role="tab" style="width:180px">p3</button><button role="tab" style="width:180px">p4</button></div></div>
+      <div class="card" data-card><div data-form-field><input aria-label="r16 chọn" style="width:192px"></div><div data-form-field><input aria-label="r16 tìm" style="width:240px"></div></div>
+      <div class="card" data-card><label data-checkbox style="display:flex;width:120px"><input type="checkbox">r17 nhãn checkbox dài xuống dòng</label>
+        <div data-checkbox style="display:flex;justify-content:space-between;width:280px"><label><input type="checkbox">r17b</label><span data-infotip><button data-infotip-button aria-label="r17 i" style="height:20px;width:44px;padding:0 0 0 4px;border:0;display:flex"><svg width="20" height="20"></svg></button></span></div></div>
+      <span data-infotip-pop aria-label="r18 a" style="position:fixed;top:4px;right:4px;width:40px;height:20px"></span><span data-infotip-pop aria-label="r18 b" style="position:fixed;top:30px;right:4px;width:40px;height:20px"></span>`);
     const found = await layoutLint(page);
     const rules = new Set(found.map((v) => v.rule));
     expect([...rules].sort((a, b) => a - b)).toEqual([
-      1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15,
+      1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18,
     ]);
     const r15 = found.filter((v) => v.rule === 15);
-    expect(r15).toHaveLength(2);
+    expect(r15).toHaveLength(3);
+    // Plain tabs too (Kết quả at 390: 2 + 1 + 1 before 2026-11-06 18:27).
+    expect(r15.some((v) => v.target.includes('r15 plain') && v.detail.includes('2 + 1 + 1'))).toBe(
+      true,
+    );
+    const r16 = found.filter((v) => v.rule === 16);
+    expect(r16).toHaveLength(1);
+    expect(r16[0]!.detail).toMatch(/"r16 chọn" w=192px above input "r16 tìm" w=240px/);
+    const r17 = found.filter((v) => v.rule === 17).map((v) => v.detail);
+    expect(r17).toHaveLength(2);
+    expect(r17.some((d) => /label on [2-9] lines/.test(d))).toBe(true);
+    expect(r17.some((d) => /\(i\) icon .* after the label text/.test(d))).toBe(true);
+    expect(found.filter((v) => v.rule === 18).map((v) => v.detail)).toEqual([
+      '2 (i) popovers open at once',
+    ]);
     expect(r15.some((v) => v.target.includes('r15 tabs') && v.detail.includes('3 + 1'))).toBe(true);
     expect(r15.some((v) => v.target.includes('r15 grid') && v.detail.includes('2 + 1'))).toBe(true);
     const r8 = found.filter((v) => v.rule === 8).map((v) => v.detail);

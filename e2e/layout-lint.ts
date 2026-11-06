@@ -31,8 +31,15 @@
  *      `data-hint` (only allowed as screen-reader text or inside an open (i) popover), or a
  *      paragraph that looks like one (muted colour, ≤ 14px, not a status / live region, not marked
  *      `data-note` as status / metadata text);
- *  (15) in a dense tab list (`Tabs dense`) or a field grid (`FieldGrid`), a last row holding a single item while a row
- *      above holds more than one (e.g. 3 tabs + 1, 2 fields + 1 — Harold 2026-11-06).
+ *  (15) in a tab list (`Tabs`, plain or dense) or a field grid (`FieldGrid`), a last row holding
+ *      a single item while a row above holds more than one (e.g. 3 tabs + 1, 2 + 1 + 1, 2 fields +
+ *      1 — Harold 2026-11-06);
+ *  (16) form controls (input, textarea, Select, picker of a `FormField`) stacked in one column of a
+ *      form / toolbar / card (each alone on its line, same left edge, one right under the other)
+ *      with different widths (> 1px), e.g. a 192px Select above a 240px search box;
+ *  (17) a checkbox / radio label on more than one line, or an (i) button whose icon is more than
+ *      8px after the end of the label text it explains (checkbox and field labels);
+ *  (18) more than one (i) popover open at a time.
  * Only rows of one flex/grid parent are compared; hidden / zero-size elements are skipped.
  * Exceptions live in `LAYOUT_ALLOW` only, each with its reason.
  */
@@ -41,7 +48,8 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { expect, type Page } from './fixtures';
 
-export type LayoutRule = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 | 13 | 14 | 15;
+export type LayoutRule =
+  1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 | 13 | 14 | 15 | 16 | 17 | 18;
 
 export interface LayoutViolation {
   rule: LayoutRule;
@@ -747,10 +755,8 @@ function measure(
 
   // ---- lone item on the last row of a tab list / field grid (rule 15) -------------------------
   for (const box of all) {
-    // Grids only: a dense tab list (laid out in equal columns) or a FieldGrid. Plain pill tabs
-    // wrap like words on narrow screens (Kết quả at 390px) and are not a grid.
-    if (!box.matches('[role="tablist"][data-tabs="dense"], [data-field-grid]') || allowed(box, 15))
-      continue;
+    // Every tab list (plain tabs too: they wrap into an equal grid, Kết quả at 390px) and FieldGrid.
+    if (!box.matches('[role="tablist"], [data-field-grid]') || allowed(box, 15)) continue;
     const items = (
       box.matches('[role="tablist"]')
         ? Array.from(box.querySelectorAll('[role="tab"]'))
@@ -777,6 +783,115 @@ function measure(
         ids: items.map(idOf),
       });
   }
+
+  // ---- stacked controls of one column share the width (rule 16) ---------------------------------
+  const FIELDISH =
+    'input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="hidden"]):not([type="range"]), textarea, [role="combobox"], button[aria-haspopup="dialog"]';
+  const HOLD16 = '[data-card], dialog, [role="dialog"], aside, form, [data-toolbar], main';
+  const stackGroups = new Map<Element, { el: Element; r: DOMRect }[]>();
+  for (const el of all) {
+    if (!el.matches(FIELDISH) || !el.closest('[data-form-field]') || allowed(el, 16)) continue;
+    if (
+      el.parentElement?.closest(FIELDISH) ||
+      el.closest('[role="listbox"], [role="dialog"] [role="grid"]')
+    )
+      continue;
+    const holder = el.closest(HOLD16);
+    if (!holder) continue;
+    stackGroups.set(holder, [
+      ...(stackGroups.get(holder) ?? []),
+      { el, r: el.getBoundingClientRect() },
+    ]);
+  }
+  for (const [holder, list] of stackGroups) {
+    const sameLine = (a: DOMRect, b: DOMRect) =>
+      Math.min(a.bottom, b.bottom) - Math.max(a.top, b.top) >= Math.min(a.height, b.height) / 2;
+    const alone = list.filter((x) => list.every((o) => o === x || !sameLine(o.r, x.r)));
+    const byTop = [...list].sort((a, b) => a.r.top - b.r.top);
+    const pairs: string[] = [];
+    const ids: number[] = [];
+    for (const a of alone) {
+      // The next control under `a` in the holder (any control, alone or not).
+      const next = byTop.find((o) => o !== a && o.r.top >= a.r.bottom - TOL);
+      if (!next || !alone.includes(next)) continue;
+      if (Math.abs(next.r.left - a.r.left) > TOL) continue;
+      if (Math.abs(next.r.width - a.r.width) <= TOL) continue;
+      pairs.push(`${name(a.el)} w=${px(a.r.width)} above ${name(next.el)} w=${px(next.r.width)}`);
+      ids.push(idOf(a.el), idOf(next.el));
+    }
+    if (pairs.length > 0)
+      out.push({
+        rule: 16,
+        target: name(holder),
+        detail: `stacked controls of one column with different widths: ${pairs.join('; ')}`,
+        ids,
+      });
+  }
+
+  // ---- one-line checkbox labels, (i) right after the text (rule 17) -----------------------------
+  /** Right edge of the last line of visible text in `el` (not screen-reader text). */
+  const textEnd = (el: Element): { right: number; top: number; lines: number } | null => {
+    let right = -Infinity;
+    let top = -Infinity;
+    const tops = new Set<number>();
+    const walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
+    for (let n = walker.nextNode(); n; n = walker.nextNode()) {
+      if (!n.textContent!.trim() || n.parentElement!.closest('.sr-only, [data-infotip]')) continue;
+      const range = document.createRange();
+      range.selectNodeContents(n);
+      for (const r of Array.from(range.getClientRects())) {
+        if (r.width <= 0 || r.height <= 0) continue;
+        tops.add(Math.round(r.top + r.height / 2));
+        if (r.top > top + 1) {
+          top = r.top;
+          right = r.right;
+        } else right = Math.max(right, r.right);
+      }
+    }
+    if (right === -Infinity) return null;
+    // Lines: text rects whose middles are more than half a line apart.
+    const mids = Array.from(tops).sort((a, b) => a - b);
+    const lh = parseFloat(getComputedStyle(el).lineHeight) || 20;
+    let lines = mids.length > 0 ? 1 : 0;
+    for (let i = 1; i < mids.length; i++) if (mids[i]! - mids[i - 1]! > lh / 2) lines++;
+    return { right, top, lines };
+  };
+  for (const el of all) {
+    if (!el.matches('[data-checkbox], [data-field-label-row]') || allowed(el, 17)) continue;
+    const label = el.matches('[data-field-label-row]')
+      ? el.querySelector('label')
+      : el.matches('label')
+        ? el
+        : el.querySelector('label');
+    if (!label) continue;
+    const end = textEnd(label);
+    if (!end) continue;
+    const problems: string[] = [];
+    if (el.matches('[data-checkbox]') && end.lines > 1)
+      problems.push(`label on ${end.lines} lines`);
+    const icon = el.querySelector('[data-infotip-button] svg');
+    if (icon && visible(icon)) {
+      const gap = icon.getBoundingClientRect().left - end.right;
+      if (gap > 8 + TOL) problems.push(`(i) icon ${px(gap)} after the label text (max 8px)`);
+    }
+    if (problems.length > 0)
+      out.push({
+        rule: 17,
+        target: name(label),
+        detail: problems.join('; '),
+        ids: [idOf(el)],
+      });
+  }
+
+  // ---- one (i) popover at a time (rule 18) ------------------------------------------------------
+  const pops = all.filter((el) => el.matches('[data-infotip-pop]') && !allowed(el, 18));
+  if (pops.length > 1)
+    out.push({
+      rule: 18,
+      target: pops.map(name).join(' / '),
+      detail: `${pops.length} (i) popovers open at once`,
+      ids: pops.map(idOf),
+    });
 
   // ---- clipped text (rule 7) ------------------------------------------------------------------
   for (const el of all) {
