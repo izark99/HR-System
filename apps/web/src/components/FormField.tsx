@@ -80,6 +80,7 @@ export function FormField({
   hint,
   hintLabel,
   error,
+  note,
   required = false,
   dense = false,
   inline = false,
@@ -94,6 +95,8 @@ export function FormField({
   hintLabel?: string;
   /** Message shown under the control; any non-empty value marks the field invalid. */
   error?: ReactNode;
+  /** State of the field shown under the control (e.g. "no upload defined yet"): not a hint, always visible. */
+  note?: ReactNode;
   required?: boolean;
   dense?: boolean;
   /** Checkbox / switch: control and label on one row. */
@@ -159,6 +162,11 @@ export function FormField({
           </div>
         ) : (
           children(field)
+        )}
+        {note && (
+          <p data-note role="status" className={cx('m-0 text-muted', text)}>
+            {note}
+          </p>
         )}
         {hasError && (
           <p id={ids.error} className={cx('m-0 text-coral-text', text)}>
@@ -241,12 +249,31 @@ export function fitColumns(grid: HTMLElement, max: number): number {
     }
     need = Math.max(need, w);
   });
-  return columnsFor(width, need, max);
+  return columnsFor(
+    width,
+    need,
+    max,
+    GRID_GAP,
+    grid.querySelectorAll('[data-field-label-row]').length,
+  );
 }
 
-/** Pure part of `fitColumns`: n columns of `(width - (n - 1) · gap) / n` must hold `need`. */
-export function columnsFor(width: number, need: number, max: number, gap = GRID_GAP): number {
-  for (let n = max; n > 1; n--) if ((width - (n - 1) * gap) / n >= need) return n;
+/**
+ * Pure part of `fitColumns`: n columns of `(width - (n - 1) · gap) / n` must hold `need`. With
+ * `count` items, n must also fill every row (count % n === 0): no row with a lone item (e.g. 3
+ * tabs + 1, 2 fields + 1 — Harold 2026-11-06).
+ */
+export function columnsFor(
+  width: number,
+  need: number,
+  max: number,
+  gap = GRID_GAP,
+  count = max,
+): number {
+  for (let n = Math.min(max, count); n > 1; n--) {
+    if (count % n !== 0) continue;
+    if ((width - (n - 1) * gap) / n >= need) return n;
+  }
   return 1;
 }
 

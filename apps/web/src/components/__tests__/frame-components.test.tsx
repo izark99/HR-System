@@ -316,13 +316,21 @@ describe('FormField (AC-UI-66)', () => {
   });
 
   it('FieldGrid drops columns when a column cannot hold the widest label row', () => {
-    // 388px wide (Designer panel), 8px gap: 3 columns are 124px, 2 are 190px.
+    // 388px wide (Designer panel), 8px gap: 3 columns are 124px.
     expect(columnsFor(388, 120, 3)).toBe(3);
-    expect(columnsFor(388, 150, 3)).toBe(2);
-    expect(columnsFor(388, 190, 3)).toBe(2);
+    // 3 fields never go 2 + 1: when 3 do not fit they stack in 1 column.
+    expect(columnsFor(388, 150, 3)).toBe(1);
     expect(columnsFor(388, 191, 3)).toBe(1);
     expect(columnsFor(388, 120, 2)).toBe(2);
     expect(columnsFor(100, 500, 2)).toBe(1);
+  });
+
+  it('columnsFor never leaves a lone item on the last row', () => {
+    // 4 tabs that fit 3 per row go 2 + 2, not 3 + 1; 3 fields that fit 2 go to 1 column.
+    expect(columnsFor(600, 180, 4, 8, 4)).toBe(2);
+    expect(columnsFor(800, 180, 4, 8, 4)).toBe(4);
+    expect(columnsFor(388, 150, 3, 8, 3)).toBe(1);
+    expect(columnsFor(388, 120, 3, 8, 3)).toBe(3);
   });
 
   it('checkbox inline: control before its label; dense uses 14px', () => {

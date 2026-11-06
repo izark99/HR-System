@@ -193,5 +193,5 @@ function denseColumns(list: HTMLElement, count: number): number {
         (parseFloat(cs.paddingRight) || 0),
     );
   });
-  return columnsFor(width, Math.ceil(need), count, DENSE_GAP);
+  return columnsFor(width, Math.ceil(need), count, DENSE_GAP, count);
 }

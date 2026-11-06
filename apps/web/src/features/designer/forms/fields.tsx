@@ -45,6 +45,7 @@ export function Field({
   label,
   htmlFor,
   hint,
+  note,
   issues = [],
   children,
   className,
@@ -52,6 +53,8 @@ export function Field({
   label: ReactNode;
   htmlFor?: string;
   hint?: ReactNode;
+  /** Visible state of the field (not a hint), e.g. columns not known yet. */
+  note?: ReactNode;
   issues?: readonly DesignIssue[];
   children: (describedBy: string | undefined, invalid: boolean) => ReactNode;
   className?: string;
@@ -63,6 +66,7 @@ export function Field({
       id={htmlFor ?? generated}
       label={label}
       hint={hint}
+      note={note}
       error={
         issues.length > 0
           ? issues.map((i, k) => (
@@ -225,6 +229,7 @@ export function SelectField({
   options,
   issues,
   hint,
+  note,
   disabled,
   placeholder,
   className,
@@ -235,13 +240,14 @@ export function SelectField({
   options: SelectOption[];
   issues?: readonly DesignIssue[];
   hint?: ReactNode;
+  note?: ReactNode;
   disabled?: boolean;
   placeholder?: string;
   className?: string;
 }) {
   const id = useId();
   return (
-    <Field label={label} htmlFor={id} hint={hint} issues={issues} className={className}>
+    <Field label={label} htmlFor={id} hint={hint} note={note} issues={issues} className={className}>
       {(_describedBy, invalid) => (
         <Select
           dense
@@ -362,7 +368,8 @@ export function ColumnField({
       onChange={onChange}
       options={withCurrent(columnOptions(columns), [value])}
       issues={issues}
-      hint={columns ? hint : t('form.columnsUnknown')}
+      hint={hint}
+      note={columns ? undefined : t('form.columnsUnknown')}
       disabled={disabled}
       placeholder={t('form.pickColumn')}
       {...(className ? { className } : {})}
@@ -398,7 +405,12 @@ export function ColumnListField({
   const free = options.filter((o) => !value.includes(o.value));
   const listIssues = issues.filter((i) => !/\.\d+$/.test(i.path ?? ''));
   return (
-    <Field label={label} hint={columns ? hint : t('form.columnsUnknown')} issues={listIssues}>
+    <Field
+      label={label}
+      hint={hint}
+      note={columns ? undefined : t('form.columnsUnknown')}
+      issues={listIssues}
+    >
       {() => (
         <div className="flex flex-col gap-2">
           {value.length > 0 && (

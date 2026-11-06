@@ -101,7 +101,8 @@ function InputExcelForm(p: NodeFormProps) {
         options={slots}
         issues={at('slot')}
         disabled={ro}
-        hint={slots.length === 0 ? t('node.inputExcel.noSlots') : t('node.inputExcel.hint')}
+        hint={t('node.inputExcel.hint')}
+        note={slots.length === 0 ? t('node.inputExcel.noSlots') : undefined}
       />
     </Section>
   );
