@@ -80,11 +80,12 @@ describe('issue text (MEMORY 2026-11-06 18:27)', () => {
     expect(Object.keys(nodePlugins).length).toBeGreaterThanOrEqual(13);
   });
 
-  it('in the node panel: no node name, no internal key', () => {
+  it('in the node panel: no node name, no internal key, no repeated label', () => {
     const text = issueText(t, invalid('on.0.left'), 'transform.join', true);
-    expect(text).toBe('Cột bảng trái: giá trị chưa hợp lệ hoặc còn thiếu.');
+    // Shown right under its field, whose label is just above: no label repeated.
+    expect(text).toBe('Giá trị chưa hợp lệ hoặc còn thiếu.');
     expect(issueText(t, invalid('keys.0'), 'transform.dedupe', true)).toBe(
-      'Cột khóa, dòng 1: giá trị chưa hợp lệ hoặc còn thiếu.',
+      'Giá trị chưa hợp lệ hoặc còn thiếu.',
     );
     expect(text).not.toContain('Ghép bảng');
     expect(text).not.toMatch(/\bon\b|mục/);

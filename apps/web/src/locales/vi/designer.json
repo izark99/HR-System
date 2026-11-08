@@ -197,6 +197,7 @@
     "nodeLabel": "Tên node",
     "issuePath": {
       "invalid": "{{field}}: giá trị chưa hợp lệ hoặc còn thiếu.",
+      "invalidHere": "Giá trị chưa hợp lệ hoặc còn thiếu.",
       "invalidNode": "Node \"{{node}}\": {{field}} chưa hợp lệ hoặc còn thiếu.",
       "row": "dòng {{n}}",
       "other": "mục cấu hình",

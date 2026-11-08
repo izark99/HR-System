@@ -109,11 +109,10 @@ export function issueText(
   if (issue.nodeId === undefined || nodeType === undefined) return issue.text;
   const node = typeof issue.params.node === 'string' ? issue.params.node : '';
   if (issue.messageKey === 'executor.error.invalidConfig' && issue.path !== undefined) {
-    // In the panel the message sits at (or right under) the field: its own label is enough.
+    // In the panel the message sits right under its field, whose label is just above: no label.
+    if (inPanel) return t('designer:panel.issuePath.invalidHere');
     const field = issueFieldLabel(t, nodeType, issue.path, inPanel);
-    return inPanel
-      ? t('designer:panel.issuePath.invalid', { field })
-      : t('designer:panel.issuePath.invalidNode', { node, field });
+    return t('designer:panel.issuePath.invalidNode', { node, field });
   }
   return inPanel && node ? withoutNode(t, issue.text, node) : issue.text;
 }

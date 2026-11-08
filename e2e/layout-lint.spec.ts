@@ -470,10 +470,29 @@ async function openInfoTip(page: Page, button: ReturnType<Page['locator']>) {
     });
 }
 
+/** Whether the node's centre lies inside the canvas pane (not under the header or a panel). */
+async function inCanvas(page: Page, id: string): Promise<boolean> {
+  return page.evaluate((nodeId) => {
+    const pane = document.querySelector('.react-flow')?.getBoundingClientRect();
+    const box = document
+      .querySelector(`[data-testid="rf__node-${nodeId}"]`)
+      ?.getBoundingClientRect();
+    if (!pane || !box) return false;
+    const x = box.left + box.width / 2;
+    const y = box.top + box.height / 2;
+    return x > pane.left && x < pane.right && y > pane.top && y < pane.bottom;
+  }, id);
+}
+
 async function selectNode(page: Page, id: string) {
   const node = page.getByTestId(`rf__node-${id}`);
   await node.scrollIntoViewIfNeeded().catch(() => undefined);
   await expect(async () => {
+    // A node added from the palette pans the canvas to it, so an older node may be off view
+    // (under the header): bring every node in view first, as a user would.
+    if (!(await node.isVisible()) || !(await inCanvas(page, id))) {
+      await page.locator('.react-flow__controls-fitview').click();
+    }
     await node.click({ timeout: 3000 });
     await expect(node).toHaveClass(/selected/, { timeout: 2000 });
   }).toPass({ timeout: 30_000 });

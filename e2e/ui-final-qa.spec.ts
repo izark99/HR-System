@@ -298,9 +298,9 @@ test.describe('issue text names fields by their labels (issue-text.ts)', () => {
     }
     await page.keyboard.press('Escape');
     for (const [id, expected] of [
-      ['grp', 'Cột: giá trị chưa hợp lệ hoặc còn thiếu.'],
+      ['grp', 'Giá trị chưa hợp lệ hoặc còn thiếu.'],
       ['cmp', 'Bảng lương không có cột "Sai Key".'],
-      ['fx', 'Cột công thức: giá trị chưa hợp lệ hoặc còn thiếu.'],
+      ['fx', 'Giá trị chưa hợp lệ hoặc còn thiếu.'],
     ] as const) {
       const texts = await panelIssueText(page, id);
       expect(texts).toContain(expected);
@@ -321,23 +321,19 @@ async function panelIssueText(page: Page, id: string): Promise<string> {
   return (await panel.locator('.text-coral-text, [role="status"]').allInnerTexts()).join('\n');
 }
 
-test.describe('KNOWN BUG: union panel', () => {
+test.describe('union panel', () => {
   test('a "sourceColumn.labels" issue (labels count ≠ inputCount) shows in the union panel', async ({
     page,
     supabase,
   }) => {
-    // KNOWN BUG (pre-existing): the schema reports the issue on `sourceColumn.labels`, the form only
-    // looks at `sourceColumn.labels.<i>` (and the Callout only shows path-less issues), so the panel
-    // shows nothing while the status bar says "Thêm cột ghi nguồn, Nhãn của các bảng chưa hợp lệ".
-    test.fail(true, 'KNOWN BUG: union labels issue missing from the node panel');
+    // The schema reports the issue on the whole list `sourceColumn.labels`: shown under the first
+    // label field (was missing from the panel before).
     withDraft(supabase, brokenDefinition());
     await page.goto(DESIGNER);
     await expect(page.getByTestId('rf__node-uni')).toBeVisible({ timeout: 30_000 });
     await expect(page.getByRole('button', { name: /lỗi · / })).not.toContainText('0 lỗi', {
       timeout: 30_000,
     });
-    await expect
-      .poll(() => panelIssueText(page, 'uni'), { timeout: 5000 })
-      .toMatch(/Nhãn của các bảng|chưa hợp lệ/);
+    await expect.poll(() => panelIssueText(page, 'uni'), { timeout: 5000 }).toMatch(/chưa hợp lệ/);
   });
 });

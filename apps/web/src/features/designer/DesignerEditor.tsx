@@ -571,22 +571,13 @@ export function DesignerEditor(props: DesignerEditorProps) {
           spot[1] >= bounds.y &&
           spot[0] + NODE_WIDTH <= bounds.x + bounds.w &&
           spot[1] + h <= bounds.y + bounds.h);
-      // Visible canvas full: zoom out so every node and the new one are in view.
+      // Visible canvas full: pan to the new node at the current zoom (zooming out to fit every
+      // node made node text unreadable after a few additions).
       if (!shown) {
-        const nodes = rf.getNodes();
-        const xs = [spot[0], ...nodes.map((n) => n.position.x)];
-        const ys = [spot[1], ...nodes.map((n) => n.position.y)];
-        const x2 = Math.max(
-          spot[0] + NODE_WIDTH,
-          ...nodes.map((n) => n.position.x + (n.measured?.width ?? NODE_WIDTH)),
-        );
-        const y2 = Math.max(
-          spot[1] + h,
-          ...nodes.map((n) => n.position.y + (n.measured?.height ?? 120)),
-        );
-        const x = Math.min(...xs);
-        const y = Math.min(...ys);
-        void rf.fitBounds({ x, y, width: x2 - x, height: y2 - y }, { padding: 0.2 });
+        void rf.setCenter(spot[0] + NODE_WIDTH / 2, spot[1] + h / 2, {
+          zoom: rf.getZoom(),
+          duration: 200,
+        });
       }
       return spot;
     },

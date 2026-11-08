@@ -812,7 +812,11 @@ function UnionForm(p: NodeFormProps) {
                   `sourceColumn.labels.${i}`,
                 )
               }
-              issues={at(`sourceColumn.labels.${i}`)}
+              issues={[
+                ...at(`sourceColumn.labels.${i}`),
+                // Issue on the whole list (e.g. count ≠ inputCount): under the first label.
+                ...(i === 0 ? p.issues.filter((x) => x.path === 'sourceColumn.labels') : []),
+              ]}
               disabled={ro}
             />
           ))}
