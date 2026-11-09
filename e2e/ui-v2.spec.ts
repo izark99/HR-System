@@ -20,8 +20,10 @@ import {
   timesheet,
   timesheetInput,
   uploadFixtures,
+  workbook,
 } from './helpers';
 import { baseFlowDefinition, type SupabaseMock } from './supabase-mock';
+import { seedDemoRefTables } from './supabase-mock-ref';
 import {
   adminTableChecks,
   axe,
@@ -459,6 +461,67 @@ test.describe('admin screens 1280x800', () => {
     await axe(page, 'admin-ui-text-edit 1280x800');
     await shot(page, '15-admin-ui-text', 'edit-dialog');
     await page.keyboard.press('Escape');
+  });
+
+  test('reference tables: list, columns, versions, data grid, import (spec §34)', async ({
+    page,
+    supabase,
+  }) => {
+    seedDemoRefTables(supabase.ref);
+    await page.goto('/admin/ref-tables');
+    await expect(page.getByRole('heading', { level: 1 })).toHaveText('Bảng tham chiếu dùng chung');
+    const list = page.getByRole('region', { name: 'Bảng tham chiếu', exact: true });
+    await expect(list.locator('tbody tr')).toHaveCount(2);
+    await commonChecks(page);
+    await titleChecks(page);
+    await cardChecks(page.locator('main [data-card]'));
+    await adminTableChecks(page.locator('main table').first());
+    await tableRowChecks(page.locator('main table').first());
+    await axe(page, 'admin-ref-tables 1280x800');
+    await shot(page, '16-admin-ref-tables', 'list');
+
+    await page.getByRole('link', { name: 'Sửa cột DM_CHI_NHANH' }).click();
+    await page.getByRole('button', { name: '+ Thêm cột' }).click();
+    const col = page.getByRole('dialog', { name: 'Thêm cột' });
+    await col.getByRole('textbox', { name: /^Tên hiển thị/ }).fill('Họ tên giám đốc CN');
+    await col.getByRole('button', { name: 'Lưu cột' }).click();
+    await expect(page.getByText('Có thể là dữ liệu cá nhân:')).toBeVisible();
+    await axe(page, 'admin-ref-columns 1280x800');
+    await shot(page, '16-admin-ref-tables', 'columns');
+    await page.getByRole('button', { name: 'Xóa cột ho_ten_giam_doc_cn' }).click();
+
+    await page.getByRole('link', { name: 'Phiên bản', exact: true }).click();
+    await expect(page.locator('[data-diff-summary]')).toBeVisible();
+    await adminTableChecks(page.locator('main table').first());
+    await axe(page, 'admin-ref-versions 1280x800');
+    await shot(page, '16-admin-ref-tables', 'versions-and-diff');
+
+    await page.getByRole('button', { name: 'Import Excel vào draft' }).click();
+    const imp = page.getByRole('dialog', { name: 'Import Excel vào draft v3' });
+    await imp.getByLabel('Chọn file Excel để import').setInputFiles(
+      workbook('danh_muc_chi_nhanh.xlsx', {
+        S: [
+          ['Mã CN', 'Tên chi nhánh', 'Vùng lương tối thiểu', 'Ghi chú'],
+          ...Array.from({ length: 12 }, (_, i) => [`CN${i + 1}`, `Chi nhánh ${i + 1}`, 1, '']),
+        ],
+      }),
+    );
+    await expect(imp.getByText('1 cảnh báo')).toBeVisible();
+    await floatChecks(imp);
+    await expect(imp.getByRole('button', { name: 'Chọn file khác' })).toBeFocused();
+    await page.mouse.move(0, 0);
+    await axe(page, 'admin-ref-import 1280x800');
+    await shot(page, '16-admin-ref-tables', 'import-dialog');
+    await page.keyboard.press('Escape');
+
+    await page.getByRole('link', { name: 'Sửa dữ liệu v3' }).click();
+    const vung = page.getByRole('textbox', { name: 'Vùng lương tối thiểu, dòng 2', exact: true });
+    await vung.fill('hai');
+    await page.getByRole('button', { name: '+ Thêm dòng' }).click();
+    await page.getByRole('button', { name: 'Xóa dòng 1', exact: true }).click();
+    await page.mouse.move(0, 0);
+    await axe(page, 'admin-ref-data 1280x800');
+    await shot(page, '16-admin-ref-tables', 'data-grid');
   });
 
   test('versions: list + diff', async ({ page, supabase }) => {

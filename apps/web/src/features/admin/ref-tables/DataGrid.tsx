@@ -273,7 +273,7 @@ export function DataGrid({
                   {c.title}
                   {c.isKey && <Chip tone="blue">{t('keyChip')}</Chip>}
                 </span>
-                <span className="block font-mono font-normal">{typeLabel(c.type)}</span>
+                <span className="block font-normal">{typeLabel(c.type)}</span>
               </th>
             ))}
             {!readOnly && (

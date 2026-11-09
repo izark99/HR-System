@@ -493,3 +493,40 @@ export class RefTablesMock {
     return false;
   }
 }
+
+/** Reference tables (spec §34): one table used by a flow, 2 published + 1 draft, a second one. */
+export function seedDemoRefTables(ref: RefTablesMock): void {
+  ref.seed({
+    code: 'DM_CHI_NHANH',
+    name: 'Danh mục chi nhánh',
+    published: [
+      { from: '2026-01-01', to: '2026-07-01', rows: branchRows(24), note: 'Thêm CN23, CN24' },
+      {
+        from: '2026-07-01',
+        rows: branchRows(24).map((r, i) => (i === 4 ? { ...r, vung: 2 } : r)),
+        note: 'Đổi vùng CN05 3 → 2',
+      },
+    ],
+    draft: branchRows(26),
+  });
+  ref.seed({
+    code: 'MAP_MA_CA',
+    name: 'Mapping mã ca làm việc',
+    columns: [
+      { key: 'ma_ca', title: 'Mã ca', type: 'string', aliases: [], isKey: true },
+      { key: 'gio_bat_dau', title: 'Giờ bắt đầu', type: 'string', aliases: [], isKey: false },
+      { key: 'he_so', title: 'Hệ số', type: 'decimal', aliases: [], isKey: false },
+    ],
+    draft: [],
+  });
+  ref.usage = [
+    {
+      ref_table_code: 'DM_CHI_NHANH',
+      flow_id: '00000000-0000-4000-8000-0000000000f1',
+      flow_code: 'payroll-timesheet',
+      flow_name: 'Đối chiếu bảng lương – chấm công',
+      version_no: 3,
+      status: 'published',
+    },
+  ];
+}

@@ -102,6 +102,11 @@ function ImportBody({
     [],
   );
 
+  const focusOther = () =>
+    requestAnimationFrame(() =>
+      inputRef.current?.parentElement?.querySelector<HTMLElement>('[data-import-other]')?.focus(),
+    );
+
   async function read(file: File) {
     setPhase({ kind: 'reading', name: file.name });
     setError(null);
@@ -127,10 +132,13 @@ function ImportBody({
         }
       }
       setPhase({ kind: 'done', name: file.name, result, extra });
+      // The drop zone (which had the focus) is gone: keep the focus in the dialog.
+      focusOther();
     } catch {
       engine.current?.dispose();
       engine.current = null;
       setPhase({ kind: 'crashed', name: file.name });
+      focusOther();
     }
   }
 
@@ -246,6 +254,7 @@ function ImportBody({
             {chip}
             {phase.kind !== 'reading' && (
               <Button
+                data-import-other
                 variant="text"
                 size="sm"
                 disabled={busy}

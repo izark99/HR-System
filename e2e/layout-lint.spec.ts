@@ -23,7 +23,7 @@ import {
 } from './helpers';
 import { layoutLint, LayoutReport } from './layout-lint';
 import { baseFlowDefinition, type SupabaseMock } from './supabase-mock';
-import { branchRows } from './supabase-mock-ref';
+import { seedDemoRefTables } from './supabase-mock-ref';
 
 const FLOW_ID = '00000000-0000-4000-8000-0000000000f1';
 const DRAFT_ID = '00000000-0000-4000-8000-000000000779';
@@ -84,43 +84,6 @@ function withDraft(supabase: SupabaseMock) {
     published_at: null,
     updated_at: '2026-10-27T01:00:00.000001+00:00',
   });
-}
-
-/** Reference tables (spec §34): one table used by a flow, 2 published + 1 draft, a second one. */
-export function seedRefTables(supabase: SupabaseMock) {
-  supabase.ref.seed({
-    code: 'DM_CHI_NHANH',
-    name: 'Danh mục chi nhánh',
-    published: [
-      { from: '2026-01-01', to: '2026-07-01', rows: branchRows(24), note: 'Thêm CN23, CN24' },
-      {
-        from: '2026-07-01',
-        rows: branchRows(24).map((r, i) => (i === 4 ? { ...r, vung: 2 } : r)),
-        note: 'Đổi vùng CN05 3 → 2',
-      },
-    ],
-    draft: branchRows(26),
-  });
-  supabase.ref.seed({
-    code: 'MAP_MA_CA',
-    name: 'Mapping mã ca làm việc',
-    columns: [
-      { key: 'ma_ca', title: 'Mã ca', type: 'string', aliases: [], isKey: true },
-      { key: 'gio_bat_dau', title: 'Giờ bắt đầu', type: 'string', aliases: [], isKey: false },
-      { key: 'he_so', title: 'Hệ số', type: 'decimal', aliases: [], isKey: false },
-    ],
-    draft: [],
-  });
-  supabase.ref.usage = [
-    {
-      ref_table_code: 'DM_CHI_NHANH',
-      flow_id: '00000000-0000-4000-8000-0000000000f1',
-      flow_code: 'payroll-timesheet',
-      flow_name: 'Đối chiếu bảng lương – chấm công',
-      version_no: 3,
-      status: 'published',
-    },
-  ];
 }
 
 async function ready(page: Page) {
@@ -337,7 +300,7 @@ for (const viewport of [DESKTOP, LAPTOP]) {
       page,
       supabase,
     }) => {
-      seedRefTables(supabase);
+      seedDemoRefTables(supabase.ref);
       const r = new LayoutReport(page);
       await page.goto('/admin/ref-tables');
       await ready(page);
