@@ -1717,7 +1717,7 @@ User story: Là người dùng, tôi muốn bố cục không nhảy ngang khi �
 
 ## 33. Tab "Văn bản giao diện" (Admin) — User story & Acceptance criteria
 
-> Chốt 2026-11-09 09:06 (MEMORY nhóm "Phạm vi & sản phẩm"). Vòng riêng sau §32, trước Phase 2. Bố cục màn chốt qua mẫu Artifact trước khi code; AC chi tiết của UI bổ sung sau khi Harold duyệt mẫu.
+> Chốt 2026-11-09 09:06 (MEMORY nhóm "Phạm vi & sản phẩm"). Vòng riêng sau §32, trước Phase 2. Bố cục màn chốt 2026-11-09 09:12 theo mẫu https://claude.ai/artifact/XbyVkYNju69SB7pmvbAurb (phương án A).
 
 User story: Là Admin, tôi muốn sửa câu chữ tiếng Việt trên giao diện và trong thông báo lỗi mà User thấy, để dùng đúng thuật ngữ nội bộ mà không cần sửa code.
 
@@ -1731,4 +1731,7 @@ User story: Là Admin, tôi muốn sửa câu chữ tiếng Việt trên giao di
 | AC-TX-06 | Supabase: bảng `ui_text_overrides` (`key` text PK, `value` text, `updated_by` uuid, `updated_at` timestamptz), RLS bật: `select` cho `anon` + `authenticated`; `insert/update/delete` chỉ admin (`is_admin()`); check độ dài phía DB. Không chứa dữ liệu cá nhân (chỉ chữ giao diện). Migration file mới; phần có `delete` gửi Harold dán SQL Editor nếu MCP treo (HANDOFF §3). |
 | AC-TX-07 | Ngân sách: JS tải ban đầu không vượt 215,2 KiB (màn "Văn bản giao diện" lazy theo route; phần nạp override ở entry tối thiểu). Có nguy cơ vượt → dừng, báo Harold. |
 | AC-TX-08 | Màn mới theo §25.5 (mẫu List, `DataTable`, `FormField`, toast) và được thêm vào `layout-lint` (1280/1024) + ảnh so pixel. |
+| AC-TX-09 | Bố cục (chốt 2026-11-09 09:12): `PageHeader` workspace (eyebrow "Văn bản giao diện", tiêu đề "Sửa câu chữ trên giao diện", mô tả) + nút outline "Khôi phục tất cả" (vô hiệu khi chưa có dòng đã sửa). Card: thanh lọc (Tìm — so không phân biệt dấu trên chữ đang dùng, bản gốc và mã; Màn — Select tự làm: Tất cả, Đăng nhập, Danh sách flow, Chạy flow, Kết quả, Admin, Kiểm tra file, Lỗi chạy; checkbox "Chỉ dòng đã sửa"; đếm "N / tổng dòng · M đã sửa" `aria-live`) + `DataTable` theo quy tắc bảng Admin (mỗi ô 1 dòng đủ chữ, kéo ngang trong card, dòng 48px): Màn (chip), Mã (mono), Chữ đang dùng (biến `{{…}}` tô nền), Trạng thái (chip "Đã sửa" amber / "Mặc định"), Sửa lần cuối ("admin · dd/MM/yyyy HH:mm" hoặc "–"), Thao tác cố định phải (bút chì = Sửa; mũi tên vòng = Khôi phục mặc định, vô hiệu khi chưa sửa; `aria-label` kèm mã). Không có dòng khớp → `EmptyState` "Không có dòng nào khớp…". |
+| AC-TX-10 | Hộp thoại "Sửa văn bản": mã + màn; "Bản gốc" chỉ đọc; `FormField` "Chữ mới" (textarea) kèm dòng biến bắt buộc (chip teal khi có, coral khi thiếu) và đếm "n/max ký tự"; lỗi tại chỗ (trống; thiếu biến — nêu tên biến; thừa biến; quá dài; có thẻ HTML) chặn Lưu; Lưu vô hiệu khi chữ không đổi; khung "Xem trước với số liệu mẫu" thay biến bằng giá trị mẫu cố định. Footer: "Khôi phục mặc định" (chỉ khi đã sửa, nút chữ bên trái), "Hủy", "Lưu" (nút chính). Esc đóng, trả focus về nút bút chì. Lưu chữ trùng bản gốc = khôi phục mặc định (xóa dòng override). Toast: "Đã lưu "<mã>". Người dùng thấy chữ mới ở lần mở trang sau." |
+| AC-TX-11 | Biến so theo tên, bỏ phần định dạng (`{{count, number}}` ≡ `count`); giữ được định dạng của bản gốc khi Admin gõ `{{count}}` (áp lại định dạng của bản gốc khi lưu, hoặc i18next nhận cả hai — chọn cách, ghi test). |
 

@@ -9,6 +9,8 @@
 
 ## Phạm vi & sản phẩm
 
+2026-11-09 09:12 - Tab "Văn bản giao diện" (duyệt mẫu https://claude.ai/artifact/XbyVkYNju69SB7pmvbAurb): bảng theo quy tắc bảng Admin hiện tại (mỗi ô 1 dòng, đủ chữ, kéo ngang; cột Màn, Mã, Chữ đang dùng, Trạng thái, Sửa lần cuối, Thao tác cố định phải: bút chì = Sửa, mũi tên vòng = Khôi phục mặc định); thanh lọc: Tìm (không phân biệt dấu), Màn (Select tự làm), "Chỉ dòng đã sửa", đếm dòng; nút "Khôi phục tất cả" ở header (ConfirmDialog). Sửa trong hộp thoại: bản gốc, ô chữ mới, biến bắt buộc đổi màu khi thiếu, đếm ký tự, lỗi tại chỗ chặn Lưu, xem trước với số liệu mẫu. Chữ mới: tab của Admin thấy ngay, người dùng khác thấy ở lần mở trang sau (không realtime).
+
 2026-11-09 09:06 - Tab Admin "Văn bản giao diện" (menu trái): Admin sửa text tiếng Việt của mọi màn User + Admin và thông báo kiểm tra file / lỗi chạy mà User thấy (engine; text đã sửa được truyền vào worker); không gồm Designer và bảng tra hàm công thức. Áp dụng chung cho mọi người dùng, kể cả màn Đăng nhập (bảng text đã sửa đọc được không cần đăng nhập vì chỉ chứa chữ giao diện, không dữ liệu cá nhân; chỉ Admin ghi). Chỉ chữ thuần (không HTML/link); chặn lưu khi thiếu/thừa biến `{{…}}`; độ dài ≤ 2 lần bản gốc (tối thiểu 40 ký tự); "Khôi phục mặc định" từng dòng và tất cả; lưu người sửa + thời điểm sửa gần nhất, không lịch sử phiên bản.
 
 2026-11-04 15:34 - Thứ tự Phase 2: (1) bảng tham chiếu có effective date (`ref_tables`, `ref_table_versions`) + node `input.refTable`; (2) `output.template` (template Excel); (3) `code.python` (Pyodide). Các node Phase 2 khác chưa xếp thứ tự.
