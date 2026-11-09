@@ -237,6 +237,8 @@
 
 ## Kỹ thuật & tổ chức
 
+2026-11-09 08:03 - Vòng tối ưu hiệu năng (HANDOFF §4 mục #5): đo lại đủ 4 chặng (đọc .xlsx, đẩy vào DuckDB, SQL, ghi .xlsx) trên Chromium, chỉ tối ưu chặng đẩy dữ liệu vào DuckDB; số trước/sau đo trên Chromium của container, kèm lệnh đo để Harold tự chạy trên laptop thật cho kết luận AC-B3-24; giới hạn 1 vòng developer + 1 vòng verifier, không đạt thì dừng báo số liệu + hướng tiếp để Harold quyết; ràng buộc: kết quả flow nghiệm thu và golden test công thức giống hệt trước, JS tải ban đầu không tăng (chunk worker được tăng), không thêm dependency.
+
 2026-11-09 07:34 - So ảnh pixel (spec §30.3): chỉ các trạng thái của `e2e/ui-v2.spec.ts` và `e2e/ui-v2-diacritics.spec.ts` (không thêm ảnh của `layout-lint`); ngưỡng 0 pixel; trạng thái động (skeleton, toast, đếm ngược, Monaco) được cố định trước khi so, nếu 2 lần chạy vẫn lệch thì trạng thái đó chỉ chụp để duyệt tay (`compare: false`, liệt kê trong spec); ảnh gốc commit thẳng vào repo (không dùng Git LFS), tổng vượt 20 MB thì dừng hỏi Harold. Session chính làm; `verifier` kiểm gói hẹp (review diff, chạy 2 lần liên tiếp, thử bỏ 1 dấu thanh phải fail, full E2E).
 
 2026-11-06 18:27 - Bổ sung chống lỗi bố cục (theo yêu cầu "không để lỗi UI tương tự"): mọi nhóm tab (thường và dense) và lưới field không để 1 phần tử nằm lẻ ở hàng cuối; control xếp dọc trong một cột form/toolbar cùng bề rộng; nhãn checkbox cũng 1 dòng (nhãn dài rút gọn, phần chi tiết đưa vào (i)); nút (i) sát chữ nhãn (≤ 8px); chỉ 1 popover (i) mở mỗi lúc, Esc chỉ đóng popover không đóng dialog; tên file dài cắt "…" kèm tooltip; minimap Designer ẩn khi canvas thấp; node mới thêm không đè node có sẵn; lỗi cấu hình node không lộ key nội bộ và không lặp tên node.

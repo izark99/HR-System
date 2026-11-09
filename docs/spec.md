@@ -1657,3 +1657,22 @@ Mọi màn có đủ 4 trạng thái: đang tải (skeleton đúng bố cục, �
 | AC-TL-12 | Vẫn sinh trang ảnh duyệt tay (`test-results/ui-v2/index.html`) và kiểm giá trị CSS (AC-UI-03..11). Đổi giao diện hoặc đổi Chromium → cập nhật ảnh gốc (`--update-snapshots`) trong cùng commit. |
 | AC-TL-13 | Phạm vi và dung lượng (chốt 2026-11-09 07:34): chỉ ảnh của 2 spec trên (không thêm ảnh `layout-lint`, đã có kiểm hình học). Ảnh gốc commit thẳng (không Git LFS); tổng `e2e/__screenshots__/` > 20 MB → dừng, hỏi Harold. Lúc sinh lần đầu: 45 ảnh, 4,9 MB. Trạng thái động được cố định trước khi so: skeleton chụp ở `prefers-reduced-motion` (khối tĩnh), hộp cảnh báo đăng xuất dùng đồng hồ giả (`clock.install`), toast chụp khi đã trượt vào xong; nếu 2 lần chạy vẫn lệch thì trạng thái đó chỉ chụp để duyệt tay (`compare: false`) và ghi vào danh sách này. Danh sách `compare: false` hiện tại: "04-run / running". |
 | AC-TL-14 | Độ nhạy: bỏ 1 dấu thanh trong một chữ hiển thị (VD sửa tạm locale) rồi build lại → ít nhất 1 ảnh so sánh fail; trả lại → pass. |
+
+---
+
+## 31. Vòng tối ưu hiệu năng — Acceptance criteria
+
+> Chốt 2026-11-09 08:03 (MEMORY nhóm "Kỹ thuật & tổ chức"). Nguồn: HANDOFF §4 mục #5, AC-B3-24, AC-B4-31. Không đổi hành vi app.
+
+User story: Là User chạy flow trên laptop văn phòng, tôi muốn file lớn được xử lý nhanh hơn, để không phải chờ lâu hoặc bỏ dở khi đối chiếu dữ liệu cả công ty.
+
+| # | Given / When / Then |
+|---|---------------------|
+| AC-PF-01 | Đo trước khi sửa: 100k × 30 và 1 triệu × 30 (dữ liệu giả, seed cố định), flow `input.excel` → `filter` → `join` → `groupBy` → `output.excel`, trên Chromium cài sẵn (E2E opt-in `HRFLOW_PERF=1` hoặc `HEAVY_E2E=1`); ghi thời gian từng chặng: đọc .xlsx, đẩy vào DuckDB (`SqlScope.upload`), chạy SQL, ghi .xlsx, tổng; mỗi số là trung vị của ≥ 3 lần chạy. Không tính lần tải DuckDB đầu tiên. |
+| AC-PF-02 | Chỉ tối ưu chặng đẩy dữ liệu vào DuckDB (`engine/duckdb/scope.ts` `upload`, `arrow-io.ts`). Đo lại như AC-PF-01 và báo bảng trước/sau. Mục tiêu: chặng đẩy dữ liệu 1 triệu × 30 giảm ≥ 30% so với số đo trước *(mục tiêu, báo số nếu không đạt)*; 100k × 30 tổng < 10 giây trên Chromium của container. |
+| AC-PF-03 | AC-B4-31 đo trên Chromium: 100k × 30 với 5 cột công thức, chỉ thời gian chạy SQL công thức (≤ 2 giây, mục tiêu); 1 triệu × 30 + 10 cột công thức chạy xong không crash. Báo số. |
+| AC-PF-04 | Không đổi kết quả: flow nghiệm thu khớp `fixtures/payroll-timesheet/expected.json`, golden test công thức (182 case) pass, kiểu cột/thứ tự dòng (`__ord`)/giá trị decimal/ngày/null sau khi đẩy vào DuckDB giống hệt trước (unit test so trước/sau trên bảng có đủ kiểu và giá trị biên). Không rò dữ liệu (không log giá trị ô). |
+| AC-PF-05 | Ràng buộc: JS tải ban đầu không tăng (chunk worker được tăng); không thêm dependency; CSP không đổi. lint/format/typecheck/test/build + `CI=1 pnpm test:e2e` pass. |
+| AC-PF-06 | Lệnh đo cho máy thật: một lệnh (VD `pnpm perf:local`) chạy trên máy Harold, sinh dữ liệu giả, chạy bản build trong Chromium/Chrome cài sẵn của máy, in bảng thời gian từng chặng; hướng dẫn ngắn trong README hoặc `docs/`. Kết luận AC-B3-24 (laptop 8 GB) theo số Harold gửi về. |
+| AC-PF-07 | Giới hạn: 1 vòng developer + 1 vòng verifier; không đạt mục tiêu thì dừng, báo số liệu trước/sau và hướng tiếp (VD tối ưu đọc/ghi .xlsx) để Harold quyết. |
+
