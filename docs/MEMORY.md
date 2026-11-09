@@ -243,6 +243,8 @@
 
 ## Kỹ thuật & tổ chức
 
+2026-11-09 10:20 - Khung cuộn (theo yêu cầu "freeze header, chỉ cuộn phần dưới" để header không hụt 10px ở mép phải): từ breakpoint `md` (768px) trở lên header cố định; Admin: menu trái cũng đứng yên, chỉ cột nội dung cuộn; màn User: vùng dưới header cuộn; thanh cuộn (10px, chừa chỗ) nằm trong vùng cuộn đó, trang (`html`) không cuộn. Dưới 768px (điện thoại, 390px) giữ cuộn cả trang như cũ (header cuộn đi). Ảnh so pixel: lúc chụp test tạm mở rộng vùng cuộn để chụp đủ nội dung. Không dựng mẫu Artifact; gửi Harold ảnh trước/sau từng màn trước khi lên `main`. Làm trong cùng vòng với sửa thanh cuộn (§32, commit `f0d5494` chưa lên `main`): developer → verifier, trước tab "Văn bản giao diện".
+
 2026-11-09 09:06 - Thanh cuộn (theo yêu cầu "chuyển tab dài/ngắn không lệch ngang"): mọi vùng cuộn trong app luôn chừa chỗ thanh cuộn — cả trang (trừ Designer full-bleed, không cuộn trang) lẫn panel/bảng/danh sách bên trong (`scrollbar-gutter: stable`); mọi thanh cuộn (trang, vùng cuộn, Monaco) cùng một kiểu như panel Designer (10px, rãnh `#F1F5F9`, tay kéo `#475569`, hover `#1F2A44`), không dùng thanh mặc định của trình duyệt (Firefox chỉ đổi được bề dày + màu); `layout-lint` chặn thanh cuộn chưa có kiểu và kiểm bề ngang nội dung không đổi khi đổi tab. Giữ từ 2026-11-06 14:48: mỗi vùng chỉ 1 thanh cuộn theo mỗi chiều, `layout-lint` chặn vùng cuộn lồng nhau cùng chiều. Làm ngay sau vòng hiệu năng, session chính tự làm, gửi Harold ảnh trước/sau.
 
 2026-11-09 09:06 - Thứ tự: vòng hiệu năng → sửa thanh cuộn → tab "Văn bản giao diện" (vòng riêng: mẫu Artifact duyệt trước → developer → verifier) → Phase 2. Tải text đã sửa mà làm JS tải ban đầu vượt ngân sách → dừng, báo Harold.
