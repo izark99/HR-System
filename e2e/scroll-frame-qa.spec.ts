@@ -229,25 +229,21 @@ for (const vp of SIZES) {
 test.describe('Designer keyboard after the content became focusable', () => {
   test.use({ signedInAs: ADMIN, viewport: { width: 1280, height: 800 } });
 
-  // KNOWN BUG (verifier 2026-11-09, commit e15946a): `main#main` got tabIndex -1, so a click on the
-  // empty canvas pane now focuses `main` instead of the body; DesignerEditor's `onCanvas()` treats
-  // only the body / canvas elements as "on the canvas", so Ctrl+V (and Ctrl+C) are ignored there.
-  // On 62c15c5 the same click left the focus on the body and the paste worked.
-  test.fail(
-    'KNOWN BUG: copy a node, click the empty canvas, paste: a copy appears',
-    async ({ page, supabase }) => {
-      withDraft(supabase);
-      await page.goto(DESIGNER);
-      await expect(page.getByTestId('rf__node-in_luong')).toBeVisible({ timeout: 30_000 });
-      await page.getByTestId('rf__node-in_luong').click();
-      await page.keyboard.press('Control+C');
-      const pane = page.locator('.react-flow__pane');
-      const box = (await pane.boundingBox())!;
-      await page.mouse.click(box.x + box.width - 40, box.y + 40);
-      await page.keyboard.press('Control+V');
-      await expect(page.getByTestId('rf__node-input_1')).toBeVisible({ timeout: 3000 });
-    },
-  );
+  // Fixed (verifier 2026-11-09, commit e15946a): `main#main` got tabIndex -1, so a click on the
+  // empty canvas pane focused `main` and Ctrl+V / Ctrl+C were ignored. The Designer's `main` is not
+  // focusable any more and `onCanvas()` treats `main` like the body.
+  test('copy a node, click the empty canvas, paste: a copy appears', async ({ page, supabase }) => {
+    withDraft(supabase);
+    await page.goto(DESIGNER);
+    await expect(page.getByTestId('rf__node-in_luong')).toBeVisible({ timeout: 30_000 });
+    await page.getByTestId('rf__node-in_luong').click();
+    await page.keyboard.press('Control+C');
+    const pane = page.locator('.react-flow__pane');
+    const box = (await pane.boundingBox())!;
+    await page.mouse.click(box.x + box.width - 40, box.y + 40);
+    await page.keyboard.press('Control+V');
+    await expect(page.getByTestId('rf__node-input_1')).toBeVisible({ timeout: 3000 });
+  });
 
   test('pane click then Delete still deletes a box selection', async ({ page, supabase }) => {
     withDraft(supabase);

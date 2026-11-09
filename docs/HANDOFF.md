@@ -1,6 +1,6 @@
 # HANDOFF — Trạng thái dự án để mở session mới
 
-> Cập nhật: 2026-11-09 (sau vòng tối ưu hiệu năng; kế tiếp: thanh cuộn §32 → tab "Văn bản giao diện" §33). Đọc file này sau `CLAUDE.md` và `docs/MEMORY.md`.
+> Cập nhật: 2026-11-09 (sau vòng thanh cuộn + khung cuộn §32; kế tiếp: tab "Văn bản giao diện" §33). Đọc file này sau `CLAUDE.md` và `docs/MEMORY.md`.
 
 ## 1. Đã xong
 
@@ -17,6 +17,7 @@
 | Bộ khung UI/UX – vòng B + 4 vòng sửa bố cục (spec §29.3, AC-UI-70..78; MEMORY 2026-11-06): mọi màn chuyển sang layout/pattern chung (User bỏ menu trái, Chạy flow có `Stepper` + `StickyActionBar`, Kết quả KPI 40px, Admin mẫu List + toast + `ConfirmDialog` chặn Esc khi busy), nối cạnh bằng bàn phím (nút "Nối tới…", Ctrl+E, đọc "Đã nối A → B"), control 44px kể cả dense, nhãn field/checkbox 1 dòng (lưới tự giảm cột, không để phần tử lẻ hàng cuối), gợi ý/giải thích sau nút (i) (`InfoTip`, 1 popover mỗi lúc), câu trạng thái hiện sẵn (`note`), mỗi chiều 1 vùng cuộn, `MiddleCut` cho tên file, lỗi cấu hình node gọi theo nhãn field, minimap ẩn khi canvas thấp, node mới đặt chỗ trống + dời khung nhìn; bộ kiểm hình học `e2e/layout-lint` (18 luật, 1280/1024/390, mọi màn + mọi loại node) — lên `main` 2026-11-08 sau khi Harold duyệt ảnh (https://claude.ai/artifact/RRMf2ZJr3qLDMhSqkZVy9k) | ✅ |
 | So ảnh pixel (spec §30.3, AC-TL-10..14) + lỗi Input slot/Tham số gọi theo nhãn form (AC-UI-79, §4.12a): `toHaveScreenshot` ngưỡng 0 pixel cho `ui-v2*.spec.ts`, 45 ảnh gốc (4,9 MB) ở `e2e/__screenshots__/`, đồng hồ trình duyệt cố định, "04-run / running" chỉ duyệt tay; bỏ 1 dấu sắc lệch 1 pixel vẫn bị bắt. Nhãn lỗi ở `locales/vi/engine-fields.json` (chỉ nạp trong worker, JS entry giữ 213,1 KiB) — lên `main` 2026-11-09 | ✅ |
 | Tối ưu hiệu năng (spec §31, AC-PF-01..07): đẩy dữ liệu vào DuckDB bằng Arrow đúng kiểu theo row group 122.880 dòng, bỏ bảng `_raw` + CAST — 1M × 30: 13,6 → 5,0 s; 100k tổng ≈ 4 s; AC-B4-31 SQL công thức 100k/5 cột ≈ 0,75 s; đo từng chặng qua User Timing `hrflow:*` (`e2e/perf-stages.spec.ts`, `HRFLOW_PERF=1`), `pnpm perf:local` cho máy thật (README) — lên `main` 2026-11-09. AC-B3-24 trên laptop 8 GB chờ số Harold đo | ✅ |
+| Thanh cuộn + khung cuộn (spec §32, AC-SB-01..09): mọi thanh cuộn (trang, vùng cuộn, Monaco) cùng kiểu 10px, luôn chừa chỗ (`scrollbar-gutter: stable`) nên đổi tab dài/ngắn không lệch ngang; từ 768px header cố định, chỉ vùng dưới cuộn (`[data-scroll-frame]`; Admin: menu trái đứng yên), dưới 768px cả trang cuộn; `layout-lint` luật 19 (thanh mặc định), 20 (không chừa chỗ); `e2e/scrollbar-shift.spec.ts` chạy Chromium bỏ cờ `--hide-scrollbars`; `shot()` tạm mở rộng vùng cuộn để chụp đủ — lên `main` 2026-11-09 sau khi Harold duyệt ảnh | ✅ |
 | Test: Vitest (~1170 test), Playwright E2E (~435 test, Supabase được mock; test nặng opt-in `HEAVY_E2E=1`, `HRFLOW_PERF=1`) | ✅ |
 
 ## 2. Môi trường
@@ -58,13 +59,15 @@
 
 14. Vòng hiệu năng (MINOR, verifier 2026-11-09): (a) SQL công thức chậm hơn thật ≈ 5–8% (+40–60 ms ở 100k; bố cục row group mới), vẫn xa mục tiêu 2 s, tổng lần chạy nhanh hơn; (b) entry User Timing `hrflow:read` trong worker tăng 1 mỗi lần chọn file, không bị xóa ngoài E2E (rất nhỏ, không chứa dữ liệu); (c) `pnpm perf:local -- --no-build` chỉ dùng được với bản `build:e2e`; (d) thứ tự cột khi upload đã có kiểm tra chặn (`scope.ts`), lỗi nếu lệch.
 
+15. Thanh cuộn + khung cuộn (MINOR, verifier 2026-11-09): (a) màn Chạy flow: `PageShell className="pb-0"` thua `pb-12` (cùng `cx`, thứ tự CSS Tailwind) nên dưới thanh nút dính đáy còn dải 48px khi cuộn tới cuối — có từ trước vòng này; sửa thì ảnh gốc màn Chạy flow đổi; (b) chỉ kiểm Chromium (Firefox chỉ đổi được bề dày + màu thanh cuộn); (c) lúc đang tải chunk Admin (skeleton) chưa có vùng cuộn nên `html` chừa 10px thoáng qua; (d) `main#main` có tabIndex -1 ngoài Designer (click vùng trống focus `main`); Designer không có, `onCanvas()` coi `main` như body.
+
 ## 5. Bước tiếp theo
 
 - ~~Vòng nâng tooling~~, ~~bộ khung UI/UX vòng A, vòng B~~ → xong (lên `main` 2026-11-08). ~~So ảnh pixel~~ + §4.12a → xong (lên `main` 2026-11-09).
 - **Tiếp theo (theo MEMORY 2026-11-04 15:34):**
   1. ~~**So ảnh pixel** (`toHaveScreenshot`): áp `docs/patches/2026-11-04-pixel-compare.patch` (`git apply`; patch viết trước vòng A/B nên nhiều khả năng phải áp tay theo nội dung: đồng hồ trình duyệt cố định `freezeClock`, thay chữ "… giây" trước khi so, trạng thái "đang chạy" không so, `maxDiffPixels: 0`, `snapshotPathTemplate` `e2e/__screenshots__/`), sinh ảnh gốc bằng `--update-snapshots` sau `pnpm --filter @hrflow/web build:e2e`, chạy 2 lần liên tiếp pass rồi commit ảnh. Gộp vào `e2e/ui-v2*.spec.ts` (giữ trang ảnh duyệt tay + `layout-lint`).~~
   2. ~~**Tối ưu hiệu năng**~~ → xong 2026-11-09 (§31). Còn: Harold chạy `pnpm perf:local` trên laptop để kết luận AC-B3-24.
-  2a. **Thanh cuộn đồng nhất, không lệch ngang** (§32, chốt 2026-11-09 09:06): session chính làm, gửi Harold ảnh trước/sau.
+  2a. ~~**Thanh cuộn đồng nhất, không lệch ngang** + khung cuộn~~ → xong 2026-11-09 (§32).
   2b. **Tab "Văn bản giao diện"** (§33, MEMORY 2026-11-09 09:12, 09:14; mẫu đã duyệt https://claude.ai/artifact/XbyVkYNju69SB7pmvbAurb, bố cục A): developer → verifier; bảng Supabase mới + RLS (HANDOFF §3 về drop/delete); ngân sách JS.
   3. **Phase 2**: bảng tham chiếu có effective date + `input.refTable` → `output.template` → `code.python` (Pyodide).
 
@@ -91,6 +94,9 @@
 | So ảnh pixel + §4.12a kiểm (PASS, 2 MINOR) | verifier | ≈ 93k |
 | Tối ưu hiệu năng (upload DuckDB) | developer | ≈ 191k |
 | Tối ưu hiệu năng kiểm (PASS, 3 MINOR — session chính sửa 2) | verifier | ≈ 99k |
+| Thanh cuộn (§32 phần 1) | session chính | — |
+| Khung cuộn (header cố định) | developer | ≈ 155k |
+| Thanh cuộn + khung cuộn kiểm (1 MAJOR Designer dán node — session chính sửa) | verifier | ≈ 114k |
 
 Ghi chú vòng giao diện: tốn nhiều vòng do yêu cầu UI chốt dần qua ảnh chụp; lần sau với thay đổi UI nên dựng **trang mẫu tương tác (Artifact) để Harold duyệt trước khi code** (đã làm ở cuối vòng, hiệu quả). Trang ảnh duyệt: https://claude.ai/artifact/F8Zq7ULN6RSgJFfEgFcmhB; mẫu bảng: https://claude.ai/artifact/AwjFJEPc5YndnE6Z1tf56B.
 

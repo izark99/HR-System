@@ -33,8 +33,10 @@ export function PageShell({
     <main
       id="main"
       // Target of the skip link: focused (not only scrolled to), so Tab and the scroll keys carry
-      // on from the content (spec §32 AC-SB-08). No ring: it is not a control.
-      tabIndex={-1}
+      // on from the content (spec §32 AC-SB-08). No ring: it is not a control. Not on the
+      // full-bleed Designer: a click on its empty canvas must leave the focus on the body, where
+      // the canvas shortcuts (copy, paste, delete) listen.
+      tabIndex={width === 'bleed' ? undefined : -1}
       data-page-width={width}
       className={cx(
         'flex flex-col focus:outline-none',

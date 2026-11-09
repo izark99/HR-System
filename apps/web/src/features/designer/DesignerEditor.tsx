@@ -102,7 +102,8 @@ const MINIMAP_MIN_HEIGHT = 360;
 
 /** Focus on the canvas (a node, an edge, the pane) or nowhere in particular (body). */
 function onCanvas(target: EventTarget | null): boolean {
-  if (!(target instanceof Element) || target === document.body) return true;
+  // `main#main` too: the page frame, focused by a click on empty space of the page (spec §32).
+  if (!(target instanceof Element) || target === document.body || target.id === 'main') return true;
   if (isEditable(target)) return false;
   const flow = target.closest('.react-flow');
   if (!flow) return false;
