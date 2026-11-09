@@ -249,10 +249,22 @@ select pg_temp.bad_rows(
   (select jsonb_agg(jsonb_build_object('ma_cn', 'CN' || g, 'ten_cn', repeat('x', 1100)))::text
      from generate_series(1, 5000) g),
   'rows_too_large', 'more than 5 MiB of rows is refused');
+-- A draft may hold cells that do not fit (rollback after a column change); publishing checks.
+update public.ref_table_versions set rows = '[{"ma_cn":"CN01","khac":1}]'
+ where id = (select id from ids where name = 'v1');
 select pg_temp.expect_error(
-  format($q$update public.ref_table_versions set rows = '[{"ma_cn":"CN01","khac":1}]' where id = %L$q$,
+  format($q$update public.ref_table_versions set status = 'published', effective_from = '2026-01-01', change_note = 'x' where id = %L$q$,
          (select id from ids where name = 'v1')),
-  '22023', 'a direct write of rows is checked too', 'invalid_rows');
+  '22023', 'a direct publish checks every row', 'invalid_rows');
+select pg_temp.expect_error(
+  format($q$update public.ref_table_versions set status = 'published', effective_from = '2026-01-01', change_note = '  ' where id = %L$q$,
+         (select id from ids where name = 'v1')),
+  '22023', 'a direct publish needs a note', 'change_note_required');
+select pg_temp.expect_error(
+  format($q$update public.ref_table_versions set status = 'published', change_note = 'x' where id = %L$q$,
+         (select id from ids where name = 'v1')),
+  '22023', 'a direct publish needs a start date', 'effective_from_required');
+update ids set at = (select updated_at from public.ref_table_versions where id = ids.id) where name = 'v1';
 
 -- Exactly 50,000 rows are accepted (then put the 3 rows back).
 select pg_temp.expect(
@@ -397,6 +409,42 @@ update public.ref_table_versions set effective_to = '2027-01-01' where id = (sel
 select pg_temp.expect(
   (select effective_to = '2027-01-01' from public.ref_table_versions where id = (select id from ids where name = 'v2')),
   'effective_to of a published version can be changed');
+
+-- Rollback after a column change (verifier MAJOR): the draft takes the current columns, cells
+-- that no longer fit stay as text, publishing is refused until they are fixed.
+update public.ref_table_versions set status = 'discarded'
+ where ref_table_id = (select id from ids where name = 'cn') and status = 'draft';
+update ids set at = (select updated_at from public.ref_tables where id = ids.id) where name = 'cn';
+select public.admin_save_ref_table(
+  (select id from ids where name = 'cn'), 'DM_CHI_NHANH', 'Danh mục chi nhánh', '',
+  '[{"key":"ma_cn","title":"Mã chi nhánh","type":"string","aliases":[],"isKey":true},
+    {"key":"ten_cn","title":"Tên chi nhánh","type":"integer","aliases":[],"isKey":false},
+    {"key":"vung","title":"Vùng","type":"string","aliases":[],"isKey":false}]',
+  (select at from ids where name = 'cn'), null);
+insert into ids (name, id, at)
+select 'v5', r.version_id, r.updated_at
+from public.admin_create_ref_draft_from_version((select id from ids where name = 'v2')) as r;
+select pg_temp.expect(
+  (select rows from public.ref_table_versions where id = (select id from ids where name = 'v5'))
+    = '[{"ma_cn":"CN01","ten_cn":"Hồ Chí Minh","vung":"1"},
+        {"ma_cn":"CN02","ten_cn":"Hà Nội","vung":"1"},
+        {"ma_cn":"CN03","vung":"2"}]'::jsonb,
+  'rollback after a column change: unknown keys left out, cells off-type kept as text');
+select pg_temp.expect_error(
+  format($q$select * from public.admin_publish_ref_table_draft(%L, '2027-01-01', null, 'x', false, %L)$q$,
+         (select id from ids where name = 'v5'), (select at from ids where name = 'v5')),
+  '22023', 'the rolled-back draft cannot be published before it is fixed', 'invalid_rows');
+update ids set at = r.updated_at
+from public.admin_replace_ref_table_draft(
+  (select id from ids where name = 'cn'),
+  '[{"ma_cn":"CN01","ten_cn":1,"vung":"1"},{"ma_cn":"CN02","vung":"1"},{"ma_cn":"CN03","vung":"2"}]',
+  (select at from ids where name = 'v5'), null) as r
+where ids.name = 'v5';
+select pg_temp.expect(
+  (select version_no from public.admin_publish_ref_table_draft(
+     (select id from ids where name = 'v5'), '2027-01-01', null, 'Sửa sau khi đổi cột', false,
+     (select at from ids where name = 'v5'))) = 5,
+  'fixed, the rolled-back draft publishes');
 
 -- Usage of the table by flows (Admins).
 select pg_temp.expect(

@@ -73,6 +73,52 @@ as $$
   select octet_length(p_rows::text)
 $$;
 
+/** A stored cell value fits the column type (null = blank always fits). */
+create or replace function private.ref_value_fits(p_type text, p_value jsonb)
+returns boolean
+language sql
+immutable
+set search_path = ''
+as $$
+  select p_value is null or jsonb_typeof(p_value) = 'null' or coalesce(
+    case p_type
+      when 'string' then jsonb_typeof(p_value) = 'string'
+      when 'integer' then jsonb_typeof(p_value) = 'number'
+        and (p_value #>> '{}') ~ '^-?[0-9]{1,16}$'
+      when 'decimal' then jsonb_typeof(p_value) = 'string'
+        and (p_value #>> '{}') ~ '^-?[0-9]{1,28}(\.[0-9]{1,10})?$'
+      when 'date' then jsonb_typeof(p_value) = 'string'
+        and (p_value #>> '{}') ~ '^[0-9]{4}-[0-9]{2}-[0-9]{2}$'
+      when 'boolean' then jsonb_typeof(p_value) = 'boolean'
+    end, false)
+$$;
+
+/**
+ * Rows of an older version put on the current columns (rollback after a column change): keys no
+ * longer defined are left out, a value that does not fit its column's type any more is kept as
+ * text (the data grid shows it in error until fixed; publishing checks every row).
+ */
+create or replace function private.project_ref_rows(p_columns jsonb, p_rows jsonb)
+returns jsonb
+language sql
+immutable
+set search_path = ''
+as $$
+  select coalesce(jsonb_agg(
+    (select coalesce(jsonb_object_agg(
+              e.key,
+              case when private.ref_value_fits(c.col ->> 'type', e.value) then e.value
+                   else to_jsonb(e.value #>> '{}') end), '{}'::jsonb)
+       from jsonb_each(case when jsonb_typeof(r.row) = 'object' then r.row else '{}'::jsonb end)
+            as e(key, value)
+       join jsonb_array_elements(p_columns) as c(col) on c.col ->> 'key' = e.key
+      where jsonb_typeof(e.value) <> 'null')
+    order by r.rn), '[]'::jsonb)
+  from jsonb_array_elements(
+         case when jsonb_typeof(p_rows) = 'array' then p_rows else '[]'::jsonb end)
+       with ordinality as r(row, rn)
+$$;
+
 /**
  * Rows of a version against the table's columns (AC-RT-01..04): an array of ≤ 50,000 objects,
  * ≤ 5 MiB, only known keys, values of the column type, every key column filled, no two rows with
@@ -112,18 +158,7 @@ begin
       select c.col from jsonb_array_elements(p_columns) as c(col) where c.col ->> 'key' = e.key
     ) as d on true
     where d.col is null
-       or (jsonb_typeof(e.value) <> 'null' and not (
-            case d.col ->> 'type'
-              when 'string' then jsonb_typeof(e.value) = 'string'
-              when 'integer' then jsonb_typeof(e.value) = 'number'
-                and (e.value #>> '{}') ~ '^-?[0-9]{1,16}$'
-              when 'decimal' then jsonb_typeof(e.value) = 'string'
-                and (e.value #>> '{}') ~ '^-?[0-9]{1,28}(\.[0-9]{1,10})?$'
-              when 'date' then jsonb_typeof(e.value) = 'string'
-                and (e.value #>> '{}') ~ '^[0-9]{4}-[0-9]{2}-[0-9]{2}$'
-              when 'boolean' then jsonb_typeof(e.value) = 'boolean'
-              else false
-            end))
+       or not private.ref_value_fits(d.col ->> 'type', e.value)
   ) then
     raise exception 'invalid_rows' using errcode = '22023';
   end if;
@@ -166,10 +201,14 @@ $$;
 revoke all on function private.ref_columns_valid(jsonb) from public, anon, authenticated;
 revoke all on function private.ref_rows_bytes(jsonb) from public, anon, authenticated;
 revoke all on function private.assert_ref_rows(jsonb, jsonb) from public, anon, authenticated;
+revoke all on function private.ref_value_fits(text, jsonb) from public, anon, authenticated;
+revoke all on function private.project_ref_rows(jsonb, jsonb) from public, anon, authenticated;
 -- Used by CHECK constraints and triggers evaluated with the writing role's privileges.
 grant execute on function private.ref_columns_valid(jsonb) to authenticated, service_role;
 grant execute on function private.ref_rows_bytes(jsonb) to authenticated, service_role;
 grant execute on function private.assert_ref_rows(jsonb, jsonb) to authenticated, service_role;
+grant execute on function private.ref_value_fits(text, jsonb) to authenticated, service_role;
+grant execute on function private.project_ref_rows(jsonb, jsonb) to authenticated, service_role;
 
 -- ---------------------------------------------------------------------------------------------
 -- Tables
@@ -246,9 +285,11 @@ create unique index if not exists ref_table_versions_one_draft_idx
 
 /**
  * Lifecycle guard (spec §34 AC-RT-01, §14.1):
- * - insert: only drafts; version_no = max + 1; publish stamps cleared; rows checked.
- * - draft: rows editable (checked against the table's columns); -> published stamps
- *   published_at/by and checks the rows again (columns may have changed); -> discarded.
+ * - insert: only drafts; version_no = max + 1; publish stamps cleared.
+ * - draft: rows editable (a draft may hold cells that no longer fit after a column change: the
+ *   grid shows them; the save RPC checks what the client sends); -> published needs a start
+ *   date and a non-blank note, stamps published_at/by and checks every row against the current
+ *   columns; -> discarded.
  * - published: immutable except `effective_to` and `status -> retired`.
  * - retired, discarded: immutable.
  * `updated_by` is always the caller. Errors: HF001 with a stable message.
@@ -274,8 +315,6 @@ begin
     new.published_at := null;
     new.published_by := null;
     new.created_by := auth.uid();
-    select t.columns into v_columns from public.ref_tables t where t.id = new.ref_table_id;
-    perform private.assert_ref_rows(v_columns, new.rows);
     return new;
   end if;
 
@@ -290,15 +329,18 @@ begin
       raise exception 'ref_version_immutable' using errcode = 'HF001';
     end if;
     if new.status = 'published' then
+      -- Also on a direct PATCH (the publish RPC checks the same first).
+      if new.effective_from is null then
+        raise exception 'effective_from_required' using errcode = '22023';
+      end if;
+      new.change_note := private.require_change_note(new.change_note);
+      select t.columns into v_columns from public.ref_tables t where t.id = new.ref_table_id;
+      perform private.assert_ref_rows(v_columns, new.rows);
       new.published_at := now();
       new.published_by := auth.uid();
     else
       new.published_at := null;
       new.published_by := null;
-    end if;
-    if new.status = 'published' or new.rows is distinct from old.rows then
-      select t.columns into v_columns from public.ref_tables t where t.id = new.ref_table_id;
-      perform private.assert_ref_rows(v_columns, new.rows);
     end if;
     return new;
   end if;
@@ -557,6 +599,9 @@ begin
     from public.ref_table_versions v
    where v.ref_table_id = p_ref_table_id and v.status = 'draft'
    for update;
+  -- What the import / grid sends must fit the columns (the trigger lets a draft hold old cells).
+  perform private.assert_ref_rows(
+    (select t.columns from public.ref_tables t where t.id = p_ref_table_id), p_rows);
 
   if v_draft is null then
     if p_expected_updated_at is not null then
@@ -584,7 +629,10 @@ begin
 end;
 $$;
 
-/** Copy the rows of a version into a new draft (rollback, spec §14.1). An open draft: 23505. */
+/**
+ * Copy the rows of a version into a new draft (rollback, spec §14.1), put on the current columns
+ * (`project_ref_rows`). An open draft: 23505.
+ */
 create or replace function public.admin_create_ref_draft_from_version(p_version_id uuid)
 returns table (version_id uuid, version_no integer, updated_at timestamptz)
 language plpgsql
@@ -607,9 +655,12 @@ begin
     raise exception 'version_not_found' using errcode = 'P0002';
   end if;
 
+  -- Columns may have changed since that version: its rows are put on the current columns.
   return query
     insert into public.ref_table_versions as v (ref_table_id, status, rows)
-    values (v_table, 'draft', v_rows)
+    values (v_table, 'draft',
+            private.project_ref_rows(
+              (select t.columns from public.ref_tables t where t.id = v_table), v_rows))
     returning v.id, v.version_no, v.updated_at;
 end;
 $$;
