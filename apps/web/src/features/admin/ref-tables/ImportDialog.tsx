@@ -181,53 +181,55 @@ function ImportBody({
 
   return (
     <div className="flex flex-col gap-4">
-      <div
-        data-import-drop
-        onDragOver={(e) => {
-          e.preventDefault();
-          setDragging(true);
+      <input
+        ref={inputRef}
+        type="file"
+        accept=".xlsx,.xls"
+        aria-label={t('import.chooseLabel')}
+        className="sr-only"
+        tabIndex={-1}
+        onChange={(e) => {
+          const f = e.target.files?.[0];
+          e.target.value = '';
+          if (f) void read(f);
         }}
-        onDragLeave={() => setDragging(false)}
-        onDrop={onDrop}
-        className={cx(
-          'flex flex-col items-center gap-1 rounded-card border-2 border-dashed p-4 text-center text-body',
-          dragging
-            ? 'border-teal-strong bg-teal-tint text-ink-soft'
-            : 'border-drop-border bg-drop-bg text-ink-soft',
-        )}
-      >
-        <span>
-          {t('import.drop')}{' '}
-          <button
-            type="button"
-            data-autofocus
-            disabled={phase.kind === 'reading' || busy}
-            onClick={() => inputRef.current?.click()}
-            className="min-h-target rounded-card px-2 font-semibold text-teal-strong underline hover:text-teal-hover disabled:cursor-not-allowed disabled:text-muted"
-          >
-            {t('import.choose')}
-          </button>
-        </span>
-        <span className="text-caption text-muted">
-          {t('import.limits', {
-            rows: MAX_ROWS.toLocaleString('vi-VN'),
-            mb: MAX_BYTES / 1024 / 1024,
-          })}
-        </span>
-        <input
-          ref={inputRef}
-          type="file"
-          accept=".xlsx,.xls"
-          aria-label={t('import.chooseLabel')}
-          className="sr-only"
-          tabIndex={-1}
-          onChange={(e) => {
-            const f = e.target.files?.[0];
-            e.target.value = '';
-            if (f) void read(f);
+      />
+      {phase.kind === 'pick' && (
+        <div
+          data-import-drop
+          onDragOver={(e) => {
+            e.preventDefault();
+            setDragging(true);
           }}
-        />
-      </div>
+          onDragLeave={() => setDragging(false)}
+          onDrop={onDrop}
+          className={cx(
+            'flex flex-col items-center gap-1 rounded-card border-2 border-dashed p-4 text-center text-body',
+            dragging
+              ? 'border-teal-strong bg-teal-tint text-ink-soft'
+              : 'border-drop-border bg-drop-bg text-ink-soft',
+          )}
+        >
+          <span>
+            {t('import.drop')}{' '}
+            <button
+              type="button"
+              data-autofocus
+              disabled={busy}
+              onClick={() => inputRef.current?.click()}
+              className="min-h-target rounded-card px-2 font-semibold text-teal-strong underline hover:text-teal-hover disabled:cursor-not-allowed disabled:text-muted"
+            >
+              {t('import.choose')}
+            </button>
+          </span>
+          <span className="text-caption text-muted">
+            {t('import.limits', {
+              rows: MAX_ROWS.toLocaleString('vi-VN'),
+              mb: MAX_BYTES / 1024 / 1024,
+            })}
+          </span>
+        </div>
+      )}
 
       {phase.kind !== 'pick' && (
         <div
@@ -240,7 +242,19 @@ function ImportBody({
               {t('import.reading')}
             </span>
           )}
-          {chip}
+          <span className="flex shrink-0 items-center gap-2">
+            {chip}
+            {phase.kind !== 'reading' && (
+              <Button
+                variant="text"
+                size="sm"
+                disabled={busy}
+                onClick={() => inputRef.current?.click()}
+              >
+                {t('import.chooseOther')}
+              </Button>
+            )}
+          </span>
         </div>
       )}
       {phase.kind === 'crashed' && (
@@ -253,7 +267,7 @@ function ImportBody({
         <div className="flex flex-col gap-2">
           <h3 className="m-0 text-label text-ink">{t('import.reportTitle')}</h3>
           <div
-            className="overflow-x-auto rounded-card border border-line"
+            className="max-h-40 overflow-auto rounded-card border border-line"
             role="region"
             tabIndex={0}
             aria-label={t('import.reportTitle')}
@@ -314,7 +328,7 @@ function ImportBody({
           {draft ? t('import.blocked', { count: draft.rowCount }) : t('import.blockedNew')}
         </Callout>
       )}
-      {done && done.result.preview.length > 0 && (
+      {rows && done && done.result.preview.length > 0 && (
         <div className="flex flex-col gap-2">
           <h3 className="m-0 text-label text-ink">
             {t('import.previewTitle', {
@@ -324,7 +338,7 @@ function ImportBody({
           </h3>
           <div
             data-import-preview
-            className="max-h-64 overflow-auto rounded-card border border-line"
+            className="max-h-40 overflow-auto rounded-card border border-line"
             role="region"
             tabIndex={0}
             aria-label={t('import.previewLabel')}
@@ -356,16 +370,15 @@ function ImportBody({
       )}
 
       {needConfirm && (
-        <div className="flex flex-col gap-3">
-          <Callout tone="amber" label={t('personal.label')} role="status">
-            {t('personal.columns', { columns: personal.map((c) => `"${c.title}"`).join(', ') })}
-          </Callout>
-          <Checkbox
-            checked={confirmed}
-            onChange={(e) => setConfirmed(e.target.checked)}
-            label={t('personal.confirm')}
-          />
-        </div>
+        <Checkbox
+          checked={confirmed}
+          onChange={(e) => setConfirmed(e.target.checked)}
+          label={t('personal.confirm')}
+          hint={`${t('personal.label')} ${t('personal.columns', {
+            columns: personal.map((c) => `"${c.title}"`).join(', '),
+          })}`}
+          hintLabel={t('personal.label')}
+        />
       )}
       {rows && gridDirty && (
         <Callout tone="amber" label={t('import.gridDirtyLabel')} role="status">

@@ -351,7 +351,7 @@ function DataEditor({
             )}
           </FormField>
           {!readOnly && (
-            <>
+            <div className="flex items-center gap-3 self-end">
               <Button onClick={addRow}>{t('data.addRow')}</Button>
               <Tooltip text={t('data.undo')} className="inline-flex">
                 <Button
@@ -375,7 +375,7 @@ function DataEditor({
                   <RedoIcon />
                 </Button>
               </Tooltip>
-            </>
+            </div>
           )}
         </Toolbar>
         {grid.rows.length === 0 ? (

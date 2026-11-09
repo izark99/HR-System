@@ -704,7 +704,11 @@ function PublishForm({
         />
       )}
       {summary && (
-        <Callout tone="blue" label={t('publish.summaryLabel')} role="status">
+        <Callout
+          tone="blue"
+          label={t('publish.summaryLabel', { version: summary.version })}
+          role="status"
+        >
           {t('publish.summary', {
             version: summary.version,
             added: summary.diff.added.length,

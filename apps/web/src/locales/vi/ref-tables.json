@@ -183,7 +183,7 @@
   "publish": {
     "title": "Publish v{{version}} của {{code}}",
     "summaryLabel": "So với v{{version}}:",
-    "summary": "v{{version}} → draft: thêm {{added}} dòng, sửa {{changed}}, xóa {{removed}}.",
+    "summary": "draft thêm {{added, number}} dòng, sửa {{changed, number}}, xóa {{removed, number}}.",
     "rowsMismatch": "Dữ liệu draft không còn khớp các cột hiện tại (cột đã đổi). Mở draft, sửa các ô lỗi rồi lưu lại.",
     "done": "Đã publish v{{version}} của {{code}}, hiệu lực từ {{from}}."
   },
@@ -259,6 +259,7 @@
     "titleNew": "Import Excel vào draft mới",
     "drop": "Kéo thả file vào đây hoặc",
     "choose": "chọn file",
+    "chooseOther": "Chọn file khác",
     "chooseLabel": "Chọn file Excel để import",
     "limits": ".xlsx .xls · tối đa {{rows}} dòng, {{mb}} MB",
     "reading": "Đang đọc file…",

@@ -19,9 +19,11 @@ import {
   runToResult,
   timesheetInput,
   uploadFixtures,
+  workbook,
 } from './helpers';
 import { layoutLint, LayoutReport } from './layout-lint';
 import { baseFlowDefinition, type SupabaseMock } from './supabase-mock';
+import { branchRows } from './supabase-mock-ref';
 
 const FLOW_ID = '00000000-0000-4000-8000-0000000000f1';
 const DRAFT_ID = '00000000-0000-4000-8000-000000000779';
@@ -82,6 +84,43 @@ function withDraft(supabase: SupabaseMock) {
     published_at: null,
     updated_at: '2026-10-27T01:00:00.000001+00:00',
   });
+}
+
+/** Reference tables (spec §34): one table used by a flow, 2 published + 1 draft, a second one. */
+export function seedRefTables(supabase: SupabaseMock) {
+  supabase.ref.seed({
+    code: 'DM_CHI_NHANH',
+    name: 'Danh mục chi nhánh',
+    published: [
+      { from: '2026-01-01', to: '2026-07-01', rows: branchRows(24), note: 'Thêm CN23, CN24' },
+      {
+        from: '2026-07-01',
+        rows: branchRows(24).map((r, i) => (i === 4 ? { ...r, vung: 2 } : r)),
+        note: 'Đổi vùng CN05 3 → 2',
+      },
+    ],
+    draft: branchRows(26),
+  });
+  supabase.ref.seed({
+    code: 'MAP_MA_CA',
+    name: 'Mapping mã ca làm việc',
+    columns: [
+      { key: 'ma_ca', title: 'Mã ca', type: 'string', aliases: [], isKey: true },
+      { key: 'gio_bat_dau', title: 'Giờ bắt đầu', type: 'string', aliases: [], isKey: false },
+      { key: 'he_so', title: 'Hệ số', type: 'decimal', aliases: [], isKey: false },
+    ],
+    draft: [],
+  });
+  supabase.ref.usage = [
+    {
+      ref_table_code: 'DM_CHI_NHANH',
+      flow_id: '00000000-0000-4000-8000-0000000000f1',
+      flow_code: 'payroll-timesheet',
+      flow_name: 'Đối chiếu bảng lương – chấm công',
+      version_no: 3,
+      status: 'published',
+    },
+  ];
 }
 
 async function ready(page: Page) {
@@ -292,6 +331,83 @@ for (const viewport of [DESKTOP, LAPTOP]) {
       await expect(page.getByRole('dialog', { name: /^Khôi phục 1 dòng/ })).toBeVisible();
       await r.check('ui texts restore-all confirm');
       r.assertClean(`admin-ui-text-${size(viewport)}`);
+    });
+
+    test(`reference tables: list, columns, versions, data, dialogs ${size(viewport)}`, async ({
+      page,
+      supabase,
+    }) => {
+      seedRefTables(supabase);
+      const r = new LayoutReport(page);
+      await page.goto('/admin/ref-tables');
+      await ready(page);
+      await expect(
+        page.getByRole('region', { name: 'Bảng tham chiếu', exact: true }),
+      ).toBeVisible();
+      await r.check('ref tables list');
+      await page.getByRole('link', { name: 'Sửa cột DM_CHI_NHANH' }).click();
+      await ready(page);
+      await page.getByRole('button', { name: '+ Thêm cột' }).click();
+      const col = page.getByRole('dialog', { name: 'Thêm cột' });
+      await col.getByRole('textbox', { name: /^Tên hiển thị/ }).fill('Họ tên giám đốc CN');
+      await r.check('ref column dialog (personal note)');
+      await col.getByRole('button', { name: 'Lưu cột' }).click();
+      await expect(page.getByText('Có thể là dữ liệu cá nhân:')).toBeVisible();
+      await r.check('ref columns form (usage, changes, personal data)');
+      await page.getByRole('button', { name: 'Xóa cột ho_ten_giam_doc_cn' }).click();
+      await page.getByRole('link', { name: 'Phiên bản', exact: true }).click();
+      await ready(page);
+      await expect(page.locator('[data-diff-summary]')).toBeVisible();
+      await r.check('ref versions + diff');
+      await page.getByRole('button', { name: 'Thao tác khác cho v3' }).click();
+      await page.getByRole('menuitem', { name: 'Publish v3' }).click();
+      await expect(page.getByText(/So với v2: draft thêm 2 dòng/)).toBeVisible();
+      await r.check('ref publish dialog');
+      await page.keyboard.press('Escape');
+      await page.getByRole('button', { name: 'Import Excel vào draft' }).click();
+      const imp = page.getByRole('dialog', { name: 'Import Excel vào draft v3' });
+      await imp.getByLabel('Chọn file Excel để import').setInputFiles(
+        workbook('danh_muc_chi_nhanh_rat_dai_ten_file_ky_09_2026.xlsx', {
+          S: [
+            ['Mã CN', 'Tên chi nhánh', 'Vùng lương tối thiểu', 'Ghi chú'],
+            ...Array.from({ length: 30 }, (_, i) => [`CN${i + 1}`, `Chi nhánh ${i + 1}`, 1, '']),
+          ],
+        }),
+      );
+      await expect(imp.getByText('1 cảnh báo')).toBeVisible();
+      await r.check('ref import dialog (warning + preview)');
+      await imp.getByLabel('Chọn file Excel để import').setInputFiles(
+        workbook('loi.xlsx', {
+          S: [
+            ['Mã CN', 'Tên chi nhánh', 'Vùng lương tối thiểu'],
+            ['CN01', 'A', 'x'],
+            ['cn01', 'B', 1],
+          ],
+        }),
+      );
+      await expect(imp.getByText('2 lỗi')).toBeVisible();
+      await r.check('ref import dialog (errors)');
+      await page.keyboard.press('Escape');
+      await page.getByRole('link', { name: 'Sửa dữ liệu v3' }).click();
+      await ready(page);
+      const vung = page.getByRole('textbox', { name: 'Vùng lương tối thiểu, dòng 2', exact: true });
+      await vung.fill('hai');
+      await page.getByRole('button', { name: '+ Thêm dòng' }).click();
+      await page.getByRole('button', { name: 'Xóa dòng 1', exact: true }).click();
+      await r.check('ref data grid (draft, invalid cell, new + removed row)');
+      await page.getByRole('button', { name: 'Lưu draft' }).click();
+      await expect(page.getByText(/còn \d+ ô lỗi/)).toBeVisible();
+      await r.check('ref data grid (save blocked)');
+      await page.getByRole('link', { name: 'Phiên bản của DM_CHI_NHANH' }).click();
+      const leave = page.getByRole('dialog', { name: 'Rời trang?' });
+      await expect(leave).toBeVisible();
+      await r.check('ref data leave dialog');
+      await leave.getByRole('button', { name: 'Rời trang' }).click();
+      await page.getByRole('link', { name: 'Xem dữ liệu v2' }).click();
+      await ready(page);
+      await expect(page.getByRole('region', { name: 'Dữ liệu v2' })).toBeVisible();
+      await r.check('ref data read-only');
+      r.assertClean(`admin-ref-tables-${size(viewport)}`);
     });
 
     test(`designer: flow tabs (Tham số, Input slot) ${size(viewport)}`, async ({
