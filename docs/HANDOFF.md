@@ -1,6 +1,6 @@
 # HANDOFF — Trạng thái dự án để mở session mới
 
-> Cập nhật: 2026-11-09 (sau vòng so ảnh pixel + HANDOFF §4.12a). Đọc file này sau `CLAUDE.md` và `docs/MEMORY.md`.
+> Cập nhật: 2026-11-09 (sau vòng tối ưu hiệu năng; kế tiếp: thanh cuộn §32 → tab "Văn bản giao diện" §33). Đọc file này sau `CLAUDE.md` và `docs/MEMORY.md`.
 
 ## 1. Đã xong
 
@@ -16,6 +16,7 @@
 | Bộ khung UI/UX – vòng A (spec §29.1–29.2, AC-UI-60..69): token mới (`page-title`, `page-title-showcase`, `kpi`, `title-xs`, khoảng cách `page-x`/`page-top`/`section`/`stack`/`inline`), nút/input 44px chữ 16px; `components/layout/` (`PageShell`, `SideNavLayout`, `PageHeader`, `Section`, `Toolbar`, `StickyActionBar`), `Tabs`, `DataTable`, `FormField`, `EmptyState`, toast, `Dialog`/`ConfirmDialog` (chuyển vào `components/`), `KpiCard`/`ConclusionCard`, `Stepper`, icon gom ở `components/icons/`; luật khung trong `design-tokens.test.ts` kèm `PENDING_ROUND_B`; trang showcase chỉ trong bản build E2E (`apps/web/e2e-showcase.html`, `e2e/ui-frame*.spec.ts`) — lên `main` 2026-11-06 | ✅ |
 | Bộ khung UI/UX – vòng B + 4 vòng sửa bố cục (spec §29.3, AC-UI-70..78; MEMORY 2026-11-06): mọi màn chuyển sang layout/pattern chung (User bỏ menu trái, Chạy flow có `Stepper` + `StickyActionBar`, Kết quả KPI 40px, Admin mẫu List + toast + `ConfirmDialog` chặn Esc khi busy), nối cạnh bằng bàn phím (nút "Nối tới…", Ctrl+E, đọc "Đã nối A → B"), control 44px kể cả dense, nhãn field/checkbox 1 dòng (lưới tự giảm cột, không để phần tử lẻ hàng cuối), gợi ý/giải thích sau nút (i) (`InfoTip`, 1 popover mỗi lúc), câu trạng thái hiện sẵn (`note`), mỗi chiều 1 vùng cuộn, `MiddleCut` cho tên file, lỗi cấu hình node gọi theo nhãn field, minimap ẩn khi canvas thấp, node mới đặt chỗ trống + dời khung nhìn; bộ kiểm hình học `e2e/layout-lint` (18 luật, 1280/1024/390, mọi màn + mọi loại node) — lên `main` 2026-11-08 sau khi Harold duyệt ảnh (https://claude.ai/artifact/RRMf2ZJr3qLDMhSqkZVy9k) | ✅ |
 | So ảnh pixel (spec §30.3, AC-TL-10..14) + lỗi Input slot/Tham số gọi theo nhãn form (AC-UI-79, §4.12a): `toHaveScreenshot` ngưỡng 0 pixel cho `ui-v2*.spec.ts`, 45 ảnh gốc (4,9 MB) ở `e2e/__screenshots__/`, đồng hồ trình duyệt cố định, "04-run / running" chỉ duyệt tay; bỏ 1 dấu sắc lệch 1 pixel vẫn bị bắt. Nhãn lỗi ở `locales/vi/engine-fields.json` (chỉ nạp trong worker, JS entry giữ 213,1 KiB) — lên `main` 2026-11-09 | ✅ |
+| Tối ưu hiệu năng (spec §31, AC-PF-01..07): đẩy dữ liệu vào DuckDB bằng Arrow đúng kiểu theo row group 122.880 dòng, bỏ bảng `_raw` + CAST — 1M × 30: 13,6 → 5,0 s; 100k tổng ≈ 4 s; AC-B4-31 SQL công thức 100k/5 cột ≈ 0,75 s; đo từng chặng qua User Timing `hrflow:*` (`e2e/perf-stages.spec.ts`, `HRFLOW_PERF=1`), `pnpm perf:local` cho máy thật (README) — lên `main` 2026-11-09. AC-B3-24 trên laptop 8 GB chờ số Harold đo | ✅ |
 | Test: Vitest (~1170 test), Playwright E2E (~435 test, Supabase được mock; test nặng opt-in `HEAVY_E2E=1`, `HRFLOW_PERF=1`) | ✅ |
 
 ## 2. Môi trường
@@ -42,7 +43,7 @@
 2. `xlsx-stream.ts` `isoToSerial`: ô `t="d"` có múi giờ (`+07:00`) hoặc phần lẻ giây đọc khác SheetJS (Excel không ghi dạng này). Test `it.fails` đang giữ chỗ.
 3. Designer: nối cạnh chỉ bằng chuột (chốt 2026-10-29); cách nối bằng bàn phím chưa làm — xếp vào vòng B của bộ khung UI/UX (chốt 2026-11-04 15:34).
 4. `hrflow_norm_key` khác `normalizeKeyPart` với sigma cuối Hy Lạp, ký tự NUL, chữ Unicode 16/17 mới (DuckDB 1.32 có bảng Unicode cũ hơn Node; CI chạy Node có ICU Unicode 17). Chấp nhận.
-5. Hiệu năng: AC-B3-24 (100k × 30 < 10 giây) biên mỏng. 1 triệu × 30: đọc async ≈ 30–36 s, sync ≈ 42–48 s (dao động theo tải máy), upload DuckDB ≈ 19 s, SQL công thức 10 cột ≈ 28 s, ghi ≈ 60 s. AC-B4-31 mới đo trên Node, chưa đo trên Chromium.
+5. Hiệu năng (cập nhật 2026-11-09 sau §31: upload DuckDB 1M ≈ 5 s, 100k tổng ≈ 4 s trên Chromium container; chặng lớn nhất còn lại là đọc .xlsx ≈ 40 s/1M ≈ 85% tổng, chưa tối ưu — Harold quyết). Số cũ: AC-B3-24 (100k × 30 < 10 giây) biên mỏng. 1 triệu × 30: đọc async ≈ 30–36 s, sync ≈ 42–48 s (dao động theo tải máy), upload DuckDB ≈ 19 s, SQL công thức 10 cột ≈ 28 s, ghi ≈ 60 s. AC-B4-31 mới đo trên Node, chưa đo trên Chromium.
 6. File DEFLATE dựng đặc biệt (hàng chục nghìn block tí hon) đọc chậm ~100 lần/byte (cả `DecompressionStream` native cũng vậy); file ~50 MB như vậy có thể treo worker vài phút, nút Hủy vẫn dùng được. Phương án nếu cần: trần thời gian đọc mỗi file.
 7. `transform.formula`: chuỗi 50 cột nối tiếp mất ≈ 3–4 s lập kế hoạch SQL (không phụ thuộc số dòng), kể cả khi xem trước; chưa có E2E cho việc ẩn cảnh báo khi sửa node phía trên (mới có unit test `preview-signature`).
 8. CI GitHub (`ci.yml`) không chạy E2E; E2E phải chạy local trước khi lên `main`.
@@ -55,12 +56,16 @@
 
 13. Vòng so ảnh pixel (MINOR, verifier 2026-11-09): (a) không được nới `maxDiffPixels` (bỏ dấu sắc chỉ lệch 1 pixel; `threshold` màu để mặc định 0,2); (b) chưa có `locales/en/engine-fields.json` — khi thêm tiếng Anh phải thêm, nếu không nhãn tiếng Việt chen vào câu tiếng Anh; (c) key `auth.tagline` không dùng ở đâu; (d) kiểm tra trước Publish ở màn Version chỉ được unit test phủ (dùng chung `checkDesign`), chưa có E2E riêng cho nhãn; (e) đổi giao diện hoặc đổi Chromium → chạy `CI=1 npx playwright test e2e/ui-v2 --update-snapshots` sau `build:e2e`, soi diff ảnh, commit ảnh cùng commit đổi UI.
 
+14. Vòng hiệu năng (MINOR, verifier 2026-11-09): (a) SQL công thức chậm hơn thật ≈ 5–8% (+40–60 ms ở 100k; bố cục row group mới), vẫn xa mục tiêu 2 s, tổng lần chạy nhanh hơn; (b) entry User Timing `hrflow:read` trong worker tăng 1 mỗi lần chọn file, không bị xóa ngoài E2E (rất nhỏ, không chứa dữ liệu); (c) `pnpm perf:local -- --no-build` chỉ dùng được với bản `build:e2e`; (d) thứ tự cột khi upload đã có kiểm tra chặn (`scope.ts`), lỗi nếu lệch.
+
 ## 5. Bước tiếp theo
 
 - ~~Vòng nâng tooling~~, ~~bộ khung UI/UX vòng A, vòng B~~ → xong (lên `main` 2026-11-08). ~~So ảnh pixel~~ + §4.12a → xong (lên `main` 2026-11-09).
 - **Tiếp theo (theo MEMORY 2026-11-04 15:34):**
   1. ~~**So ảnh pixel** (`toHaveScreenshot`): áp `docs/patches/2026-11-04-pixel-compare.patch` (`git apply`; patch viết trước vòng A/B nên nhiều khả năng phải áp tay theo nội dung: đồng hồ trình duyệt cố định `freezeClock`, thay chữ "… giây" trước khi so, trạng thái "đang chạy" không so, `maxDiffPixels: 0`, `snapshotPathTemplate` `e2e/__screenshots__/`), sinh ảnh gốc bằng `--update-snapshots` sau `pnpm --filter @hrflow/web build:e2e`, chạy 2 lần liên tiếp pass rồi commit ảnh. Gộp vào `e2e/ui-v2*.spec.ts` (giữ trang ảnh duyệt tay + `layout-lint`).~~
-  2. **Tối ưu hiệu năng** (HANDOFF §4 mục #5, vòng riêng): thời gian đẩy dữ liệu vào DuckDB, AC-B3-24 (100k × 30 < 10 giây), đo AC-B4-31 trên Chromium.
+  2. ~~**Tối ưu hiệu năng**~~ → xong 2026-11-09 (§31). Còn: Harold chạy `pnpm perf:local` trên laptop để kết luận AC-B3-24.
+  2a. **Thanh cuộn đồng nhất, không lệch ngang** (§32, chốt 2026-11-09 09:06): session chính làm, gửi Harold ảnh trước/sau.
+  2b. **Tab "Văn bản giao diện"** (§33, MEMORY 2026-11-09 09:12, 09:14; mẫu đã duyệt https://claude.ai/artifact/XbyVkYNju69SB7pmvbAurb, bố cục A): developer → verifier; bảng Supabase mới + RLS (HANDOFF §3 về drop/delete); ngân sách JS.
   3. **Phase 2**: bảng tham chiếu có effective date + `input.refTable` → `output.template` → `code.python` (Pyodide).
 
 ## 6. Token theo vòng (để so sánh hiệu quả)
@@ -84,6 +89,8 @@
 | Kiểm vòng sửa (2 lần, lần cuối PASS) | verifier | ≈ 323k (162k + 161k) |
 | So ảnh pixel + §4.12a | session chính (không subagent code) | — |
 | So ảnh pixel + §4.12a kiểm (PASS, 2 MINOR) | verifier | ≈ 93k |
+| Tối ưu hiệu năng (upload DuckDB) | developer | ≈ 191k |
+| Tối ưu hiệu năng kiểm (PASS, 3 MINOR — session chính sửa 2) | verifier | ≈ 99k |
 
 Ghi chú vòng giao diện: tốn nhiều vòng do yêu cầu UI chốt dần qua ảnh chụp; lần sau với thay đổi UI nên dựng **trang mẫu tương tác (Artifact) để Harold duyệt trước khi code** (đã làm ở cuối vòng, hiệu quả). Trang ảnh duyệt: https://claude.ai/artifact/F8Zq7ULN6RSgJFfEgFcmhB; mẫu bảng: https://claude.ai/artifact/AwjFJEPc5YndnE6Z1tf56B.
 

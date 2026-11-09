@@ -214,6 +214,13 @@ export class SqlScope {
         vectors[c.key] = toArrow(table.vectors[i]!, from, to - from, c.key);
       });
       vectors[ORD_NAME] = ordVector(from, to - from);
+      // Appended by position, so the key order of `vectors` must be the table definition. JS puts
+      // integer-like keys ("2024") first; slot/SQL keys cannot be such (IDENTIFIER), but a future
+      // key must never shift data into the wrong column silently.
+      const order = Object.keys(vectors);
+      if (order.length !== cols.length + 1 || cols.some((c, i) => order[i] !== c.key)) {
+        throw new Error('upload: column order differs from the table definition');
+      }
       const ipc = tableToIPC(new ArrowTable(vectors), 'stream');
       try {
         // Appended by position: the Arrow columns are in the order of the table definition.

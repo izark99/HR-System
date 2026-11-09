@@ -82,7 +82,8 @@ CI (GitHub Actions) chạy install → lint → format:check → typecheck → t
 
 Dùng để kết luận AC-B3-24 (laptop 8 GB). Chạy trên Windows hoặc macOS có cài Google Chrome; dữ liệu giả sinh tại chỗ (thư mục temp của máy), app chạy bản build cục bộ với Supabase giả lập, không gửi gì ra ngoài.
 
-1. Cài một lần: Node ≥ 22, `corepack enable`, `pnpm install` (không cần tải trình duyệt của Playwright).
+0. Lấy mã nguồn về máy (một lần): trên GitHub mở repo → nút **Code** → **Download ZIP**, giải nén (hoặc `git clone` nếu đã có Git). "Thư mục repo" là thư mục vừa giải nén (có file `package.json`). Mở terminal trong thư mục đó: Windows bấm chuột phải vào thư mục → "Open in Terminal"; macOS: Terminal, gõ `cd ` rồi kéo thư mục vào.
+1. Cài một lần: Node ≥ 22 (https://nodejs.org, bản LTS), `corepack enable` (Windows: mở terminal bằng "Run as administrator" cho riêng lệnh này; macOS có thể cần `sudo corepack enable`), rồi `pnpm install` (không cần tải trình duyệt của Playwright).
 2. Đóng bớt ứng dụng nặng, cắm sạc, rồi chạy trong thư mục repo:
 
 ```bash
