@@ -1,6 +1,7 @@
 import * as Comlink from 'comlink';
 import type { ParamValues, RunOutcome, RunProgressEvent } from '../../engine/protocol';
 import type { EngineApi } from '../../engine/worker';
+import { textGeneration, textOverrides } from '../../lib/ui-text';
 import { beginEngineWork } from '../auth/idle/activity';
 
 /** Rejection of calls still pending on a worker that was terminated (hard cancel). */
@@ -57,6 +58,8 @@ export class EngineClient {
   private readonly pending = new Set<(err: Error) => void>();
   private readonly ports = new Set<MessagePort>();
   private crashed = false;
+  /** `textGeneration()` the worker has the edited texts of (0: none sent, none needed). */
+  private textsSent = 0;
   readonly api: Api;
 
   constructor(private readonly createWorker: () => WorkerLike = spawnWorker) {
@@ -78,6 +81,7 @@ export class EngineClient {
     const worker = this.createWorker();
     this.worker = worker;
     this.crashed = false;
+    this.textsSent = 0;
     this.remote = Comlink.wrap<EngineApi>(worker);
     // Without this a dead worker would leave every pending call (and the engine-busy pause of
     // the auto sign-out) hanging forever. Accepted trade-off (reviewer MINOR): `error` also fires
@@ -102,6 +106,13 @@ export class EngineClient {
 
   private track<T>(call: () => T | PromiseLike<T>): Promise<T> {
     if (this.crashed) return Promise.reject(new EngineCrashedError());
+    // Texts edited by Admins reach the worker before the call (messages are handled in order).
+    if (this.textsSent !== textGeneration()) {
+      this.textsSent = textGeneration();
+      this.remote
+        .setTextOverrides(textOverrides(['engine', 'engineFields']))
+        .catch(() => undefined);
+    }
     return new Promise<T>((resolve, reject) => {
       const endWork = beginEngineWork();
       const abandon = (err: Error) => {

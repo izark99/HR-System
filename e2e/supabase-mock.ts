@@ -248,6 +248,17 @@ export class SupabaseMock {
   /** false: the token endpoint accepts a locked account, only the profile row says "locked". */
   authEnforcesBan = true;
 
+  /**
+   * public.ui_text_overrides (spec §33): `key` = `<ns>:<path>`, `value` null = default. Readable
+   * without sign-in (edited rows only; Admins see all), written by Admins only, never removed.
+   */
+  uiTexts: { key: string; value: string | null; updated_by: string | null; updated_at: string }[] =
+    [];
+  /** The ui_text_overrides read fails (500) while set: the app must keep the default texts. */
+  uiTextFailure: InjectedFailure | null = null;
+  /** Delay (ms) before the ui_text_overrides read answers. */
+  uiTextDelayMs = 0;
+
   /** PATCH/DELETE requests on flow_versions, as received. */
   versionWrites: { method: string; id: string; body: Record<string, unknown> }[] = [];
   /** Next flow_versions PATCH/DELETE fails with this. */
@@ -401,6 +412,81 @@ export class SupabaseMock {
     return rows[0];
   }
 
+  /** Same rules as the table: RLS, key/value checks, author and time set by the database. */
+  private async handleUiTexts(
+    request: Request,
+    url: URL,
+    json: (status: number, data: unknown) => Promise<void>,
+  ): Promise<void> {
+    const method = request.method();
+    const caller = this.userFromRequest(request);
+    const admin = caller?.role === 'admin' && caller.is_active;
+    if (method === 'GET') {
+      if (this.uiTextFailure) {
+        const f = this.uiTextFailure;
+        if (!f.sticky) this.uiTextFailure = null;
+        return json(f.status, { code: f.code, message: 'injected' });
+      }
+      if (this.uiTextDelayMs > 0) await new Promise((r) => setTimeout(r, this.uiTextDelayMs));
+      const cols = (url.searchParams.get('select') ?? '*').split(',').map((c) => c.trim());
+      if (!caller && cols.some((c) => c === '*' || c === 'updated_by' || c === 'updated_at')) {
+        return json(401, { code: '42501', message: 'permission denied' }).catch(() => undefined);
+      }
+      const onlyEdited = url.searchParams.get('value') === 'not.is.null';
+      const rows = this.uiTexts
+        .filter((r) => (admin ? !onlyEdited || r.value !== null : r.value !== null))
+        .map((r) => Object.fromEntries(cols.map((c) => [c, r[c as keyof typeof r]])));
+      return json(200, rows).catch(() => undefined);
+    }
+    if (!admin) return json(403, { code: '42501', message: 'denied' });
+    const bad = (v: unknown) =>
+      v !== null &&
+      (typeof v !== 'string' || v.length > 2000 || v.trim() === '' || /<[A-Za-z/!?]/.test(v));
+    const now = '2026-11-09T02:30:00+00:00';
+    if (method === 'POST') {
+      let body: unknown;
+      try {
+        body = JSON.parse(request.postData() ?? '');
+      } catch {
+        body = null;
+      }
+      const list = (Array.isArray(body) ? body : [body]) as { key?: unknown; value?: unknown }[];
+      for (const r of list) {
+        if (
+          typeof r?.key !== 'string' ||
+          !/^[a-zA-Z]+:[A-Za-z0-9_.-]+$/.test(r.key) ||
+          bad(r.value)
+        ) {
+          return json(400, { code: '23514', message: 'check' });
+        }
+      }
+      for (const r of list) {
+        const row = { key: r.key as string, value: (r.value as string | null) ?? null };
+        const existing = this.uiTexts.find((x) => x.key === row.key);
+        if (existing) Object.assign(existing, row, { updated_by: caller.id, updated_at: now });
+        else this.uiTexts.push({ ...row, updated_by: caller.id, updated_at: now });
+      }
+      return json(201, []);
+    }
+    if (method === 'PATCH') {
+      const patch = JSON.parse(request.postData() ?? '{}') as { value?: unknown };
+      if (bad(patch.value ?? null)) return json(400, { code: '23514', message: 'check' });
+      const key = url.searchParams.get('key')?.replace(/^eq\./, '');
+      const onlyEdited = url.searchParams.get('value') === 'not.is.null';
+      if (!key && !onlyEdited)
+        return json(400, { code: '21000', message: 'UPDATE requires a WHERE clause' });
+      for (const r of this.uiTexts) {
+        if ((key && r.key !== key) || (onlyEdited && r.value === null)) continue;
+        r.value = (patch.value as string | null) ?? null;
+        r.updated_by = caller.id;
+        r.updated_at = now;
+      }
+      return json(204, undefined);
+    }
+    // No removal on this table (AC-TX-06): not even an Admin.
+    return json(403, { code: '42501', message: 'denied' });
+  }
+
   private async handle(route: Route, request: Request): Promise<void> {
     const url = new URL(request.url());
     const method = request.method();
@@ -494,6 +580,7 @@ export class SupabaseMock {
     const rows = (all: unknown[]) => (single ? json(200, all[0] ?? null) : json(200, all));
     const eqFilter = (field: string) => url.searchParams.get(field)?.replace(/^eq\./, '');
 
+    if (path === '/rest/v1/ui_text_overrides') return this.handleUiTexts(request, url, json);
     if (path === '/rest/v1/profiles' && method === 'GET') {
       if (!caller?.is_active) return rows([]);
       const id = eqFilter('id');

@@ -9,6 +9,9 @@ import { createServices } from './services';
 
 const services = createServices();
 
+/** The first render waits for the texts edited by Admins (at most ~1.5 s, never fails). */
+export const appReady: Promise<unknown> = services?.ready ?? Promise.resolve();
+
 /** Shown when the build has no (or an unsafe) Supabase configuration. */
 function ConfigError() {
   const { t } = useTranslation();

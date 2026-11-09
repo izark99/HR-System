@@ -5,11 +5,14 @@ import { SupabaseFlowSource } from '../features/runner/supabase-flow-source';
 import { appConfig } from '../lib/env';
 import { browserSessionStorage, clearSessionAfterIdle, getSupabase } from '../lib/supabase';
 import { createHttpRevoker } from '../features/auth/session-revoke';
+import { loadTextOverrides } from '../lib/ui-text';
 
 export interface AppServices {
   auth: AuthService;
   source: FlowSource;
   logger: RunLogger | null;
+  /** Texts edited by Admins loaded (or given up on: defaults stay), spec §33 AC-TX-05. */
+  ready?: Promise<unknown>;
 }
 
 /** Bundled flows, loaded on demand so the fixture never reaches the production bundle. */
@@ -35,5 +38,10 @@ export function createServices(): AppServices | null {
   const sb = getSupabase();
   const source = new SupabaseFlowSource(sb);
   const revoker = createHttpRevoker(appConfig.supabaseUrl, appConfig.supabaseKey);
-  return { auth: new SupabaseAuth(sb, browserSessionStorage(), revoker), source, logger: source };
+  return {
+    auth: new SupabaseAuth(sb, browserSessionStorage(), revoker),
+    source,
+    logger: source,
+    ready: loadTextOverrides(sb),
+  };
 }

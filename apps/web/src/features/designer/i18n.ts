@@ -1,4 +1,5 @@
 import i18next from 'i18next';
+import { applyTextOverrides } from '../../lib/ui-text';
 import viDesigner from '../../locales/vi/designer.json';
 
 /**
@@ -7,4 +8,6 @@ import viDesigner from '../../locales/vi/designer.json';
  */
 if (!i18next.hasResourceBundle('vi', 'designer')) {
   i18next.addResourceBundle('vi', 'designer', viDesigner);
+  // Texts edited by Admins (spec §33 AC-TX-02).
+  applyTextOverrides('designer');
 }

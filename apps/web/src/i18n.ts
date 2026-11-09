@@ -11,7 +11,8 @@ export const resources = {
 } as const;
 
 void i18next.use(initReactI18next).init({
-  resources,
+  // Copies: texts edited by Admins (lib/ui-text.ts) change the store, never the default JSON.
+  resources: structuredClone(resources),
   lng: 'vi',
   fallbackLng: 'vi',
   ns: ['common', 'engine'],

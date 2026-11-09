@@ -6,7 +6,7 @@
 import * as Comlink from 'comlink';
 import type { DuckDbProvider } from './duckdb/base';
 import type { FileDownload, ParamValues, RowQuery, RunProgressEvent, UploadFile } from './protocol';
-import { createEngineTranslator } from './core/i18n';
+import { createEngineTranslator, setEngineTextOverrides } from './core/i18n';
 import { checkDesign } from './design';
 import { PreviewSession } from './preview';
 import { EngineSession } from './session';
@@ -25,6 +25,8 @@ function transferable(file: FileDownload): FileDownload {
 }
 
 const api = {
+  /** Texts edited by Admins (spec §33 AC-TX-05): sent before any other call of a fresh worker. */
+  setTextOverrides: (map: Record<string, string>) => setEngineTextOverrides(map),
   loadFlow: (raw: unknown) => session.loadFlow(raw),
   /** Designer / publish check: every problem + inferred columns (no data, spec §13.2). */
   checkDesign: (raw: unknown) => checkDesign(raw, { t: designT, duck }),
