@@ -89,8 +89,10 @@ test.describe('AC-09 data stays in the browser', () => {
     for (const r of toSupabase) {
       expect(r.fromWorker, r.url).toBe(false);
       expect(new URL(r.url).pathname, r.url).toMatch(
-        /^\/(rest\/v1\/(profiles|run_logs|rpc\/(my_flows|my_recent_runs|resolve_flow_version))|auth\/v1\/(user|token))$/,
+        /^\/(rest\/v1\/(profiles|run_logs|ui_text_overrides|rpc\/(my_flows|my_recent_runs|resolve_flow_version))|auth\/v1\/(user|token))$/,
       );
+      // UI texts edited by Admins (spec §33): read only, never written by a User.
+      if (new URL(r.url).pathname === '/rest/v1/ui_text_overrides') expect(r.method).toBe('GET');
     }
 
     // The run log: exactly one, metadata only (hashes, sizes, counts, i18n key) — spec §7.1.
