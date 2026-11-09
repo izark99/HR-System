@@ -9,6 +9,8 @@
 
 ## Phạm vi & sản phẩm
 
+2026-11-09 19:15 - Bảng tham chiếu vòng 1 (chấp nhận khác mẫu): hộp Import có lỗi thì chỉ hiện báo cáo + "chưa thay draft", không lỗi mới hiện xem trước 200 dòng; cảnh báo dữ liệu cá nhân trong hộp Import là checkbox xác nhận + nút (i) (màn Cột giữ khung cảnh báo); hàm RPC của bảng tham chiếu chạy `security invoker` như flow (hàm ghi audit xác nhận là definer, tự kiểm admin). Giữ bảng danh sách kéo ngang như quy tắc bảng Admin (không thu cột Phiên bản).
+
 2026-11-09 14:38 - Harold duyệt mẫu màn Bảng tham chiếu (https://claude.ai/artifact/92KZJ49WJTdFoxWMo26kar, bản 2 đã sửa lỗi bố cục màn Designer); bắt đầu vòng 1.
 
 2026-11-09 14:37 - Bảng tham chiếu (tiếp 14:28): import Excel vào draft thay toàn bộ dữ liệu draft; lưới sửa trong app có sửa ô, thêm/xóa dòng, tìm, Hoàn tác/Làm lại (Ctrl+Z/Y) và dán nhiều ô từ Excel; chia 2 vòng code: (1) database + RLS + màn Admin (danh sách, cột, phiên bản, import, lưới sửa), (2) node `input.refTable` + chọn version khi chạy + Designer + tham số `fromRefTable` — mỗi vòng developer → verifier → lên `main`. Mẫu Designer phải qua kiểm bố cục (không chồng lấn node/panel, không tràn, nhãn 1 dòng, giải thích sau (i)) như các lỗi đã sửa 2026-11-06.
