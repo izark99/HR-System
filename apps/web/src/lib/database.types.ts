@@ -128,6 +128,15 @@ export type RecentRunRow = {
   error_code: string | null;
 };
 
+/** Admin-edited UI text (spec §33): `key` is `<namespace>:<path>`, `value` null = default. */
+export type UiTextOverrideRow = {
+  key: string;
+  value: string | null;
+  /** Set by the database (trigger); not readable before sign-in. */
+  updated_by: string | null;
+  updated_at: string;
+};
+
 type Table<Row, Insert = Partial<Row>, Update = Partial<Row>> = {
   Row: Row;
   Insert: Insert;
@@ -151,6 +160,11 @@ export type Database = {
         RunLogInsert & { id: string; user_id: string; created_at: string },
         RunLogInsert,
         never
+      >;
+      ui_text_overrides: Table<
+        UiTextOverrideRow,
+        { key: string; value: string },
+        { value: string | null }
       >;
     };
     Views: Record<never, never>;
