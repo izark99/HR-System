@@ -50,6 +50,8 @@ export default function SqlEditor({
       fixedOverflowWidgets: true,
       ariaLabel: label,
       tabSize: 2,
+      // Same 10px bars as the rest of the app (spec §32 AC-SB-03; colours in index.css).
+      scrollbar: { verticalScrollbarSize: 10, horizontalScrollbarSize: 10, useShadows: false },
       wordWrap: 'on',
       // A real <textarea> for input: page-level key handlers (React Flow, Designer shortcuts)
       // recognise it as a text field.

@@ -99,7 +99,13 @@ export default function FormulaEditor({
       wordWrap: 'on',
       renderLineHighlight: 'none',
       overviewRulerLanes: 0,
-      scrollbar: { vertical: 'auto', horizontal: 'hidden' },
+      // Same 10px bars as the rest of the app (spec §32 AC-SB-03; colours in index.css).
+      scrollbar: {
+        vertical: 'auto',
+        horizontal: 'hidden',
+        verticalScrollbarSize: 10,
+        useShadows: false,
+      },
       suggest: { showWords: false },
       quickSuggestions: { other: true, strings: false, comments: false },
       editContext: false,

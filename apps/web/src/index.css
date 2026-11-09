@@ -260,23 +260,26 @@
 
 @layer base {
   /*
-   * In-app scroll areas (tables, diff, reports; AC-UI-59): one scrollbar look for the whole app.
-   * 10px track on #F1F5F9, pill thumb in the input-border grey (3:1 against the track,
-   * WCAG 1.4.11), ink on hover. Chromium/Safari use ::-webkit-scrollbar (rounded); Firefox
-   * gets the standard thin bar in the same colours.
+   * One scrollbar look for the whole app (AC-UI-59, spec §32 AC-SB-03): the page (`html`) and every
+   * in-app scroll area. 10px track on #F1F5F9, pill thumb in the input-border grey (3:1 against the
+   * track, WCAG 1.4.11), ink on hover. Chromium/Safari use ::-webkit-scrollbar (rounded); Firefox
+   * gets the standard thin bar in the same colours. Monaco draws its own bars: same look below.
    */
+  html::-webkit-scrollbar,
   .overflow-auto::-webkit-scrollbar,
   .overflow-x-auto::-webkit-scrollbar,
   .overflow-y-auto::-webkit-scrollbar {
     width: 10px;
     height: 10px;
   }
+  html::-webkit-scrollbar-track,
   .overflow-auto::-webkit-scrollbar-track,
   .overflow-x-auto::-webkit-scrollbar-track,
   .overflow-y-auto::-webkit-scrollbar-track {
     background: var(--color-neutral);
     border-radius: var(--radius-pill);
   }
+  html::-webkit-scrollbar-thumb,
   .overflow-auto::-webkit-scrollbar-thumb,
   .overflow-x-auto::-webkit-scrollbar-thumb,
   .overflow-y-auto::-webkit-scrollbar-thumb {
@@ -284,18 +287,53 @@
     border: 2px solid var(--color-neutral);
     border-radius: var(--radius-pill);
   }
+  html::-webkit-scrollbar-thumb:hover,
   .overflow-auto::-webkit-scrollbar-thumb:hover,
   .overflow-x-auto::-webkit-scrollbar-thumb:hover,
   .overflow-y-auto::-webkit-scrollbar-thumb:hover {
     background: var(--color-ink);
   }
+  html::-webkit-scrollbar-corner,
+  .overflow-auto::-webkit-scrollbar-corner,
+  .overflow-x-auto::-webkit-scrollbar-corner,
+  .overflow-y-auto::-webkit-scrollbar-corner {
+    background: var(--color-neutral);
+  }
   @supports (-moz-appearance: none) {
+    html,
     .overflow-auto,
     .overflow-x-auto,
     .overflow-y-auto {
       scrollbar-width: thin;
       scrollbar-color: var(--color-line-input) var(--color-neutral);
     }
+  }
+  /*
+   * Room for the vertical scrollbar is always kept (MEMORY 2026-11-09 09:06, spec §32 AC-SB-01/02):
+   * a long tab (scrolls) and a short one (does not) put content at the same x. The page itself and
+   * every area that can scroll vertically; a sideways-only area (`overflow-x-auto`: tables) never
+   * scrolls vertically, so it keeps no gutter. The full-bleed Designer has no page scroll.
+   */
+  html,
+  .overflow-auto,
+  .overflow-y-auto {
+    scrollbar-gutter: stable;
+  }
+  html:has(.hr-designer) {
+    scrollbar-gutter: auto;
+  }
+  .monaco-scrollable-element > .scrollbar {
+    background: var(--color-neutral);
+    border-radius: var(--radius-pill);
+  }
+  .monaco-scrollable-element > .scrollbar > .slider {
+    background: var(--color-line-input) !important;
+    border: 2px solid var(--color-neutral);
+    border-radius: var(--radius-pill);
+  }
+  .monaco-scrollable-element > .scrollbar > .slider:hover,
+  .monaco-scrollable-element > .scrollbar > .slider.active {
+    background: var(--color-ink) !important;
   }
   /*
    * Every in-app scroll area is the containing block of the absolutely positioned elements inside

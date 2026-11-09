@@ -565,12 +565,17 @@ test.describe('round B frame states 1280x800 (AC-UI-74)', () => {
     expect((await style(toast)).borderLeft).toBe(`4px solid ${C.teal}`);
     const close = toast.getByRole('button', { name: 'Đóng thông báo' });
     expect(Math.round((await style(close)).height)).toBe(44);
-    // Measured once the slide-in animation has finished.
+    // Measured once the slide-in animation has finished. 24px from the content edge: the page
+    // keeps 10px for its scrollbar on the right (spec §32), the toast stays clear of it.
+    const gutter = await page.evaluate(
+      () => innerWidth - Math.round(document.body.getBoundingClientRect().width),
+    );
+    expect(gutter).toBe(10);
     await expect
       .poll(async () => {
         const b = (await toast.boundingBox())!;
         return [
-          Math.round(DESKTOP.width - (b.x + b.width)),
+          Math.round(DESKTOP.width - gutter - (b.x + b.width)),
           Math.round(DESKTOP.height - (b.y + b.height)),
         ];
       })

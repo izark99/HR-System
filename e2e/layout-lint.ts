@@ -39,7 +39,12 @@
  *      with different widths (> 1px), e.g. a 192px Select above a 240px search box;
  *  (17) a checkbox / radio label on more than one line, or an (i) button whose icon is more than
  *      8px after the end of the label text it explains (checkbox and field labels);
- *  (18) more than one (i) popover open at a time.
+ *  (18) more than one (i) popover open at a time;
+ *  (19) a scrollbar not in the app look (spec §32 AC-SB-03): the page or an element that scrolls
+ *      while its `::-webkit-scrollbar` is not the shared 10px bar (a browser-default bar);
+ *  (20) room for the vertical scrollbar not kept (AC-SB-01/02): the page (except the full-bleed
+ *      Designer) or an element that scrolls vertically without `scrollbar-gutter: stable`, so a
+ *      long and a short tab put content at different x.
  * Only rows of one flex/grid parent are compared; hidden / zero-size elements are skipped.
  * Exceptions live in `LAYOUT_ALLOW` only, each with its reason.
  */
@@ -49,7 +54,7 @@ import { join } from 'node:path';
 import { expect, type Page } from './fixtures';
 
 export type LayoutRule =
-  1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 | 13 | 14 | 15 | 16 | 17 | 18;
+  1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 | 13 | 14 | 15 | 16 | 17 | 18 | 19 | 20;
 
 export interface LayoutViolation {
   rule: LayoutRule;
@@ -718,6 +723,46 @@ function measure(
           ids: outer ? [idOf(el), idOf(outer)] : [idOf(el)],
         });
     }
+  }
+
+  // ---- scrollbar look and kept room (rules 19, 20) -------------------------------------------
+  const barWidth = (el: Element) => getComputedStyle(el, '::-webkit-scrollbar').width;
+  const pageScrollsY = docEl.scrollHeight > docEl.clientHeight + TOL;
+  const pageScrollsX = docEl.scrollWidth > docEl.clientWidth + TOL;
+  if ((pageScrollsY || pageScrollsX) && barWidth(document.documentElement) !== '10px')
+    out.push({
+      rule: 19,
+      target: 'the page',
+      detail: `scrolls with a browser-default scrollbar (::-webkit-scrollbar width ${barWidth(document.documentElement)}, expected 10px)`,
+      ids: [],
+    });
+  if (!fullBleed && getComputedStyle(document.documentElement).scrollbarGutter !== 'stable')
+    out.push({
+      rule: 20,
+      target: 'the page',
+      detail: 'keeps no room for its scrollbar (scrollbar-gutter is not stable)',
+      ids: [],
+    });
+  for (const el of all) {
+    if (el instanceof SVGElement || el === document.documentElement || el === document.body)
+      continue;
+    const y = scrolls(el, 'y');
+    if (!y && !scrolls(el, 'x')) continue;
+    if (!allowed(el, 19) && barWidth(el) !== '10px')
+      out.push({
+        rule: 19,
+        target: name(el),
+        detail: `scrolls with a browser-default scrollbar (::-webkit-scrollbar width ${barWidth(el)}, expected 10px)`,
+        ids: [idOf(el)],
+      });
+    if (y && !allowed(el, 20) && getComputedStyle(el).scrollbarGutter !== 'stable')
+      out.push({
+        rule: 20,
+        target: name(el),
+        detail:
+          'scrolls vertically but keeps no room for its scrollbar (scrollbar-gutter is not stable)',
+        ids: [idOf(el)],
+      });
   }
 
   // ---- no hint shown as text (rule 14) ------------------------------------------------------

@@ -508,7 +508,8 @@ test.describe('layout-lint self-test', () => {
   test('each rule catches its deliberate fault, a clean page has none', async ({ page }) => {
     const css = `body{margin:0;font:16px/20px sans-serif} .card{border:1px solid #ccc;width:300px;padding:8px;margin:8px}
       .row{display:flex;gap:8px;align-items:flex-start} input,button{box-sizing:border-box;height:44px;margin:0}
-      .grid{display:grid;grid-template-columns:1fr 1fr;gap:8px} .f{display:flex;flex-direction:column;gap:4px;min-width:0}`;
+      .grid{display:grid;grid-template-columns:1fr 1fr;gap:8px} .f{display:flex;flex-direction:column;gap:4px;min-width:0}
+      html{scrollbar-gutter:stable} html::-webkit-scrollbar,.sb::-webkit-scrollbar{width:10px;height:10px}`;
     await page.setContent(`<style>${css}</style>
       <div class="card" data-card id="clean"><div class="row"><input aria-label="a"><button>OK</button></div>
       <div class="grid" data-field-grid><div class="f">c1</div><div class="f">c2</div><div class="f">c3</div><div class="f">c4</div></div>
@@ -537,12 +538,21 @@ test.describe('layout-lint self-test', () => {
       <div class="card" data-card><div data-form-field><input aria-label="r16 chọn" style="width:192px"></div><div data-form-field><input aria-label="r16 tìm" style="width:240px"></div></div>
       <div class="card" data-card><label data-checkbox style="display:flex;width:120px"><input type="checkbox">r17 nhãn checkbox dài xuống dòng</label>
         <div data-checkbox style="display:flex;justify-content:space-between;width:280px"><label><input type="checkbox">r17b</label><span data-infotip><button data-infotip-button aria-label="r17 i" style="height:20px;width:44px;padding:0 0 0 4px;border:0;display:flex"><svg width="20" height="20"></svg></button></span></div></div>
+      <div class="card"><div id="r19" style="height:40px;overflow-y:auto;scrollbar-gutter:stable"><div style="height:100px">r19 thanh mặc định</div></div></div>
+      <div class="card"><div id="r20" class="sb" style="height:40px;overflow-y:auto"><div style="height:100px">r20 không chừa chỗ</div></div></div>
       <span data-infotip-pop aria-label="r18 a" style="position:fixed;top:4px;right:4px;width:40px;height:20px"></span><span data-infotip-pop aria-label="r18 b" style="position:fixed;top:30px;right:4px;width:40px;height:20px"></span>`);
     const found = await layoutLint(page);
     const rules = new Set(found.map((v) => v.rule));
     expect([...rules].sort((a, b) => a - b)).toEqual([
-      1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18,
+      1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20,
     ]);
+    // Rules 19, 20 (spec §32): a default bar (r19 + the two r13 boxes), no kept room (r20 + r13).
+    const r19 = found.filter((v) => v.rule === 19).map((v) => v.target);
+    expect(r19.some((x) => x.includes('r19'))).toBe(true);
+    expect(r19.some((x) => x.includes('r20'))).toBe(false);
+    const r20 = found.filter((v) => v.rule === 20).map((v) => v.target);
+    expect(r20.some((x) => x.includes('r20'))).toBe(true);
+    expect(r20.some((x) => x.includes('r19'))).toBe(false);
     const r15 = found.filter((v) => v.rule === 15);
     expect(r15).toHaveLength(3);
     // Plain tabs too (Kết quả at 390: 2 + 1 + 1 before 2026-11-06 18:27).
@@ -588,9 +598,11 @@ test.describe('layout-lint self-test', () => {
 
     // Rule 13 on the full-bleed Designer: screen-reader text far down a panel that is not its
     // containing block makes the page scroll around the scrolling panel (the bug of 2026-11-06).
-    const bleed = (fixed: boolean) => `<style>body{margin:0}</style>
+    const bleed = (
+      fixed: boolean,
+    ) => `<style>body{margin:0} aside::-webkit-scrollbar{width:10px}</style>
       <div class="hr-designer" style="height:100vh;display:flex">
-        <aside style="height:100%;overflow-y:auto;width:300px${fixed ? ';position:relative' : ''}">
+        <aside style="height:100%;overflow-y:auto;scrollbar-gutter:stable;width:300px${fixed ? ';position:relative' : ''}">
           <div style="height:2000px">panel</div>
           <span style="position:absolute;width:1px;height:1px;overflow:hidden">sr</span>
         </aside></div>`;
@@ -600,5 +612,12 @@ test.describe('layout-lint self-test', () => {
     expect(page13[0]!.detail).toMatch(/inside the page/);
     await page.setContent(bleed(true));
     expect(await layoutLint(page)).toEqual([]);
+
+    // Rule 20 for the page itself (outside the Designer): no room kept for its scrollbar.
+    await page.setContent(
+      `<style>body{margin:0} html::-webkit-scrollbar{width:10px}</style><div style="height:2000px">dài</div>`,
+    );
+    const page20 = await layoutLint(page);
+    expect(page20.map((v) => [v.rule, v.target])).toEqual([[20, 'the page']]);
   });
 });
