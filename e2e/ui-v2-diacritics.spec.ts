@@ -13,7 +13,7 @@ import { mkdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { ADMIN, expect, test, type Locator, type Page } from './fixtures';
 import { runToResult, uploadFixtures } from './helpers';
-import { DESKTOP, MOBILE, settle, SHOTS, shot } from './ui-v2-checks';
+import { DESKTOP, freezeClock, MOBILE, settle, SHOTS, shot } from './ui-v2-checks';
 
 /** Fake flow name: longer than one line on 1280px, mixing stacked marks and dots below. */
 const LONG_NAME =
@@ -284,6 +284,9 @@ async function checkCut(page: Page, full: string): Promise<void> {
   await page.keyboard.press('Escape');
   await expect(tip).toHaveCount(0);
 }
+
+// Dates on screen must not depend on the run day (pixel comparison, spec §30.3).
+test.beforeEach(({ page }) => freezeClock(page));
 
 for (const viewport of [DESKTOP, MOBILE]) {
   const size = `${viewport.width}x${viewport.height}`;

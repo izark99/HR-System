@@ -67,18 +67,53 @@ ${sections}</html>`,
   );
 }
 
-/** Full-page PNG `<screen>--<state>--<w>x<h>.png` in test-results/ui-v2 (+ index.html). */
-export async function shot(page: Page, screen: string, state: string): Promise<void> {
+/**
+ * Browser clock for the screenshot specs (spec §30.3 AC-TL-11): dates shown on screen (month
+ * picker, version timeline) do not depend on the day the suite runs. After every fixed timestamp
+ * of the Supabase mock and before any real run date, so mocked sessions stay valid.
+ */
+export const FROZEN_NOW = new Date('2026-11-02T09:00:00+07:00');
+
+export async function freezeClock(page: Page): Promise<void> {
+  await page.clock.setFixedTime(FROZEN_NOW);
+}
+
+/**
+ * Full-page PNG `<screen>--<state>--<w>x<h>.png` in test-results/ui-v2 (+ index.html) for the
+ * manual review page, then compared with the committed baseline in e2e/__screenshots__
+ * (spec §30.3; update with `CI=1 pnpm test:e2e e2e/ui-v2 --update-snapshots`).
+ */
+export async function shot(
+  page: Page,
+  screen: string,
+  state: string,
+  // false: a state that changes while it is shown (a run in progress) — kept for manual review only.
+  { compare = true }: { compare?: boolean } = {},
+): Promise<void> {
   mkdirSync(SHOTS, { recursive: true });
   await settle(page);
   const { width, height } = page.viewportSize()!;
+  const name = `${screen}--${state}--${width}x${height}.png`;
   await page.screenshot({
-    path: join(SHOTS, `${screen}--${state}--${width}x${height}.png`),
+    path: join(SHOTS, name),
     fullPage: true,
     animations: 'disabled',
     caret: 'hide',
   });
   writeIndex();
+  if (compare) {
+    // Run duration ("· 0,04 giây") differs on every run: pinned in the DOM before the comparison
+    // (spec §30.3 AC-TL-11). Masking is not enough: its box width follows the text.
+    await page.evaluate(() => {
+      const walk = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
+      for (let n = walk.nextNode(); n; n = walk.nextNode()) {
+        if (/\d giây/.test(n.nodeValue ?? '')) {
+          n.nodeValue = n.nodeValue!.replace(/[\d.,]+ giây/g, '0,00 giây');
+        }
+      }
+    });
+    await expect(page).toHaveScreenshot(name, { fullPage: true });
+  }
 }
 
 /** Results of every axe scan, for the run report (serious/critical must be 0). */

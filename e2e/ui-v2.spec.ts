@@ -34,6 +34,8 @@ import {
   designerToolbarChecks,
   DESKTOP,
   floatChecks,
+  freezeClock,
+  FROZEN_NOW,
   inputChecks,
   labelChecks,
   MOBILE,
@@ -54,6 +56,9 @@ const FLOW_ID = '00000000-0000-4000-8000-0000000000f1';
 const DRAFT_ID = '00000000-0000-4000-8000-000000000777';
 const VERSIONS = '/admin/flows/payroll-timesheet/versions';
 const DESIGNER = '/admin/flows/payroll-timesheet/designer';
+
+// Dates on screen must not depend on the run day (pixel comparison, spec §30.3).
+test.beforeEach(({ page }) => freezeClock(page));
 
 test.afterAll(() => {
   // Summary of every axe scan in this worker (minor/moderate findings are reported, not blocking).
@@ -229,20 +234,22 @@ for (const viewport of [DESKTOP, MOBILE]) {
       await axe(page, `run-validation ${size}`);
       await shot(page, '04-run', 'validation');
 
-      // Running: a run large enough to be caught mid-way (12k rows per side).
+      // Running: a run large enough to be caught mid-way (24k rows per side).
       await page.reload();
       await pickMonth(page, '2026-09');
-      await payrollInput(page).setInputFiles([payroll('bang_luong_lon.xlsx', employees(12_000))]);
+      await payrollInput(page).setInputFiles([payroll('bang_luong_lon.xlsx', employees(24_000))]);
       await timesheetInput(page).setInputFiles([
-        timesheet('cham_cong_lon.xlsx', employees(12_000, 1, 'CN01', 24)),
+        timesheet('cham_cong_lon.xlsx', employees(24_000, 1, 'CN01', 24)),
       ]);
       await expect(runButton(page)).toHaveText('Chạy', { timeout: 30_000 });
       await runButton(page).click();
       const cancel = page.getByRole('button', { name: 'Hủy', exact: true });
       await expect(cancel).toBeVisible({ timeout: 5_000 });
-      await shot(page, '04-run', 'running');
-      await axe(page, `run-running ${size}`);
+      // Checks first, while the run is surely in progress; then the picture and the axe scan.
       await commonChecks(page);
+      await shot(page, '04-run', 'running', { compare: false });
+      await axe(page, `run-running ${size}`);
+      await expect(cancel).toBeVisible();
     });
 
     test('result: summary tab and mismatch tab', async ({ page }) => {
@@ -601,7 +608,7 @@ test.describe('idle sign-out warning', () => {
   test.use({ viewport: DESKTOP });
 
   test('dialog', async ({ page }) => {
-    await page.clock.install();
+    await page.clock.install({ time: FROZEN_NOW });
     await page.goto('/');
     await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
     await page.clock.fastForward('07:55:00');

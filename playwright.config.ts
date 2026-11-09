@@ -15,7 +15,19 @@ const PORT = Number(process.env.E2E_PORT ?? 4173);
 export default defineConfig({
   testDir: './e2e',
   timeout: 60_000,
-  expect: { timeout: 15_000 },
+  expect: {
+    timeout: 15_000,
+    // Pixel comparison of the design screenshots (spec §30.3). Zero tolerance: a dropped Vietnamese
+    // tone mark changes only 2–9 pixels.
+    toHaveScreenshot: {
+      animations: 'disabled',
+      caret: 'hide',
+      scale: 'css',
+      maxDiffPixels: 0,
+    },
+  },
+  // Baselines are made with the preinstalled Chromium only (one platform): no OS suffix.
+  snapshotPathTemplate: 'e2e/__screenshots__/{testFileName}/{arg}{ext}',
   fullyParallel: false,
   forbidOnly: !!process.env.CI,
   retries: 0,

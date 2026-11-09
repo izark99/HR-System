@@ -40,9 +40,7 @@ test('smoke: the draft opens on the canvas, checked without errors', async ({ pa
   await expect(canvasNode(page, 'in_luong')).toBeVisible();
   await expect(canvasNode(page, 'cmp')).toBeVisible();
   await expect(statusBar(page)).toContainText('0 lỗi');
-  await page.screenshot({ path: '/tmp/claude-0/shots/designer.png' });
   await canvasNode(page, 'cmp').click();
-  await page.screenshot({ path: '/tmp/claude-0/shots/designer-compare.png' });
   expect(errors).toEqual([]);
 });
 
