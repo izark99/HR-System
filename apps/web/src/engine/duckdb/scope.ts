@@ -15,6 +15,7 @@ import {
   booleanFromArrow,
   decimalFromUtf8,
   integerFromUtf8,
+  ordVector,
   stringFromUtf8,
   toArrow,
 } from './arrow-io';
@@ -33,8 +34,14 @@ import {
   type Cte,
 } from './sql';
 
-/** Rows per Arrow batch when moving data between TS and DuckDB (bounds the peak copy). */
+/** Rows per Arrow batch when reading results back from DuckDB (bounds the peak copy). */
 const CHUNK_ROWS = 50_000;
+
+/**
+ * Rows per Arrow batch of `upload`: one DuckDB row group (`DEFAULT_ROW_GROUP_SIZE`, 122,880), see
+ * `upload`. Bounds the peak copy like CHUNK_ROWS.
+ */
+export const UPLOAD_CHUNK_ROWS = 122_880;
 
 /*
  * Arrow vectors are assembled from typed arrays with `makeData`: apache-arrow's Builders (used by
@@ -187,42 +194,34 @@ export class SqlScope {
     }
   }
 
-  /** TS table → DuckDB table with canonical types and a dense 1-based `__ord`. */
+  /**
+   * TS table → DuckDB table with canonical types and a dense 1-based `__ord`. The typed table is
+   * created first and filled batch by batch with Arrow data already in its types (`toArrow`), so
+   * there is no raw copy to cast. Batches are whole DuckDB row groups: appending a batch that
+   * ends inside a row group makes the next append several times slower (measured, spec §31).
+   */
   upload(table: Table): SqlRel {
     const name = this.nextName();
-    const raw = `${name}_raw`;
     // Registered first: a failure half-way (bad value, out of memory) leaves nothing behind.
     this.track(name, 'TABLE');
-    this.track(raw, 'TABLE');
     const cols = table.columns;
-    const casts = cols.map((c) => `CAST(${q(c.key)} AS ${DUCK_TYPE[c.type]}) AS ${q(c.key)}`);
-    if (table.rowCount === 0) {
-      const defs = [...cols.map((c) => `${q(c.key)} ${DUCK_TYPE[c.type]}`), `${ORD} BIGINT`];
-      this.run(`CREATE TABLE ${qName(name)} (${defs.join(', ')})`);
-    } else {
-      for (let from = 0; from < table.rowCount; from += CHUNK_ROWS) {
-        const to = Math.min(table.rowCount, from + CHUNK_ROWS);
-        const vectors: Record<string, Vector> = {};
-        cols.forEach((c, i) => {
-          vectors[c.key] = toArrow(table.vectors[i]!, from, to - from, c.key);
-        });
-        const ord = new Float64Array(to - from);
-        for (let i = 0; i < ord.length; i++) ord[i] = from + i + 1;
-        vectors[ORD_NAME] = makeVector(
-          makeData({ type: new Float64(), length: ord.length, nullCount: 0, data: ord }),
-        );
-        const ipc = tableToIPC(new ArrowTable(vectors), 'stream');
-        try {
-          this.db.insertArrow(ipc, raw, from === 0);
-        } catch (err) {
-          throw toEngineError(err);
-        }
+    const defs = [...cols.map((c) => `${q(c.key)} ${DUCK_TYPE[c.type]}`), `${ORD} BIGINT`];
+    this.run(`CREATE TABLE ${qName(name)} (${defs.join(', ')})`);
+    for (let from = 0; from < table.rowCount; from += UPLOAD_CHUNK_ROWS) {
+      const to = Math.min(table.rowCount, from + UPLOAD_CHUNK_ROWS);
+      const vectors: Record<string, Vector> = {};
+      cols.forEach((c, i) => {
+        vectors[c.key] = toArrow(table.vectors[i]!, from, to - from, c.key);
+      });
+      vectors[ORD_NAME] = ordVector(from, to - from);
+      const ipc = tableToIPC(new ArrowTable(vectors), 'stream');
+      try {
+        // Appended by position: the Arrow columns are in the order of the table definition.
+        this.db.insertArrow(ipc, name, false);
+      } catch (err) {
+        throw toEngineError(err);
       }
-      this.run(
-        `CREATE TABLE ${qName(name)} AS SELECT ${[...casts, `CAST(${ORD} AS BIGINT) AS ${ORD}`].join(', ')} FROM ${qName(raw)}`,
-      );
     }
-    this.drop(raw);
     return new SqlRel(table.columns, name, [], table.rowCount);
   }
 
