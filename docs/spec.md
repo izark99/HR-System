@@ -1676,3 +1676,24 @@ User story: Là User chạy flow trên laptop văn phòng, tôi muốn file lớ
 | AC-PF-06 | Lệnh đo cho máy thật: một lệnh (VD `pnpm perf:local`) chạy trên máy Harold, sinh dữ liệu giả, chạy bản build trong Chromium/Chrome cài sẵn của máy, in bảng thời gian từng chặng; hướng dẫn ngắn trong README hoặc `docs/`. Kết luận AC-B3-24 (laptop 8 GB) theo số Harold gửi về. |
 | AC-PF-07 | Giới hạn: 1 vòng developer + 1 vòng verifier; không đạt mục tiêu thì dừng, báo số liệu trước/sau và hướng tiếp (VD tối ưu đọc/ghi .xlsx) để Harold quyết. |
 
+**Số đo** (2026-11-09, Chromium cài sẵn của container, 4 nhân, 15 GB RAM; `HRFLOW_PERF=1 pnpm test:e2e e2e/perf-stages.spec.ts`, trung vị 3 lần sau 1 lần khởi động DuckDB không tính; đơn vị giây). `read` = đọc + kiểm tra file; `upload` = `SqlScope.upload`; `sql` = SQL DuckDB (node, materialize, đọc kết quả về); `write` = ghi .xlsx; tổng = read + chạy (trong worker).
+
+| Flow | Chặng | Trước | Sau | Thay đổi |
+|------|-------|------:|----:|---------:|
+| 100k × 30, filter → join → groupBy → output.excel | read | 3,33 | 3,46 | (không sửa) |
+| | upload | 0,81 | 0,25 | −69% |
+| | sql | 0,23 | 0,23 | 0 |
+| | write | 0,02 | 0,01 | 0 |
+| | **tổng** | **4,40** | **3,95** | −10% |
+| 1M × 30, cùng flow | read | 39,95 | 40,88 | (không sửa) |
+| | upload | 13,59 | 4,95 | −64% |
+| | sql | 2,20 | 2,15 | 0 |
+| | write | 0,02 | 0,02 | 0 |
+| | **tổng** | **55,88** | **48,02** | −14% |
+| AC-B4-31: 100k × 30 + 5 cột công thức | SQL công thức | 0,70 | 0,75 | (không sửa) |
+| | upload | 0,81 | 0,25 | −69% |
+| AC-B4-31: 1M × 30 + 10 cột công thức | SQL công thức | 12,96 | 13,57 | (không sửa), chạy xong không crash |
+| | upload | 12,92 | 5,16 | −60% |
+
+Kết quả: AC-PF-02 đạt (upload 1M giảm 64% ≥ 30%; 100k tổng 3,95 s < 10 s). AC-PF-03: SQL công thức 100k × 5 cột 0,75 s ≤ 2 s; 1M × 10 cột chạy xong. Ghi do 3 thay đổi trong `upload`, đo riêng trong Node (`upload-perf.test.ts`, 400k × 30): lô 122.880 dòng (= 1 row group của DuckDB; nối lô kết thúc giữa row group làm lần nối sau chậm gấp nhiều lần) 4,76 → 1,83 s; Arrow đúng kiểu đích, bỏ bảng `_raw` + `CAST` 1,83 → 1,61 s; `writeScaled` không cấp phát mảng mỗi ô 1,61 → 1,20 s. Chặng còn lại lớn nhất là đọc .xlsx (≈ 40 s ở 1M, ≈ 85% tổng) — ngoài phạm vi vòng này. Kết luận AC-B3-24 trên laptop 8 GB chờ số Harold đo bằng `pnpm perf:local` (README, mục "Đo hiệu năng trên máy thật").
+

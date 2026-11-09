@@ -7,7 +7,7 @@
  *
  *   pnpm perf:local                       # 100,000 rows, stages + formula, 3 runs
  *   pnpm perf:local -- --rows 100000,1000000 --runs 3 --suite stages,formula
- *   pnpm perf:local -- --no-build         # reuse the last build
+ *   pnpm perf:local -- --no-build         # reuse the last build:e2e output (not `pnpm build`)
  */
 import { spawnSync } from 'node:child_process';
 import process from 'node:process';
