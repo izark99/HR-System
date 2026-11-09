@@ -9,6 +9,8 @@
 
 ## Phạm vi & sản phẩm
 
+2026-11-09 14:37 - Bảng tham chiếu (tiếp 14:28): import Excel vào draft thay toàn bộ dữ liệu draft; lưới sửa trong app có sửa ô, thêm/xóa dòng, tìm, Hoàn tác/Làm lại (Ctrl+Z/Y) và dán nhiều ô từ Excel; chia 2 vòng code: (1) database + RLS + màn Admin (danh sách, cột, phiên bản, import, lưới sửa), (2) node `input.refTable` + chọn version khi chạy + Designer + tham số `fromRefTable` — mỗi vòng developer → verifier → lên `main`. Mẫu Designer phải qua kiểm bố cục (không chồng lấn node/panel, không tràn, nhãn 1 dòng, giải thích sau (i)) như các lỗi đã sửa 2026-11-06.
+
 2026-11-09 14:28 - Phase 2 bước 1 — bảng tham chiếu + `input.refTable`: dữ liệu lưu JSON trong `ref_table_versions.rows`, mỗi version ≤ 50.000 dòng và ≤ 5 MB; nhập bằng import Excel (đọc + kiểm cột/kiểu trong worker, xem trước rồi lưu thành version) **và** sửa từng ô ngay trong app (chỉ trên version draft); cột định nghĩa ở cấp bảng (mọi version cùng bộ cột: mã, tên, kiểu, tên cột trong file, cột khóa), đổi cột thì Designer kiểm lại các flow đang dùng; vòng đời version giống flow (Draft → Publish có hiệu lực từ ngày + ghi chú → Retired, không chồng lấn, bất biến, rollback = publish lại); Designer xem trước dùng version theo ngày hiệu lực của tham số mẫu (chưa nhập thì hôm nay); gộp tham số danh sách chọn lấy từ bảng tham chiếu (`fromRefTable`). Màn quản lý dựng mẫu Artifact cho Harold duyệt trước khi code.
 
 2026-11-09 13:51 - Tab "Văn bản giao diện" (hiệu năng, verifier đo ~1.470 dòng chậm trên máy yếu): bảng hiện 100 dòng đầu, cuối bảng có nút "Hiện thêm 100 dòng (còn N)"; tìm/lọc vẫn chạy trên toàn bộ danh sách, số đếm giữ tổng; đổi ô tìm hoặc bộ lọc thì về lại 100 dòng đầu.
