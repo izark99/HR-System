@@ -3,13 +3,16 @@ import { useTranslation } from 'react-i18next';
 import { PageShell, SideNavLayout, type SideNavItem } from '../../components/layout';
 import { appConfig } from '../../lib/env';
 
-type NavItem = { key: string; to?: '/admin/flows' | '/admin/users' | '/admin/ui-text' };
+type NavItem = {
+  key: string;
+  to?: '/admin/flows' | '/admin/users' | '/admin/ui-text' | '/admin/ref-tables';
+};
 
 // Order and labels follow the Admin wireframe; items without `to` come in later steps.
 const ITEMS: NavItem[] = [
   { key: 'dashboard' },
   { key: 'flows', to: '/admin/flows' },
-  { key: 'refTables' },
+  { key: 'refTables', to: '/admin/ref-tables' },
   { key: 'templates' },
   { key: 'users', to: '/admin/users' },
   { key: 'uiText', to: '/admin/ui-text' },
@@ -36,7 +39,8 @@ export function AdminLayout() {
     label: t(`admin.nav.${item.key}`),
     ...(item.to
       ? {
-          to: item.to,
+          // The reference tables live under one splat route; `/admin/ref-tables` is its list.
+          to: item.to as SideNavItem['to'],
           // Sub-pages (e.g. /admin/flows/:code/versions) keep their section highlighted.
           active: path === item.to || path.startsWith(`${item.to}/`),
         }

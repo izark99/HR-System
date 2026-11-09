@@ -8,6 +8,7 @@ import type { DuckDbProvider } from './duckdb/base';
 import type { FileDownload, ParamValues, RowQuery, RunProgressEvent, UploadFile } from './protocol';
 import { createEngineTranslator, setEngineTextOverrides } from './core/i18n';
 import { checkDesign } from './design';
+import { readRefImport, type RefImportColumn } from './io/ref-import';
 import { PreviewSession } from './preview';
 import { EngineSession } from './session';
 
@@ -53,6 +54,9 @@ const api = {
   getFilterOptions: (sheetId: string) => session.getFilterOptions(sheetId),
   getArtifact: (index: number) => transferable(session.getArtifact(index)),
   validationReportFile: async () => transferable(await session.validationReportFile()),
+  /** Admin import into a reference table draft (spec §34 AC-RT-03): one file, nothing kept. */
+  refImport: async (file: UploadFile, columns: RefImportColumn[], maxRows: number) =>
+    readRefImport({ name: file.name, data: await file.blob.arrayBuffer() }, columns, maxRows),
 };
 
 export type EngineApi = typeof api;

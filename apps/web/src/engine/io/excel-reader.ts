@@ -53,7 +53,7 @@ const EXCEL_ERRORS: Record<number, string> = {
 };
 
 /** Excel row of every table row (1-based), for cross-file `unique` messages. */
-interface FileReadResult {
+export interface FileReadResult {
   table: Table;
   excelRows: Int32Array;
   extraColumns: ColumnDef[];

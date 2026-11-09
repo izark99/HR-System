@@ -249,6 +249,22 @@ const FRAME_ALLOW: { file: string; rule: string; reason: string; only?: string[]
     reason: 'dense reference table of supported functions beside the canvas',
   },
   {
+    file: 'features/admin/ref-tables/DataGrid.tsx',
+    rule: 'table',
+    reason:
+      'editable data grid of a reference table version: dense 14px cells holding inputs (spec §34 AC-RT-04), not an admin list',
+  },
+  {
+    file: 'features/admin/ref-tables/ImportDialog.tsx',
+    rule: 'table',
+    reason: 'dense file-check report + 200-row preview of an import (like ValidationReport)',
+  },
+  {
+    file: 'features/admin/ref-tables/RowDiffView.tsx',
+    rule: 'table',
+    reason: 'row-by-row diff of two reference table versions (like DiffView)',
+  },
+  {
     file: 'features/designer/canvas/nodes.tsx',
     rule: 'spacing',
     reason: 'node cards on the React Flow canvas: dense 14px layout around the port handles',

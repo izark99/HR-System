@@ -98,6 +98,16 @@ const adminUiTextRoute = createRoute({
   component: lazyRouteComponent(() => import('../features/admin/ui-text/UiTextPage'), 'UiTextPage'),
 });
 
+/** "Bảng tham chiếu" (spec §34): one splat route, its screens dispatched in their own chunk. */
+const adminRefTablesRoute = createRoute({
+  getParentRoute: () => adminRoute,
+  path: '/ref-tables/$',
+  component: lazyRouteComponent(
+    () => import('../features/admin/ref-tables/RefTablesRoute'),
+    'RefTablesRoute',
+  ),
+});
+
 const adminFlowsRoute = createRoute({
   getParentRoute: () => adminRoute,
   path: '/flows',
@@ -152,6 +162,7 @@ export const router = createRouter({
       adminUsersRoute,
       adminFlowsRoute,
       adminUiTextRoute,
+      adminRefTablesRoute,
       flowVersionsRoute,
       designerRoute,
     ]),

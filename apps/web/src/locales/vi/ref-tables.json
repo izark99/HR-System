@@ -1,0 +1,319 @@
+{
+  "eyebrow": "Bảng tham chiếu",
+  "errorLabel": "Lỗi:",
+  "retry": "Thử lại",
+  "cancel": "Hủy",
+  "saving": "Đang lưu…",
+  "keyChip": "Khóa",
+  "unknownUser": "không rõ",
+  "notFound": "Không tìm thấy bảng tham chiếu \"{{code}}\".",
+  "back": {
+    "list": "Bảng tham chiếu",
+    "versions": "Phiên bản của {{code}}"
+  },
+  "types": {
+    "string": "Chữ",
+    "integer": "Số nguyên",
+    "decimal": "Số thập phân",
+    "date": "Ngày",
+    "boolean": "Đúng/sai"
+  },
+  "status": {
+    "draft": "Draft",
+    "published": "Published",
+    "retired": "Retired",
+    "discarded": "Đã hủy"
+  },
+  "list": {
+    "title": "Bảng tham chiếu dùng chung",
+    "subtitle": "Danh mục, mapping mã, biểu thuế, hệ số cho các flow. Không chứa dữ liệu cá nhân.",
+    "create": "+ Tạo bảng",
+    "cardLabel": "Danh sách bảng tham chiếu",
+    "caption": "Bảng tham chiếu",
+    "search": "Tìm",
+    "searchPlaceholder": "Mã hoặc tên bảng",
+    "count": "{{count, number}} bảng",
+    "col": {
+      "code": "Mã",
+      "name": "Tên bảng",
+      "versions": "Phiên bản",
+      "rows": "Số dòng",
+      "usage": "Dùng trong",
+      "actions": "Thao tác"
+    },
+    "unpublished": "Chưa publish",
+    "versionFrom": "v{{version}} · từ {{from}}",
+    "usage": "{{count}} flow",
+    "editColumns": "Sửa cột",
+    "editColumnsFor": "Sửa cột {{code}}",
+    "openVersions": "Mở trang phiên bản",
+    "openVersionsFor": "Mở trang phiên bản {{code}}",
+    "menu": {
+      "editDraft": "Sửa dữ liệu draft v{{version}}",
+      "viewCurrent": "Xem dữ liệu v{{version}} đang hiệu lực"
+    },
+    "emptyTitle": "Chưa có bảng tham chiếu",
+    "emptyText": "Tạo bảng đầu tiên, khai báo cột rồi import dữ liệu từ Excel.",
+    "noMatch": "Không có bảng nào khớp."
+  },
+  "form": {
+    "newTitle": "Tạo bảng tham chiếu",
+    "subtitle": "Cột dùng chung cho mọi phiên bản của bảng. Flow thấy các cột này mà không cần dữ liệu.",
+    "versions": "Phiên bản",
+    "save": "Lưu",
+    "saved": "Đã lưu cột của {{code}}.",
+    "created": "Đã tạo bảng {{code}} cùng draft v1.",
+    "usageLabel": "Đang dùng:",
+    "usage": "bảng có trong {{count}} flow: {{flows}}. Đổi hoặc xóa cột sẽ được kiểm lại ở các flow này.",
+    "changesLabel": "Thay đổi cột:",
+    "changes": {
+      "removed": "xóa {{keys}}.",
+      "retyped": "đổi kiểu {{keys}}.",
+      "added": "thêm {{keys}}.",
+      "flows": "Kiểm tra lại các flow: {{flows}}.",
+      "published": "Phiên bản đã publish giữ nguyên dữ liệu cũ."
+    },
+    "infoTitle": "Thông tin bảng",
+    "code": "Mã bảng",
+    "codeHint": "Chữ in hoa, số và dấu gạch dưới (VD DM_CHI_NHANH). Không đổi được sau khi tạo; flow gọi bảng bằng mã này.",
+    "name": "Tên bảng",
+    "description": "Mô tả",
+    "columnsTitle": "Các cột ({{count}})",
+    "columnsCaption": "Các cột của bảng",
+    "addColumn": "+ Thêm cột",
+    "col": {
+      "key": "Mã cột",
+      "title": "Tên hiển thị",
+      "type": "Kiểu",
+      "aliases": "Tên cột trong file",
+      "isKey": "Cột khóa",
+      "actions": "Thao tác"
+    },
+    "editColumn": "Sửa",
+    "editColumnFor": "Sửa cột {{key}}",
+    "removeColumn": "Xóa cột",
+    "removeColumnFor": "Xóa cột {{key}}",
+    "noColumnsTitle": "Chưa có cột",
+    "noColumnsText": "Thêm ít nhất 1 cột và chọn cột khóa.",
+    "problemsLabel": "Chưa lưu được:",
+    "errors": {
+      "codeInvalid": "Mã bảng gồm chữ in hoa, số, dấu gạch dưới, bắt đầu bằng chữ (2–64 ký tự).",
+      "codeTaken": "Mã bảng {{code}} đã có, chọn mã khác.",
+      "nameRequired": "Nhập tên bảng.",
+      "noColumns": "Thêm ít nhất 1 cột.",
+      "noKey": "Chọn ít nhất 1 cột khóa.",
+      "tooMany": "Tối đa 100 cột.",
+      "column": "Cột \"{{column}}\": {{problem}}"
+    }
+  },
+  "column": {
+    "addTitle": "Thêm cột",
+    "editTitle": "Sửa cột",
+    "title": "Tên hiển thị",
+    "key": "Mã cột",
+    "keyHint": "Chữ thường không dấu, số, dấu gạch dưới (VD ma_cn). Flow dùng mã này để gọi cột.",
+    "type": "Kiểu dữ liệu",
+    "aliases": "Tên cột trong file",
+    "aliasesHint": "Các tên khác của cột trong file Excel, cách nhau bằng dấu phẩy. Tên hiển thị luôn được nhận; so khớp không phân biệt dấu, hoa thường.",
+    "aliasesPlaceholder": "VD Mã CN, Ma chi nhanh",
+    "isKey": "Cột khóa",
+    "isKeyHint": "Giá trị của các cột khóa không được trùng trong một phiên bản (không phân biệt hoa thường, khoảng trắng thừa) và không được để trống.",
+    "personalNote": "Tên cột giống dữ liệu cá nhân: khi lưu bảng phải xác nhận bảng không chứa dữ liệu cá nhân.",
+    "save": "Lưu cột",
+    "errors": {
+      "keyInvalid": "mã cột gồm chữ thường không dấu, số, dấu gạch dưới, bắt đầu bằng chữ.",
+      "keyDuplicate": "mã cột bị trùng.",
+      "titleRequired": "nhập tên hiển thị (tối đa 120 ký tự).",
+      "titleDuplicate": "tên hiển thị bị trùng với cột khác.",
+      "aliasTooMany": "tối đa 20 tên trong file.",
+      "aliasTooLong": "mỗi tên trong file tối đa 120 ký tự.",
+      "aliases": "Tối đa 20 tên, mỗi tên tối đa 120 ký tự."
+    }
+  },
+  "personal": {
+    "label": "Có thể là dữ liệu cá nhân:",
+    "columns": "cột {{columns}} có tên giống dữ liệu cá nhân. Bảng tham chiếu lưu trên server nên chỉ được chứa danh mục, mapping, biểu thuế, hệ số.",
+    "confirm": "Tôi xác nhận bảng này không chứa dữ liệu cá nhân."
+  },
+  "versions": {
+    "title": "{{name}}: phiên bản & hiệu lực",
+    "subtitle": "Mỗi kỳ chạy dùng đúng phiên bản có hiệu lực theo ngày tham chiếu của flow.",
+    "columns": "Cột của bảng",
+    "import": "Import Excel vào draft",
+    "cardLabel": "Danh sách phiên bản",
+    "caption": "Phiên bản của bảng",
+    "col": {
+      "version": "Phiên bản",
+      "status": "Trạng thái",
+      "from": "Hiệu lực từ",
+      "to": "Đến (không gồm)",
+      "rows": "Số dòng",
+      "note": "Ghi chú",
+      "updated": "Cập nhật",
+      "actions": "Thao tác"
+    },
+    "current": "Đang hiệu lực",
+    "updatedBy": "{{user}} · {{time}}",
+    "editData": "Sửa dữ liệu",
+    "viewData": "Xem dữ liệu",
+    "actionFor": "{{action}} v{{version}}",
+    "publish": "Publish",
+    "compare": "So sánh",
+    "clone": "Tạo draft từ bản này",
+    "editEnd": "Đổi ngày kết thúc",
+    "retire": "Retire",
+    "discard": "Hủy draft",
+    "hasDraft": "đang có draft v{{version}}. Publish hoặc hủy draft đó trước.",
+    "cloned": "Đã tạo draft v{{version}} từ v{{from}}.",
+    "retired": "Đã retire v{{version}}.",
+    "discarded": "Đã hủy draft v{{version}}.",
+    "endChanged": "Đã đổi ngày kết thúc của v{{version}}.",
+    "retireDialog": {
+      "title": "Retire v{{version}}?",
+      "body": "Phiên bản ({{range}}) sẽ không còn được dùng khi chạy flow. Không hoàn tác được."
+    },
+    "discardDialog": {
+      "title": "Hủy draft v{{version}}?",
+      "body": "Dữ liệu của draft sẽ bị bỏ. Số phiên bản này không được dùng lại.",
+      "action": "Hủy draft"
+    },
+    "emptyTitle": "Chưa có phiên bản",
+    "emptyText": "Import Excel để tạo draft đầu tiên."
+  },
+  "publish": {
+    "title": "Publish v{{version}} của {{code}}",
+    "summaryLabel": "So với v{{version}}:",
+    "summary": "v{{version}} → draft: thêm {{added}} dòng, sửa {{changed}}, xóa {{removed}}.",
+    "rowsMismatch": "Dữ liệu draft không còn khớp các cột hiện tại (cột đã đổi). Mở draft, sửa các ô lỗi rồi lưu lại.",
+    "done": "Đã publish v{{version}} của {{code}}, hiệu lực từ {{from}}."
+  },
+  "diff": {
+    "title": "So sánh phiên bản",
+    "from": "Từ phiên bản",
+    "to": "Đến phiên bản",
+    "same": "Chọn 2 phiên bản khác nhau để so sánh.",
+    "needTwo": "Cần ít nhất 2 phiên bản để so sánh.",
+    "loading": "Đang tải dữ liệu để so sánh…",
+    "failed": "Không tải được dữ liệu để so sánh. Thử lại sau.",
+    "summary": "Thêm {{added, number}} dòng, xóa {{removed, number}}, sửa {{changed, number}}, giữ nguyên {{unchanged, number}} (so theo cột khóa).",
+    "tableLabel": "Các dòng khác nhau",
+    "col": {
+      "change": "Thay đổi",
+      "key": "Khóa"
+    },
+    "kind": {
+      "added": "Thêm",
+      "removed": "Xóa",
+      "changed": "Sửa"
+    },
+    "blank": "(trống)",
+    "truncated": "Mỗi loại hiện tối đa {{max}} dòng."
+  },
+  "data": {
+    "title": "Dữ liệu v{{version}} · {{name}}",
+    "subtitle": "Sửa trực tiếp từng ô hoặc import lại từ Excel. Bản đã publish chỉ xem, không sửa.",
+    "subtitleReadOnly": "Bản đã publish chỉ xem, không sửa. Muốn đổi dữ liệu: tạo draft từ bản này ở trang phiên bản.",
+    "import": "Import Excel",
+    "save": "Lưu draft",
+    "saved": "Đã lưu draft v{{version}}.",
+    "cardLabel": "Dữ liệu phiên bản",
+    "gridLabel": "Dữ liệu v{{version}}",
+    "search": "Tìm trong dữ liệu",
+    "searchPlaceholder": "VD CN05 hoặc Hậu Giang",
+    "addRow": "+ Thêm dòng",
+    "undo": "Hoàn tác (Ctrl+Z)",
+    "redo": "Làm lại (Ctrl+Y)",
+    "clean": "{{count, number}} dòng · đã lưu {{time}}",
+    "countReadOnly": "{{count, number}} dòng",
+    "dirty": "{{edited, number}} ô sửa · {{added, number}} dòng mới · {{removed, number}} dòng xóa — chưa lưu",
+    "matches": "{{shown, number}} / {{total, number}} dòng",
+    "showMore": "Hiện thêm {{count, number}} dòng (còn {{left, number}})",
+    "empty": "Draft chưa có dòng nào. Bấm \"+ Thêm dòng\" hoặc import từ Excel.",
+    "emptyReadOnly": "Phiên bản không có dòng nào.",
+    "noMatch": "Không có dòng nào khớp.",
+    "problemsLabel": "Chưa lưu được:",
+    "problems": "còn {{count, number}} ô lỗi (tô đỏ). Sửa hoặc xóa dòng đó rồi lưu lại.",
+    "noColumnsLabel": "Lưu ý:",
+    "noColumns": "Bảng chưa có cột. Khai báo cột ở trang Cột của bảng.",
+    "notFound": "Không tìm thấy phiên bản v{{version}} của bảng \"{{code}}\".",
+    "tooManyRows": "Draft có {{count, number}} dòng, vượt giới hạn {{max, number}} dòng.",
+    "tooLarge": "Dữ liệu draft khoảng {{mb}} MB, vượt giới hạn {{max}} MB."
+  },
+  "grid": {
+    "rowNo": "#",
+    "actions": "Thao tác",
+    "cellLabel": "{{column}}, dòng {{row}}",
+    "remove": "Xóa dòng",
+    "restore": "Bỏ xóa",
+    "removeRow": "Xóa dòng {{row}}",
+    "restoreRow": "Bỏ xóa dòng {{row}}",
+    "problem": {
+      "type": "Giá trị phải là {{type}}.",
+      "tooPrecise": "Số quá dài: tối đa 28 chữ số phần nguyên, 10 chữ số thập phân.",
+      "keyBlank": "Cột khóa không được để trống.",
+      "keyDuplicate": "Khóa bị trùng với một dòng khác."
+    }
+  },
+  "import": {
+    "title": "Import Excel vào draft v{{version}}",
+    "titleNew": "Import Excel vào draft mới",
+    "drop": "Kéo thả file vào đây hoặc",
+    "choose": "chọn file",
+    "chooseLabel": "Chọn file Excel để import",
+    "limits": ".xlsx .xls · tối đa {{rows}} dòng, {{mb}} MB",
+    "reading": "Đang đọc file…",
+    "crashed": "Không đọc được file (bộ xử lý dữ liệu gặp lỗi). Thử lại hoặc tách file nhỏ hơn.",
+    "errors": "{{count, number}} lỗi",
+    "warnings": "{{count, number}} cảnh báo",
+    "valid": "Hợp lệ",
+    "reportTitle": "Báo cáo kiểm tra",
+    "col": {
+      "severity": "Mức",
+      "row": "Dòng",
+      "column": "Cột",
+      "message": "Nội dung"
+    },
+    "severity": {
+      "error": "Lỗi",
+      "warning": "Cảnh báo"
+    },
+    "moreIssues": "Còn {{count, number}} dòng khác trong báo cáo (đã tính vào số lỗi/cảnh báo).",
+    "blockedLabel": "Chưa lưu được:",
+    "blocked": "sửa lỗi trong file rồi chọn lại. Dữ liệu draft hiện tại ({{count, number}} dòng) chưa bị thay.",
+    "blockedNew": "sửa lỗi trong file rồi chọn lại.",
+    "previewTitle": "Xem trước ({{count, number}}/{{total, number}} dòng đầu)",
+    "previewLabel": "Xem trước dữ liệu",
+    "gridDirtyLabel": "Lưu ý:",
+    "gridDirty": "các ô đã sửa trên lưới mà chưa lưu sẽ bị bỏ khi thay dữ liệu draft.",
+    "conflict": "Draft vừa được người khác lưu hoặc publish. Đóng hộp này, tải lại trang rồi import lại.",
+    "replace": "Thay dữ liệu draft ({{before, number}} → {{after, number}} dòng)",
+    "replaceIdle": "Thay dữ liệu draft",
+    "done": "Đã thay dữ liệu draft v{{version}}.",
+    "extraColumn": "File {{file}}: cột \"{{column}}\" không có trong bảng, sẽ bỏ qua.",
+    "duplicateKey": "File {{file}}, dòng {{row}}: khóa \"{{value}}\" trùng với dòng {{otherRow}} (\"{{otherValue}}\").",
+    "tooPrecise": "File {{file}}, dòng {{row}}: số {{value}} ở cột \"{{column}}\" quá dài (tối đa {{digits}} chữ số thập phân).",
+    "tooManyRows": "File {{file}} có {{count, number}} dòng, vượt giới hạn {{max, number}} dòng của một phiên bản.",
+    "tooLarge": "Dữ liệu khoảng {{mb}} MB, vượt giới hạn {{max}} MB của một phiên bản."
+  },
+  "conflict": {
+    "title": "Có người vừa lưu",
+    "tableText": "Bảng vừa được người khác lưu sau khi anh/chị mở trang. Tải lại để xem bản mới (thay đổi chưa lưu trên trang này sẽ bị bỏ).",
+    "draftText": "Draft vừa được người khác lưu hoặc publish sau khi anh/chị mở trang. Tải lại để xem bản mới (thay đổi chưa lưu trên trang này sẽ bị bỏ).",
+    "stay": "Ở lại",
+    "reload": "Tải lại"
+  },
+  "leave": {
+    "title": "Rời trang?",
+    "text": "Thay đổi chưa lưu sẽ bị mất.",
+    "stay": "Ở lại",
+    "leave": "Rời trang"
+  },
+  "errors": {
+    "invalid_columns": "Định nghĩa cột không hợp lệ (cần ít nhất 1 cột khóa, mã cột không trùng).",
+    "invalid_rows": "Dữ liệu không khớp các cột của bảng (sai kiểu hoặc cột không còn).",
+    "rows_too_many": "Vượt giới hạn 50.000 dòng của một phiên bản.",
+    "rows_too_large": "Vượt giới hạn 5 MB của một phiên bản.",
+    "key_blank": "Có dòng để trống cột khóa.",
+    "duplicate_key": "Có 2 dòng trùng khóa."
+  }
+}

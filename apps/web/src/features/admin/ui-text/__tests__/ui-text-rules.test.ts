@@ -17,7 +17,7 @@ describe('catalog (spec §33 AC-TX-02)', () => {
   it('lists every text of every namespace once', () => {
     expect(list.length).toBeGreaterThan(1400);
     expect(new Set(list.map((e) => e.key)).size).toBe(list.length);
-    for (const ns of ['common', 'designer', 'engine', 'engineFields', 'uiText']) {
+    for (const ns of ['common', 'designer', 'engine', 'engineFields', 'uiText', 'refTables']) {
       expect(list.some((e) => e.key.startsWith(`${ns}:`))).toBe(true);
     }
     // Keys fit the database check.

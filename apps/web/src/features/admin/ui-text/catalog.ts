@@ -3,6 +3,7 @@
 import { resources } from '../../../i18n';
 import viDesigner from '../../../locales/vi/designer.json';
 import viEngineFields from '../../../locales/vi/engine-fields.json';
+import viRefTables from '../../../locales/vi/ref-tables.json';
 import viUiText from '../../../locales/vi/ui-text.json';
 
 /**
@@ -30,6 +31,7 @@ export const UI_TEXT_NAMESPACES: Record<string, unknown> = {
   engine: resources.vi.engine,
   engineFields: viEngineFields,
   uiText: viUiText,
+  refTables: viRefTables,
 };
 
 /**
@@ -57,6 +59,7 @@ export const GROUP_PREFIXES: Record<string, UiTextGroup> = {
   'common:result': 'result',
   'common:admin': 'admin',
   'uiText:': 'admin',
+  'refTables:': 'admin',
   'designer:': 'designer',
   'designer:formula.fn': 'functions',
   'engineFields:': 'designer',
