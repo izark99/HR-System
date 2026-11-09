@@ -17,8 +17,8 @@ export default defineConfig({
   timeout: 60_000,
   expect: {
     timeout: 15_000,
-    // Pixel comparison of the design screenshots (spec §30.3). Zero tolerance: a dropped Vietnamese
-    // tone mark changes only 2–9 pixels.
+    // Pixel comparison of the design screenshots (spec §30.3). Zero tolerance, never raise it: a
+    // dropped Vietnamese tone mark changes only 1–9 pixels (an acute accent: 1 pixel, AC-TL-14).
     toHaveScreenshot: {
       animations: 'disabled',
       caret: 'hide',

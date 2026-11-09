@@ -1,6 +1,6 @@
 # HANDOFF — Trạng thái dự án để mở session mới
 
-> Cập nhật: 2026-11-08 (sau vòng B của bộ khung UI/UX và các vòng sửa bố cục). Đọc file này sau `CLAUDE.md` và `docs/MEMORY.md`.
+> Cập nhật: 2026-11-09 (sau vòng so ảnh pixel + HANDOFF §4.12a). Đọc file này sau `CLAUDE.md` và `docs/MEMORY.md`.
 
 ## 1. Đã xong
 
@@ -15,6 +15,7 @@
 | Giao diện bản 2 (spec §25, §28; AC-UI-01..59): token theo `docs/design-reference.md` (chỉ cấu trúc, giữ màu teal/coral/amber/blue + Be Vietnam Pro), nút 5 loại, card phẳng, thang chữ lớn (ngoại lệ 14px canvas/Monaco/bảng xem trước), màn Kết quả có tiêu đề kết luận + KPI + card tối, tiêu đề tên dài 1 dòng cắt "…", bảng Admin đủ chữ + kéo ngang + cột Thao tác biểu tượng cố định phải + menu "⋯" (APG), dialog tạo tài khoản, skeleton khi tải, thanh cuộn đồng bộ, toolbar/palette Designer gọn, `@axe-core/playwright` quét a11y, ngân sách CSS — lên `main` 2026-11-03 | ✅ |
 | Bộ khung UI/UX – vòng A (spec §29.1–29.2, AC-UI-60..69): token mới (`page-title`, `page-title-showcase`, `kpi`, `title-xs`, khoảng cách `page-x`/`page-top`/`section`/`stack`/`inline`), nút/input 44px chữ 16px; `components/layout/` (`PageShell`, `SideNavLayout`, `PageHeader`, `Section`, `Toolbar`, `StickyActionBar`), `Tabs`, `DataTable`, `FormField`, `EmptyState`, toast, `Dialog`/`ConfirmDialog` (chuyển vào `components/`), `KpiCard`/`ConclusionCard`, `Stepper`, icon gom ở `components/icons/`; luật khung trong `design-tokens.test.ts` kèm `PENDING_ROUND_B`; trang showcase chỉ trong bản build E2E (`apps/web/e2e-showcase.html`, `e2e/ui-frame*.spec.ts`) — lên `main` 2026-11-06 | ✅ |
 | Bộ khung UI/UX – vòng B + 4 vòng sửa bố cục (spec §29.3, AC-UI-70..78; MEMORY 2026-11-06): mọi màn chuyển sang layout/pattern chung (User bỏ menu trái, Chạy flow có `Stepper` + `StickyActionBar`, Kết quả KPI 40px, Admin mẫu List + toast + `ConfirmDialog` chặn Esc khi busy), nối cạnh bằng bàn phím (nút "Nối tới…", Ctrl+E, đọc "Đã nối A → B"), control 44px kể cả dense, nhãn field/checkbox 1 dòng (lưới tự giảm cột, không để phần tử lẻ hàng cuối), gợi ý/giải thích sau nút (i) (`InfoTip`, 1 popover mỗi lúc), câu trạng thái hiện sẵn (`note`), mỗi chiều 1 vùng cuộn, `MiddleCut` cho tên file, lỗi cấu hình node gọi theo nhãn field, minimap ẩn khi canvas thấp, node mới đặt chỗ trống + dời khung nhìn; bộ kiểm hình học `e2e/layout-lint` (18 luật, 1280/1024/390, mọi màn + mọi loại node) — lên `main` 2026-11-08 sau khi Harold duyệt ảnh (https://claude.ai/artifact/RRMf2ZJr3qLDMhSqkZVy9k) | ✅ |
+| So ảnh pixel (spec §30.3, AC-TL-10..14) + lỗi Input slot/Tham số gọi theo nhãn form (AC-UI-79, §4.12a): `toHaveScreenshot` ngưỡng 0 pixel cho `ui-v2*.spec.ts`, 45 ảnh gốc (4,9 MB) ở `e2e/__screenshots__/`, đồng hồ trình duyệt cố định, "04-run / running" chỉ duyệt tay; bỏ 1 dấu sắc lệch 1 pixel vẫn bị bắt. Nhãn lỗi ở `locales/vi/engine-fields.json` (chỉ nạp trong worker, JS entry giữ 213,1 KiB) — lên `main` 2026-11-09 | ✅ |
 | Test: Vitest (~1170 test), Playwright E2E (~435 test, Supabase được mock; test nặng opt-in `HEAVY_E2E=1`, `HRFLOW_PERF=1`) | ✅ |
 
 ## 2. Môi trường
@@ -50,16 +51,17 @@
 
 11. Bộ khung UI/UX vòng A (MINOR/ghi chú cho vòng B, verifier 2026-11-06): `ConfirmDialog` khi `busy` chỉ khóa nút, Esc vẫn đóng và gọi `onCancel` — vòng B chặn sự kiện `cancel` lúc busy và thêm E2E (Khóa/Retire); DatePicker qua `FormField` chưa kiểm trên DOM thật; token cũ `display-xl`/`display-lg`/`body-lg` còn (deprecated), xóa ở vòng B; `PENDING_ROUND_B` (61 vi phạm / 49 file) phải rỗng khi xong vòng B; tiêu đề màn cũ vẫn 48px tới vòng B.
 
-12. Sau vòng B (MINOR, 2026-11-08): (a) thông báo lỗi của Input slot / Tham số (`engine.json` `slot.invalidField`, `param.invalidField`…) còn tên mục nội bộ ở `{{field}}` — cần map đường dẫn sang nhãn như `features/designer/issue-text.ts`; (b) test `infotip-qa` "pinned one and a hovered one" fail 1 lần, chạy lại 100+ lượt xanh — nếu lặp lại xem cleanup của store popover (`InfoTip.tsx`); (c) ở 1024px khi mở panel dữ liệu Designer, canvas chỉ còn ~230px; (d) bảng xem trước trong panel dữ liệu mất header dính (cuộn chung với panel); (e) ngân sách JS còn ~2,1 KiB (213,1 / 215,2) — vòng sau cần để ý; (f) hàng 3 ô của Input slot xếp 1 cột ở panel Designer (nhãn không vừa 3 cột); (g) thêm node khi khung nhìn kín: khung dời tới node mới (giữ zoom), node cũ có thể ngoài khung — dùng "Vừa khung".
+12. Sau vòng B (MINOR, 2026-11-08): (a) ~~lỗi Input slot / Tham số lộ tên mục nội bộ~~ → đã sửa 2026-11-09 (AC-UI-79); (b) test `infotip-qa` "pinned one and a hovered one" fail 1 lần, chạy lại 100+ lượt xanh — nếu lặp lại xem cleanup của store popover (`InfoTip.tsx`); (c) ở 1024px khi mở panel dữ liệu Designer, canvas chỉ còn ~230px; (d) bảng xem trước trong panel dữ liệu mất header dính (cuộn chung với panel); (e) ngân sách JS còn ~2,1 KiB (213,1 / 215,2) — vòng sau cần để ý; (f) hàng 3 ô của Input slot xếp 1 cột ở panel Designer (nhãn không vừa 3 cột); (g) thêm node khi khung nhìn kín: khung dời tới node mới (giữ zoom), node cũ có thể ngoài khung — dùng "Vừa khung".
+
+13. Vòng so ảnh pixel (MINOR, verifier 2026-11-09): (a) không được nới `maxDiffPixels` (bỏ dấu sắc chỉ lệch 1 pixel; `threshold` màu để mặc định 0,2); (b) chưa có `locales/en/engine-fields.json` — khi thêm tiếng Anh phải thêm, nếu không nhãn tiếng Việt chen vào câu tiếng Anh; (c) key `auth.tagline` không dùng ở đâu; (d) kiểm tra trước Publish ở màn Version chỉ được unit test phủ (dùng chung `checkDesign`), chưa có E2E riêng cho nhãn; (e) đổi giao diện hoặc đổi Chromium → chạy `CI=1 npx playwright test e2e/ui-v2 --update-snapshots` sau `build:e2e`, soi diff ảnh, commit ảnh cùng commit đổi UI.
 
 ## 5. Bước tiếp theo
 
-- ~~Vòng nâng tooling~~, ~~bộ khung UI/UX vòng A, vòng B~~ → xong (lên `main` 2026-11-08).
+- ~~Vòng nâng tooling~~, ~~bộ khung UI/UX vòng A, vòng B~~ → xong (lên `main` 2026-11-08). ~~So ảnh pixel~~ + §4.12a → xong (lên `main` 2026-11-09).
 - **Tiếp theo (theo MEMORY 2026-11-04 15:34):**
-  1. **So ảnh pixel** (`toHaveScreenshot`): áp `docs/patches/2026-11-04-pixel-compare.patch` (`git apply`; patch viết trước vòng A/B nên nhiều khả năng phải áp tay theo nội dung: đồng hồ trình duyệt cố định `freezeClock`, thay chữ "… giây" trước khi so, trạng thái "đang chạy" không so, `maxDiffPixels: 0`, `snapshotPathTemplate` `e2e/__screenshots__/`), sinh ảnh gốc bằng `--update-snapshots` sau `pnpm --filter @hrflow/web build:e2e`, chạy 2 lần liên tiếp pass rồi commit ảnh. Gộp vào `e2e/ui-v2*.spec.ts` (giữ trang ảnh duyệt tay + `layout-lint`).
+  1. ~~**So ảnh pixel** (`toHaveScreenshot`): áp `docs/patches/2026-11-04-pixel-compare.patch` (`git apply`; patch viết trước vòng A/B nên nhiều khả năng phải áp tay theo nội dung: đồng hồ trình duyệt cố định `freezeClock`, thay chữ "… giây" trước khi so, trạng thái "đang chạy" không so, `maxDiffPixels: 0`, `snapshotPathTemplate` `e2e/__screenshots__/`), sinh ảnh gốc bằng `--update-snapshots` sau `pnpm --filter @hrflow/web build:e2e`, chạy 2 lần liên tiếp pass rồi commit ảnh. Gộp vào `e2e/ui-v2*.spec.ts` (giữ trang ảnh duyệt tay + `layout-lint`).~~
   2. **Tối ưu hiệu năng** (HANDOFF §4 mục #5, vòng riêng): thời gian đẩy dữ liệu vào DuckDB, AC-B3-24 (100k × 30 < 10 giây), đo AC-B4-31 trên Chromium.
   3. **Phase 2**: bảng tham chiếu có effective date + `input.refTable` → `output.template` → `code.python` (Pyodide).
-- Có thể gộp mục §4.12(a) (lỗi slot/param lộ tên mục) vào vòng gần nhất có đụng Designer.
 
 ## 6. Token theo vòng (để so sánh hiệu quả)
 
@@ -80,6 +82,8 @@
 | Vòng B kiểm + viết `layout-lint` (CHANGES REQUIRED) | verifier | ≈ 243k |
 | Vòng sửa bố cục 1–3 (Select tràn, 44px, FieldGrid, InfoTip, cuộn lồng, nhãn 1 dòng) | developer | ≈ 790k (221k + 298k + 271k) |
 | Kiểm vòng sửa (2 lần, lần cuối PASS) | verifier | ≈ 323k (162k + 161k) |
+| So ảnh pixel + §4.12a | session chính (không subagent code) | — |
+| So ảnh pixel + §4.12a kiểm (PASS, 2 MINOR) | verifier | ≈ 93k |
 
 Ghi chú vòng giao diện: tốn nhiều vòng do yêu cầu UI chốt dần qua ảnh chụp; lần sau với thay đổi UI nên dựng **trang mẫu tương tác (Artifact) để Harold duyệt trước khi code** (đã làm ở cuối vòng, hiệu quả). Trang ảnh duyệt: https://claude.ai/artifact/F8Zq7ULN6RSgJFfEgFcmhB; mẫu bảng: https://claude.ai/artifact/AwjFJEPc5YndnE6Z1tf56B.
 
