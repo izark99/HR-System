@@ -9,6 +9,8 @@
 
 ## Phạm vi & sản phẩm
 
+2026-11-09 14:28 - Phase 2 bước 1 — bảng tham chiếu + `input.refTable`: dữ liệu lưu JSON trong `ref_table_versions.rows`, mỗi version ≤ 50.000 dòng và ≤ 5 MB; nhập bằng import Excel (đọc + kiểm cột/kiểu trong worker, xem trước rồi lưu thành version) **và** sửa từng ô ngay trong app (chỉ trên version draft); cột định nghĩa ở cấp bảng (mọi version cùng bộ cột: mã, tên, kiểu, tên cột trong file, cột khóa), đổi cột thì Designer kiểm lại các flow đang dùng; vòng đời version giống flow (Draft → Publish có hiệu lực từ ngày + ghi chú → Retired, không chồng lấn, bất biến, rollback = publish lại); Designer xem trước dùng version theo ngày hiệu lực của tham số mẫu (chưa nhập thì hôm nay); gộp tham số danh sách chọn lấy từ bảng tham chiếu (`fromRefTable`). Màn quản lý dựng mẫu Artifact cho Harold duyệt trước khi code.
+
 2026-11-09 13:51 - Tab "Văn bản giao diện" (hiệu năng, verifier đo ~1.470 dòng chậm trên máy yếu): bảng hiện 100 dòng đầu, cuối bảng có nút "Hiện thêm 100 dòng (còn N)"; tìm/lọc vẫn chạy trên toàn bộ danh sách, số đếm giữ tổng; đổi ô tìm hoặc bộ lọc thì về lại 100 dòng đầu.
 
 2026-11-09 13:06 - Tab "Văn bản giao diện": thứ tự cột của bảng là Màn, Mã, Trạng thái, Sửa lần cuối, Chữ đang dùng, Thao tác (cột chữ dài để cuối, liếc là thấy dòng đã sửa); chấp nhận người dùng đã đăng nhập đọc được `updated_by` (uuid của Admin, không kèm tên) của các dòng đã sửa.
@@ -90,6 +92,8 @@
 2026-10-26 08:20 - File chấm công dạng tổng hợp theo tháng, mỗi NV 1 dòng.
 
 ## Dữ liệu & tuân thủ
+
+2026-11-09 14:28 - Bảng tham chiếu: User chỉ đọc được bảng mà flow được gán cho họ dùng tới (danh sách bảng ghi lại khi Publish flow, đúng spec §7.3); import phát hiện cột có tên giống dữ liệu cá nhân (họ tên, CCCD, số điện thoại, email, mã NV…) → cảnh báo, Admin phải tick xác nhận "không phải dữ liệu cá nhân" mới lưu, xác nhận ghi audit (spec §17).
 
 2026-10-27 07:31 - CSP giữ `style-src 'self' 'unsafe-inline'` (React Flow, Monaco gán style lúc chạy); script inline vẫn bị chặn. Quy tắc `data-privacy.md` sửa cho khớp.
 

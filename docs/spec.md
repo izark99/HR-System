@@ -170,7 +170,7 @@ Kiến trúc giữ tính **portable**: frontend là static build; backend chỉ 
 | `flows` | Flow (định danh logic) | `id`, `code` (unique), `name`, `description`, `category`, `is_archived` |
 | `flow_versions` | Phiên bản flow | `id`, `flow_id`, `version_no`, `status` (`draft`/`published`/`retired`), `effective_from` (date), `effective_to` (date, null = vô thời hạn), `definition` (jsonb), `schema_version`, `change_note`, `published_by`, `published_at` |
 | `flow_assignments` | Gán flow cho user/group | `flow_id`, `user_id` *hoặc* `group_id` |
-| `ref_tables` *(Phase 2)* | Bảng tham chiếu (định danh) | `id`, `code`, `name`, `columns` (jsonb: tên, kiểu) |
+| `ref_tables` *(Phase 2, chi tiết §34)* | Bảng tham chiếu (định danh) | `id`, `code`, `name`, `columns` (jsonb: tên, kiểu) |
 | `ref_table_versions` *(Phase 2)* | Phiên bản bảng tham chiếu | `id`, `ref_table_id`, `effective_from`, `effective_to`, `rows` (jsonb) *hoặc* `storage_path` (Parquet nếu lớn), `row_count`, `status` |
 | `templates` *(Phase 2)* | Template Excel | `id`, `code`, `name`, `storage_path`, `sheets` (jsonb: metadata sheet/named range), `checksum` |
 | `run_logs` | Nhật ký chạy (**không chứa nội dung dữ liệu**) | `id`, `user_id`, `flow_version_id`, `params` (jsonb), `inputs_meta` (jsonb: tên slot, số dòng, kích thước, SHA-256), `status`, `duration_ms`, `rows_out`, `error_code`, `error_node_id`, `client_info` |
@@ -1749,3 +1749,29 @@ Ghi chú hiện thực (vòng developer 2026-11-09):
 - Quyền đọc cột: `anon` chỉ đọc `key`, `value`; `authenticated` đọc cả `updated_by`, `updated_at` (dòng chưa khôi phục; Admin thấy mọi dòng). `updated_by` không có khóa ngoại (migration không chứa từ khóa xóa).
 
 
+
+---
+
+## 34. Phase 2 bước 1 — Bảng tham chiếu có hiệu lực + `input.refTable` — User story & Acceptance criteria
+
+> Chốt 2026-11-09 14:28 (MEMORY nhóm "Phạm vi & sản phẩm", "Dữ liệu & tuân thủ"). Bố cục màn chốt qua mẫu Artifact trước khi code (AC chi tiết của UI bổ sung sau khi Harold duyệt). Thay mô tả sơ bộ ở §7.1 (`ref_tables`, `ref_table_versions`), giữ §7.3, §14, §17.
+
+**US-RT-1** — Là Admin, tôi muốn tạo bảng tham chiếu (danh mục, mapping mã, biểu thuế, hệ số) với các cột cố định, nhập dữ liệu từ Excel hoặc sửa trực tiếp trong app, rồi publish theo ngày hiệu lực, để flow tự dùng đúng quy định của từng kỳ.
+**US-RT-2** — Là Admin, tôi muốn kéo node "Bảng tham chiếu" vào flow và dùng các cột của nó như một bảng đầu vào, để tra cứu/ghép mà không bắt User upload thêm file.
+**US-RT-3** — Là User, tôi muốn chạy flow mà không phải làm gì thêm với bảng tham chiếu, và chạy lại kỳ cũ cho ra đúng kết quả của kỳ đó.
+
+| # | Given / When / Then |
+|---|---------------------|
+| AC-RT-01 | Dữ liệu (MEMORY 14:28): `ref_tables` (`id`, `code` unique dạng định danh, `name`, `description`, `columns` jsonb, `updated_at`) + `ref_table_versions` (`id`, `ref_table_id`, `version_no`, `status` draft/published/retired, `effective_from`, `effective_to`, `change_note`, `rows` jsonb, `row_count`, `published_by/at`, `updated_at`). Mỗi version ≤ 50.000 dòng và ≤ 5 MB (check DB + kiểm phía client trước khi gửi). Không chồng lấn hiệu lực giữa các version published của cùng bảng (exclusion constraint như flow), published bất biến (trigger), tối đa 1 draft/bảng, rollback = tạo draft từ version cũ. Không có lệnh/policy chứa từ khóa xóa trong migration áp qua MCP (HANDOFF §3); hủy draft dùng RPC hoặc phần SQL Harold dán. Supabase cấp quyền mặc định: `revoke all … from public, anon, authenticated` trước `grant` (HANDOFF §4.16e). |
+| AC-RT-02 | Cột ở cấp bảng: mỗi cột có `key` (định danh), `title`, `type` (string/integer/decimal/date/boolean), `aliases` (tên cột trong file Excel), cột khóa (≥ 1, không trùng trong 1 version, so khớp như `unique` của slot: không phân biệt hoa thường/khoảng trắng). Đổi cột (thêm/xóa/đổi kiểu) có cảnh báo liệt kê flow đang dùng bảng; kiểm tra thiết kế (Designer, Publish flow) báo lỗi nếu flow dùng cột không còn. |
+| AC-RT-03 | Import Excel (Admin): chọn file .xlsx/.xls → worker đọc (cùng bộ đọc + chống zip bomb của input slot; dòng tiêu đề, alias, kiểu theo định nghĩa cột) → báo cáo kiểm tra (thiếu cột, sai kiểu, trùng khóa, vượt giới hạn dòng/kích thước) → xem trước 200 dòng → "Lưu vào draft" (ghi đè toàn bộ dữ liệu draft; chưa có draft thì tạo). Lỗi chặn lưu; cảnh báo không chặn. |
+| AC-RT-04 | Sửa trong app (chỉ version draft): lưới dữ liệu sửa từng ô (kiểm kiểu tại chỗ), thêm dòng, xóa dòng (trong draft, chưa lưu), lưu bằng nút Lưu (kiểm xung đột `updated_at` như Designer), cảnh báo khi rời trang còn thay đổi chưa lưu. Version published/retired chỉ xem. Lưới hiện theo lô (như AC-TX-13) để không đơ với 50.000 dòng; có tìm trong dữ liệu. |
+| AC-RT-05 | Dữ liệu cá nhân (MEMORY 14:28, §17): khi định nghĩa cột hoặc import, tên cột/tiêu đề khớp danh sách heuristic (họ tên, tên NV, CCCD/CMND, số điện thoại, email, mã NV, ngày sinh, địa chỉ, số tài khoản…; không phân biệt dấu/hoa thường) → cảnh báo, nút Lưu chỉ bật khi Admin tick "Tôi xác nhận bảng này không chứa dữ liệu cá nhân"; xác nhận ghi `audit_logs` (không kèm dữ liệu). |
+| AC-RT-06 | Version: màn Version của bảng giống màn Version flow (danh sách, Publish với hiệu lực từ ngày + ghi chú bắt buộc, đề xuất đóng version đang mở, cảnh báo khoảng trống, Retire, Hủy draft, rollback, diff: số dòng thêm/xóa/sửa theo khóa + xem từng dòng khác). |
+| AC-RT-07 | Node `input.refTable` (plugin `engine/nodes/`, schema `packages/flow-schema`): config `{ refTable: code }`; cổng ra `table` với cột theo định nghĩa bảng (không cần dữ liệu để suy cột); Designer: palette nhóm Đầu vào, form chọn bảng (Select tự làm có tìm), cảnh báo nếu bảng chưa có version published; kiểm tra thiết kế báo lỗi khi bảng không tồn tại. |
+| AC-RT-08 | Chọn version khi chạy (§14.2): cùng as-of date với flow (`isAsOfDate`, không có thì hôm nay); `effective_from ≤ as_of < effective_to`; không có version hiệu lực → lỗi rõ ràng trước khi chạy ("Bảng tham chiếu \"…\" chưa có phiên bản hiệu lực cho kỳ 03/2025"), nêu ở bước kiểm tra trước khi bấm Chạy. Run log ghi `ref_versions` (mã bảng → id version) không kèm dữ liệu. Designer xem trước dùng version theo ngày hiệu lực của tham số mẫu (chưa nhập → hôm nay) và ghi rõ version nào đang dùng. |
+| AC-RT-09 | RLS (MEMORY 14:28, §7.3): Admin toàn quyền (trừ xóa version published/retired); User chỉ SELECT version **published** của bảng có trong danh sách bảng của một flow version published được gán cho họ (trực tiếp/qua nhóm). Khi Publish flow, danh sách bảng dùng tới (`input.refTable` + `fromRefTable`) được ghi vào `flow_versions.ref_tables` (trigger tính từ `definition`, client không tự đặt). `anon` không đọc gì. Test RLS (`supabase/tests/`) gồm: User không được gán không đọc được; bảng không nằm trong flow không đọc được; draft không đọc được. |
+| AC-RT-10 | Tham số danh sách chọn lấy từ bảng (`options.fromRefTable`, `valueColumn`, `labelColumn`): form Designer chọn bảng + 2 cột (Select); màn Chạy flow tải danh sách từ version hiệu lực theo as-of date (nếu chính tham số đó là as-of thì dùng hôm nay); bảng không có version hiệu lực → tham số hiện lỗi, không chặn các tham số khác. |
+| AC-RT-11 | Màn Admin "Bảng tham chiếu" (mục menu trái đang "Sắp có" → bật): danh sách bảng (mẫu List, `DataTable`), tạo/sửa bảng + cột, trang version; theo §25.5, `layout-lint` (1280/1024), ảnh so pixel, axe. Chi tiết bố cục theo mẫu Harold duyệt. |
+| AC-RT-12 | Ngân sách: mọi code mới nằm trong chunk lười (màn Admin, Designer, màn Chạy flow, worker); JS tải ban đầu không tăng (còn ~675 B). Có nguy cơ vượt → dừng, báo Harold. |
+| AC-RT-13 | Không hồi quy: flow nghiệm thu khớp `expected.json`; full E2E, unit, golden pass; dữ liệu test giả (danh mục chi nhánh, biểu hệ số), không có dữ liệu cá nhân. |
