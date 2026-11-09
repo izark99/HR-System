@@ -242,6 +242,49 @@ test('AC-B3-34/35/37/38: slot/param errors on the field, renamed key breaks comp
   await expect(p.getByText(/ma_nv/).first()).toBeVisible();
 });
 
+test('AC-UI-79: slot / param field errors name the form label, never the config path', async ({
+  page,
+  supabase,
+}) => {
+  withDraft(supabase);
+  await open(page);
+  const p = panel(page);
+
+  // Tham số: a key with a space is not a valid identifier.
+  await p.getByRole('button', { name: 'Thêm tham số' }).click();
+  const second = p
+    .getByRole('group', { name: 'Tham số', exact: true })
+    .locator(':scope > [role="group"]')
+    .nth(1);
+  await second.getByLabel('Mã', { exact: true }).fill('Ky Luong');
+  await expect(statusBar(page)).toContainText('1 lỗi');
+  await statusBar(page).click();
+  const paramIssue = page.getByRole('button', { name: /^Lỗi.*Tham số/ });
+  await expect(paramIssue).toContainText('giá trị ở mục "Mã" không hợp lệ');
+  await statusBar(page).click(); // the list toggles
+  await expect(second).toContainText('giá trị ở mục "Mã" không hợp lệ');
+  await toolbar(page).getByRole('button', { name: 'Hoàn tác' }).click();
+  await page.keyboard.press('Control+Z');
+  await expect(statusBar(page)).toContainText('0 lỗi');
+
+  // Input slot: header row 0 (below the minimum), then the first column's alias list emptied.
+  await p.getByRole('tab', { name: 'Input slot' }).click();
+  await p.getByLabel('Dòng tiêu đề', { exact: true }).fill('0');
+  await expect(statusBar(page)).toContainText(/[1-9] lỗi/);
+  await statusBar(page).click();
+  const slotIssue = page.getByRole('button', { name: /^Lỗi.*Mục upload/ }).first();
+  await expect(slotIssue).toContainText('"Dòng tiêu đề"');
+  await statusBar(page).click();
+  await expect(p).toContainText('"Dòng tiêu đề"');
+  // A column field: "Cột 1, Mã cột" (was `columns.0.key`).
+  const cols = p.getByRole('group', { name: 'Các cột', exact: true });
+  await cols.locator(':scope > [role="group"]').nth(0).getByLabel('Mã cột').fill('_ma_nv');
+  await expect(p).toContainText('mã cột ở mục "Cột 1, Mã cột" không hợp lệ');
+  for (const where of [p, page.getByRole('main')]) {
+    await expect(where).not.toContainText(/headerRow|columns\.\d|\.type\b|engineFields/);
+  }
+});
+
 test('AC-B3-39/40: save, then leave without prompt; unsaved changes prompt in-app and on close', async ({
   page,
   supabase,
