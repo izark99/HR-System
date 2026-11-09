@@ -92,6 +92,14 @@ describe('grid editing (AC-RT-04)', () => {
     expect(texts(r.state)).toEqual(['CN01|Hồ Chí Minh|9', 'CN02|Hà Nội|1', 'CN03|Cần Thơ|8']);
   });
 
+  it('skips rows marked for removal when pasting (they are not saved)', () => {
+    let s = toggleRemoved(start(), 1, W);
+    const r = paste(s, [0, 1, 2], 1, 'A\nB\nC', W);
+    s = r.state;
+    expect(texts(s)).toEqual(['CN01|A|1', 'CN02|Hà Nội|1', 'CN03|B|2', '|C|']);
+    expect(r.added).toBe(1);
+  });
+
   it('parses Excel clipboard text (CRLF, quoted cells, trailing line break)', () => {
     expect(parseClipboard('a\tb\r\nc\td\r\n')).toEqual([
       ['a', 'b'],

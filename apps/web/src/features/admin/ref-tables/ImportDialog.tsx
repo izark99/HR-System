@@ -316,7 +316,11 @@ function ImportBody({
                       </td>
                       <td className={denseTdClass}>{i.row ?? '–'}</td>
                       <td className={denseTdClass}>{columnTitle(i.column) || '–'}</td>
-                      <td className={cx(denseTdClass, 'whitespace-normal')}>
+                      <td
+                        className={cx(
+                          denseTdClass.replace('whitespace-nowrap', 'min-w-60 whitespace-normal'),
+                        )}
+                      >
                         {formatIssue(i, (k, p) => te(k, p ?? {}))}
                       </td>
                     </tr>

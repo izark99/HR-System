@@ -282,11 +282,15 @@ function DataEditor({
     else handlers.undo();
   }
 
-  const status = readOnly
+  const base = readOnly
     ? t('data.countReadOnly', { count: grid.rows.length })
     : summary.dirty
       ? t('data.dirty', { edited: summary.edited, added: summary.added, removed: summary.removed })
       : t('data.clean', { count: grid.rows.length, time: formatStamp(version.updatedAt) });
+  const status =
+    !readOnly && problems.size > 0
+      ? `${base} · ${t('data.problemCount', { count: problems.size })}`
+      : base;
 
   return (
     <>

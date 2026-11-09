@@ -240,52 +240,49 @@ test.describe('Admin', () => {
   });
 });
 
-test.describe('KNOWN BUG', () => {
+test.describe('paste over removed rows', () => {
   test.use({ signedInAs: ADMIN });
 
-  // Pasting several lines over a range that contains a row marked "removed" writes one of the
-  // lines into that row: the row stays removed (disabled, struck through) and its pasted values
-  // are dropped at save. Expected: removed rows are skipped (or the paste restores the row).
-  test.fail('paste over a removed row loses that pasted line', async ({ page, supabase }) => {
+  // Fixed 2026-11-09: rows marked "removed" are skipped by a multi-line paste.
+  test('a multi-line paste skips a row marked removed', async ({ page, supabase }) => {
     supabase.ref.seed({ code: 'DM_CHI_NHANH', name: 'Danh mục chi nhánh', draft: branchRows(4) });
     await page.goto(`${LIST}/DM_CHI_NHANH/versions/1`);
     await page.getByRole('button', { name: 'Xóa dòng 3' }).click();
     await expect(page.locator('[data-grid-row="2"]')).toHaveAttribute('data-removed', 'true');
-    await pasteInto(cell(page, 'Tên chi nhánh', 2), 'Tên A\nTên B\nTên C');
+    // Row 3 is skipped: the 2 lines go to rows 2 and 4 (a 3rd line would be a new row, which
+    // then needs a key before saving).
+    await pasteInto(cell(page, 'Tên chi nhánh', 2), 'Tên A\nTên B');
+    await expect(cell(page, 'Tên chi nhánh', 4)).toHaveValue('Tên B');
     await page.getByRole('button', { name: 'Lưu draft' }).click();
     await expect(page.getByText('Đã lưu draft v1.')).toBeVisible();
     const names = supabase.ref.draftOf('DM_CHI_NHANH')!.rows.map((r) => r.ten_cn);
-    expect(names).toEqual(expect.arrayContaining(['Tên A', 'Tên B', 'Tên C']));
+    expect(names).toEqual(expect.arrayContaining(['Tên A', 'Tên B']));
+    expect(names).toHaveLength(3);
   });
 });
 
-test.describe('KNOWN BUG (layout)', () => {
+test.describe('import report layout', () => {
   test.use({ signedInAs: ADMIN, viewport: { width: 1280, height: 800 } });
 
-  // ImportDialog.tsx: the "Nội dung" cell adds `whitespace-normal` to `denseTdClass`, which
-  // already holds `whitespace-nowrap`; `cx` does not merge classes, so the stylesheet order wins
-  // (nowrap) and the message is cut at the dialog edge (horizontal scroll to read it).
-  test.fail(
-    'import report: the message column wraps inside the dialog',
-    async ({ page, supabase }) => {
-      supabase.ref.seed({ code: 'DM_CHI_NHANH', name: 'Danh mục chi nhánh', draft: branchRows(2) });
-      await page.goto(`${LIST}/DM_CHI_NHANH/versions`);
-      await page.getByRole('button', { name: 'Import Excel vào draft' }).click();
-      const imp = page.getByRole('dialog', { name: 'Import Excel vào draft v1' });
-      await imp.getByLabel('Chọn file Excel để import').setInputFiles(
-        workbook('danh_muc_chi_nhanh.xlsx', {
-          S: [
-            [...HEAD, 'Ghi chú'],
-            ['CN01', 'A', 1, 'x'],
-          ],
-        }),
-      );
-      await expect(imp.getByText('1 cảnh báo')).toBeVisible();
-      const message = imp.getByRole('cell', { name: /không có trong bảng/ });
-      expect(await message.evaluate((el) => getComputedStyle(el).whiteSpace)).toBe('normal');
-      const box = message.locator('xpath=ancestor::div[contains(@class,"overflow-auto")][1]');
-      const [scroll, client] = await box.evaluate((el) => [el.scrollWidth, el.clientWidth]);
-      expect(scroll).toBeLessThanOrEqual(client);
-    },
-  );
+  // Fixed 2026-11-09: the "Nội dung" cell wraps inside the dialog.
+  test('import report: the message column wraps inside the dialog', async ({ page, supabase }) => {
+    supabase.ref.seed({ code: 'DM_CHI_NHANH', name: 'Danh mục chi nhánh', draft: branchRows(2) });
+    await page.goto(`${LIST}/DM_CHI_NHANH/versions`);
+    await page.getByRole('button', { name: 'Import Excel vào draft' }).click();
+    const imp = page.getByRole('dialog', { name: 'Import Excel vào draft v1' });
+    await imp.getByLabel('Chọn file Excel để import').setInputFiles(
+      workbook('danh_muc_chi_nhanh.xlsx', {
+        S: [
+          [...HEAD, 'Ghi chú'],
+          ['CN01', 'A', 1, 'x'],
+        ],
+      }),
+    );
+    await expect(imp.getByText('1 cảnh báo')).toBeVisible();
+    const message = imp.getByRole('cell', { name: /không có trong bảng/ });
+    expect(await message.evaluate((el) => getComputedStyle(el).whiteSpace)).toBe('normal');
+    const box = message.locator('xpath=ancestor::div[contains(@class,"overflow-auto")][1]');
+    const [scroll, client] = await box.evaluate((el) => [el.scrollWidth, el.clientWidth]);
+    expect(scroll).toBeLessThanOrEqual(client);
+  });
 });

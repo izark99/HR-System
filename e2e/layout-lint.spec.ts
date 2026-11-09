@@ -355,6 +355,8 @@ for (const viewport of [DESKTOP, LAPTOP]) {
       await ready(page);
       const vung = page.getByRole('textbox', { name: 'Vùng lương tối thiểu, dòng 2', exact: true });
       await vung.fill('hai');
+      await expect(page.locator('[data-cell-error]')).toBeVisible();
+      await r.check('ref data grid (error of the focused cell)');
       await page.getByRole('button', { name: '+ Thêm dòng' }).click();
       await page.getByRole('button', { name: 'Xóa dòng 1', exact: true }).click();
       await r.check('ref data grid (draft, invalid cell, new + removed row)');

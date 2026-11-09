@@ -1,9 +1,16 @@
-import { memo, useState, type ClipboardEvent, type KeyboardEvent } from 'react';
+import {
+  memo,
+  useLayoutEffect,
+  useRef,
+  useState,
+  type ClipboardEvent,
+  type KeyboardEvent,
+} from 'react';
 import { useTranslation } from 'react-i18next';
 import { denseTdClass, denseThClass } from '../../../components/DataTable';
 import { TrashIcon, UndoIcon } from '../../../components/icons';
 import { RowIcon, rowIconClass } from '../../../components/RowActions';
-import { Chip, cx } from '../../../components/ui';
+import { Chip, cx, floatClass } from '../../../components/ui';
 import { isMultiCell, type GridRow } from './grid-model';
 import { parseCell, type CellProblem, type RefColumn } from './model';
 import { useTypeLabel } from './shared';
@@ -71,6 +78,32 @@ const Cell = memo(function Cell({
       ? problem
       : undefined;
   const errorId = `ref-cell-err-${rowIndex}-${col}`;
+  const [focused, setFocused] = useState(false);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const bubbleRef = useRef<HTMLSpanElement>(null);
+  const bubble = focused && shown !== undefined;
+  // The error of the focused cell shows right under it (MEMORY 2026-11-06 14:45: validation
+  // errors stay visible in place), as a floating layer so rows and columns never move.
+  useLayoutEffect(() => {
+    if (!bubble) return;
+    const place = () => {
+      const a = inputRef.current?.getBoundingClientRect();
+      const el = bubbleRef.current;
+      if (!a || !el) return;
+      const below = a.bottom + 4;
+      const top =
+        below + el.offsetHeight > window.innerHeight - 8 ? a.top - el.offsetHeight - 4 : below;
+      el.style.top = `${top}px`;
+      el.style.left = `${Math.max(8, Math.min(a.left, window.innerWidth - el.offsetWidth - 8))}px`;
+    };
+    place();
+    window.addEventListener('scroll', place, true);
+    window.addEventListener('resize', place);
+    return () => {
+      window.removeEventListener('scroll', place, true);
+      window.removeEventListener('resize', place);
+    };
+  });
   const commit = () => {
     if (text !== value) handlers.commit(rowIndex, col, text);
   };
@@ -126,6 +159,7 @@ const Cell = memo(function Cell({
   return (
     <td className={cx(denseTdClass, 'px-1 py-1')}>
       <input
+        ref={inputRef}
         type="text"
         data-pos={pos}
         data-col={col}
@@ -145,12 +179,29 @@ const Cell = memo(function Cell({
           removed && 'text-muted line-through',
         )}
         onChange={(e) => setText(e.target.value)}
-        onBlur={commit}
+        onFocus={() => setFocused(true)}
+        onBlur={() => {
+          setFocused(false);
+          commit();
+        }}
         onKeyDown={onKeyDown}
         onPaste={onPaste}
       />
       {shown && (
         <span id={errorId} className="sr-only">
+          {t(`grid.problem.${shown}`, { type: t(`types.${column.type}`) })}
+        </span>
+      )}
+      {bubble && (
+        <span
+          ref={bubbleRef}
+          aria-hidden
+          data-cell-error
+          className={cx(
+            floatClass,
+            'pointer-events-none fixed top-0 left-0 z-50 block w-max max-w-80 border-coral-text! px-3 py-2 text-caption whitespace-normal text-coral-text',
+          )}
+        >
           {t(`grid.problem.${shown}`, { type: t(`types.${column.type}`) })}
         </span>
       )}

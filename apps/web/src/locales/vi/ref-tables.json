@@ -227,6 +227,7 @@
     "countReadOnly": "{{count, number}} dòng",
     "dirty": "{{edited, number}} ô sửa · {{added, number}} dòng mới · {{removed, number}} dòng xóa — chưa lưu",
     "matches": "{{shown, number}} / {{total, number}} dòng",
+    "problemCount": "{{count, number}} ô lỗi",
     "showMore": "Hiện thêm {{count, number}} dòng (còn {{left, number}})",
     "empty": "Draft chưa có dòng nào. Bấm \"+ Thêm dòng\" hoặc import từ Excel.",
     "emptyReadOnly": "Phiên bản không có dòng nào.",

@@ -368,3 +368,47 @@ test.describe('Admin', () => {
     await expect(page.getByText('Đã tạo draft v5 từ v3.')).toBeVisible();
   });
 });
+
+test.describe('Admin, columns changed after publishing', () => {
+  test.use({ signedInAs: ADMIN });
+
+  test('rollback after a column change: draft created, bad cells shown, publish refused', async ({
+    page,
+    supabase,
+  }) => {
+    const t = supabase.ref.seed({
+      code: 'DM_CHI_NHANH',
+      name: 'Danh mục chi nhánh',
+      published: [{ from: '2026-01-01', rows: branchRows(3) }],
+    });
+    // The Admin changed "Vùng" to a date column and dropped "Tên chi nhánh".
+    t.columns = [
+      { key: 'ma_cn', title: 'Mã chi nhánh', type: 'string', aliases: [], isKey: true },
+      { key: 'vung', title: 'Vùng lương tối thiểu', type: 'date', aliases: [], isKey: false },
+    ];
+    await page.goto(`${LIST}/DM_CHI_NHANH/versions`);
+    await page.getByRole('button', { name: 'Thao tác khác cho v1' }).click();
+    await page.getByRole('menuitem', { name: 'Tạo draft từ bản này v1' }).click();
+    await expect(page.getByText('Đã tạo draft v2 từ v1.')).toBeVisible();
+    expect(supabase.ref.draftOf('DM_CHI_NHANH')!.rows[0]).toEqual({ ma_cn: 'CN01', vung: '2' });
+
+    await page.getByRole('link', { name: 'Sửa dữ liệu v2' }).click();
+    const vung = cell(page, 'Vùng lương tối thiểu', 1);
+    await expect(vung).toHaveAttribute('data-cell-problem', 'type');
+    await expect(status(page)).toHaveText(/· 3 ô lỗi$/);
+    // The focused cell shows its error in place.
+    await vung.focus();
+    await expect(page.locator('[data-cell-error]')).toHaveText('Giá trị phải là Ngày.');
+    await page.getByLabel('Tìm trong dữ liệu').focus();
+    await expect(page.locator('[data-cell-error]')).toHaveCount(0);
+
+    await page.getByRole('link', { name: 'Phiên bản của DM_CHI_NHANH' }).click();
+    await page.getByRole('button', { name: 'Thao tác khác cho v2' }).click();
+    await page.getByRole('menuitem', { name: 'Publish v2' }).click();
+    const pub = dialog(page, 'Publish v2 của DM_CHI_NHANH');
+    await pub.getByLabel(/Ghi chú thay đổi/).fill('Đổi cột');
+    await pub.getByRole('button', { name: 'Publish' }).click();
+    await expect(pub.getByText(/Dữ liệu draft không còn khớp các cột hiện tại/)).toBeVisible();
+    expect(supabase.ref.draftOf('DM_CHI_NHANH')).toBeDefined();
+  });
+});

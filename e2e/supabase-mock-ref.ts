@@ -62,6 +62,23 @@ export function branchRows(n: number, from = 1): MockRefRow[] {
 const nkey = (v: unknown) =>
   typeof v === 'string' ? v.normalize('NFC').replace(/\s+/g, ' ').trim().toLowerCase() : String(v);
 
+/** A row with every key column filled (to check one other cell's type on its own). */
+function keyStub(t: MockRefTable): MockRefRow {
+  const out: MockRefRow = {};
+  for (const c of t.columns.filter((x) => x.isKey))
+    out[c.key] =
+      c.type === 'integer'
+        ? 1
+        : c.type === 'boolean'
+          ? true
+          : c.type === 'date'
+            ? '2026-01-01'
+            : c.type === 'decimal'
+              ? '1'
+              : 'k';
+  return out;
+}
+
 export class RefTablesMock {
   tables: MockRefTable[] = [];
   versions: MockRefVersion[] = [];
@@ -436,7 +453,18 @@ export class RefTablesMock {
         await json(409, { code: '23505', message: 'duplicate' });
         return true;
       }
-      const v = this.newVersion(src.ref_table_id, structuredClone(src.rows), caller);
+      // private.project_ref_rows: rows put on the current columns (rollback after a change).
+      const table = this.tables.find((x) => x.id === src.ref_table_id)!;
+      const rows = src.rows.map((r) => {
+        const out: MockRefRow = {};
+        for (const c of table.columns) {
+          const v = r[c.key];
+          if (v === undefined || v === null) continue;
+          out[c.key] = this.rowsProblem(table, [{ ...keyStub(table), [c.key]: v }]) ? String(v) : v;
+        }
+        return out;
+      });
+      const v = this.newVersion(src.ref_table_id, rows, caller);
       await json(200, [{ version_id: v.id, version_no: v.version_no, updated_at: v.updated_at }]);
       return true;
     }
@@ -460,6 +488,12 @@ export class RefTablesMock {
       }
       if (v.updated_at !== body.p_expected_updated_at) {
         await json(409, { code: 'HF002', message: 'draft_conflict' });
+        return true;
+      }
+      const owner = this.tables.find((x) => x.id === v.ref_table_id)!;
+      const bad = this.rowsProblem(owner, v.rows);
+      if (bad) {
+        await json(400, { code: '22023', message: bad });
         return true;
       }
       const from = body.p_effective_from as string;

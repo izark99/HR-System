@@ -215,8 +215,8 @@ export function isMultiCell(text: string): boolean {
 
 /**
  * Paste a block at (`targets[0]`, `col`): the block's rows go to `targets` in order (the rows on
- * screen, which may be filtered by the search), then to new rows at the end; cells past the last
- * column are left out. One undo step.
+ * screen, which may be filtered by the search) skipping rows marked for removal, then to new rows
+ * at the end; cells past the last column are left out. One undo step.
  */
 export function paste(
   state: GridState,
@@ -226,10 +226,13 @@ export function paste(
   width: number,
 ): { state: GridState; rows: number; added: number } {
   const block = parseClipboard(text);
+  // Rows marked for removal are stepped over: a pasted line never lands in a row that will not
+  // be saved (verifier 2026-11-09).
+  const open = targets.filter((i) => !state.rows[i]?.removed);
   const cells: CellChange[] = [];
   let added = 0;
   block.forEach((values, r) => {
-    let row = targets[r];
+    let row = open[r];
     if (row === undefined) row = state.rows.length + added++;
     values.forEach((value, k) => {
       const c = col + k;
