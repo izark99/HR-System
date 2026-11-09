@@ -72,6 +72,27 @@ test.describe('Admin', () => {
     await expect(rowOf(page, 'auth.login.title')).toHaveCount(0);
   });
 
+  test('100 rows at a time, "Hiện thêm" adds 100, a new search starts again (AC-TX-13)', async ({
+    page,
+  }) => {
+    await page.goto(URL);
+    const body = table(page).locator('tbody tr');
+    await expect(body).toHaveCount(100);
+    const more = card(page).getByRole('button', { name: /^Hiện thêm 100 dòng \(còn 1\.\d{3}\)$/ });
+    await more.click();
+    await expect(body).toHaveCount(200);
+    // The count stays over every row.
+    await expect(card(page).locator('[data-ui-text-count]')).toHaveText(
+      /^1\.\d{3} \/ 1\.\d{3} dòng · 0 đã sửa$/,
+    );
+    // A search over every row (beyond the rows drawn), then back to the first 100.
+    await search(page, 'formula.fn.WEEKDAY.desc');
+    await expect(rowOf(page, 'designer:formula.fn.WEEKDAY.desc')).toBeVisible();
+    await expect(card(page).getByRole('button', { name: /^Hiện thêm/ })).toHaveCount(0);
+    await search(page, '');
+    await expect(body).toHaveCount(100);
+  });
+
   test('edit: toast, the tab shows the new text at once, stored with author', async ({
     page,
     supabase,

@@ -9,6 +9,8 @@
 
 ## Phạm vi & sản phẩm
 
+2026-11-09 13:51 - Tab "Văn bản giao diện" (hiệu năng, verifier đo ~1.470 dòng chậm trên máy yếu): bảng hiện 100 dòng đầu, cuối bảng có nút "Hiện thêm 100 dòng (còn N)"; tìm/lọc vẫn chạy trên toàn bộ danh sách, số đếm giữ tổng; đổi ô tìm hoặc bộ lọc thì về lại 100 dòng đầu.
+
 2026-11-09 13:06 - Tab "Văn bản giao diện": thứ tự cột của bảng là Màn, Mã, Trạng thái, Sửa lần cuối, Chữ đang dùng, Thao tác (cột chữ dài để cuối, liếc là thấy dòng đã sửa); chấp nhận người dùng đã đăng nhập đọc được `updated_by` (uuid của Admin, không kèm tên) của các dòng đã sửa.
 
 2026-11-09 09:14 - Tab Admin "Văn bản giao diện" (menu trái): Admin sửa được **mọi text hiện có** của app: tên màn, menu, tiêu đề, nhãn, nút, thông báo của mọi màn User + Admin, Designer (kể cả bảng tra hàm công thức) và thông báo engine (kiểm tra file, lỗi chạy, lỗi cấu hình; text đã sửa được truyền vào worker). Không gồm dữ liệu do Admin đặt trong flow (tên flow, tên mục upload, tên sheet xuất…) — sửa ở Designer như cũ. Áp dụng chung cho mọi người dùng, kể cả màn Đăng nhập (bảng text đã sửa đọc được không cần đăng nhập vì chỉ chứa chữ giao diện, không dữ liệu cá nhân; chỉ Admin ghi). Chỉ chữ thuần (không HTML/link); chặn lưu khi thiếu/thừa biến `{{…}}`; độ dài ≤ 2 lần bản gốc (tối thiểu 40 ký tự); "Khôi phục mặc định" từng dòng và tất cả; lưu người sửa + thời điểm sửa gần nhất, không lịch sử phiên bản.

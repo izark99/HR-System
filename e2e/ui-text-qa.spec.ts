@@ -128,7 +128,8 @@ test.describe('performance of the ~1.470-row table (HRFLOW_PERF=1)', () => {
     await expect(count).toHaveText(/^1\.\d{3} \/ 1\.\d{3} dòng/);
     const clear = Date.now() - c0;
     const d0 = Date.now();
-    await page.getByRole('button', { name: 'Sửa auth.login.title', exact: true }).click();
+    // The first row drawn (only the first 100 rows are in the table, AC-TX-13).
+    await page.locator('[data-edit]').first().click();
     await expect(page.getByRole('dialog', { name: 'Sửa văn bản' })).toBeVisible();
     const dialogOpen = Date.now() - d0;
     const x0 = Date.now();

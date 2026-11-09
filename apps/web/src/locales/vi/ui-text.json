@@ -72,5 +72,6 @@
     "title": "Khôi phục {{count, number}} dòng về mặc định?",
     "text": "Mọi chữ đã sửa trở về bản gốc cho tất cả người dùng. Không hoàn tác được.",
     "confirm": "Khôi phục tất cả"
-  }
+  },
+  "showMore": "Hiện thêm {{count, number}} dòng (còn {{left, number}})"
 }

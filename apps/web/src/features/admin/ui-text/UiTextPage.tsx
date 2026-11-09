@@ -356,6 +356,9 @@ const UiTextTable = memo(function UiTextTable({
   );
 });
 
+/** Rows drawn at once in the table (spec §33 AC-TX-13). */
+const PAGE = 100;
+
 export function UiTextPage() {
   const { t } = useTranslation('uiText');
   const toast = useToast();
@@ -369,6 +372,9 @@ export function UiTextPage() {
   const [confirmAll, setConfirmAll] = useState(false);
   const [busyAll, setBusyAll] = useState(false);
   const [actionError, setActionError] = useState<AdminErrorKey | null>(null);
+  // Rows drawn at once (spec §33 AC-TX-13): the first PAGE, more on request; search and filters
+  // still run over every row. Back to one page whenever the search or a filter changes.
+  const [limit, setLimit] = useState(PAGE);
 
   useEffect(() => {
     let alive = true;
@@ -414,6 +420,14 @@ export function UiTextPage() {
     );
   }, [rows, deferredQuery, group, onlyEdited]);
   const editedCount = rows.filter((r) => r.edited).length;
+  const [filterKey, setFilterKey] = useState('');
+  const nextKey = `${deferredQuery}\u0000${group}\u0000${String(onlyEdited)}`;
+  if (filterKey !== nextKey) {
+    setFilterKey(nextKey);
+    setLimit(PAGE);
+  }
+  const visible = useMemo(() => shown.slice(0, limit), [shown, limit]);
+  const more = Math.min(PAGE, shown.length - visible.length);
 
   /** Apply a change in this tab right away (AC-TX-05) and in the table. */
   function applied(changes: [string, string | null][], toastMessage: string) {
@@ -564,7 +578,14 @@ export function UiTextPage() {
               />
             </div>
           </Toolbar>
-          <UiTextTable rows={shown} onEdit={onEdit} onReset={onReset} />
+          <UiTextTable rows={visible} onEdit={onEdit} onReset={onReset} />
+          {more > 0 && (
+            <div className="flex items-center justify-center border-t border-line p-4">
+              <Button onClick={() => setLimit((n) => n + PAGE)}>
+                {t('showMore', { count: more, left: shown.length - visible.length })}
+              </Button>
+            </div>
+          )}
         </section>
       )}
 
