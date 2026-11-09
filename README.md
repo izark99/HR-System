@@ -78,6 +78,22 @@ python3 fixtures/payroll-timesheet/generate.py
 
 CI (GitHub Actions) chạy install → lint → format:check → typecheck → test → build trên mỗi push/PR.
 
+### Đo hiệu năng trên máy thật (spec §31, AC-PF-06)
+
+Dùng để kết luận AC-B3-24 (laptop 8 GB). Chạy trên Windows hoặc macOS có cài Google Chrome; dữ liệu giả sinh tại chỗ (thư mục temp của máy), app chạy bản build cục bộ với Supabase giả lập, không gửi gì ra ngoài.
+
+1. Cài một lần: Node ≥ 22, `corepack enable`, `pnpm install` (không cần tải trình duyệt của Playwright).
+2. Đóng bớt ứng dụng nặng, cắm sạc, rồi chạy trong thư mục repo:
+
+```bash
+pnpm perf:local                                   # 100.000 dòng × 30 cột, 3 lần
+pnpm perf:local -- --rows 100000,1000000          # thêm 1 triệu dòng (sinh file lần đầu mất vài phút)
+```
+
+3. Kết quả in ra từng bảng `[perf stages]` (flow lọc → ghép → tổng hợp → xuất Excel) và `[perf formula]` (công thức): thời gian trung vị (ms) của từng chặng `read` (đọc + kiểm tra file), `upload` (đẩy vào DuckDB), `sql`, `write` (ghi .xlsx) và `total`. Gửi lại nguyên các bảng này kèm cấu hình máy (CPU, RAM). AC-B3-24 đạt khi `total` của 100.000 dòng < 10 giây và 1 triệu dòng chạy xong không lỗi.
+
+Không có Chrome mà có Edge: PowerShell `$env:PW_CHANNEL="msedge"; pnpm perf:local`, macOS `PW_CHANNEL=msedge pnpm perf:local`. Trình duyệt khác: đặt `PW_CHROMIUM_PATH` trỏ tới file chạy của Chromium.
+
 ### Biến môi trường (apps/web)
 
 | Biến | Giá trị | Ghi chú |

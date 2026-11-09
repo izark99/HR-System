@@ -9,6 +9,8 @@ import { existsSync } from 'node:fs';
 const PREINSTALLED = '/opt/pw-browsers/chromium';
 const executablePath =
   process.env.PW_CHROMIUM_PATH ?? (existsSync(PREINSTALLED) ? PREINSTALLED : undefined);
+// PW_CHANNEL=chrome runs the installed Google Chrome instead (pnpm perf:local on a real machine).
+const CHANNEL = process.env.PW_CHANNEL;
 // E2E_PORT lets two E2E runs (different checkouts) share one machine.
 const PORT = Number(process.env.E2E_PORT ?? 4173);
 
@@ -38,9 +40,14 @@ export default defineConfig({
     acceptDownloads: true,
     locale: 'vi-VN',
     trace: 'retain-on-failure',
-    ...(executablePath ? { launchOptions: { executablePath } } : {}),
+    ...(executablePath && !CHANNEL ? { launchOptions: { executablePath } } : {}),
   },
-  projects: [{ name: 'chromium', use: { ...devices['Desktop Chrome'] } }],
+  projects: [
+    {
+      name: 'chromium',
+      use: { ...devices['Desktop Chrome'], ...(CHANNEL ? { channel: CHANNEL } : {}) },
+    },
+  ],
   webServer: {
     command: `pnpm --filter @hrflow/web preview --port ${PORT} --strictPort`,
     url: `http://localhost:${PORT}`,

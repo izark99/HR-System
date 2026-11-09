@@ -1,6 +1,7 @@
 import { OutputExcelConfigSchema, type OutputExcelConfig } from '@hrflow/flow-schema';
 import type { NodeOutputs, PortDef, TsNodePlugin } from '../core/plugin';
 import { EngineError, type ParamValue } from '../core/types';
+import { perfMeasure, perfNow } from '../core/perf';
 import { writeWorkbook } from '../io/excel-writer';
 
 export const XLSX_MIME = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
@@ -53,7 +54,9 @@ export const outputExcelPlugin: TsNodePlugin<OutputExcelConfig, Promise<NodeOutp
       if (!table) throw new EngineError('executor.error.missingInput', { port: s.port });
       return { name: s.name, table };
     });
+    const t0 = perfNow();
     const data = await writeWorkbook(sheets);
+    perfMeasure('write', t0);
     ctx.run.emitArtifact({
       fileName: resolveFileName(config.fileName, ctx.run.params),
       mimeType: XLSX_MIME,

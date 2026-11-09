@@ -148,6 +148,78 @@ export function perfFlow(): FlowDefinitionInput {
   };
 }
 
+/** Formula columns of the AC-B4-31 measurements (formula-perf, e2e/perf-stages). */
+export const PERF_FORMULAS = [
+  '=ROUND([so_2]*1.1,2)',
+  '=IF([so_6]>25000000,"Cao","Thấp")',
+  '=IFERROR([so_7]/[so_8],0)',
+  '=LEFT([ma_nv],4)&"-"&UPPER([chi_nhanh])',
+  '=DATEDIF([ngay_vao],DATE(2026,9,30),"M")',
+  '=SUM([so_1],[so_2],[so_3],[so_4])',
+  '=EOMONTH([ngay_hd],1)',
+  '=MAX([so_11],[so_12])-MIN([so_13],[so_14])',
+  '=PROPER([ho_ten])',
+  '=[so_15]*[so_1]/26',
+];
+
+/**
+ * AC-B4-31 in Chromium (spec §31, AC-PF-03): the perf slot → transform.formula (`count` formula
+ * columns) read by two groupBy nodes, so the formula result is materialized once on its own (its
+ * SQL time is that one `sql` measure) → output.excel with the two small summaries.
+ */
+export function perfFormulaFlow(count: number): FlowDefinitionInput {
+  const base = perfFlow();
+  return {
+    ...base,
+    inputSlots: (base.inputSlots ?? []).slice(0, 1),
+    nodes: [
+      base.nodes[0]!,
+      {
+        id: 'ct',
+        type: 'transform.formula',
+        label: 'Công thức',
+        config: {
+          columns: PERF_FORMULAS.slice(0, count).map((formula, i) => ({
+            key: `ct_${i + 1}`,
+            formula,
+          })),
+        },
+      },
+      {
+        id: 'g_cn',
+        type: 'transform.groupBy',
+        label: 'Theo chi nhánh',
+        config: { by: ['chi_nhanh'], aggregations: [{ key: 'so_nv', fn: 'countRows' }] },
+      },
+      {
+        id: 'g_pb',
+        type: 'transform.groupBy',
+        label: 'Theo phòng ban',
+        config: { by: ['phong_ban'], aggregations: [{ key: 'so_nv', fn: 'countRows' }] },
+      },
+      {
+        id: 'xuat',
+        type: 'output.excel',
+        label: 'Xuất',
+        config: {
+          fileName: 'CongThuc.xlsx',
+          sheets: [
+            { name: 'Chi nhánh', port: 'cn' },
+            { name: 'Phòng ban', port: 'pb' },
+          ],
+        },
+      },
+    ],
+    edges: [
+      { from: 'in_data', to: 'ct' },
+      { from: 'ct', to: 'g_cn' },
+      { from: 'ct', to: 'g_pb' },
+      { from: 'g_cn', to: 'xuat', toPort: 'cn' },
+      { from: 'g_pb', to: 'xuat', toPort: 'pb' },
+    ],
+  };
+}
+
 /** Rows of the branch lookup workbook (header first). */
 export function perfBranchAoa(): (string | number)[][] {
   const aoa: (string | number)[][] = [['Chi nhánh', 'Vùng', 'Hệ số']];

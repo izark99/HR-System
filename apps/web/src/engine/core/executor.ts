@@ -8,6 +8,7 @@ import type { DuckDbLoadProgress, DuckDbProvider } from '../duckdb/base';
 import type { SqlScope } from '../duckdb/scope';
 import { isSqlRel, type SqlRel } from '../duckdb/sql';
 import { nodePlugins } from '../nodes';
+import { perfMeasure, perfNow } from './perf';
 import {
   pluginUsesDuckDb,
   type AnyNodePlugin,
@@ -423,7 +424,9 @@ export async function runFlow(
             else {
               let rel = uploaded.get(key);
               if (!rel) {
+                const u0 = perfNow();
                 uploaded.set(key, (rel = sql.upload(value)));
+                perfMeasure('upload', u0);
                 hold(rel, 1);
                 // Only DuckDB nodes read this port: the TS rows are not needed any more.
                 const users = consumers.get(key) ?? [];
@@ -442,10 +445,12 @@ export async function runFlow(
             }
           }
           // Promise.resolve().then(): a synchronous throw also becomes a rejection.
+          const s0 = perfNow();
           result = await raceAbort(
             Promise.resolve().then(() => plugin.runSql!(step.config, rels, { ...base, sql })),
             signal,
           );
+          perfMeasure('sql', s0);
           // Steps of the lazy chain remember their node, so a failure later (when a consumer
           // materializes the chain) still names the node that caused it.
           const owner = { id: node.id, label: node.label ?? node.id };
@@ -460,7 +465,11 @@ export async function runFlow(
             if (!isSqlRel(value)) tables[link.port] = value;
             else {
               let table = fetched.get(key);
-              if (!table) fetched.set(key, (table = scope!.fetch(value)));
+              if (!table) {
+                const f0 = perfNow();
+                fetched.set(key, (table = scope!.fetch(value)));
+                perfMeasure('sql', f0);
+              }
               tables[link.port] = table;
             }
           }
@@ -483,7 +492,11 @@ export async function runFlow(
             continue;
           }
           // A TS consumer materializes it when it fetches the table.
-          if (users.length > 1 || collect.has(node.id)) result[port] = scope!.materialize(value);
+          if (users.length > 1 || collect.has(node.id)) {
+            const m0 = perfNow();
+            result[port] = scope!.materialize(value);
+            perfMeasure('sql', m0);
+          }
         }
       } catch (err) {
         if (isCancelled(err)) throw err;

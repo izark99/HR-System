@@ -13,7 +13,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { readSlotAsync } from '../io/excel-reader';
-import { perfFlow, writePerfWorkbook } from './perf-flow';
+import { PERF_FORMULAS as FORMULAS, perfFlow, writePerfWorkbook } from './perf-flow';
 import { FormulaConfigSchema } from '@hrflow/flow-schema';
 import { createEngineTranslator } from '../core/i18n';
 import { SqlScope } from '../duckdb/scope';
@@ -24,19 +24,6 @@ import { nodeDuckDb } from './duckdb-node';
 const ENABLED = process.env.HRFLOW_PERF === '1';
 const SIZES = (process.env.HRFLOW_PERF_SIZES ?? '100000').split(',').map(Number);
 const DIR = join(tmpdir(), 'hrflow-perf-columnar');
-
-const FORMULAS = [
-  '=ROUND([so_2]*1.1,2)',
-  '=IF([so_6]>25000000,"Cao","Thấp")',
-  '=IFERROR([so_7]/[so_8],0)',
-  '=LEFT([ma_nv],4)&"-"&UPPER([chi_nhanh])',
-  '=DATEDIF([ngay_vao],DATE(2026,9,30),"M")',
-  '=SUM([so_1],[so_2],[so_3],[so_4])',
-  '=EOMONTH([ngay_hd],1)',
-  '=MAX([so_11],[so_12])-MIN([so_13],[so_14])',
-  '=PROPER([ho_ten])',
-  '=[so_15]*[so_1]/26',
-];
 
 describe.skipIf(!ENABLED)('perf: transform.formula (AC-B4-31)', () => {
   for (const n of SIZES) {

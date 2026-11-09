@@ -11,6 +11,7 @@ import { normalizeKeyPart } from './core/keys';
 import { isCancelled, planFlow, runFlow, type RunFlowResult } from './core/executor';
 import { createEngineTranslator } from './core/i18n';
 import { EngineError, Table, type Translate, type Value } from './core/types';
+import { perfClear, perfMeasure, perfNow } from './core/perf';
 import { readSlot, readSlotAsync, type SlotReadResult, type SourceFile } from './io/excel-reader';
 import { writeWorkbook } from './io/excel-writer';
 import { formatIssue } from './io/validation';
@@ -161,7 +162,9 @@ export class EngineSession {
     }
     if (!isLatest()) return null;
     // .xlsx sheets are inflated in chunks (async); a newer call may have started meanwhile.
+    const t0 = perfNow();
     const result = await readSlotAsync(slot, sources);
+    perfMeasure('read', t0);
     // The file bytes are not needed any more once read (the worker may hold several large files).
     sources.length = 0;
     if (!isLatest()) return null;
@@ -179,6 +182,8 @@ export class EngineSession {
     const flow = this.requireFlow();
     this.clearRun();
     this.abort = new AbortController();
+    perfClear(['upload', 'sql', 'write', 'run']);
+    const t0 = perfNow();
     try {
       const result = await runFlow(flow, {
         t: this.t,
@@ -193,6 +198,7 @@ export class EngineSession {
           return this.slotResults.get(key) ?? readSlot(slot, []);
         },
       });
+      perfMeasure('run', t0);
       return { ok: true, summary: this.collect(flow, result) };
     } catch (err) {
       return { ok: false, cancelled: isCancelled(err), error: errorInfo(err) };

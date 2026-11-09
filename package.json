@@ -14,7 +14,8 @@
     "test": "pnpm -r run test",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "test:e2e": "pnpm --filter @hrflow/web build:e2e && playwright test"
+    "test:e2e": "pnpm --filter @hrflow/web build:e2e && playwright test",
+    "perf:local": "node scripts/perf-local.mjs"
   },
   "devDependencies": {
     "@axe-core/playwright": "^4.14.0",
