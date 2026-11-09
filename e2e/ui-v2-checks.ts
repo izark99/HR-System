@@ -94,26 +94,67 @@ export async function shot(
   await settle(page);
   const { width, height } = page.viewportSize()!;
   const name = `${screen}--${state}--${width}x${height}.png`;
-  await page.screenshot({
-    path: join(SHOTS, name),
-    fullPage: true,
-    animations: 'disabled',
-    caret: 'hide',
-  });
-  writeIndex();
-  if (compare) {
-    // Run duration ("· 0,04 giây") differs on every run: pinned in the DOM before the comparison
-    // (spec §30.3 AC-TL-11). Masking is not enough: its box width follows the text.
-    await page.evaluate(() => {
-      const walk = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
-      for (let n = walk.nextNode(); n; n = walk.nextNode()) {
-        if (/\d giây/.test(n.nodeValue ?? '')) {
-          n.nodeValue = n.nodeValue!.replace(/[\d.,]+ giây/g, '0,00 giây');
-        }
-      }
+  const expanded = await expandScrollFrame(page);
+  try {
+    await page.screenshot({
+      path: join(SHOTS, name),
+      fullPage: true,
+      animations: 'disabled',
+      caret: 'hide',
     });
-    await expect(page).toHaveScreenshot(name, { fullPage: true });
+    writeIndex();
+    if (compare) await compareShot(page, name);
+  } finally {
+    if (expanded) await restoreScrollFrame(page);
   }
+}
+
+/**
+ * From 768px the window does not scroll, the frame below the top bar does (spec §32 AC-SB-07), so
+ * a full-page shot would only hold one window of content. For the shot only, the app frame grows
+ * to its content (inline `height: auto`, removed right after) and the frame keeps its layout
+ * (scrollbar room included): the image shows the whole screen as before (AC-SB-09). The scroll
+ * position is put back afterwards.
+ */
+async function expandScrollFrame(page: Page): Promise<boolean> {
+  return page.evaluate(() => {
+    const frame = document.querySelector<HTMLElement>('[data-scroll-frame]');
+    if (!frame || !/(auto|scroll)/.test(getComputedStyle(frame).overflowY)) return false;
+    frame.dataset.e2eScrollTop = String(frame.scrollTop);
+    for (const el of Array.from(
+      document.querySelectorAll<HTMLElement>('[data-app-shell], [data-scroll-frame]'),
+    ))
+      el.style.setProperty('height', 'auto', 'important');
+    return true;
+  });
+}
+
+async function restoreScrollFrame(page: Page): Promise<void> {
+  await page.evaluate(() => {
+    for (const el of Array.from(
+      document.querySelectorAll<HTMLElement>('[data-app-shell], [data-scroll-frame]'),
+    ))
+      el.style.removeProperty('height');
+    const frame = document.querySelector<HTMLElement>('[data-scroll-frame]');
+    if (frame) {
+      frame.scrollTop = Number(frame.dataset.e2eScrollTop ?? 0);
+      delete frame.dataset.e2eScrollTop;
+    }
+  });
+}
+
+async function compareShot(page: Page, name: string): Promise<void> {
+  // Run duration ("· 0,04 giây") differs on every run: pinned in the DOM before the comparison
+  // (spec §30.3 AC-TL-11). Masking is not enough: its box width follows the text.
+  await page.evaluate(() => {
+    const walk = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
+    for (let n = walk.nextNode(); n; n = walk.nextNode()) {
+      if (/\d giây/.test(n.nodeValue ?? '')) {
+        n.nodeValue = n.nodeValue!.replace(/[\d.,]+ giây/g, '0,00 giây');
+      }
+    }
+  });
+  await expect(page).toHaveScreenshot(name, { fullPage: true });
 }
 
 /** Results of every axe scan, for the run report (serious/critical must be 0). */

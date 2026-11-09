@@ -25,7 +25,8 @@
  *  (12) a field label (`FormField` label, `[data-field-label]`) taller than one line;
  *  (13) two nested scroll areas scrolling the same way: an element that scrolls (overflow auto /
  *      scroll and content larger than its box) inside another one that scrolls on the same axis;
- *      on the full-bleed Designer the page itself scrolling counts as the outer one. Floating
+ *      on the full-bleed Designer the page itself scrolling counts as the outer one; the page's
+ *      scroll frame (`[data-scroll-frame]`, from 768px) stands for the page. Floating
  *      layers (fixed / absolute popovers, dialogs, listboxes) start a new stack;
  *  (14) a hint / explanation shown as text in a form, card, panel or dialog: an element marked
  *      `data-hint` (only allowed as screen-reader text or inside an open (i) popover), or a
@@ -44,7 +45,8 @@
  *      while its `::-webkit-scrollbar` is not the shared 10px bar (a browser-default bar);
  *  (20) room for the vertical scrollbar not kept (AC-SB-01/02): the page (except the full-bleed
  *      Designer) or an element that scrolls vertically without `scrollbar-gutter: stable`, so a
- *      long and a short tab put content at different x.
+ *      long and a short tab put content at different x. From 768px (AC-SB-07) the page's scroll
+ *      frame keeps the room instead and the window must neither scroll nor keep a room.
  * Only rows of one flex/grid parent are compared; hidden / zero-size elements are skipped.
  * Exceptions live in `LAYOUT_ALLOW` only, each with its reason.
  */
@@ -692,13 +694,20 @@ function measure(
   };
   const fullBleed = document.querySelector('.hr-designer') !== null;
   const docEl = document.scrollingElement ?? document.documentElement;
+  // The page's scroll frame (from 768px the area below the top bar scrolls, not the window: spec
+  // §32 AC-SB-07) stands for the page: an area scrolling inside it is judged as one inside the
+  // page was before (the window scrolling around a panel only counts on the full-bleed Designer).
+  const frameEl = document.querySelector('[data-scroll-frame]');
+  const framed = frameEl !== null && /(auto|scroll)/.test(getComputedStyle(frameEl).overflowY);
+  const isPage = (a: Element) =>
+    a === document.body || a === document.documentElement || (framed && a === frameEl);
   for (const el of all) {
-    if (el instanceof SVGElement || allowed(el, 13)) continue;
+    if (el instanceof SVGElement || allowed(el, 13) || (framed && el === frameEl)) continue;
     for (const axis of ['y', 'x'] as const) {
       if (!scrolls(el, axis)) continue;
       let outer: Element | null = null;
       let a: Element | null = layer(el) ? null : el.parentElement;
-      while (a && a !== document.body && a !== document.documentElement) {
+      while (a && !isPage(a)) {
         if (scrolls(a, axis) && !allowed(a, 13)) {
           outer = a;
           break;
@@ -706,7 +715,7 @@ function measure(
         if (layer(a)) break;
         a = a.parentElement;
       }
-      const reached = a === document.body || a === document.documentElement || a === null;
+      const reached = a === null || isPage(a);
       const page =
         !outer &&
         reached &&
@@ -736,7 +745,26 @@ function measure(
       detail: `scrolls with a browser-default scrollbar (::-webkit-scrollbar width ${barWidth(document.documentElement)}, expected 10px)`,
       ids: [],
     });
-  if (!fullBleed && getComputedStyle(document.documentElement).scrollbarGutter !== 'stable')
+  if (framed) {
+    // From 768px: the frame keeps the room (whether it scrolls or not, so a long and a short
+    // screen put content at the same x); the window neither scrolls nor keeps a room, so the top
+    // bar reaches its right edge (AC-SB-07).
+    if (getComputedStyle(frameEl).scrollbarGutter !== 'stable')
+      out.push({
+        rule: 20,
+        target: name(frameEl),
+        detail:
+          'the page scroll frame keeps no room for its scrollbar (scrollbar-gutter is not stable)',
+        ids: [idOf(frameEl)],
+      });
+    if (pageScrollsY || getComputedStyle(document.documentElement).scrollbarGutter === 'stable')
+      out.push({
+        rule: 20,
+        target: 'the page',
+        detail: `${pageScrollsY ? 'scrolls' : 'keeps room for a scrollbar'} around the scroll frame (the window must not scroll from 768px)`,
+        ids: [],
+      });
+  } else if (!fullBleed && getComputedStyle(document.documentElement).scrollbarGutter !== 'stable')
     out.push({
       rule: 20,
       target: 'the page',
@@ -755,7 +783,12 @@ function measure(
         detail: `scrolls with a browser-default scrollbar (::-webkit-scrollbar width ${barWidth(el)}, expected 10px)`,
         ids: [idOf(el)],
       });
-    if (y && !allowed(el, 20) && getComputedStyle(el).scrollbarGutter !== 'stable')
+    if (
+      y &&
+      !allowed(el, 20) &&
+      el !== frameEl &&
+      getComputedStyle(el).scrollbarGutter !== 'stable'
+    )
       out.push({
         rule: 20,
         target: name(el),

@@ -15,7 +15,9 @@ export interface SideNavItem {
 
 /**
  * Admin frame (spec §25.5): 240px left menu (items per §25.3 "Menu trái") + `PageShell fluid`
- * holding the page. Below 768px the menu folds behind a disclosure button named `label`.
+ * holding the page. From 768px the menu stays put and the page column is the scroll area (spec §32
+ * AC-SB-07); below 768px the whole page scrolls and the menu folds behind a disclosure button
+ * named `label`.
  */
 export function SideNavLayout({
   label,
@@ -31,7 +33,7 @@ export function SideNavLayout({
   const navId = useId();
   const [open, setOpen] = useState(false);
   return (
-    <div className="flex flex-col md:flex-row">
+    <div className="flex flex-col md:h-full md:flex-row">
       <div className="px-page-x pt-page-top md:hidden">
         <button
           type="button"
@@ -81,7 +83,11 @@ export function SideNavLayout({
           ),
         )}
       </nav>
-      <PageShell width="fluid">{children}</PageShell>
+      {/* From 768px the menu stays put and only this column scrolls (spec §32 AC-SB-07). A plain
+          block around the page: the page's own blocks never shrink to fit the column. */}
+      <div data-scroll-frame className="min-w-0 flex-1 md:min-h-0">
+        <PageShell width="fluid">{children}</PageShell>
+      </div>
     </div>
   );
 }

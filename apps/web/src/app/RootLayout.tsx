@@ -4,6 +4,7 @@ import { useAuth } from '../features/auth/auth-context';
 import { CHANGE_PASSWORD_PATH, LOGIN_PATH, resolveGuard } from '../features/auth/guard';
 import { IdleLogout } from '../features/auth/idle/IdleLogout';
 import { AppShell } from './AppShell';
+import { installFrameKeyScroll } from './scroll-frame';
 import { LoadingRegion, PageSkeleton } from '../components/Skeleton';
 
 function Redirect({ href }: { href: string }) {
@@ -29,6 +30,9 @@ export function RootLayout() {
   const renderedPath = useRouterState({ select: (s) => s.matches.at(-1)?.pathname ?? null });
   const userId = auth.status === 'signedIn' ? auth.user.id : null;
   const previous = useRef<string | null>(null);
+
+  // Scroll keys with nothing focused scroll the page's frame (spec §32 AC-SB-08).
+  useEffect(() => installFrameKeyScroll(document), []);
 
   useEffect(() => {
     const prev = previous.current;

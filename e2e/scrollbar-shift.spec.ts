@@ -1,10 +1,12 @@
 /**
  * Spec §32 AC-SB-01/02 (MEMORY 2026-11-09 09:06): a long tab (scrolls) and a short one (does not)
- * put the content at the same x — the page and every vertical scroll area keep room for their
- * scrollbar. Supabase is mocked; fake data only.
+ * put the content at the same x — every vertical scroll area keeps room for its scrollbar.
+ * AC-SB-07..09 (MEMORY 2026-11-09 10:20): from 768px the top bar stays put and only the area below
+ * it scrolls (Admin: the content column, the left menu stays put); below 768px the page scrolls.
+ * Supabase is mocked; fake data only.
  */
 import { existsSync } from 'node:fs';
-import { ADMIN, expect, test, type Page } from './fixtures';
+import { ADMIN, expect, test, USER, type Page } from './fixtures';
 import { runToResult, uploadFixtures } from './helpers';
 import { baseFlowDefinition, type SupabaseMock } from './supabase-mock';
 
@@ -13,6 +15,7 @@ const DRAFT_ID = '00000000-0000-4000-8000-000000000781';
 const DESIGNER = '/admin/flows/payroll-timesheet/designer';
 const DESKTOP = { width: 1280, height: 800 };
 const LAPTOP = { width: 1024, height: 768 };
+const PHONE = { width: 390, height: 844 };
 const size = (v: { width: number; height: number }) => `${v.width}x${v.height}`;
 
 // Playwright's headless Chromium runs with --hide-scrollbars (the page's own bar is never drawn):
@@ -47,6 +50,23 @@ async function ready(page: Page) {
   await expect(page.locator('[aria-busy="true"]:not(dialog)')).toHaveCount(0);
 }
 
+/** Room the page (`html`) keeps for its scrollbar: window width minus the body's width. */
+const pageRoom = (page: Page) =>
+  page.evaluate(() => innerWidth - Math.round(document.body.getBoundingClientRect().width));
+
+/** Room kept by the scroll frame for its vertical scrollbar (it has no border). */
+const frameRoom = (page: Page) =>
+  page
+    .locator('[data-scroll-frame]')
+    .evaluate((el) => (el as HTMLElement).offsetWidth - el.clientWidth);
+
+/** Scroll position of the scroll frame and of the page. */
+const scrollTops = (page: Page) =>
+  page.evaluate(() => ({
+    frame: document.querySelector('[data-scroll-frame]')?.scrollTop ?? -1,
+    page: Math.round(scrollY),
+  }));
+
 /** Left / right edges of the elements of `sel`, rounded to the pixel. */
 const edges = (page: Page, sel: string | ReturnType<Page['locator']>) =>
   (typeof sel === 'string' ? page.locator(sel) : sel).evaluateAll((els) =>
@@ -69,12 +89,11 @@ for (const viewport of [DESKTOP, LAPTOP]) {
       await page.getByRole('tab', { name: /^Nhóm/ }).click();
       await expect(page.getByRole('table', { name: 'Danh sách nhóm' })).toBeVisible();
       expect(await edges(page, sel)).toEqual(before);
-      // The room is kept whether the page scrolls or not: the body is narrower than the window by
-      // exactly one 10px bar (clientWidth of the root ignores an unused gutter, the body does not).
-      const room = await page.evaluate(
-        () => innerWidth - Math.round(document.body.getBoundingClientRect().width),
-      );
-      expect(room).toBe(10);
+      // The page itself keeps no room (it does not scroll): the white top bar reaches the window's
+      // right edge (AC-SB-07). The room is kept by the content column, the page's scroll area.
+      expect(await pageRoom(page)).toBe(0);
+      expect((await edges(page, 'header'))[0]).toEqual([0, viewport.width]);
+      expect(await frameRoom(page)).toBe(10);
     });
 
     test(`result: mismatch ↔ summary ${size(viewport)}`, async ({ page }) => {
@@ -113,3 +132,109 @@ for (const viewport of [DESKTOP, LAPTOP]) {
     });
   });
 }
+
+for (const viewport of [DESKTOP, LAPTOP]) {
+  test.describe(`scroll frame ${size(viewport)} (AC-SB-07/08)`, () => {
+    test.use({ signedInAs: ADMIN, viewport });
+
+    test(`admin: the content column scrolls, top bar and left menu stay put ${size(viewport)}`, async ({
+      page,
+      supabase,
+    }) => {
+      // Version list + diff: longer than the window at both sizes.
+      withDraft(supabase);
+      await page.goto('/admin/flows/payroll-timesheet/versions');
+      await expect(page.getByRole('region', { name: 'So sánh phiên bản' })).toBeVisible();
+      await ready(page);
+      const frame = page.locator('[data-scroll-frame]');
+      await expect(frame.locator('main#main')).toHaveCount(1);
+      const fixed = 'header, nav[aria-label="Menu Admin"]';
+      const box = () =>
+        page.locator(fixed).evaluateAll((els) =>
+          els.map((e) => {
+            const b = e.getBoundingClientRect();
+            return [Math.round(b.left), Math.round(b.top), Math.round(b.right)];
+          }),
+        );
+      const before = await box();
+      // Mouse wheel over the content column.
+      await page.mouse.move(viewport.width / 2, viewport.height / 2);
+      await page.mouse.wheel(0, 400);
+      await expect.poll(async () => (await scrollTops(page)).frame).toBeGreaterThan(0);
+      expect((await scrollTops(page)).page).toBe(0);
+      expect(await box()).toEqual(before);
+      // Nothing focused yet (right after loading): End still scrolls the content column.
+      await page.reload();
+      await expect(page.getByRole('region', { name: 'So sánh phiên bản' })).toBeVisible();
+      await ready(page);
+      expect(await page.evaluate(() => document.activeElement === document.body)).toBe(true);
+      await page.keyboard.press('End');
+      await expect.poll(async () => (await scrollTops(page)).frame).toBeGreaterThan(0);
+      // Keyboard (focus in the page): End / Home / PageDown / Space scroll the content column.
+      await page.getByRole('heading', { level: 1 }).click();
+      await page.keyboard.press('Home');
+      await expect.poll(async () => (await scrollTops(page)).frame).toBe(0);
+      await page.keyboard.press('End');
+      const max = await frame.evaluate((el) => el.scrollHeight - el.clientHeight);
+      await expect.poll(async () => (await scrollTops(page)).frame).toBe(max);
+      await page.keyboard.press('Home');
+      await expect.poll(async () => (await scrollTops(page)).frame).toBe(0);
+      await page.keyboard.press('PageDown');
+      await expect.poll(async () => (await scrollTops(page)).frame).toBeGreaterThan(0);
+      await page.keyboard.press('Home');
+      await expect.poll(async () => (await scrollTops(page)).frame).toBe(0);
+      await page.keyboard.press('Space');
+      await expect.poll(async () => (await scrollTops(page)).frame).toBeGreaterThan(0);
+      expect(await box()).toEqual(before);
+      // A new screen starts at the top of the frame.
+      await page.mouse.wheel(0, 400);
+      await page.getByRole('link', { name: 'Flows' }).click();
+      await expect(page.getByRole('heading', { level: 1 })).toHaveText('Flow và phiên bản');
+      await expect.poll(async () => (await scrollTops(page)).frame).toBe(0);
+    });
+
+    test(`user screens: the area below the top bar scrolls ${size(viewport)}`, async ({ page }) => {
+      test.setTimeout(120_000);
+      await uploadFixtures(page);
+      await runToResult(page);
+      await ready(page);
+      const header = () => page.locator('header').boundingBox();
+      const before = await header();
+      expect(before).toMatchObject({ x: 0, y: 0, width: viewport.width });
+      expect(await pageRoom(page)).toBe(0);
+      expect(await frameRoom(page)).toBe(10);
+      await page.mouse.move(viewport.width / 2, viewport.height / 2);
+      await page.mouse.wheel(0, 600);
+      await expect.poll(async () => (await scrollTops(page)).frame).toBeGreaterThan(0);
+      expect((await scrollTops(page)).page).toBe(0);
+      expect(await header()).toEqual(before);
+    });
+
+    test(`skip link focuses the content ${size(viewport)}`, async ({ page }) => {
+      await page.goto('/admin/users');
+      await ready(page);
+      await page.keyboard.press('Tab');
+      await expect(page.getByRole('link', { name: 'Bỏ qua, tới nội dung chính' })).toBeFocused();
+      await page.keyboard.press('Enter');
+      await expect(page.locator('main#main')).toBeFocused();
+    });
+  });
+}
+
+test.describe(`below 768px the whole page scrolls ${size(PHONE)} (AC-SB-07)`, () => {
+  test.use({ signedInAs: USER, viewport: PHONE });
+
+  test('the top bar scrolls away with the page', async ({ page }) => {
+    test.setTimeout(120_000);
+    await uploadFixtures(page);
+    await runToResult(page);
+    await ready(page);
+    const top = async () => (await page.locator('header').boundingBox())!.y;
+    expect(await top()).toBe(0);
+    await page.mouse.move(PHONE.width / 2, PHONE.height / 2);
+    await page.mouse.wheel(0, 300);
+    await expect.poll(async () => (await scrollTops(page)).page).toBeGreaterThan(0);
+    expect((await scrollTops(page)).frame).toBe(0);
+    expect(await top()).toBeLessThan(0);
+  });
+});

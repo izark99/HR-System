@@ -404,7 +404,9 @@ test.describe('admin screens 1280x800', () => {
       ).length;
     });
     expect(inView, 'rows fully in view at 1280x800').toBeGreaterThanOrEqual(9);
+    // Nothing scrolled: neither the window nor the content column (spec §32 AC-SB-07).
     expect(await page.evaluate(() => window.scrollY)).toBe(0);
+    expect(await page.locator('[data-scroll-frame]').evaluate((el) => el.scrollTop)).toBe(0);
     await tableRowChecks(table, { noScroll: true });
     await shot(page, '07-admin-users', 'ten-accounts');
   });
@@ -565,12 +567,13 @@ test.describe('round B frame states 1280x800 (AC-UI-74)', () => {
     expect((await style(toast)).borderLeft).toBe(`4px solid ${C.teal}`);
     const close = toast.getByRole('button', { name: 'Đóng thông báo' });
     expect(Math.round((await style(close)).height)).toBe(44);
-    // Measured once the slide-in animation has finished. 24px from the content edge: the page
-    // keeps 10px for its scrollbar on the right (spec §32), the toast stays clear of it.
+    // Measured once the slide-in animation has finished. 24px from the window edge: from 768px
+    // the window keeps no room for a scrollbar (the frame below the top bar scrolls, spec §32
+    // AC-SB-07), so the content edge is the window edge.
     const gutter = await page.evaluate(
       () => innerWidth - Math.round(document.body.getBoundingClientRect().width),
     );
-    expect(gutter).toBe(10);
+    expect(gutter).toBe(0);
     await expect
       .poll(async () => {
         const b = (await toast.boundingBox())!;

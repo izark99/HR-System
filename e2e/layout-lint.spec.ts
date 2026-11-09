@@ -619,5 +619,22 @@ test.describe('layout-lint self-test', () => {
     );
     const page20 = await layoutLint(page);
     expect(page20.map((v) => [v.rule, v.target])).toEqual([[20, 'the page']]);
+
+    // From 768px the page scrolls in its frame (spec §32 AC-SB-07): the frame keeps the room, the
+    // window does not; an area scrolling inside the frame is judged as one inside the page.
+    const framed = (frameGutter: boolean, htmlGutter: boolean) =>
+      `<style>body{margin:0} html{overflow:hidden${htmlGutter ? ';scrollbar-gutter:stable' : ''}}
+      [data-scroll-frame]::-webkit-scrollbar,.sb::-webkit-scrollbar{width:10px}</style>
+      <div style="height:100vh;display:flex;flex-direction:column"><header style="height:64px;flex-shrink:0">bar</header>
+        <div data-scroll-frame style="flex:1;min-height:0;overflow-y:auto;position:relative${frameGutter ? ';scrollbar-gutter:stable' : ''}">
+          <div class="sb" style="height:100px;overflow-y:auto;scrollbar-gutter:stable;position:relative"><div style="height:300px">bảng</div></div>
+          <div style="height:2000px">dài</div></div></div>`;
+    await page.setContent(framed(true, false));
+    expect(await layoutLint(page)).toEqual([]);
+    await page.setContent(framed(false, true));
+    const frame20 = (await layoutLint(page)).filter((v) => v.rule === 20);
+    expect(frame20).toHaveLength(2);
+    expect(frame20.some((v) => /scroll frame keeps no room/.test(v.detail))).toBe(true);
+    expect(frame20.some((v) => v.target === 'the page' && /keeps room/.test(v.detail))).toBe(true);
   });
 });

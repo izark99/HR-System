@@ -268,21 +268,24 @@
   html::-webkit-scrollbar,
   .overflow-auto::-webkit-scrollbar,
   .overflow-x-auto::-webkit-scrollbar,
-  .overflow-y-auto::-webkit-scrollbar {
+  .overflow-y-auto::-webkit-scrollbar,
+  [data-scroll-frame]::-webkit-scrollbar {
     width: 10px;
     height: 10px;
   }
   html::-webkit-scrollbar-track,
   .overflow-auto::-webkit-scrollbar-track,
   .overflow-x-auto::-webkit-scrollbar-track,
-  .overflow-y-auto::-webkit-scrollbar-track {
+  .overflow-y-auto::-webkit-scrollbar-track,
+  [data-scroll-frame]::-webkit-scrollbar-track {
     background: var(--color-neutral);
     border-radius: var(--radius-pill);
   }
   html::-webkit-scrollbar-thumb,
   .overflow-auto::-webkit-scrollbar-thumb,
   .overflow-x-auto::-webkit-scrollbar-thumb,
-  .overflow-y-auto::-webkit-scrollbar-thumb {
+  .overflow-y-auto::-webkit-scrollbar-thumb,
+  [data-scroll-frame]::-webkit-scrollbar-thumb {
     background: var(--color-line-input);
     border: 2px solid var(--color-neutral);
     border-radius: var(--radius-pill);
@@ -290,20 +293,23 @@
   html::-webkit-scrollbar-thumb:hover,
   .overflow-auto::-webkit-scrollbar-thumb:hover,
   .overflow-x-auto::-webkit-scrollbar-thumb:hover,
-  .overflow-y-auto::-webkit-scrollbar-thumb:hover {
+  .overflow-y-auto::-webkit-scrollbar-thumb:hover,
+  [data-scroll-frame]::-webkit-scrollbar-thumb:hover {
     background: var(--color-ink);
   }
   html::-webkit-scrollbar-corner,
   .overflow-auto::-webkit-scrollbar-corner,
   .overflow-x-auto::-webkit-scrollbar-corner,
-  .overflow-y-auto::-webkit-scrollbar-corner {
+  .overflow-y-auto::-webkit-scrollbar-corner,
+  [data-scroll-frame]::-webkit-scrollbar-corner {
     background: var(--color-neutral);
   }
   @supports (-moz-appearance: none) {
     html,
     .overflow-auto,
     .overflow-x-auto,
-    .overflow-y-auto {
+    .overflow-y-auto,
+    [data-scroll-frame] {
       scrollbar-width: thin;
       scrollbar-color: var(--color-line-input) var(--color-neutral);
     }
@@ -321,6 +327,24 @@
   }
   html:has(.hr-designer) {
     scrollbar-gutter: auto;
+  }
+  /*
+   * Scroll frame (MEMORY 2026-11-09 10:20, spec §32 AC-SB-07): from 768px the top bar stays put
+   * and the area below it (`[data-scroll-frame]`: User screens below the bar, the Admin content
+   * column, the sign-in frame) is the page's only scroll area, with the shared bar and its room
+   * kept. The page itself no longer scrolls, so it keeps no room: the white top bar reaches the
+   * window's right edge. Below 768px the page scrolls as before.
+   */
+  @media (width >= 48rem) {
+    html:has([data-scroll-frame]) {
+      overflow: hidden;
+      scrollbar-gutter: auto;
+    }
+    [data-scroll-frame] {
+      position: relative;
+      overflow-y: auto;
+      scrollbar-gutter: stable;
+    }
   }
   .monaco-scrollable-element > .scrollbar {
     background: var(--color-neutral);

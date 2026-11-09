@@ -149,6 +149,9 @@ export const router = createRouter({
     ]),
   ]),
   defaultPreload: false,
+  // From 768px the page scrolls inside its frame, not the window (spec §32 AC-SB-07/08): a new
+  // screen starts at the top of that frame too.
+  scrollToTopSelectors: ['[data-scroll-frame]'],
   // Lazy route chunks (AC-UI-56): skeleton of the coming screen after 200 ms of waiting.
   defaultPendingMs: SKELETON_DELAY_MS,
   defaultPendingComponent: RoutePending,

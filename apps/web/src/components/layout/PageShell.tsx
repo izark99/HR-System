@@ -32,9 +32,12 @@ export function PageShell({
   return (
     <main
       id="main"
+      // Target of the skip link: focused (not only scrolled to), so Tab and the scroll keys carry
+      // on from the content (spec §32 AC-SB-08). No ring: it is not a control.
+      tabIndex={-1}
       data-page-width={width}
       className={cx(
-        'flex flex-col',
+        'flex flex-col focus:outline-none',
         width !== 'bleed' && 'gap-section px-page-x pt-page-top pb-12',
         WIDTH[width],
         className,

@@ -8,7 +8,9 @@ import { cardClass, cx } from '../../components/ui';
  */
 export function AuthLayout({ children }: { children: ReactNode }) {
   return (
-    <div className="min-h-screen bg-page font-sans text-ink">
+    // From 768px this frame is the page's scroll area (spec §32 AC-SB-07), as below the top bar of
+    // the other screens.
+    <div data-scroll-frame className="min-h-screen bg-page font-sans text-ink md:h-dvh md:min-h-0">
       <PageShell width="narrow" className="pt-16 max-sm:pt-8">
         {children}
       </PageShell>

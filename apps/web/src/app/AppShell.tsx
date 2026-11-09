@@ -8,15 +8,21 @@ export function AppShell() {
   const { t } = useTranslation();
   const auth = useAuth();
   const inAdmin = useRouterState({ select: (s) => isAdminPath(s.location.pathname) });
+  // From 768px the top bar stays put and only the area below it scrolls (spec §32 AC-SB-07): User
+  // screens scroll here, Admin screens in their content column (SideNavLayout), the Designer not
+  // at all. Below 768px the whole page scrolls as before.
   return (
-    <div className="min-h-screen bg-page font-sans text-ink">
+    <div
+      data-app-shell
+      className="min-h-screen bg-page font-sans text-ink md:flex md:h-dvh md:min-h-0 md:flex-col"
+    >
       <a
         href="#main"
         className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-50 focus:rounded-card focus:border focus:border-line focus:bg-card focus:px-4 focus:py-3 focus:shadow-float"
       >
         {t('app.skipToContent')}
       </a>
-      <header className="flex h-16 items-center justify-between gap-3 border-b border-line bg-card px-6 max-sm:px-3">
+      <header className="flex h-16 shrink-0 items-center justify-between gap-3 border-b border-line bg-card px-6 max-sm:px-3">
         <div className="flex items-center gap-3">
           <Link
             to="/"
@@ -34,7 +40,9 @@ export function AppShell() {
         </div>
         {auth.status === 'signedIn' && <UserMenu user={auth.user} />}
       </header>
-      <Outlet />
+      <div {...(inAdmin ? {} : { 'data-scroll-frame': '' })} className="md:min-h-0 md:flex-1">
+        <Outlet />
+      </div>
     </div>
   );
 }
