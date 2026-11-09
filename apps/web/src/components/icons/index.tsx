@@ -216,6 +216,16 @@ export function MoreIcon({ size = 18, className }: IconProps) {
   );
 }
 
+/** Circular arrow: "Khôi phục mặc định" (Văn bản giao diện). */
+export function ResetIcon({ size = 18, className }: IconProps) {
+  return (
+    <Icon size={size} className={className}>
+      <path d="M3 7v6h6" />
+      <path d="M21 17a9 9 0 0 0-15-6.7L3 13" />
+    </Icon>
+  );
+}
+
 // ---- Designer toolbar (formerly features/designer/ToolbarIcons.tsx) ---------------------------
 
 export function UndoIcon({ size = 18, className }: IconProps) {

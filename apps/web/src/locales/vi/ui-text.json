@@ -1,0 +1,76 @@
+{
+  "eyebrow": "Văn bản giao diện",
+  "title": "Sửa câu chữ trên giao diện",
+  "subtitle": "Đổi chữ tiếng Việt mọi người dùng thấy, kể cả thông báo khi kiểm tra file.",
+  "resetAll": "Khôi phục tất cả",
+  "listLabel": "Danh sách văn bản",
+  "tableLabel": "Văn bản giao diện",
+  "search": "Tìm",
+  "searchPlaceholder": "VD: đăng nhập",
+  "group": "Màn",
+  "allGroups": "Tất cả",
+  "onlyEdited": "Chỉ dòng đã sửa",
+  "count": "{{shown, number}} / {{total, number}} dòng · {{edited, number}} đã sửa",
+  "groups": {
+    "common": "Chung",
+    "auth": "Đăng nhập",
+    "flows": "Danh sách flow",
+    "run": "Chạy flow",
+    "result": "Kết quả",
+    "admin": "Admin",
+    "designer": "Designer",
+    "functions": "Bảng tra hàm",
+    "validation": "Kiểm tra file",
+    "runtime": "Lỗi chạy"
+  },
+  "col": {
+    "group": "Màn",
+    "code": "Mã",
+    "text": "Chữ đang dùng",
+    "status": "Trạng thái",
+    "updated": "Sửa lần cuối",
+    "actions": "Thao tác"
+  },
+  "status": {
+    "edited": "Đã sửa",
+    "default": "Mặc định"
+  },
+  "updatedBy": "{{name}} · {{date}}",
+  "unknownAuthor": "không rõ",
+  "edit": "Sửa",
+  "editFor": "Sửa {{code}}",
+  "reset": "Khôi phục mặc định",
+  "resetFor": "Khôi phục mặc định {{code}}",
+  "emptyTitle": "Không có dòng nào khớp",
+  "empty": "Không có dòng nào khớp. Thử bỏ bộ lọc hoặc tìm chữ khác.",
+  "dialog": {
+    "title": "Sửa văn bản",
+    "original": "Bản gốc",
+    "newText": "Chữ mới",
+    "varsLabel": "Biến cần giữ:",
+    "noVars": "Không có biến",
+    "varPresent": "{{name}}: có",
+    "varMissing": "{{name}}: thiếu",
+    "length": "{{n, number}}/{{max, number}} ký tự",
+    "preview": "Xem trước với số liệu mẫu",
+    "save": "Lưu",
+    "saving": "Đang lưu…"
+  },
+  "errors": {
+    "empty": "Chữ không được để trống. Muốn dùng lại bản gốc, bấm \"Khôi phục mặc định\".",
+    "missing": "Thiếu biến {{vars}}: số liệu sẽ không hiện trong câu. Thêm lại biến này.",
+    "extra": "Biến {{vars}} không có trong bản gốc nên sẽ hiện nguyên văn. Xóa biến này.",
+    "tooLong": "Dài quá {{max, number}} ký tự: chữ dài có thể làm vỡ bố cục. Rút gọn lại.",
+    "html": "Chỉ nhận chữ thường, không nhận thẻ HTML hay link."
+  },
+  "toast": {
+    "saved": "Đã lưu \"{{code}}\". Người dùng thấy chữ mới ở lần mở trang sau.",
+    "reset": "Đã khôi phục mặc định \"{{code}}\".",
+    "resetAll": "Đã khôi phục {{count, number}} dòng về mặc định."
+  },
+  "confirmAll": {
+    "title": "Khôi phục {{count, number}} dòng về mặc định?",
+    "text": "Mọi chữ đã sửa trở về bản gốc cho tất cả người dùng. Không hoàn tác được.",
+    "confirm": "Khôi phục tất cả"
+  }
+}

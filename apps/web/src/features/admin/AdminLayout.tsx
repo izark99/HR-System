@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { PageShell, SideNavLayout, type SideNavItem } from '../../components/layout';
 import { appConfig } from '../../lib/env';
 
-type NavItem = { key: string; to?: '/admin/flows' | '/admin/users' };
+type NavItem = { key: string; to?: '/admin/flows' | '/admin/users' | '/admin/ui-text' };
 
 // Order and labels follow the Admin wireframe; items without `to` come in later steps.
 const ITEMS: NavItem[] = [
@@ -12,6 +12,7 @@ const ITEMS: NavItem[] = [
   { key: 'refTables' },
   { key: 'templates' },
   { key: 'users', to: '/admin/users' },
+  { key: 'uiText', to: '/admin/ui-text' },
   { key: 'logs' },
 ];
 

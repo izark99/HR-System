@@ -251,6 +251,49 @@ for (const viewport of [DESKTOP, LAPTOP]) {
       r.assertClean(`admin-flows-versions-${size(viewport)}`);
     });
 
+    test(`ui texts: table, filters, edit + confirm dialogs, empty ${size(viewport)}`, async ({
+      page,
+      supabase,
+    }) => {
+      supabase.uiTexts = [
+        {
+          key: 'common:auth.login.note',
+          value: 'Tài khoản do phòng Nhân sự cấp. Quên mật khẩu, liên hệ bộ phận HR Analytics.',
+          updated_by: ADMIN.id,
+          updated_at: '2026-11-09T02:30:00+00:00',
+        },
+      ];
+      const r = new LayoutReport(page);
+      await page.goto('/admin/ui-text');
+      await ready(page);
+      const card = page.getByRole('region', { name: 'Danh sách văn bản' });
+      await card.getByLabel('Tìm').fill('auth.login');
+      await expect(card.locator('tbody tr').first()).toBeVisible();
+      await r.check('ui texts table (search)');
+      await card.getByRole('checkbox', { name: 'Chỉ dòng đã sửa' }).check();
+      await expect(card.locator('tbody tr')).toHaveCount(1);
+      await r.check('ui texts table (only edited)');
+      await card.getByRole('button', { name: 'Sửa auth.login.note' }).click();
+      const edit = page.getByRole('dialog', { name: 'Sửa văn bản' });
+      await expect(edit.getByLabel('Chữ mới')).toBeFocused();
+      await r.check('ui text edit dialog');
+      await card.page().keyboard.press('Escape');
+      await card.getByLabel('Tìm').fill('result.titleMismatched');
+      await card.getByRole('checkbox', { name: 'Chỉ dòng đã sửa' }).uncheck();
+      await card.getByRole('button', { name: 'Sửa result.titleMismatched', exact: true }).click();
+      await edit.getByLabel('Chữ mới').fill('Kỳ này có nhân viên lệch');
+      await expect(edit.getByText(/^Thiếu biến/)).toBeVisible();
+      await r.check('ui text edit dialog (missing variable)');
+      await page.keyboard.press('Escape');
+      await card.getByLabel('Tìm').fill('không có dòng nào như thế này');
+      await expect(card.locator('[data-empty-state]')).toBeVisible();
+      await r.check('ui texts empty');
+      await page.getByRole('button', { name: 'Khôi phục tất cả' }).click();
+      await expect(page.getByRole('dialog', { name: /^Khôi phục 1 dòng/ })).toBeVisible();
+      await r.check('ui texts restore-all confirm');
+      r.assertClean(`admin-ui-text-${size(viewport)}`);
+    });
+
     test(`designer: flow tabs (Tham số, Input slot) ${size(viewport)}`, async ({
       page,
       supabase,

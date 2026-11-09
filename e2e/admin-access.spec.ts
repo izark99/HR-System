@@ -7,7 +7,7 @@ import { FLOW_URL, recordRequests, type RecordedRequest } from './helpers';
 
 /** JS chunks of the admin area (layout, pages, admin API, version screen). */
 const ADMIN_CHUNK =
-  /\/assets\/(Admin[A-Za-z]*|use-admin|FlowVersions[A-Za-z]*|version-[a-z-]+)-[\w-]+\.js$/;
+  /\/assets\/(Admin[A-Za-z]*|UiText[A-Za-z]*|use-admin|FlowVersions[A-Za-z]*|version-[a-z-]+)-[\w-]+\.js$/;
 const adminChunks = (requests: RecordedRequest[]) =>
   requests.map((r) => r.url).filter((u) => ADMIN_CHUNK.test(new URL(u).pathname));
 
@@ -21,6 +21,7 @@ const ADMIN_URLS = [
   '/admin/users?tab=groups',
   '/admin/flows#import',
   '/admin/flows/payroll-timesheet/versions',
+  '/admin/ui-text',
 ];
 
 test.describe('signed in as a User', () => {

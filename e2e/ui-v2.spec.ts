@@ -429,6 +429,38 @@ test.describe('admin screens 1280x800', () => {
     await page.keyboard.press('Escape');
   });
 
+  test('ui texts: list and edit dialog (spec §33)', async ({ page, supabase }) => {
+    supabase.uiTexts = [
+      {
+        key: 'common:auth.login.note',
+        value: 'Tài khoản do phòng Nhân sự cấp. Quên mật khẩu, liên hệ bộ phận HR Analytics.',
+        updated_by: ADMIN.id,
+        updated_at: '2026-11-09T02:30:00+00:00',
+      },
+    ];
+    await page.goto('/admin/ui-text');
+    await expect(page.getByRole('heading', { level: 1 })).toHaveText('Sửa câu chữ trên giao diện');
+    const card = page.getByRole('region', { name: 'Danh sách văn bản' });
+    await card.getByLabel('Tìm').fill('auth.login');
+    await expect(card.locator('tbody tr')).toHaveCount(7);
+    await commonChecks(page);
+    await titleChecks(page);
+    await cardChecks(page.locator('main [data-card]'));
+    await adminTableChecks(page.locator('main table').first());
+    await tableRowChecks(page.locator('main table').first());
+    await axe(page, 'admin-ui-text 1280x800');
+    await shot(page, '15-admin-ui-text', 'list');
+    await card.getByLabel('Tìm').fill('result.titleMismatched');
+    await card.getByRole('button', { name: 'Sửa result.titleMismatched', exact: true }).click();
+    const dialog = page.getByRole('dialog', { name: 'Sửa văn bản' });
+    await dialog.getByLabel('Chữ mới').fill('Kỳ {{period}} có nhân viên lệch');
+    await expect(dialog.getByText(/^Thiếu biến/)).toBeVisible();
+    await floatChecks(dialog);
+    await axe(page, 'admin-ui-text-edit 1280x800');
+    await shot(page, '15-admin-ui-text', 'edit-dialog');
+    await page.keyboard.press('Escape');
+  });
+
   test('versions: list + diff', async ({ page, supabase }) => {
     withDraft(supabase);
     await page.goto(VERSIONS);

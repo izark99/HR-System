@@ -91,6 +91,13 @@ const adminUsersRoute = createRoute({
   component: lazyRouteComponent(() => import('../features/admin/AdminUsersPage'), 'AdminUsersPage'),
 });
 
+/** "Văn bản giao diện" (spec §33): its own chunk, with the default texts of every screen. */
+const adminUiTextRoute = createRoute({
+  getParentRoute: () => adminRoute,
+  path: '/ui-text',
+  component: lazyRouteComponent(() => import('../features/admin/ui-text/UiTextPage'), 'UiTextPage'),
+});
+
 const adminFlowsRoute = createRoute({
   getParentRoute: () => adminRoute,
   path: '/flows',
@@ -144,6 +151,7 @@ export const router = createRouter({
       adminIndexRoute,
       adminUsersRoute,
       adminFlowsRoute,
+      adminUiTextRoute,
       flowVersionsRoute,
       designerRoute,
     ]),

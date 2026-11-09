@@ -346,7 +346,10 @@ export class SupabaseMock {
           /^\/rest\/v1\/(groups|group_members|flow_assignments|flow_versions|flows)(\?|$)/.test(
             c.path,
           ) ||
-          c.path.startsWith('/rest/v1/rpc/admin_'),
+          c.path.startsWith('/rest/v1/rpc/admin_') ||
+          // ui_text_overrides: every user reads key/value; only the Admin tab writes or reads authors.
+          (c.path.startsWith('/rest/v1/ui_text_overrides') &&
+            (c.method !== 'GET' || decodeURIComponent(c.path).includes('updated_by'))),
       )
       .map((c) => `${c.method} ${c.path}`);
   }
@@ -584,8 +587,17 @@ export class SupabaseMock {
     if (path === '/rest/v1/profiles' && method === 'GET') {
       if (!caller?.is_active) return rows([]);
       const id = eqFilter('id');
+      // `id=in.("a","b")` (PostgREST list filter) or `id=eq.a`.
+      const ids = id?.startsWith('in.(')
+        ? id
+            .slice(4, -1)
+            .split(',')
+            .map((x) => x.replace(/"/g, ''))
+        : null;
       const visible = this.users.filter(
-        (u) => (caller.role === 'admin' || u.id === caller.id) && (!id || u.id === id),
+        (u) =>
+          (caller.role === 'admin' || u.id === caller.id) &&
+          (!id || (ids ? ids.includes(u.id) : u.id === id)),
       );
       return rows(visible.map(({ password: _p, ...p }) => p));
     }

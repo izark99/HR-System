@@ -1739,3 +1739,11 @@ User story: Là Admin, tôi muốn sửa câu chữ tiếng Việt trên giao di
 | AC-TX-10 | Hộp thoại "Sửa văn bản": mã + màn; "Bản gốc" chỉ đọc; `FormField` "Chữ mới" (textarea) kèm dòng biến bắt buộc (chip teal khi có, coral khi thiếu) và đếm "n/max ký tự"; lỗi tại chỗ (trống; thiếu biến — nêu tên biến; thừa biến; quá dài; có thẻ HTML) chặn Lưu; Lưu vô hiệu khi chữ không đổi; khung "Xem trước với số liệu mẫu" thay biến bằng giá trị mẫu cố định. Footer: "Khôi phục mặc định" (chỉ khi đã sửa, nút chữ bên trái), "Hủy", "Lưu" (nút chính). Esc đóng, trả focus về nút bút chì. Lưu chữ trùng bản gốc = khôi phục mặc định (xóa dòng override). Toast: "Đã lưu "<mã>". Người dùng thấy chữ mới ở lần mở trang sau." |
 | AC-TX-11 | Biến so theo tên, bỏ phần định dạng (`{{count, number}}` ≡ `count`); giữ được định dạng của bản gốc khi Admin gõ `{{count}}` (áp lại định dạng của bản gốc khi lưu, hoặc i18next nhận cả hai — chọn cách, ghi test). |
 
+Ghi chú hiện thực (vòng developer 2026-11-09):
+
+- AC-TX-11: khi lưu, biến gõ không kèm định dạng được gắn lại định dạng của bản gốc (`{{count}}` → `{{count, number}}`); chữ sau khi gắn trùng bản gốc = khôi phục mặc định (`value = null`). Lúc áp dụng, dòng có tập biến khác bản gốc hoặc key không còn trong code bị bỏ qua.
+- Nạp lúc khởi động: 1 request `select key, value … value is not null`; lần render đầu chờ tối đa 1,5 giây, quá hạn hoặc lỗi thì hiện chữ mặc định, câu trả lời đến muộn vẫn được áp (render lại). Text của tab nằm ở namespace riêng `uiText` (`locales/vi/ui-text.json`, nạp cùng chunk của tab, nhóm "Admin"); menu trái thêm key `admin.nav.uiText`.
+- Engine: client gửi map text đã sửa của `engine` + `engineFields` vào worker trước lời gọi đầu tiên (và lại sau mỗi lần Admin lưu); translator trong worker dựng lại khi map đổi.
+- Quyền đọc cột: `anon` chỉ đọc `key`, `value`; `authenticated` đọc cả `updated_by`, `updated_at` (dòng chưa khôi phục; Admin thấy mọi dòng). `updated_by` không có khóa ngoại (migration không chứa từ khóa xóa).
+
+
