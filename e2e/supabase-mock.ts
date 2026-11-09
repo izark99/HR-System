@@ -9,6 +9,7 @@
 import type { BrowserContext, Page, Request, Route } from '@playwright/test';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
+import { RefTablesMock } from './supabase-mock-ref';
 
 export const SUPABASE_ORIGIN = 'https://rzakjtgvbyxqsmbpcomw.supabase.co';
 const AUTH_STORAGE_KEY = 'hrflow.auth';
@@ -259,6 +260,9 @@ export class SupabaseMock {
   /** Delay (ms) before the ui_text_overrides read answers. */
   uiTextDelayMs = 0;
 
+  /** Reference tables (spec §34): `ref_tables`, `ref_table_versions` and their RPCs. */
+  ref = new RefTablesMock();
+
   /** PATCH/DELETE requests on flow_versions, as received. */
   versionWrites: { method: string; id: string; body: Record<string, unknown> }[] = [];
   /** Next flow_versions PATCH/DELETE fails with this. */
@@ -343,7 +347,7 @@ export class SupabaseMock {
       .filter(
         (c) =>
           c.path.startsWith('/functions/v1/admin-users') ||
-          /^\/rest\/v1\/(groups|group_members|flow_assignments|flow_versions|flows)(\?|$)/.test(
+          /^\/rest\/v1\/(groups|group_members|flow_assignments|flow_versions|flows|ref_tables|ref_table_versions)(\?|$)/.test(
             c.path,
           ) ||
           c.path.startsWith('/rest/v1/rpc/admin_') ||
@@ -584,6 +588,7 @@ export class SupabaseMock {
     const eqFilter = (field: string) => url.searchParams.get(field)?.replace(/^eq\./, '');
 
     if (path === '/rest/v1/ui_text_overrides') return this.handleUiTexts(request, url, json);
+    if (await this.ref.handle(request, url, caller, json)) return;
     if (path === '/rest/v1/profiles' && method === 'GET') {
       if (!caller?.is_active) return rows([]);
       const id = eqFilter('id');
