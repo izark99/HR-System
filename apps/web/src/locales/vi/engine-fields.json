@@ -1,0 +1,58 @@
+{
+  "row": "dòng {{n}}",
+  "columnN": "Cột {{n}}",
+  "other": "cấu hình chung",
+  "slot": {
+    "key": "Mã",
+    "label": "Tên hiển thị",
+    "required": "Bắt buộc upload",
+    "accept": "Định dạng file nhận",
+    "sheet": "Chọn sheet",
+    "headerRow": "Dòng tiêu đề",
+    "headerRows": "Số dòng tiêu đề",
+    "dataStartRow": "Dòng dữ liệu đầu tiên",
+    "stopAt": "Dừng khi gặp số dòng trống liên tiếp",
+    "skipRows": "Bỏ qua dòng không phải dữ liệu",
+    "whenBlank": "Cột khóa",
+    "whenKeyContains": "Bỏ dòng khi cột khóa chứa",
+    "unmergeCells": "Ô gộp (merge)",
+    "columns": "Các cột",
+    "extraColumns": "Cột không khai báo",
+    "multiple": "Cho upload nhiều file và tự gộp",
+    "minFiles": "Số file tối thiểu",
+    "maxFiles": "Số file tối đa",
+    "maxRows": "Cảnh báo khi file có quá số dòng"
+  },
+  "column": {
+    "key": "Mã cột",
+    "label": "Tên hiển thị",
+    "aliases": "Tên cột trong file",
+    "type": "Kiểu dữ liệu",
+    "presence": "Cột phải có trong file",
+    "required": "Mỗi dòng phải có giá trị",
+    "defaultValue": "Giá trị khi ô trống",
+    "dateFormats": "Định dạng ngày dạng chữ",
+    "decimalSeparator": "Dấu thập phân (số dạng chữ)",
+    "rules": "Quy tắc kiểm tra"
+  },
+  "rule": {
+    "unique": "Loại",
+    "regex": "Biểu thức regex",
+    "min": "Tối thiểu",
+    "max": "Tối đa",
+    "severity": "Mức"
+  },
+  "param": {
+    "key": "Mã",
+    "label": "Tên hiển thị",
+    "type": "Kiểu",
+    "required": "Bắt buộc nhập",
+    "log": "Ghi vào lịch sử chạy",
+    "isAsOfDate": "Dùng làm ngày hiệu lực",
+    "options": "Lựa chọn"
+  },
+  "option": {
+    "value": "Giá trị",
+    "label": "Nhãn"
+  }
+}

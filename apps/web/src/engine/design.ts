@@ -17,6 +17,7 @@ import type { AnyNodePlugin, PortDef } from './core/plugin';
 import { EngineError, type ColumnDef, type Translate } from './core/types';
 import { nodePlugins } from './nodes';
 import type { ColumnInfo } from './protocol';
+import { setupFieldLabel } from './field-path';
 
 /**
  * Design-time check of a flow (spec §13.2, §15.3 "Kiểm tra realtime", §14.4 publish check): the
@@ -153,7 +154,7 @@ export async function checkDesign(
         add(
           'error',
           'design.param.invalidField',
-          { param: label, field },
+          { param: label, field: setupFieldLabel(t, 'param', field) },
           {
             paramIndex: i,
             path: field,
@@ -213,7 +214,12 @@ export async function checkDesign(
     if (!parsed.success) {
       for (const path of zodPaths(parsed.error)) {
         const field = path.join('.');
-        add('error', slotIssueKey(path), { slot: label, field }, { slotIndex: i, path: field });
+        add(
+          'error',
+          slotIssueKey(path),
+          { slot: label, field: setupFieldLabel(t, 'slot', field) },
+          { slotIndex: i, path: field },
+        );
       }
       if (isRecord(s) && typeof s.key === 'string') brokenSlots.set(s.key, label);
       return;
