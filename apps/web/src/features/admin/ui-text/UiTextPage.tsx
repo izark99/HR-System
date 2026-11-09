@@ -1,5 +1,14 @@
 import i18next from 'i18next';
-import { Fragment, useDeferredValue, useEffect, useMemo, useState } from 'react';
+import {
+  Fragment,
+  memo,
+  useCallback,
+  useDeferredValue,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
 import { useTranslation } from 'react-i18next';
 import { DataTable, type DataTableColumn } from '../../../components/DataTable';
 import { ConfirmDialog, Dialog, DialogFooter } from '../../../components/Dialog';
@@ -238,6 +247,115 @@ function EditForm({
   );
 }
 
+/**
+ * The table of every text (spec §33 AC-TX-09, column order AC-TX-12). Memoised: it re-renders
+ * only when the filtered rows change, not on each key stroke of the search box (deferred) or when
+ * the edit dialog opens / closes.
+ */
+const UiTextTable = memo(function UiTextTable({
+  rows,
+  onEdit,
+  onReset,
+}: {
+  rows: Row[];
+  onEdit: (r: Row) => void;
+  onReset: (r: Row) => void;
+}) {
+  const { t } = useTranslation('uiText');
+  const columns = useMemo<DataTableColumn<Row>[]>(
+    () => [
+      {
+        id: 'group',
+        header: t('col.group'),
+        cell: (r) => <Chip tone="blue">{t(`groups.${r.group}`)}</Chip>,
+      },
+      {
+        id: 'code',
+        header: t('col.code'),
+        cell: (r) => <span className="font-mono text-caption text-muted">{r.code}</span>,
+      },
+      {
+        id: 'status',
+        header: t('col.status'),
+        cell: (r) =>
+          r.edited ? (
+            <Chip tone="amber">{t('status.edited')}</Chip>
+          ) : (
+            <Chip tone="neutral">{t('status.default')}</Chip>
+          ),
+      },
+      {
+        id: 'updated',
+        header: t('col.updated'),
+        cell: (r) => (
+          <span className="text-caption text-muted">
+            {r.edited && r.override
+              ? t('updatedBy', {
+                  name: r.override.updatedBy ?? t('unknownAuthor'),
+                  date: stamp(r.override.updatedAt),
+                })
+              : '–'}
+          </span>
+        ),
+      },
+      // The long text last (AC-TX-12): status and author stay in view without scrolling sideways.
+      {
+        id: 'text',
+        header: t('col.text'),
+        rowHeader: true,
+        cell: (r) => (
+          <span className="font-normal text-ink-soft">
+            <VarText text={r.current} />
+          </span>
+        ),
+      },
+    ],
+    [t],
+  );
+  const actions = useMemo(
+    () => ({
+      header: t('col.actions'),
+      cell: (r: Row) => (
+        <div data-row-actions className="flex items-center justify-end gap-2">
+          <RowIcon label={t('edit')}>
+            <button
+              type="button"
+              data-edit={r.key}
+              aria-label={t('editFor', { code: r.code })}
+              className={cx(rowIconClass, 'hover:text-ink')}
+              onClick={() => onEdit(r)}
+            >
+              <PencilIcon />
+            </button>
+          </RowIcon>
+          <RowIcon label={t('reset')}>
+            <button
+              type="button"
+              aria-label={t('resetFor', { code: r.code })}
+              disabled={!r.edited}
+              className={cx(rowIconClass, 'hover:text-ink disabled:opacity-40')}
+              onClick={() => onReset(r)}
+            >
+              <ResetIcon />
+            </button>
+          </RowIcon>
+        </div>
+      ),
+    }),
+    [t, onEdit, onReset],
+  );
+  return (
+    <DataTable
+      caption={t('tableLabel')}
+      columns={columns}
+      rows={rows}
+      rowKey={(r) => r.key}
+      empty={{ title: t('emptyTitle'), text: t('empty') }}
+      actions={actions}
+    />
+  );
+});
+
 export function UiTextPage() {
   const { t } = useTranslation('uiText');
   const toast = useToast();
@@ -346,52 +464,17 @@ export function UiTextPage() {
     }
   }
 
-  const columns: DataTableColumn<Row>[] = [
-    {
-      id: 'group',
-      header: t('col.group'),
-      cell: (r) => <Chip tone="blue">{t(`groups.${r.group}`)}</Chip>,
-    },
-    {
-      id: 'code',
-      header: t('col.code'),
-      cell: (r) => <span className="font-mono text-caption text-muted">{r.code}</span>,
-    },
-    {
-      id: 'text',
-      header: t('col.text'),
-      rowHeader: true,
-      cell: (r) => (
-        <span className="font-normal text-ink-soft">
-          <VarText text={r.current} />
-        </span>
-      ),
-    },
-    {
-      id: 'status',
-      header: t('col.status'),
-      cell: (r) =>
-        r.edited ? (
-          <Chip tone="amber">{t('status.edited')}</Chip>
-        ) : (
-          <Chip tone="neutral">{t('status.default')}</Chip>
-        ),
-    },
-    {
-      id: 'updated',
-      header: t('col.updated'),
-      cell: (r) => (
-        <span className="text-caption text-muted">
-          {r.edited && r.override
-            ? t('updatedBy', {
-                name: r.override.updatedBy ?? t('unknownAuthor'),
-                date: stamp(r.override.updatedAt),
-              })
-            : '–'}
-        </span>
-      ),
-    },
-  ];
+  // Stable handlers: the table below is memoised and must not re-render on every key stroke or
+  // when the edit dialog opens (≈ 1.500 rows; verifier 2026-11-09).
+  const latest = useRef({ resetRow });
+  useEffect(() => {
+    latest.current = { resetRow };
+  });
+  const onEdit = useCallback((r: Row) => {
+    setActionError(null);
+    setEditing(r);
+  }, []);
+  const onReset = useCallback((r: Row) => void latest.current.resetRow(r), []);
 
   return (
     <>
@@ -481,45 +564,7 @@ export function UiTextPage() {
               />
             </div>
           </Toolbar>
-          <DataTable
-            caption={t('tableLabel')}
-            columns={columns}
-            rows={shown}
-            rowKey={(r) => r.key}
-            empty={{ title: t('emptyTitle'), text: t('empty') }}
-            actions={{
-              header: t('col.actions'),
-              cell: (r) => (
-                <div data-row-actions className="flex items-center justify-end gap-2">
-                  <RowIcon label={t('edit')}>
-                    <button
-                      type="button"
-                      data-edit={r.key}
-                      aria-label={t('editFor', { code: r.code })}
-                      className={cx(rowIconClass, 'hover:text-ink')}
-                      onClick={() => {
-                        setActionError(null);
-                        setEditing(r);
-                      }}
-                    >
-                      <PencilIcon />
-                    </button>
-                  </RowIcon>
-                  <RowIcon label={t('reset')}>
-                    <button
-                      type="button"
-                      aria-label={t('resetFor', { code: r.code })}
-                      disabled={!r.edited}
-                      className={cx(rowIconClass, 'hover:text-ink disabled:opacity-40')}
-                      onClick={() => void resetRow(r)}
-                    >
-                      <ResetIcon />
-                    </button>
-                  </RowIcon>
-                </div>
-              ),
-            }}
-          />
+          <UiTextTable rows={shown} onEdit={onEdit} onReset={onReset} />
         </section>
       )}
 

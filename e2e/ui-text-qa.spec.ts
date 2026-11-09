@@ -146,59 +146,59 @@ test.describe('performance of the ~1.470-row table (HRFLOW_PERF=1)', () => {
   });
 });
 
-test.describe('KNOWN BUG', () => {
+test.describe('formula hover (fixed 2026-11-09)', () => {
   test.use({ signedInAs: ADMIN, viewport: { width: 1440, height: 900 } });
 
   // MEMORY 2026-11-09 09:14: edited texts are plain text, no HTML / link. The function hover of
-  // the formula editor renders `formula.fn.*.desc` as Markdown, so an edited description with
-  // Markdown link syntax becomes a clickable link to an outside address.
-  test.fail(
-    'formula hover shows an edited function description as plain text, no link',
-    async ({ page, supabase }) => {
-      preset(supabase, {
-        'designer:formula.fn.IF.desc': 'Xem [tài liệu](https://example.invalid/doc) về IF.',
-      });
-      const def = baseFlowDefinition() as Record<string, unknown> & {
-        nodes: unknown[];
-        edges: unknown[];
-      };
-      def.nodes.push({
-        id: 'formula_1',
-        type: 'transform.formula',
-        label: 'Công thức',
-        config: {
-          columns: [
-            { key: 'x', title: 'X', formula: '=IF([ot]>1,1,0)', type: 'auto', onError: 'blank' },
-          ],
-        },
-      });
-      def.edges.push({ from: 'in_luong', fromPort: 'table', to: 'formula_1', toPort: 'in' });
-      supabase.setVersions([{ no: 1, from: '2026-01-01', to: null }]);
-      supabase.versions.push({
-        id: '00000000-0000-4000-8000-000000000777',
-        flow_id: '00000000-0000-4000-8000-0000000000f1',
-        version_no: 2,
-        status: 'draft',
-        effective_from: '',
-        effective_to: null,
-        definition: def,
-        published_at: null,
-        updated_at: '2026-10-27T01:00:00.000001+00:00',
-      });
-      await page.goto('/admin/flows/payroll-timesheet/designer');
-      const node = page.getByTestId('rf__node-formula_1');
-      await expect(node).toBeVisible();
-      const editor = page.getByTestId('formula-editor-0');
-      await expect(async () => {
-        await node.click();
-        await expect(editor.locator('.monaco-editor')).toBeVisible({ timeout: 3000 });
-      }).toPass({ timeout: 60_000 });
-      await editor.locator('.view-lines span', { hasText: /^IF$/ }).first().hover();
-      const hover = page.locator('.monaco-hover').filter({ hasText: 'về IF' });
-      await expect(hover).toBeVisible();
-      // The bug: the hover holds a link (<a> with the outside address).
-      await expect(hover.locator('a')).toHaveCount(0);
-      await expect(hover).toContainText('[tài liệu](https://example.invalid/doc)');
-    },
-  );
+  // the formula editor rendered `formula.fn.*.desc` as Markdown, so an edited description with
+  // Markdown link syntax became a clickable link; it is now escaped (plain text).
+  test('formula hover shows an edited function description as plain text, no link', async ({
+    page,
+    supabase,
+  }) => {
+    preset(supabase, {
+      'designer:formula.fn.IF.desc': 'Xem [tài liệu](https://example.invalid/doc) về IF.',
+    });
+    const def = baseFlowDefinition() as Record<string, unknown> & {
+      nodes: unknown[];
+      edges: unknown[];
+    };
+    def.nodes.push({
+      id: 'formula_1',
+      type: 'transform.formula',
+      label: 'Công thức',
+      config: {
+        columns: [
+          { key: 'x', title: 'X', formula: '=IF([ot]>1,1,0)', type: 'auto', onError: 'blank' },
+        ],
+      },
+    });
+    def.edges.push({ from: 'in_luong', fromPort: 'table', to: 'formula_1', toPort: 'in' });
+    supabase.setVersions([{ no: 1, from: '2026-01-01', to: null }]);
+    supabase.versions.push({
+      id: '00000000-0000-4000-8000-000000000777',
+      flow_id: '00000000-0000-4000-8000-0000000000f1',
+      version_no: 2,
+      status: 'draft',
+      effective_from: '',
+      effective_to: null,
+      definition: def,
+      published_at: null,
+      updated_at: '2026-10-27T01:00:00.000001+00:00',
+    });
+    await page.goto('/admin/flows/payroll-timesheet/designer');
+    const node = page.getByTestId('rf__node-formula_1');
+    await expect(node).toBeVisible();
+    const editor = page.getByTestId('formula-editor-0');
+    await expect(async () => {
+      await node.click();
+      await expect(editor.locator('.monaco-editor')).toBeVisible({ timeout: 3000 });
+    }).toPass({ timeout: 60_000 });
+    await editor.locator('.view-lines span', { hasText: /^IF$/ }).first().hover();
+    const hover = page.locator('.monaco-hover').filter({ hasText: 'về IF' });
+    await expect(hover).toBeVisible();
+    // The bug: the hover holds a link (<a> with the outside address).
+    await expect(hover.locator('a')).toHaveCount(0);
+    await expect(hover).toContainText('[tài liệu](https://example.invalid/doc)');
+  });
 });

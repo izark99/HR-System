@@ -145,9 +145,18 @@ monaco.languages.registerHoverProvider(FORMULA_LANGUAGE, {
         position.lineNumber,
         word.endColumn,
       ),
-      contents: [{ value: `**${f.syntax}**` }, { value: f.desc }],
+      // Plain text (the Admin can edit these texts, spec §33): no Markdown, so no link or image.
+      contents: [{ value: `**${escapeMarkdown(f.syntax)}**` }, { value: escapeMarkdown(f.desc) }],
     };
   },
 });
 
 export { monaco };
+
+/**
+ * Backslash-escapes every ASCII punctuation character (CommonMark §2.4) of a plain text: no
+ * Markdown syntax, and `:` / `/` escaped so a bare address is not turned into a link either.
+ */
+function escapeMarkdown(text: string): string {
+  return text.replace(/[!-/:-@[-`{-~]/g, '\\$&');
+}
