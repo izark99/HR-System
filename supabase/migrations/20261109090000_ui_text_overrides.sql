@@ -53,7 +53,10 @@ create or replace trigger set_updated_at before update on public.ui_text_overrid
 create or replace trigger audit after insert or update on public.ui_text_overrides
   for each row execute function private.audit_row();
 
--- Privileges (column level for anon: no author metadata before sign-in).
+-- Privileges (column level for anon: no author metadata before sign-in). Supabase grants every
+-- privilege on new public tables to anon / authenticated by default: taken back first, so only the
+-- grants below apply (no removal privilege at all).
+revoke all on public.ui_text_overrides from public, anon, authenticated;
 grant select (key, value) on public.ui_text_overrides to anon;
 grant select, insert, update on public.ui_text_overrides to authenticated;
 grant all on public.ui_text_overrides to service_role;
