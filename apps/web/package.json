@@ -29,7 +29,7 @@
     "monaco-editor": "0.57.0",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
-    "react-i18next": "^16.2.0",
+    "react-i18next": "^17.1.13",
     "xlsx": "file:../../vendor/xlsx-0.20.3.tgz",
     "zod": "^4.1.12"
   },
