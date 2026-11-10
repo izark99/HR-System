@@ -9,6 +9,8 @@
 
 ## Phạm vi & sản phẩm
 
+2026-11-10 07:50 - Harold duyệt mẫu màn Chạy flow cho bảng tham chiếu (https://claude.ai/artifact/WB8Ndbb5CXYgsr2muW5pET): khung "Phiên bản áp dụng" liệt kê từng bảng "Tên · vN · từ ngày" + nút "Xem bảng"; thiếu phiên bản → khung lỗi nêu bảng, khóa nút Tiếp, mờ phần upload; hộp "Xem bảng" chỉ đọc (tìm không dấu, 100 dòng/lô + "Hiện thêm", không sửa/tải về). Bắt đầu vòng 2.
+
 2026-11-10 07:47 - Bảng tham chiếu vòng 2: thiếu phiên bản hiệu lực của bảng tham chiếu thì báo ngay khi User chọn kỳ (khung "Phiên bản áp dụng"), khóa nút Chạy trước bước upload; bản published có ô không khớp kiểu (Admin đổi kiểu cột sau khi publish) → tự chuyển nếu được, không được thì chặn chạy và nêu bảng + phiên bản + cột; dữ liệu bảng tham chiếu chỉ giữ trong bộ nhớ tab (tải lại mỗi lần mở màn Chạy flow, không lưu trình duyệt); User xem được nội dung bảng tham chiếu đang áp dụng (nút "Xem bảng" mở danh sách dòng chỉ đọc) — mẫu Artifact duyệt trước khi code. PR dependabot để nguyên, gom vào vòng nâng thư viện sau Phase 2 (build + full E2E + ngân sách JS + ảnh so pixel trước khi merge).
 
 2026-11-09 19:15 - Bảng tham chiếu vòng 1 (chấp nhận khác mẫu): hộp Import có lỗi thì chỉ hiện báo cáo + "chưa thay draft", không lỗi mới hiện xem trước 200 dòng; cảnh báo dữ liệu cá nhân trong hộp Import là checkbox xác nhận + nút (i) (màn Cột giữ khung cảnh báo); hàm RPC của bảng tham chiếu chạy `security invoker` như flow (hàm ghi audit xác nhận là definer, tự kiểm admin). Giữ bảng danh sách kéo ngang như quy tắc bảng Admin (không thu cột Phiên bản).

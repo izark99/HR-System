@@ -1,6 +1,6 @@
 # HANDOFF — Trạng thái dự án để mở session mới
 
-> Cập nhật: 2026-11-10 (sau Phase 2 bước 1 vòng 1 — bảng tham chiếu, §34; kế tiếp: vòng 2 `input.refTable`). Đọc file này sau `CLAUDE.md` và `docs/MEMORY.md`.
+> Cập nhật: 2026-11-10 07:50 (sau Phase 2 bước 1 vòng 1; vòng 2 đã chốt + duyệt mẫu, chuẩn bị giao developer — xem §5). Đọc file này sau `CLAUDE.md` và `docs/MEMORY.md`.
 
 ## 1. Đã xong
 
@@ -69,13 +69,14 @@
 
 ## 5. Bước tiếp theo
 
-- ~~Vòng nâng tooling~~, ~~bộ khung UI/UX vòng A, vòng B~~ → xong (lên `main` 2026-11-08). ~~So ảnh pixel~~ + §4.12a → xong (lên `main` 2026-11-09).
-- **Tiếp theo (theo MEMORY 2026-11-04 15:34):**
-  1. ~~**So ảnh pixel** (`toHaveScreenshot`): áp `docs/patches/2026-11-04-pixel-compare.patch` (`git apply`; patch viết trước vòng A/B nên nhiều khả năng phải áp tay theo nội dung: đồng hồ trình duyệt cố định `freezeClock`, thay chữ "… giây" trước khi so, trạng thái "đang chạy" không so, `maxDiffPixels: 0`, `snapshotPathTemplate` `e2e/__screenshots__/`), sinh ảnh gốc bằng `--update-snapshots` sau `pnpm --filter @hrflow/web build:e2e`, chạy 2 lần liên tiếp pass rồi commit ảnh. Gộp vào `e2e/ui-v2*.spec.ts` (giữ trang ảnh duyệt tay + `layout-lint`).~~
-  2. ~~**Tối ưu hiệu năng**~~ → xong 2026-11-09 (§31). Còn: Harold chạy `pnpm perf:local` trên laptop để kết luận AC-B3-24.
-  2a. ~~**Thanh cuộn đồng nhất, không lệch ngang** + khung cuộn~~ → xong 2026-11-09 (§32).
-  2b. ~~**Tab "Văn bản giao diện"**~~ → xong 2026-11-09 (§33). (§33, MEMORY 2026-11-09 09:12, 09:14; mẫu đã duyệt https://claude.ai/artifact/XbyVkYNju69SB7pmvbAurb, bố cục A): developer → verifier; bảng Supabase mới + RLS (HANDOFF §3 về drop/delete); ngân sách JS.
-  3. **Phase 2**: bảng tham chiếu có effective date + `input.refTable` (vòng 1 xong 2026-11-10; vòng 2: node `input.refTable` + chọn version khi chạy + Designer + `fromRefTable` + `flow_versions.ref_tables` + quyền User đọc) → `output.template` → `code.python` (Pyodide).
+> Trạng thái lúc 2026-11-10 07:50: `main` = `716ec58` + commit docs trên nhánh `claude/hopeful-wright-a2fhd1` (MEMORY/spec vòng 2). Không có việc dở chưa commit.
+
+- **Đang làm: Phase 2 bước 1 – vòng 2 (bảng tham chiếu)**. Phạm vi: spec §34 AC-RT-07 (node `input.refTable`, Designer: palette Đầu vào, form chọn bảng, ghi rõ version dùng xem trước), AC-RT-08 (chọn version theo as-of khi chạy, lỗi thiếu version, run log `ref_versions`, Designer xem trước theo tham số mẫu), AC-RT-09 phần còn lại (`flow_versions.ref_tables` do trigger tính từ `definition` lúc Publish; User chỉ SELECT version published của bảng nằm trong flow được gán; migration mới, không từ khóa drop/delete, `revoke all` trước `grant`), AC-RT-10 (tham số `fromRefTable`), AC-RT-15 (kiểm thiếu version ngay khi chọn kỳ, tự chuyển kiểu ô / chặn chạy, dữ liệu chỉ trong RAM, hộp "Xem bảng" chỉ đọc), AC-RT-02 phần kiểm thiết kế (flow dùng cột không còn → lỗi). MEMORY 2026-11-09 14:28/14:37, 2026-11-10 07:47 và dòng duyệt mẫu 2026-11-10 07:50.
+  - Mẫu đã duyệt: Designer (màn 5) https://claude.ai/artifact/92KZJ49WJTdFoxWMo26kar — HTML `/tmp/claude-0/-home-user-HR-System/8e399ec8-d20c-5aa2-bcb6-380f9e44567a/scratchpad/bang-tham-chieu.html`; màn Chạy flow https://claude.ai/artifact/WB8Ndbb5CXYgsr2muW5pET — HTML `…/scratchpad/xem-bang-tham-chieu.html` (scratchpad có thể mất khi đổi container; khi đó đọc lại bằng Artifact read).
+  - Quy trình: developer (gói bối cảnh như trên) → session chính soi ảnh → verifier → áp migration lên Supabase thật bằng `execute_sql` + bài test rollback trên DB thật → full E2E → gửi Harold ảnh → lên `main`.
+  - Rủi ro: ngân sách JS còn ~0,5 KiB (code mới phải ở chunk lười: màn Chạy flow, Designer, worker); run log thêm `ref_versions` (không dữ liệu); RLS User đọc theo flow được gán.
+- Sau vòng 2: Phase 2 bước 2 `output.template` → bước 3 `code.python` (Pyodide); vòng nâng thư viện gom 6 PR dependabot (MEMORY 07:47).
+- Chờ Harold: chạy `pnpm perf:local` trên laptop (AC-B3-24); quyết xóa 4 nhánh `claude/*` cũ đã nằm trong `main` (beautiful-babbage, wizardly-knuth, exciting-clarke, eager-albattani).
 
 ## 6. Token theo vòng (để so sánh hiệu quả)
 
