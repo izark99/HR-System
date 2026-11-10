@@ -1,6 +1,6 @@
 # HANDOFF — Trạng thái dự án để mở session mới
 
-> Cập nhật: 2026-11-09 (sau tab "Văn bản giao diện" §33; kế tiếp: Phase 2). Đọc file này sau `CLAUDE.md` và `docs/MEMORY.md`.
+> Cập nhật: 2026-11-10 (sau Phase 2 bước 1 vòng 1 — bảng tham chiếu, §34; kế tiếp: vòng 2 `input.refTable`). Đọc file này sau `CLAUDE.md` và `docs/MEMORY.md`.
 
 ## 1. Đã xong
 
@@ -19,6 +19,7 @@
 | Tối ưu hiệu năng (spec §31, AC-PF-01..07): đẩy dữ liệu vào DuckDB bằng Arrow đúng kiểu theo row group 122.880 dòng, bỏ bảng `_raw` + CAST — 1M × 30: 13,6 → 5,0 s; 100k tổng ≈ 4 s; AC-B4-31 SQL công thức 100k/5 cột ≈ 0,75 s; đo từng chặng qua User Timing `hrflow:*` (`e2e/perf-stages.spec.ts`, `HRFLOW_PERF=1`), `pnpm perf:local` cho máy thật (README) — lên `main` 2026-11-09. AC-B3-24 trên laptop 8 GB chờ số Harold đo | ✅ |
 | Thanh cuộn + khung cuộn (spec §32, AC-SB-01..09): mọi thanh cuộn (trang, vùng cuộn, Monaco) cùng kiểu 10px, luôn chừa chỗ (`scrollbar-gutter: stable`) nên đổi tab dài/ngắn không lệch ngang; từ 768px header cố định, chỉ vùng dưới cuộn (`[data-scroll-frame]`; Admin: menu trái đứng yên), dưới 768px cả trang cuộn; `layout-lint` luật 19 (thanh mặc định), 20 (không chừa chỗ); `e2e/scrollbar-shift.spec.ts` chạy Chromium bỏ cờ `--hide-scrollbars`; `shot()` tạm mở rộng vùng cuộn để chụp đủ — lên `main` 2026-11-09 sau khi Harold duyệt ảnh | ✅ |
 | Tab Admin "Văn bản giao diện" (spec §33, AC-TX-01..13): Admin sửa mọi text hiện có (~1.473 key: `common`, `designer` kể cả bảng tra hàm, `engine`, `engineFields`), áp cho mọi người kể cả màn Đăng nhập; bảng `public.ui_text_overrides` (value null = mặc định, không có xóa; anon chỉ đọc `key`,`value`; chỉ admin ghi; trigger tác giả/audit) — đã áp lên Supabase thật bằng `execute_sql` 2026-11-09, `supabase/tests/ui_text_overrides.sql` chạy trên DB thật ra `UI TEXT OK` (tự rollback); override nạp lúc khởi động (chờ tối đa 1,5 s), truyền vào worker, áp cho `designer` khi nạp lười; bảng vẽ 100 dòng/lần + "Hiện thêm"; hover hàm công thức escape Markdown — lên `main` 2026-11-09 | ✅ |
+| Phase 2 bước 1 vòng 1 — Bảng tham chiếu (spec §34, AC-RT-01..06, 09 phần bảng, 11..14): `ref_tables` + `ref_table_versions` (JSON rows ≤ 50.000 dòng / 5 MiB, draft → published → retired, hủy draft = `discarded`, không chồng hiệu lực, published bất biến, rollback chiếu lên cột hiện tại), RPC `security invoker`, chỉ Admin (User đọc ở vòng 2); màn Admin danh sách / cột (cảnh báo dữ liệu cá nhân + audit) / phiên bản (Publish, Retire, Hủy, so sánh theo khóa) / lưới sửa (hoàn tác, dán nhiều ô, lô 100 dòng, lỗi tại ô) / Import Excel trong worker — migration `20261109150000_ref_tables.sql` áp lên Supabase thật bằng `execute_sql` 2026-11-10 (bài test rollback trên DB thật OK) — lên `main` 2026-11-10 | ✅ |
 | Test: Vitest (~1170 test), Playwright E2E (~435 test, Supabase được mock; test nặng opt-in `HEAVY_E2E=1`, `HRFLOW_PERF=1`) | ✅ |
 
 ## 2. Môi trường
@@ -64,6 +65,8 @@
 
 16. Tab "Văn bản giao diện" (MINOR, 2026-11-09): (a) **ngân sách JS tải ban đầu còn ~675 B** (214,6 / 215,2 KiB; i18next bị Rolldown tách thành chunk preload riêng) — vòng sau thêm code vào entry gần như chắc vượt: phải cắt chỗ khác hoặc Harold quyết nâng ngân sách; (b) `authenticated` đọc được `updated_by` (uuid) của dòng đã sửa — Harold chấp nhận (MEMORY 13:06); (c) worker chỉ nhận chữ mới ở lần gọi kế tiếp; (d) ảnh so pixel `10-versions--row-menu-open` lệch 37 pixel 1 lần trong full E2E (chạy lại pass) — nếu lặp lại xem vị trí menu "⋯" lúc đo; (e) Supabase cấp mọi quyền bảng mới cho `anon`/`authenticated` mặc định: migration mới phải `revoke all … from public, anon, authenticated` trước khi `grant` (stub local không có quyền mặc định này nên test local không bắt được).
 
+17. Bảng tham chiếu vòng 1 (MINOR, 2026-11-10): (a) **ngân sách JS còn ~0,5 KiB** (214,7/215,2); (b) lưu 5 MB qua PostgREST chưa đo trên Supabase thật (giới hạn request của gateway); (c) DB so khóa bằng `btrim`, không chuẩn hóa NFC (client chặt hơn); (d) đổi kiểu cột khi đã có bản published: dữ liệu cũ giữ kiểu cũ — vòng 2 (engine) phải xử lý giá trị không khớp kiểu; (e) `supabase/tests/ref_tables*.sql` mới chạy trên Postgres local; trên DB thật chạy bài test rút gọn (rollback).
+
 ## 5. Bước tiếp theo
 
 - ~~Vòng nâng tooling~~, ~~bộ khung UI/UX vòng A, vòng B~~ → xong (lên `main` 2026-11-08). ~~So ảnh pixel~~ + §4.12a → xong (lên `main` 2026-11-09).
@@ -72,7 +75,7 @@
   2. ~~**Tối ưu hiệu năng**~~ → xong 2026-11-09 (§31). Còn: Harold chạy `pnpm perf:local` trên laptop để kết luận AC-B3-24.
   2a. ~~**Thanh cuộn đồng nhất, không lệch ngang** + khung cuộn~~ → xong 2026-11-09 (§32).
   2b. ~~**Tab "Văn bản giao diện"**~~ → xong 2026-11-09 (§33). (§33, MEMORY 2026-11-09 09:12, 09:14; mẫu đã duyệt https://claude.ai/artifact/XbyVkYNju69SB7pmvbAurb, bố cục A): developer → verifier; bảng Supabase mới + RLS (HANDOFF §3 về drop/delete); ngân sách JS.
-  3. **Phase 2**: bảng tham chiếu có effective date + `input.refTable` → `output.template` → `code.python` (Pyodide).
+  3. **Phase 2**: bảng tham chiếu có effective date + `input.refTable` (vòng 1 xong 2026-11-10; vòng 2: node `input.refTable` + chọn version khi chạy + Designer + `fromRefTable` + `flow_versions.ref_tables` + quyền User đọc) → `output.template` → `code.python` (Pyodide).
 
 ## 6. Token theo vòng (để so sánh hiệu quả)
 
@@ -102,6 +105,8 @@
 | Thanh cuộn + khung cuộn kiểm (1 MAJOR Designer dán node — session chính sửa) | verifier | ≈ 114k |
 | Tab "Văn bản giao diện" (dừng 1 lần vì hạn mức 5 giờ, resume) | developer | ≈ 324k |
 | Tab "Văn bản giao diện" kiểm (PASS, 1 MAJOR hiệu năng + 2 MINOR — session chính sửa) | verifier | ≈ 128k |
+| Bảng tham chiếu vòng 1 + lượt sửa (dừng 1 lần vì hạn mức) | developer | ≈ 1,09M (527k + 561k) |
+| Bảng tham chiếu vòng 1 kiểm (PASS, 1 MAJOR + 4 MINOR) | verifier | ≈ 203k |
 
 Ghi chú vòng giao diện: tốn nhiều vòng do yêu cầu UI chốt dần qua ảnh chụp; lần sau với thay đổi UI nên dựng **trang mẫu tương tác (Artifact) để Harold duyệt trước khi code** (đã làm ở cuối vòng, hiệu quả). Trang ảnh duyệt: https://claude.ai/artifact/F8Zq7ULN6RSgJFfEgFcmhB; mẫu bảng: https://claude.ai/artifact/AwjFJEPc5YndnE6Z1tf56B.
 
