@@ -9,6 +9,8 @@ export interface Readiness {
   missingParams: string[];
   /** The as-of date has no usable version yet (resolving / none / lookup failed). */
   versionBlocked: boolean;
+  /** A reference table has no usable version for the period, or is still loading (AC-RT-15). */
+  refsBlocked: boolean;
   canRun: boolean;
 }
 
@@ -45,6 +47,7 @@ export function readiness(state: SessionState): Readiness {
     })
     .map((p) => p.key);
   const versionBlocked = state.versionCheck !== 'ok';
+  const refsBlocked = state.refs.status !== 'ok' && state.refs.status !== 'none';
   return {
     errors,
     warnings,
@@ -53,9 +56,11 @@ export function readiness(state: SessionState): Readiness {
     missingSlots,
     missingParams,
     versionBlocked,
+    refsBlocked,
     canRun:
       state.load === 'ready' &&
       !versionBlocked &&
+      !refsBlocked &&
       !state.restoring &&
       !state.restoreFailed &&
       !validating &&

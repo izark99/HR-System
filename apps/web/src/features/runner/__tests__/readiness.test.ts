@@ -41,6 +41,7 @@ function state(p: Partial<SessionState> = {}): SessionState {
   return {
     code: 'payroll-timesheet',
     load: 'ready',
+    refs: { status: 'none', tables: [], params: {} },
     problems: [],
     summary: null,
     flow,

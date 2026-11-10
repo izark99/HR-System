@@ -90,7 +90,12 @@ function recentRunOf(row: RecentRunRow): RecentRun {
  * metadata-only run logging, `my_recent_runs` for the history card.
  */
 export class SupabaseFlowSource implements FlowSource, RunLogger {
-  constructor(private readonly sb: FlowSourceClient) {}
+  /** Reference tables are read with the same client (RLS of the User, spec §34). */
+  readonly refs: FlowSourceClient;
+
+  constructor(private readonly sb: FlowSourceClient) {
+    this.refs = sb;
+  }
 
   async list(asOf: string): Promise<FlowSummary[]> {
     const { data, error } = await this.sb.rpc('my_flows', { p_as_of: asOf });

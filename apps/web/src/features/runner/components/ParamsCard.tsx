@@ -19,6 +19,8 @@ export function ParamsCard({
   disabled,
   onChange,
   aside,
+  footer,
+  refOptions,
 }: {
   params: readonly FlowParam[];
   values: ParamValues;
@@ -26,20 +28,29 @@ export function ParamsCard({
   onChange: (key: string, value: string) => void;
   /** Shown next to the params (e.g. the version effective for the chosen period). */
   aside?: ReactNode;
+  /** Full-width block under the params (the "Phiên bản áp dụng" box of reference tables). */
+  footer?: ReactNode;
+  /**
+   * Options of list params taken from a reference table (spec §34 AC-RT-10), by param key;
+   * `error`: shown under that param only.
+   */
+  refOptions?: Record<string, { options: { value: string; label: string }[]; error?: string }>;
 }) {
   const { t } = useTranslation();
-  if (params.length === 0 && !aside) return null;
+  if (params.length === 0 && !aside && !footer) return null;
   return (
     <Section title={t('run.paramsTitle')}>
       <div className="flex flex-wrap items-end gap-6">
         {params.map((p) => {
           const value = String(values[p.key] ?? '');
-          const options = Array.isArray(p.options) ? p.options : null;
+          const fromRef = p.options && !Array.isArray(p.options) ? refOptions?.[p.key] : undefined;
+          const options = Array.isArray(p.options) ? p.options : (fromRef?.options ?? null);
           return (
             <FormField
               key={p.key}
               id={`param-${p.key}`}
               required={p.required}
+              {...(fromRef?.error ? { error: fromRef.error } : {})}
               label={
                 <>
                   {p.label}
@@ -94,6 +105,7 @@ export function ParamsCard({
         })}
         {aside}
       </div>
+      {footer}
     </Section>
   );
 }

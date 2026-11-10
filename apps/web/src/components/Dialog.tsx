@@ -16,6 +16,7 @@ export function Dialog({
   initialFocusId,
   locked = false,
   hint,
+  wide = false,
   children,
 }: {
   open: boolean;
@@ -33,6 +34,8 @@ export function Dialog({
   initialFocusId?: string;
   /** Explanation of the dialog, behind an (i) button beside the title (`InfoTip`). */
   hint?: ReactNode;
+  /** 720px instead of 520px (a data table inside, e.g. "Xem bảng"). */
+  wide?: boolean;
   children: ReactNode;
 }) {
   const { t } = useTranslation();
@@ -88,7 +91,8 @@ export function Dialog({
       }}
       className={cx(
         floatClass,
-        'm-auto w-[min(520px,calc(100vw-24px))] p-0 text-ink backdrop:bg-ink/40',
+        'm-auto p-0 text-ink backdrop:bg-ink/40',
+        wide ? 'w-[min(720px,calc(100vw-24px))]' : 'w-[min(520px,calc(100vw-24px))]',
       )}
     >
       {open && (

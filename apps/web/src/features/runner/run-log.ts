@@ -24,6 +24,8 @@ export interface RunLogInput {
   durationMs: number;
   summary: RunSummary | null;
   error: EngineErrorInfo | null;
+  /** Reference table code → version id used by the run (spec §34 AC-RT-08). */
+  refVersions?: Record<string, string>;
 }
 
 const ERROR_CODE = /^[A-Za-z][A-Za-z0-9_.]{0,99}$/;
@@ -87,5 +89,8 @@ export async function buildRunLog(input: RunLogInput): Promise<RunLogInsert> {
     error_code: input.status === 'failed' && code && ERROR_CODE.test(code) ? code : null,
     error_node_id: input.status === 'failed' && nodeId && NODE_ID.test(nodeId) ? nodeId : null,
     client_info: null,
+    ...(input.refVersions && Object.keys(input.refVersions).length > 0
+      ? { ref_versions: input.refVersions }
+      : {}),
   };
 }

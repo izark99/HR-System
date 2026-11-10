@@ -239,6 +239,12 @@ const FRAME_ALLOW: { file: string; rule: string; reason: string; only?: string[]
       'dense file-check issue table, 14px like the result sheets (MEMORY 2026-11-06 08:24, AC-UI-77)',
   },
   {
+    file: 'features/runner/components/RefTableDialog.tsx',
+    rule: 'table',
+    reason:
+      'read-only dense rows of a reference table in the "Xem bảng" dialog, 14px with the shared dense cells, scrolling inside the dialog (spec §34 AC-RT-15 d)',
+  },
+  {
     file: 'features/admin/versions/DiffView.tsx',
     rule: 'table',
     reason: 'side-by-side JSON diff of two versions, not an admin list',

@@ -17,6 +17,8 @@ import { EngineClient } from './engine-client';
 import { asOfFromParams, todayIso } from './as-of';
 import type { FlowSource, FlowSummary, FlowVersionInfo, LoadedFlow } from './flow-source';
 import { buildRunLog, type RunLogger } from './run-log';
+import type { RefTablePayload } from '../../engine/io/ref-data';
+import type { RefLoader, RefState } from './ref-runtime';
 
 /**
  * State of the run wizard for the open flow. Files stay as `File` handles on the main thread
@@ -83,6 +85,8 @@ export interface SessionState {
   /** Version in use (null for bundled flows). */
   version: FlowVersionInfo | null;
   versionCheck: VersionCheck;
+  /** Reference tables the flow uses, for the chosen period (spec §34 AC-RT-15). */
+  refs: RefState;
 }
 
 const IDLE_RUN: RunState = { status: 'idle', nodes: [], error: null, summary: null, params: {} };
@@ -101,6 +105,7 @@ const INITIAL: SessionState = {
   asOf: '',
   version: null,
   versionCheck: 'ok',
+  refs: { status: 'none', tables: [], params: {} },
 };
 
 /**
@@ -124,6 +129,7 @@ interface RunRecord {
   flow: FlowDefinition;
   params: ParamValues;
   slots: { key: string; files: { name: string; size: number }[]; rows: number | null }[];
+  refVersions: Record<string, string>;
   logged: boolean;
 }
 
@@ -157,6 +163,12 @@ export class RunStore {
   /** Bumped by every version resolution; late answers are dropped. */
   private versionToken = 0;
   private currentRun: RunRecord | null = null;
+  /** Reference tables of this open (rows in RAM only); payload last sent to the worker. */
+  private refLoader: RefLoader | null = null;
+  private refPayload: RefTablePayload[] = [];
+  private refToken = 0;
+  private refsAsOf = '';
+  private refsDeferred = false;
   private readonly logger: RunLogger | null;
   private readonly today: () => string;
 
@@ -198,6 +210,10 @@ export class RunStore {
     }
     const token = ++this.token;
     ++this.versionToken;
+    ++this.refToken;
+    // Reference rows are loaded again on every open of the run page (AC-RT-15 c).
+    this.refLoader = null;
+    this.refPayload = [];
     const asOf = this.today();
     this.set(() => ({ ...INITIAL, code, load: 'loading', asOf }));
     let loaded: LoadedFlow | null;
@@ -271,10 +287,58 @@ export class RunStore {
     for (const [key, slot] of Object.entries(slots)) {
       if (slot.files.length > 0) void this.validateSlot(key);
     }
+    void this.resolveRefs(true);
+  }
+
+  /**
+   * Version of every reference table for the period (spec §34 AC-RT-08, 15): rows fetched once per
+   * open, sent to the worker (which checks them against the current column types). `force`: the
+   * definition changed. Deferred while a run is in progress.
+   */
+  async resolveRefs(force = false): Promise<void> {
+    const flow = this.state.flow;
+    if (!flow) return;
+    const uses =
+      flow.nodes.some((n) => n.type === 'input.refTable') ||
+      flow.params.some((p) => p.options && !Array.isArray(p.options));
+    if (!uses) {
+      this.refPayload = [];
+      if (this.state.refs.status !== 'none') this.set((s) => ({ ...s, refs: INITIAL.refs }));
+      return;
+    }
+    const asOf = asOfFromParams(flow.params, this.state.params, this.today());
+    if (!force && asOf === this.refsAsOf && this.state.refs.status !== 'error') return;
+    if (this.isBusy()) {
+      this.refsDeferred = true;
+      return;
+    }
+    this.refsDeferred = false;
+    this.refsAsOf = asOf;
+    const token = ++this.refToken;
+    this.set((s) => ({ ...s, refs: { ...s.refs, status: 'loading' } }));
+    try {
+      const rt = await import('./ref-runtime');
+      const client = this.source.refs;
+      if (!client) throw new Error('no reference tables');
+      this.refLoader ??= new rt.RefLoader(client);
+      const resolved = await this.refLoader.resolve(flow, this.state.params, this.today());
+      if (token !== this.refToken) return;
+      const statuses = await this.engine().api.setRefTables(resolved.payload);
+      if (token !== this.refToken) return;
+      this.refPayload = resolved.payload;
+      const refs = rt.refStateOf(resolved, statuses);
+      this.set((s) => ({ ...s, refs }));
+    } catch {
+      if (token === this.refToken) {
+        this.refsAsOf = '';
+        this.set((s) => ({ ...s, refs: { ...s.refs, status: 'error' } }));
+      }
+    }
   }
 
   setParam(key: string, value: string): void {
     this.set((s) => ({ ...s, params: { ...s.params, [key]: value } }));
+    if (this.state.flow?.params.find((p) => p.key === key)?.isAsOfDate) void this.resolveRefs();
     const { flow, version, asOf } = this.state;
     if (!flow || !version) return;
     const next = asOfFromParams(flow.params, this.state.params, this.today());
@@ -413,6 +477,8 @@ export class RunStore {
     }
     if (this.state.versionCheck !== 'ok') return;
     if ((this.state.version?.id ?? null) !== this.loadedVersionId) return;
+    const refs = this.state.refs;
+    if (refs.status !== 'ok' && refs.status !== 'none') return;
     const token = ++this.token;
     const params = { ...this.state.params };
     this.currentRun = {
@@ -430,6 +496,9 @@ export class RunStore {
           rows: st?.validation?.rowCount ?? null,
         };
       }),
+      refVersions: Object.fromEntries(
+        refs.tables.filter((r) => r.version).map((r) => [r.code, r.version!.id]),
+      ),
       logged: false,
     };
     const nodes: NodeProgress[] = flow.nodes.map((n) => ({
@@ -506,6 +575,7 @@ export class RunStore {
 
   /** A period change made during a run is applied once the run has settled. */
   private resolveDeferred(): void {
+    if (this.refsDeferred && !this.isBusy()) void this.resolveRefs(true);
     const asOf = this.deferredAsOf;
     // After a failed restore the worker has no flow: wait for retryRestore() to succeed.
     if (asOf === null || this.isBusy() || this.state.restoring || this.state.restoreFailed) return;
@@ -536,6 +606,7 @@ export class RunStore {
       durationMs: summary?.durationMs ?? Date.now() - run.startedAt,
       summary,
       error,
+      refVersions: run.refVersions,
     })
       .then((entry) => logger.logRun(entry))
       .catch(() => undefined);
@@ -580,6 +651,8 @@ export class RunStore {
       const loaded = await this.engine().api.loadFlow(this.definition);
       if (token !== this.token) return;
       if (!loaded.ok) return;
+      // The fresh worker has no reference rows yet: send the same ones again (RAM only).
+      if (this.refPayload.length > 0) await this.engine().api.setRefTables(this.refPayload);
       // A slot whose re-validation call failed (worker crashed again) is not restored either.
       const results = await Promise.all(
         Object.keys(this.state.slots).map((k) => this.validateSlot(k)),
@@ -604,6 +677,11 @@ export class RunStore {
   resetRun(): void {
     if (this.state.run.status === 'running' || this.state.run.status === 'cancelling') return;
     this.set((s) => ({ ...s, run: IDLE_RUN }));
+  }
+
+  /** Rows of a reference table version already loaded by this open ("Xem bảng", AC-RT-15 d). */
+  refRows(versionId: string): Promise<unknown[]> {
+    return this.refLoader ? this.refLoader.rowsOf(versionId) : Promise.resolve([]);
   }
 
   getRows(sheetId: string, query: RowQuery): Promise<RowPage> {

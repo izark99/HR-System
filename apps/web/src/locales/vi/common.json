@@ -105,7 +105,9 @@
       "resolvingVersion": "Đang xác định phiên bản…",
       "noVersion": "Chạy (chưa có phiên bản cho kỳ này)",
       "versionError": "Chạy (chưa xác định được phiên bản)",
-      "barLabel": "Thao tác chạy flow"
+      "barLabel": "Thao tác chạy flow",
+      "refsLoading": "Đang tải bảng tham chiếu…",
+      "refsBlocked": "Chạy (thiếu bảng tham chiếu)"
     },
     "progress": {
       "title": "Đang chạy flow",
@@ -140,7 +142,41 @@
       "error": "không kết nối được máy chủ.",
       "retry": "Thử lại"
     },
-    "engineLoadingLabel": "Đang chuẩn bị:"
+    "engineLoadingLabel": "Đang chuẩn bị:",
+    "refs": {
+      "label": "Phiên bản áp dụng",
+      "flow": "Flow {{version}} · hiệu lực từ {{from}}",
+      "flowTo": "Flow {{version}} · hiệu lực từ {{from}} đến {{to}}",
+      "forPeriod": ", theo kỳ đã chọn",
+      "forToday": ", theo ngày hôm nay",
+      "table": "{{name}} · v{{version}} · từ {{from}}",
+      "view": "Xem bảng",
+      "viewAria": "Xem bảng {{name}}",
+      "loading": "Đang tải bảng tham chiếu…",
+      "blockedTitle": "Chưa chạy được {{when}}",
+      "missing": "Bảng tham chiếu \"{{name}}\" chưa có phiên bản hiệu lực cho {{when}}. Liên hệ Admin.",
+      "type": "Bảng tham chiếu \"{{name}}\" phiên bản v{{version}}: cột \"{{column}}\" có ô không đúng kiểu dữ liệu hiện tại và không tự chuyển được. Liên hệ Admin.",
+      "errorTitle": "Chưa tải được bảng tham chiếu",
+      "loadError": "Không kết nối được máy chủ. Kiểm tra mạng rồi thử lại.",
+      "retry": "Thử lại",
+      "paramMissing": "Bảng \"{{name}}\" chưa có phiên bản hiệu lực cho {{when}}.",
+      "whenPeriod": "kỳ {{period}}",
+      "whenDate": "ngày {{date}}",
+      "whenToday": "hôm nay",
+      "dialog": {
+        "range": "Phiên bản v{{version}} · hiệu lực từ {{from}} · chỉ xem",
+        "rangeTo": "Phiên bản v{{version}} · hiệu lực từ {{from}} đến {{to}} · chỉ xem",
+        "search": "Tìm trong bảng",
+        "placeholder": "Tìm, VD Hau Giang",
+        "count": "{{shown}} / {{total}} dòng",
+        "tableLabel": "Dữ liệu bảng {{name}}",
+        "empty": "Không có dòng nào khớp.",
+        "more": "Hiện thêm {{count}} dòng (còn {{rest}})",
+        "close": "Đóng",
+        "errorLabel": "Chưa tải được dữ liệu:",
+        "error": "không kết nối được máy chủ."
+      }
+    }
   },
   "slot": {
     "multiple": "Nhiều file · {{accept}}",

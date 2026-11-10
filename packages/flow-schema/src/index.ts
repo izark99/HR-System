@@ -4,3 +4,4 @@ export * from './nodes';
 export * from './transforms';
 export * from './flow';
 export * from './migrate';
+export * from './ref-tables';

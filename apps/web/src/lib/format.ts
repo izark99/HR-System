@@ -48,3 +48,16 @@ export function formatCell(value: CellValue, type: DataType, t: (key: string) =>
 export function isNumericType(type: DataType): boolean {
   return type === 'decimal' || type === 'integer';
 }
+
+/** "dd/MM/yyyy" from an ISO date. */
+export function formatIsoDate(iso: string): string {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso);
+  return m ? `${m[3]}/${m[2]}/${m[1]}` : iso;
+}
+
+/** The day before an exclusive upper bound, as dd/MM/yyyy. */
+export function lastDay(exclusiveTo: string): string {
+  const d = new Date(`${exclusiveTo}T00:00:00Z`);
+  d.setUTCDate(d.getUTCDate() - 1);
+  return formatIsoDate(d.toISOString().slice(0, 10));
+}

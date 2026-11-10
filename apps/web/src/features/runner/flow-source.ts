@@ -1,3 +1,5 @@
+import type { FlowSourceClient } from './supabase-flow-source';
+
 /**
  * Where the User's flows come from: Supabase (published `flow_versions` assigned to the user,
  * chosen by effective date — `SupabaseFlowSource`) or, in dev/tests, flows bundled with the app
@@ -55,4 +57,6 @@ export interface FlowSource {
   get(code: string, asOf: string): Promise<LoadedFlow | null>;
   /** The User's own recent runs (metadata only); absent when runs are not logged. */
   recentRuns?(limit: number): Promise<RecentRun[]>;
+  /** Client reading reference tables under the User's RLS (spec §34); absent for bundled flows. */
+  readonly refs?: Pick<FlowSourceClient, 'from'>;
 }

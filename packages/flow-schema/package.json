@@ -6,7 +6,8 @@
   "description": "Zod schemas for flow definitions, input slots and node configs (shared by UI, engine and tests).",
   "exports": {
     ".": "./src/index.ts",
-    "./migrate": "./src/migrate.ts"
+    "./migrate": "./src/migrate.ts",
+    "./ref-tables": "./src/ref-tables.ts"
   },
   "scripts": {
     "typecheck": "tsc -p tsconfig.json",
