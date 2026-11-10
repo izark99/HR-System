@@ -259,7 +259,7 @@ export function RunPage() {
           />
 
           <div
-            className={cx('grid grid-cols-1 gap-6 md:grid-cols-2', refsLocked && 'opacity-60')}
+            className="grid grid-cols-1 gap-6 md:grid-cols-2"
             data-refs-locked={refsLocked || undefined}
           >
             {flow.inputSlots.map((slot) => {

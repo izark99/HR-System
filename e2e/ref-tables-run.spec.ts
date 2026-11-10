@@ -77,7 +77,7 @@ test.describe('reference tables on the run page', () => {
     await expect(box).toContainText('Danh mục chi nhánh · v1 · từ 01/01/2025');
     await expect(runButton(page)).toBeDisabled();
     await expect(runButton(page)).toHaveText('Chạy (thiếu bảng tham chiếu)');
-    await expect(page.locator('[data-refs-locked]')).toHaveCSS('opacity', '0.6');
+    await expect(page.locator('[data-refs-locked]')).toHaveCount(1);
     await expect(payrollInput(page)).toBeDisabled();
     // Another period clears it; rows of a version are fetched once per page open.
     await pickMonth(page, '2026-09');

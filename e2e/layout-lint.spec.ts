@@ -24,6 +24,7 @@ import {
 import { layoutLint, LayoutReport } from './layout-lint';
 import { baseFlowDefinition, type SupabaseMock } from './supabase-mock';
 import { seedDemoRefTables } from './supabase-mock-ref';
+import { openRefDesigner, openRefFlow, refBox, seedRefDraft, seedRefRun } from './ref-run-helpers';
 
 const FLOW_ID = '00000000-0000-4000-8000-0000000000f1';
 const DRAFT_ID = '00000000-0000-4000-8000-000000000779';
@@ -168,6 +169,38 @@ for (const viewport of [DESKTOP, LAPTOP, MOBILE]) {
             path: `${process.env.LL_SHOTS}/run-files-${size(viewport)}.png`,
           });
       r.assertClean(`run-${size(viewport)}`);
+    });
+
+    test(`run: reference tables ok, missing, type error, Xem bảng ${size(viewport)}`, async ({
+      page,
+      supabase,
+    }) => {
+      seedRefRun(supabase, [
+        { bac: 1, he_so: '1.2' },
+        { bac: 2, he_so: 'không phải số' },
+      ]);
+      const r = new LayoutReport(page);
+      await openRefFlow(page, '2026-09');
+      await ready(page);
+      await expect(refBox(page)).toHaveAttribute('role', 'alert');
+      await r.check('run refs type error');
+      supabase.ref.versions.find((v) => v.id === 'reftbl-2-v1')!.rows = [{ bac: 1, he_so: '1.2' }];
+      await page.reload();
+      await pickMonth(page, '2026-09');
+      await expect(refBox(page)).toHaveAttribute('role', 'status');
+      await r.check('run refs ok');
+      await page.locator('#param-chi_nhanh').click();
+      await r.check('run refs list param open');
+      await page.keyboard.press('Escape');
+      await refBox(page).getByRole('button', { name: 'Xem bảng Danh mục chi nhánh' }).click();
+      const dialog = page.getByRole('dialog', { name: 'Danh mục chi nhánh' });
+      await expect(dialog.locator('tbody tr')).toHaveCount(100);
+      await r.check('run refs Xem bảng');
+      await dialog.locator('[data-dialog-footer]').getByRole('button', { name: 'Đóng' }).click();
+      await pickMonth(page, '2025-03');
+      await expect(refBox(page)).toContainText('Chưa chạy được kỳ 03/2025');
+      await r.check('run refs missing version');
+      r.assertClean(`run-refs-${size(viewport)}`);
     });
 
     test(`result: mismatch + summary tabs ${size(viewport)}`, async ({ page }) => {
@@ -492,6 +525,25 @@ for (const viewport of [DESKTOP, LAPTOP]) {
       await expect(page.locator('[data-connect-menu]')).toBeVisible();
       await r.check('designer connect list');
       r.assertClean(`designer-nodes-${size(viewport)}`);
+    });
+
+    test(`designer: reference table node form and list param ${size(viewport)}`, async ({
+      page,
+      supabase,
+    }) => {
+      seedRefDraft(supabase);
+      const r = new LayoutReport(page);
+      await openRefDesigner(page);
+      await selectNode(page, 'ref_cn');
+      const panel = page.getByRole('complementary', { name: 'Cấu hình' });
+      await expect(panel.locator('[data-ref-preview]')).toBeVisible();
+      await r.check('designer refTable form');
+      await page.locator('.react-flow__pane').click({ position: { x: 5, y: 5 } });
+      await panel.getByRole('tab', { name: 'Tham số' }).click();
+      await expect(panel.getByRole('combobox', { name: 'Cột nhãn' })).toBeVisible();
+      await panel.getByRole('combobox', { name: 'Cột nhãn' }).scrollIntoViewIfNeeded();
+      await r.check('designer list param from a table');
+      r.assertClean(`designer-ref-${size(viewport)}`);
     });
 
     test(`designer: every palette node type, wired and with a long name ${size(viewport)}`, async ({
