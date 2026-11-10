@@ -178,7 +178,9 @@ test.describe('reference tables on the run page', () => {
     await page.goto('/run/payroll-timesheet');
     await expect(page.getByRole('heading', { level: 1 })).toHaveText(/Đối chiếu bảng lương/);
     const answer = await page.evaluate(async (origin) => {
-      const raw = Object.values(sessionStorage).find((v) => v.includes('access_token'));
+      const raw = (Object.values(sessionStorage) as string[]).find((v) =>
+        v.includes('access_token'),
+      );
       const token = raw ? (JSON.parse(raw) as { access_token: string }).access_token : '';
       const r = await fetch(`${origin}/rest/v1/ref_tables?select=code`, {
         headers: { authorization: `Bearer ${token}`, apikey: 'x' },
