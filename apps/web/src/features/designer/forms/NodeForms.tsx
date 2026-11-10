@@ -9,6 +9,7 @@ import type { DesignerDoc, DNode, JsonObject } from '../model';
 /** Monaco (and its worker) load only when an SQL form opens (spec §5, AC-B3-49). */
 const SqlEditor = lazy(() => import('../sql/SqlEditor'));
 import { FormulaForm } from '../formula/FormulaForm';
+import { RefTableForm } from './RefTableForm';
 
 import {
   CheckField,
@@ -1051,6 +1052,7 @@ function CodeSqlForm(p: NodeFormProps) {
 
 const FORMS: Record<string, (p: NodeFormProps) => ReactNode> = {
   'input.excel': InputExcelForm,
+  'input.refTable': RefTableForm,
   'control.compare': CompareForm,
   'output.excel': OutputExcelForm,
   'output.preview': OutputPreviewForm,

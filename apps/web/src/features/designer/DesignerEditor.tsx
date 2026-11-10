@@ -73,6 +73,8 @@ import { upstreamSignature } from './preview-signature';
 import { DRAG_MIME, Palette } from './Palette';
 import { StatusBar } from './StatusBar';
 import { useDesignCheck } from './use-design-check';
+import { RefCatalogContext, useRefCatalogState } from './ref-catalog';
+import type { ParamValues } from '../../engine/protocol';
 import { issueText } from './issue-text';
 import {
   ArrowLeftIcon,
@@ -242,7 +244,15 @@ export function DesignerEditor(props: DesignerEditorProps) {
   // id of the node the list was opened for: selecting another node closes it.
   const [connectFor, setConnectFor] = useState<string | null>(null);
   const [announce, setAnnounce] = useState('');
-  const { result: rawCheck, checking, failed } = useDesignCheck(definition);
+  // Sample params of the data panel: their as-of date picks the reference table versions of the
+  // preview (spec §34 AC-RT-08).
+  const [sampleParams, setSampleParams] = useState<ParamValues>({});
+  const refCatalog = useRefCatalogState(doc, sampleParams);
+  const {
+    result: rawCheck,
+    checking,
+    failed,
+  } = useDesignCheck(definition, refCatalog.defs, refCatalog.tables === null && !refCatalog.failed);
   // Invalid config fields named by their form labels, not internal keys (MEMORY 2026-11-06 18:27).
   const check = useMemo(() => {
     if (!rawCheck) return rawCheck;
@@ -785,291 +795,295 @@ export function DesignerEditor(props: DesignerEditorProps) {
   const compactHeader = useSyncExternalStore(subscribeCompact, compactNow, () => false);
 
   return (
-    <div className="hr-designer flex h-[calc(100dvh-64px)] flex-col">
-      <header className="flex flex-wrap items-center gap-3 border-b border-line bg-card px-4 py-2 lg:flex-nowrap">
-        {/* Below 1280px only the arrow shows (name unchanged, text in a tooltip), leaving the
+    <RefCatalogContext.Provider value={refCatalog}>
+      <div className="hr-designer flex h-[calc(100dvh-64px)] flex-col">
+        <header className="flex flex-wrap items-center gap-3 border-b border-line bg-card px-4 py-2 lg:flex-nowrap">
+          {/* Below 1280px only the arrow shows (name unchanged, text in a tooltip), leaving the
             flow name room to stay readable (AC-UI-78 rule 2). */}
-        <Tooltip text={compactHeader ? t('toolbar.back') : null} className="inline-flex shrink-0">
-          <Link
-            to="/admin/flows/$flowCode/versions"
-            params={{ flowCode: props.flowCode }}
-            className="inline-flex min-h-target min-w-target items-center justify-center gap-2 rounded-card px-3 text-caption font-semibold whitespace-nowrap text-teal-strong no-underline hover:bg-page max-xl:px-0"
-          >
-            <ArrowLeftIcon className="xl:hidden" />
-            <span className="max-xl:sr-only">{t('toolbar.back')}</span>
-          </Link>
-        </Tooltip>
-        {/* Takes the room left by the toolbar, never below a readable 192px: the name is cut with
+          <Tooltip text={compactHeader ? t('toolbar.back') : null} className="inline-flex shrink-0">
+            <Link
+              to="/admin/flows/$flowCode/versions"
+              params={{ flowCode: props.flowCode }}
+              className="inline-flex min-h-target min-w-target items-center justify-center gap-2 rounded-card px-3 text-caption font-semibold whitespace-nowrap text-teal-strong no-underline hover:bg-page max-xl:px-0"
+            >
+              <ArrowLeftIcon className="xl:hidden" />
+              <span className="max-xl:sr-only">{t('toolbar.back')}</span>
+            </Link>
+          </Tooltip>
+          {/* Takes the room left by the toolbar, never below a readable 192px: the name is cut with
             "…" + tooltip, version and status chip always fit (AC-UI-78 rule 2). */}
-        <h1 className="m-0 flex min-w-48 flex-1 items-center gap-2 text-title-sm text-ink">
-          <OneLine text={props.flowName} />
-          <span className="shrink-0 text-dense whitespace-nowrap text-muted">
-            v{props.version.versionNo}
-          </span>
-          <Chip tone={VERSION_STATUS_TONE[props.version.status]}>
-            {tc(`admin.flows.status.${props.version.status}`)}
-          </Chip>
-        </h1>
-        {!ro && (
-          <span
-            role="status"
-            className={cx(
-              'shrink-0 text-caption font-semibold whitespace-nowrap',
-              dirty ? 'text-amber-text' : 'text-teal-strong',
-            )}
-          >
-            {dirty ? t('save.dirty') : t('save.clean')}
-          </span>
-        )}
-        <div
-          role="toolbar"
-          aria-label={t('toolbar.label')}
-          className="ml-auto flex shrink-0 items-center gap-2"
-        >
+          <h1 className="m-0 flex min-w-48 flex-1 items-center gap-2 text-title-sm text-ink">
+            <OneLine text={props.flowName} />
+            <span className="shrink-0 text-dense whitespace-nowrap text-muted">
+              v{props.version.versionNo}
+            </span>
+            <Chip tone={VERSION_STATUS_TONE[props.version.status]}>
+              {tc(`admin.flows.status.${props.version.status}`)}
+            </Chip>
+          </h1>
           {!ro && (
-            <>
-              <IconButton
-                label={t('toolbar.undo')}
-                tooltip={t('toolbar.undoTip')}
-                icon={<UndoIcon />}
-                onClick={doUndo}
-                disabled={hist.past.length === 0}
-                aria-keyshortcuts="Control+Z"
-              />
-              <IconButton
-                label={t('toolbar.redo')}
-                tooltip={t('toolbar.redoTip')}
-                icon={<RedoIcon />}
-                onClick={doRedo}
-                disabled={hist.future.length === 0}
-                aria-keyshortcuts="Control+Shift+Z Control+Y"
-              />
-            </>
-          )}
-          <IconButton
-            label={t('toolbar.copy')}
-            tooltip={t('toolbar.copyTip')}
-            icon={<CopyIcon />}
-            onClick={copy}
-            disabled={selection.nodes.length + selection.notes.length === 0}
-            aria-keyshortcuts="Control+C"
-          />
-          {!ro && (
-            <>
-              <IconButton
-                label={t('toolbar.paste')}
-                tooltip={t('toolbar.pasteTip')}
-                icon={<PasteIcon />}
-                onClick={pasteClip}
-                aria-keyshortcuts="Control+V"
-              />
-              <IconButton
-                label={t('toolbar.delete')}
-                tooltip={t('toolbar.deleteTip')}
-                icon={<TrashIcon />}
-                onClick={deleteSelection}
-                disabled={!hasSelection}
-                aria-keyshortcuts="Delete"
-              />
-              <ConnectMenu
-                key={selectedNode?.id ?? ''}
-                doc={doc}
-                node={selectedNode}
-                open={selectedNode !== null && connectFor === selectedNode.id}
-                onOpenChange={(o) => setConnectFor(o ? (selectedNode?.id ?? null) : null)}
-                onConnect={connectByKeyboard}
-              />
-              {/* Icon buttons (with tooltip) so the toolbar fits 1024px (AC-UI-78 rule 2). */}
-              <IconButton
-                label={t('toolbar.note')}
-                tooltip={t('toolbar.note')}
-                icon={<NoteIcon />}
-                onClick={addNoteCmd}
-              />
-              <IconButton
-                label={t('toolbar.layout')}
-                tooltip={t('toolbar.layout')}
-                icon={<LayoutIcon />}
-                onClick={layout}
-                disabled={doc.nodes.length === 0}
-              />
-            </>
-          )}
-          <IconButton
-            label={t('toolbar.export')}
-            tooltip={t('toolbar.export')}
-            icon={<DownloadIcon />}
-            onClick={exportJson}
-          />
-          {!ro && (
-            <Button
-              variant="primary"
-              size="sm"
-              onClick={() => void save()}
-              disabled={saving}
-              aria-keyshortcuts="Control+S"
+            <span
+              role="status"
+              className={cx(
+                'shrink-0 text-caption font-semibold whitespace-nowrap',
+                dirty ? 'text-amber-text' : 'text-teal-strong',
+              )}
             >
-              {saving ? t('save.saving') : t('save.button')}
-            </Button>
+              {dirty ? t('save.dirty') : t('save.clean')}
+            </span>
           )}
-        </div>
-      </header>
-
-      {ro && (
-        <div className="border-b border-line bg-card px-4 py-2">
-          <Callout tone="blue" label={t('readOnly.label')} role="status">
-            {t('readOnly.text')}{' '}
-            <Button
-              size="sm"
-              className="ml-2"
-              onClick={props.onCreateDraft}
-              disabled={props.creatingDraft}
-            >
-              {tc('admin.versions.clone')}
-            </Button>
-          </Callout>
-        </div>
-      )}
-      <div className="flex min-h-0 flex-1">
-        {!ro && (
-          <aside className="w-62 shrink-0 border-r border-line bg-card">
-            <Palette onAdd={(type) => addAt(type, placeFree(type, centre()))} disabled={ro} />
-          </aside>
-        )}
-        <div className="flex min-w-0 flex-1 flex-col">
           <div
-            ref={wrapperRef}
-            className="relative min-h-0 flex-1"
-            onDragOver={onDragOver}
-            onDrop={onDrop}
-            aria-label={t('canvas.label')}
-            role="region"
+            role="toolbar"
+            aria-label={t('toolbar.label')}
+            className="ml-auto flex shrink-0 items-center gap-2"
           >
-            <ReactFlow
-              nodes={rfNodes}
-              edges={edges}
-              nodeTypes={nodeTypes}
-              onNodesChange={onNodesChange}
-              onEdgesChange={onEdgesChange}
-              onNodeDragStop={onNodeDragStop}
-              onConnect={onConnect}
-              onPaneClick={() => setSelection(NONE)}
-              nodesDraggable={!ro}
-              nodesConnectable={!ro}
-              deleteKeyCode={null}
-              panActivationKeyCode={null}
-              fitView
-              fitViewOptions={{ maxZoom: 1, padding: 0.2 }}
-              minZoom={0.2}
-              maxZoom={2}
-              ariaLabelConfig={ariaConfig}
-            >
-              <Background gap={20} />
-              {/* A low canvas (data panel open) has no room for it beside the zoom buttons. */}
-              {canvasTall && <MiniMap pannable zoomable ariaLabel={t('canvas.minimap')} />}
-              <Controls showInteractive={false} />
-            </ReactFlow>
-            {doc.nodes.length === 0 && (
-              <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
-                <p className="m-0 max-w-90 rounded-card border border-line bg-card px-6 py-4 text-center text-dense text-muted">
-                  {ro ? t('canvas.emptyReadOnly') : t('canvas.empty')}
-                </p>
-              </div>
+            {!ro && (
+              <>
+                <IconButton
+                  label={t('toolbar.undo')}
+                  tooltip={t('toolbar.undoTip')}
+                  icon={<UndoIcon />}
+                  onClick={doUndo}
+                  disabled={hist.past.length === 0}
+                  aria-keyshortcuts="Control+Z"
+                />
+                <IconButton
+                  label={t('toolbar.redo')}
+                  tooltip={t('toolbar.redoTip')}
+                  icon={<RedoIcon />}
+                  onClick={doRedo}
+                  disabled={hist.future.length === 0}
+                  aria-keyshortcuts="Control+Shift+Z Control+Y"
+                />
+              </>
+            )}
+            <IconButton
+              label={t('toolbar.copy')}
+              tooltip={t('toolbar.copyTip')}
+              icon={<CopyIcon />}
+              onClick={copy}
+              disabled={selection.nodes.length + selection.notes.length === 0}
+              aria-keyshortcuts="Control+C"
+            />
+            {!ro && (
+              <>
+                <IconButton
+                  label={t('toolbar.paste')}
+                  tooltip={t('toolbar.pasteTip')}
+                  icon={<PasteIcon />}
+                  onClick={pasteClip}
+                  aria-keyshortcuts="Control+V"
+                />
+                <IconButton
+                  label={t('toolbar.delete')}
+                  tooltip={t('toolbar.deleteTip')}
+                  icon={<TrashIcon />}
+                  onClick={deleteSelection}
+                  disabled={!hasSelection}
+                  aria-keyshortcuts="Delete"
+                />
+                <ConnectMenu
+                  key={selectedNode?.id ?? ''}
+                  doc={doc}
+                  node={selectedNode}
+                  open={selectedNode !== null && connectFor === selectedNode.id}
+                  onOpenChange={(o) => setConnectFor(o ? (selectedNode?.id ?? null) : null)}
+                  onConnect={connectByKeyboard}
+                />
+                {/* Icon buttons (with tooltip) so the toolbar fits 1024px (AC-UI-78 rule 2). */}
+                <IconButton
+                  label={t('toolbar.note')}
+                  tooltip={t('toolbar.note')}
+                  icon={<NoteIcon />}
+                  onClick={addNoteCmd}
+                />
+                <IconButton
+                  label={t('toolbar.layout')}
+                  tooltip={t('toolbar.layout')}
+                  icon={<LayoutIcon />}
+                  onClick={layout}
+                  disabled={doc.nodes.length === 0}
+                />
+              </>
+            )}
+            <IconButton
+              label={t('toolbar.export')}
+              tooltip={t('toolbar.export')}
+              icon={<DownloadIcon />}
+              onClick={exportJson}
+            />
+            {!ro && (
+              <Button
+                variant="primary"
+                size="sm"
+                onClick={() => void save()}
+                disabled={saving}
+                aria-keyshortcuts="Control+S"
+              >
+                {saving ? t('save.saving') : t('save.button')}
+              </Button>
             )}
           </div>
-          <section
-            aria-labelledby="designer-data-title"
-            role="region"
-            className="border-t border-line bg-card"
-          >
-            <h2 id="designer-data-title" className="m-0 font-semibold">
-              <button
-                type="button"
-                aria-expanded={dataOpen}
-                onClick={() => setDataOpen((o) => !o)}
-                className="flex min-h-target w-full items-center px-4 text-left text-dense font-semibold text-ink hover:bg-page"
+        </header>
+
+        {ro && (
+          <div className="border-b border-line bg-card px-4 py-2">
+            <Callout tone="blue" label={t('readOnly.label')} role="status">
+              {t('readOnly.text')}{' '}
+              <Button
+                size="sm"
+                className="ml-2"
+                onClick={props.onCreateDraft}
+                disabled={props.creatingDraft}
               >
-                {t('data.title')}
-              </button>
-            </h2>
-            <div hidden={!dataOpen}>
-              <DataPanel
-                doc={doc}
-                definition={definition}
-                node={selectedNode}
-                onRunWarnings={onRunWarnings}
-              />
+                {tc('admin.versions.clone')}
+              </Button>
+            </Callout>
+          </div>
+        )}
+        <div className="flex min-h-0 flex-1">
+          {!ro && (
+            <aside className="w-62 shrink-0 border-r border-line bg-card">
+              <Palette onAdd={(type) => addAt(type, placeFree(type, centre()))} disabled={ro} />
+            </aside>
+          )}
+          <div className="flex min-w-0 flex-1 flex-col">
+            <div
+              ref={wrapperRef}
+              className="relative min-h-0 flex-1"
+              onDragOver={onDragOver}
+              onDrop={onDrop}
+              aria-label={t('canvas.label')}
+              role="region"
+            >
+              <ReactFlow
+                nodes={rfNodes}
+                edges={edges}
+                nodeTypes={nodeTypes}
+                onNodesChange={onNodesChange}
+                onEdgesChange={onEdgesChange}
+                onNodeDragStop={onNodeDragStop}
+                onConnect={onConnect}
+                onPaneClick={() => setSelection(NONE)}
+                nodesDraggable={!ro}
+                nodesConnectable={!ro}
+                deleteKeyCode={null}
+                panActivationKeyCode={null}
+                fitView
+                fitViewOptions={{ maxZoom: 1, padding: 0.2 }}
+                minZoom={0.2}
+                maxZoom={2}
+                ariaLabelConfig={ariaConfig}
+              >
+                <Background gap={20} />
+                {/* A low canvas (data panel open) has no room for it beside the zoom buttons. */}
+                {canvasTall && <MiniMap pannable zoomable ariaLabel={t('canvas.minimap')} />}
+                <Controls showInteractive={false} />
+              </ReactFlow>
+              {doc.nodes.length === 0 && (
+                <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
+                  <p className="m-0 max-w-90 rounded-card border border-line bg-card px-6 py-4 text-center text-dense text-muted">
+                    {ro ? t('canvas.emptyReadOnly') : t('canvas.empty')}
+                  </p>
+                </div>
+              )}
             </div>
-          </section>
-          <StatusBar check={check} checking={checking} failed={failed} onJump={jump} />
-          <p aria-live="polite" data-connect-announce className="sr-only">
-            {announce}
-          </p>
-        </div>
-        <aside
-          aria-label={t('panel.label')}
-          className="w-105 shrink-0 overflow-y-auto border-l border-line bg-card p-4"
-        >
-          <ConfigPanel
-            doc={doc}
-            node={selectedNode}
-            note={selectedNote}
-            check={check}
-            readOnly={ro}
-            tab={tab}
-            onTab={setTab}
-            slotIndex={slotIndex}
-            onSlotIndex={setSlotIndex}
-            onNodeConfig={(id, config, mk, renames) =>
-              apply((d) => updateNode(d, id, { config }, renames), mk)
-            }
-            onNodeLabel={(id, label) => apply((d) => updateNode(d, id, { label }), `${id}:label`)}
-            onParams={(params, mk) => apply((d) => ({ ...d, params }), mk)}
-            onSlots={(inputSlots, mk) => apply((d) => ({ ...d, inputSlots }), mk)}
-            onNote={(id, text) => apply((d) => updateNote(d, id, text), `${id}:text`)}
-            onDeleteSelection={deleteSelection}
-          />
-        </aside>
-      </div>
-
-      <Dialog
-        open={blocker.status === 'blocked'}
-        onClose={() => blocker.reset?.()}
-        title={t('leave.title')}
-      >
-        <p className="m-0 text-body text-ink-soft">{t('leave.text')}</p>
-        <DialogFooter>
-          <Button onClick={() => blocker.reset?.()}>{t('leave.stay')}</Button>
-          <Button variant="primary" onClick={() => blocker.proceed?.()}>
-            {t('leave.leave')}
-          </Button>
-        </DialogFooter>
-      </Dialog>
-
-      <Dialog
-        open={conflict !== null}
-        onClose={() => setConflict(null)}
-        title={t('conflict.title')}
-      >
-        <p className="m-0 text-body text-ink-soft">
-          {conflict?.at
-            ? t('conflict.text', { time: formatTime(conflict.at) })
-            : t('conflict.textNoTime')}
-        </p>
-        <p className="m-0 text-caption text-muted">{t('conflict.hint')}</p>
-        <DialogFooter>
-          <Button onClick={exportJson}>{t('conflict.export')}</Button>
-          <Button
-            variant="primary"
-            onClick={() => {
-              setConflict(null);
-              props.onReload();
-            }}
+            <section
+              aria-labelledby="designer-data-title"
+              role="region"
+              className="border-t border-line bg-card"
+            >
+              <h2 id="designer-data-title" className="m-0 font-semibold">
+                <button
+                  type="button"
+                  aria-expanded={dataOpen}
+                  onClick={() => setDataOpen((o) => !o)}
+                  className="flex min-h-target w-full items-center px-4 text-left text-dense font-semibold text-ink hover:bg-page"
+                >
+                  {t('data.title')}
+                </button>
+              </h2>
+              <div hidden={!dataOpen}>
+                <DataPanel
+                  doc={doc}
+                  definition={definition}
+                  params={sampleParams}
+                  onParams={setSampleParams}
+                  node={selectedNode}
+                  onRunWarnings={onRunWarnings}
+                />
+              </div>
+            </section>
+            <StatusBar check={check} checking={checking} failed={failed} onJump={jump} />
+            <p aria-live="polite" data-connect-announce className="sr-only">
+              {announce}
+            </p>
+          </div>
+          <aside
+            aria-label={t('panel.label')}
+            className="w-105 shrink-0 overflow-y-auto border-l border-line bg-card p-4"
           >
-            {t('conflict.reload')}
-          </Button>
-        </DialogFooter>
-      </Dialog>
-    </div>
+            <ConfigPanel
+              doc={doc}
+              node={selectedNode}
+              note={selectedNote}
+              check={check}
+              readOnly={ro}
+              tab={tab}
+              onTab={setTab}
+              slotIndex={slotIndex}
+              onSlotIndex={setSlotIndex}
+              onNodeConfig={(id, config, mk, renames) =>
+                apply((d) => updateNode(d, id, { config }, renames), mk)
+              }
+              onNodeLabel={(id, label) => apply((d) => updateNode(d, id, { label }), `${id}:label`)}
+              onParams={(params, mk) => apply((d) => ({ ...d, params }), mk)}
+              onSlots={(inputSlots, mk) => apply((d) => ({ ...d, inputSlots }), mk)}
+              onNote={(id, text) => apply((d) => updateNote(d, id, text), `${id}:text`)}
+              onDeleteSelection={deleteSelection}
+            />
+          </aside>
+        </div>
+
+        <Dialog
+          open={blocker.status === 'blocked'}
+          onClose={() => blocker.reset?.()}
+          title={t('leave.title')}
+        >
+          <p className="m-0 text-body text-ink-soft">{t('leave.text')}</p>
+          <DialogFooter>
+            <Button onClick={() => blocker.reset?.()}>{t('leave.stay')}</Button>
+            <Button variant="primary" onClick={() => blocker.proceed?.()}>
+              {t('leave.leave')}
+            </Button>
+          </DialogFooter>
+        </Dialog>
+
+        <Dialog
+          open={conflict !== null}
+          onClose={() => setConflict(null)}
+          title={t('conflict.title')}
+        >
+          <p className="m-0 text-body text-ink-soft">
+            {conflict?.at
+              ? t('conflict.text', { time: formatTime(conflict.at) })
+              : t('conflict.textNoTime')}
+          </p>
+          <p className="m-0 text-caption text-muted">{t('conflict.hint')}</p>
+          <DialogFooter>
+            <Button onClick={exportJson}>{t('conflict.export')}</Button>
+            <Button
+              variant="primary"
+              onClick={() => {
+                setConflict(null);
+                props.onReload();
+              }}
+            >
+              {t('conflict.reload')}
+            </Button>
+          </DialogFooter>
+        </Dialog>
+      </div>
+    </RefCatalogContext.Provider>
   );
 }

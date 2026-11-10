@@ -1,6 +1,10 @@
 import { Link, useParams } from '@tanstack/react-router';
 import { useCallback, useEffect, useId, useMemo, useRef, useState, type FormEvent } from 'react';
 import { useTranslation } from 'react-i18next';
+import { flowRefTables } from '@hrflow/flow-schema/ref-tables';
+import type { RefTableDef } from '../../../engine/core/types';
+import { getSupabase } from '../../../lib/supabase';
+import { loadRefCatalog, refDefinitions } from '../../runner/ref-source';
 import { DatePicker } from '../../../components/DatePicker';
 import type { MenuItem } from '../../../components/Menu';
 import { DataTable, type DataTableColumn } from '../../../components/DataTable';
@@ -96,7 +100,12 @@ type DialogState =
 async function checkDefinition(definition: Json): Promise<string[] | null> {
   const engine = new EngineClient();
   try {
-    const design = await engine.api.checkDesign(definition);
+    // Reference tables used by the flow (spec §34): their definitions take part in the check.
+    let refs: Record<string, RefTableDef> | undefined;
+    if (flowRefTables(definition).length > 0) {
+      refs = await loadRefCatalog(getSupabase()).then(refDefinitions, () => undefined);
+    }
+    const design = await engine.api.checkDesign(definition, refs);
     const errors = design.issues.filter((i) => i.severity === 'error').map((i) => i.text);
     if (errors.length > 0) return errors;
     const result = await engine.api.loadFlow(definition);

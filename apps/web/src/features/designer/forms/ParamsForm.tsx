@@ -5,11 +5,12 @@ import { paramUsages, type DesignerDoc, type JsonObject } from '../model';
 import { resized } from './NodeForms';
 import { CheckField, issuesAt, ListEditor, SelectField, TextField } from './fields';
 import { KeyUsageWarning, useRenameWatch } from './SlotForm';
+import { useRefCatalog } from '../ref-catalog';
 
 /**
  * Flow params (spec §8, §15.3 "Tham số"): key, label, type, required, log (default by type,
- * explained), as-of date (one at most, month/date) and the option list of `select`
- * (`fromRefTable` is Phase 2).
+ * explained), as-of date (one at most, month/date) and the options of `select`: typed in, or
+ * taken from a reference table (`fromRefTable` + value / label columns, spec §34 AC-RT-10).
  */
 
 type Obj = Record<string, unknown>;
@@ -35,6 +36,8 @@ export function ParamsForm({
 }) {
   const { t } = useTranslation('designer');
   const watch = useRenameWatch();
+  const catalog = useRefCatalog();
+  const tables = catalog.tables ?? [];
   const params = doc.params;
   const forParam = (i: number) => issues.filter((x) => x.paramIndex === i);
   return (
@@ -69,6 +72,40 @@ export function ParamsForm({
           const log = p.log === true ? 'yes' : p.log === false ? 'no' : 'default';
           const field = `param${i}`;
           const oldKey = watch.warningFor(field);
+          const fromRef =
+            typeof p.options === 'object' && p.options !== null && !Array.isArray(p.options)
+              ? (p.options as Obj)
+              : null;
+          const refTable = fromRef
+            ? tables.find((x) => x.code === str(fromRef.fromRefTable))
+            : null;
+          const tableOptions = tables.map((x) => ({
+            value: x.code,
+            label: `${x.code} — ${x.name}`,
+          }));
+          const columnOptions = (refTable?.columns ?? []).map((col) => ({
+            value: col.key,
+            label: col.key,
+          }));
+          const keep = (list: { value: string; label: string }[], v: string) =>
+            v && !list.some((o) => o.value === v) ? [...list, { value: v, label: v }] : list;
+          const setRef = (patch: Obj) => set({ options: { ...fromRef, ...patch } });
+          const typeField = (
+            <SelectField
+              label={t('params.type')}
+              value={type}
+              onChange={(v) => {
+                let next: Obj = { ...p, type: v };
+                if (v !== 'select') next = without(next, 'options');
+                else if (!Array.isArray(next.options)) next.options = [];
+                if (v !== 'month' && v !== 'date') next = without(next, 'isAsOfDate');
+                setItem(next);
+              }}
+              options={TYPES.map((x) => ({ value: x, label: t(`params.types.${x}`) }))}
+              issues={at('type')}
+              disabled={ro}
+            />
+          );
           return (
             <>
               <FieldGrid dense>
@@ -95,20 +132,28 @@ export function ParamsForm({
                 />
               </FieldGrid>
               {oldKey && <KeyUsageWarning oldKey={oldKey} nodes={paramUsages(doc, oldKey)} />}
-              <SelectField
-                label={t('params.type')}
-                value={type}
-                onChange={(v) => {
-                  let next: Obj = { ...p, type: v };
-                  if (v !== 'select') next = without(next, 'options');
-                  else if (!Array.isArray(next.options)) next.options = [];
-                  if (v !== 'month' && v !== 'date') next = without(next, 'isAsOfDate');
-                  setItem(next);
-                }}
-                options={TYPES.map((x) => ({ value: x, label: t(`params.types.${x}`) }))}
-                issues={at('type')}
-                disabled={ro}
-              />
+              {type === 'select' ? (
+                <FieldGrid dense>
+                  {typeField}
+                  <SelectField
+                    label={t('params.optionSource')}
+                    value={fromRef ? 'ref' : 'list'}
+                    onChange={(v) =>
+                      set({
+                        options:
+                          v === 'ref' ? { fromRefTable: '', valueColumn: '', labelColumn: '' } : [],
+                      })
+                    }
+                    options={[
+                      { value: 'list', label: t('params.sourceList') },
+                      { value: 'ref', label: t('params.sourceRef') },
+                    ]}
+                    disabled={ro}
+                  />
+                </FieldGrid>
+              ) : (
+                typeField
+              )}
               <CheckField
                 label={t('params.required')}
                 checked={p.required === true}
@@ -146,7 +191,38 @@ export function ParamsForm({
                   disabled={ro}
                 />
               )}
-              {type === 'select' && (
+              {type === 'select' && fromRef && (
+                <>
+                  <SelectField
+                    label={t('params.fromRefTable')}
+                    value={str(fromRef.fromRefTable)}
+                    onChange={(v) => setRef({ fromRefTable: v })}
+                    options={keep(tableOptions, str(fromRef.fromRefTable))}
+                    issues={at('options.fromRefTable')}
+                    hint={t('params.refHint')}
+                    disabled={ro}
+                  />
+                  <FieldGrid dense>
+                    <SelectField
+                      label={t('params.valueColumn')}
+                      value={str(fromRef.valueColumn)}
+                      onChange={(v) => setRef({ valueColumn: v })}
+                      options={keep(columnOptions, str(fromRef.valueColumn))}
+                      issues={at('options.valueColumn')}
+                      disabled={ro}
+                    />
+                    <SelectField
+                      label={t('params.labelColumn')}
+                      value={str(fromRef.labelColumn)}
+                      onChange={(v) => setRef({ labelColumn: v })}
+                      options={keep(columnOptions, str(fromRef.labelColumn))}
+                      issues={at('options.labelColumn')}
+                      disabled={ro}
+                    />
+                  </FieldGrid>
+                </>
+              )}
+              {type === 'select' && !fromRef && (
                 <ListEditor
                   label={t('params.options')}
                   items={options}

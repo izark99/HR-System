@@ -11,6 +11,10 @@ import { formatCell, formatInteger, isNumericType } from '../../lib/format';
 import { ParamsCard } from '../runner/components/ParamsCard';
 import { EngineClient } from '../runner/engine-client';
 import type { DesignerDoc, DNode, JsonObject } from './model';
+import type { RefTablePayload } from '../../engine/io/ref-data';
+import { getSupabase } from '../../lib/supabase';
+import { loadRefRows } from '../runner/ref-source';
+import { useRefCatalog } from './ref-catalog';
 
 const TABS_ID = 'designer-data';
 
@@ -45,11 +49,16 @@ export function DataPanel({
   doc,
   definition,
   node,
+  params,
+  onParams,
   onRunWarnings,
 }: {
   doc: DesignerDoc;
   definition: JsonObject;
   node: DNode | null;
+  /** Sample params (kept by the editor: their as-of date also picks reference versions). */
+  params: ParamValues;
+  onParams: (update: (p: ParamValues) => ParamValues) => void;
   /** Run warnings of the last preview (e.g. formula row errors), shown on the canvas nodes too. */
   /** `at` = the definition when the preview was started (to tell stale warnings apart). */
   onRunWarnings?: (warnings: RunWarningInfo[], at: JsonObject) => void;
@@ -59,7 +68,9 @@ export function DataPanel({
   const { t: te } = useTranslation('engine');
   const engine = usePreviewEngine();
   const [samples, setSamples] = useState<Record<string, SampleState>>({});
-  const [params, setParams] = useState<ParamValues>({});
+  const catalog = useRefCatalog();
+  /** Rows of reference versions fetched for previews (RAM of this panel only). */
+  const refRows = useRef(new Map<string, Promise<unknown[]>>());
   const [outcome, setOutcome] = useState<PreviewOutcome | null>(null);
   const [running, setRunning] = useState(false);
   const [tab, setTab] = useState(0);
@@ -115,6 +126,12 @@ export function DataPanel({
     setTab(0);
     try {
       const at = definition;
+      const refError = await sendRefTables(at);
+      if (refError) {
+        onRunWarnings?.([], at);
+        setOutcome({ ok: false, error: refError, ran: [] });
+        return;
+      }
       const result = await engine().api.previewRun(at, node.id, params);
       setOutcome(result);
       onRunWarnings?.(result.ok ? result.warnings : [], at);
@@ -129,6 +146,49 @@ export function DataPanel({
       setRunning(false);
     }
   };
+
+  /**
+   * Rows of the reference tables read by the flow, in the version effective on the preview date
+   * (spec §34 AC-RT-08), sent to the preview worker. A version whose cells no longer fit the
+   * columns is reported like on the run page (table, version, column; no value).
+   */
+  async function sendRefTables(at: JsonObject) {
+    const codes = new Set(
+      (Array.isArray(at.nodes) ? at.nodes : [])
+        .filter((n): n is JsonObject => typeof n === 'object' && n !== null && !Array.isArray(n))
+        .filter((n) => n.type === 'input.refTable')
+        .map((n) => (n.config as JsonObject | undefined)?.refTable)
+        .filter((c): c is string => typeof c === 'string'),
+    );
+    const payload: RefTablePayload[] = [];
+    for (const code of codes) {
+      const meta = catalog.tables?.find((x) => x.code === code);
+      const version = catalog.previewVersion(code);
+      if (!meta || !version) continue;
+      let rows = refRows.current.get(version.id);
+      if (!rows) {
+        rows = loadRefRows(getSupabase(), version.id);
+        refRows.current.set(version.id, rows);
+        rows.catch(() => refRows.current.delete(version.id));
+      }
+      payload.push({
+        code,
+        name: meta.name,
+        versionId: version.id,
+        versionNo: version.versionNo,
+        columns: meta.columns,
+        rows: await rows,
+      });
+    }
+    const statuses = await engine().api.setRefTables(payload);
+    const bad = statuses.find((x) => !x.ok);
+    if (!bad || bad.ok) return null;
+    const p = payload.find((x) => x.code === bad.code)!;
+    return {
+      messageKey: 'refTable.error.cellType',
+      params: { table: p.name, version: p.versionNo, column: bad.column },
+    };
+  }
 
   const validParams = doc.params.filter(
     (p): p is JsonObject & FlowParam =>
@@ -163,7 +223,7 @@ export function DataPanel({
           params={validParams}
           values={params}
           disabled={running}
-          onChange={(key, value) => setParams((p) => ({ ...p, [key]: value }))}
+          onChange={(key, value) => onParams((p) => ({ ...p, [key]: value }))}
         />
       )}
       <div className="flex flex-wrap items-center gap-3">

@@ -268,7 +268,8 @@
     "error": {
       "catalogUnavailable": "Chưa tải được danh sách bảng tham chiếu; tải lại trang để kiểm tra lại.",
       "unknownTable": "Node \"{{node}}\": bảng tham chiếu \"{{table}}\" không tồn tại.",
-      "notLoaded": "Chưa có dữ liệu bảng tham chiếu \"{{table}}\" cho kỳ đã chọn."
+      "notLoaded": "Chưa có dữ liệu bảng tham chiếu \"{{table}}\" cho kỳ đã chọn.",
+      "cellType": "Bảng tham chiếu \"{{table}}\" phiên bản v{{version}}: cột \"{{column}}\" có ô không đúng kiểu dữ liệu hiện tại và không tự chuyển được."
     },
     "warning": {
       "noPublished": "Bảng tham chiếu \"{{table}}\" chưa có phiên bản nào được publish; flow chưa chạy được."

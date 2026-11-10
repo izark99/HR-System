@@ -1,4 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
+import { flowRefTables } from '@hrflow/flow-schema/ref-tables';
+import type { RefTableDef } from '../../engine/core/types';
 import type { DesignCheckResult } from '../../engine/design';
 import { EngineClient, EngineCrashedError } from '../runner/engine-client';
 
@@ -9,7 +11,13 @@ export const CHECK_DEBOUNCE_MS = 300;
  * the engine worker of this Designer, only the latest answer is kept. The worker holds no file
  * here (configuration only); it is terminated when the Designer closes.
  */
-export function useDesignCheck(definition: unknown): {
+export function useDesignCheck(
+  definition: unknown,
+  /** Reference tables (spec §34); undefined = not known (catalog failed). */
+  refs?: Record<string, RefTableDef>,
+  /** The catalog is still loading: a flow using reference tables waits for it. */
+  refsPending = false,
+): {
   result: DesignCheckResult | null;
   checking: boolean;
   failed: boolean;
@@ -29,14 +37,16 @@ export function useDesignCheck(definition: unknown): {
     };
   }, []);
 
+  const waits = refsPending && flowRefTables(definition).length > 0;
   useEffect(() => {
     const id = ++seq.current;
     setChecking(true);
+    if (waits) return;
     const timer = setTimeout(() => {
       const attempt = (retry: boolean) => {
         const client = clientRef.current;
         if (!client) return;
-        client.api.checkDesign(definition).then(
+        client.api.checkDesign(definition, refs).then(
           (r) => {
             if (id !== seq.current) return;
             setResult(r);
@@ -60,7 +70,7 @@ export function useDesignCheck(definition: unknown): {
       attempt(true);
     }, CHECK_DEBOUNCE_MS);
     return () => clearTimeout(timer);
-  }, [definition]);
+  }, [definition, refs, waits]);
 
   return { result, checking, failed };
 }
