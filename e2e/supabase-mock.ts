@@ -359,9 +359,12 @@ export class SupabaseMock {
       .filter(
         (c) =>
           c.path.startsWith('/functions/v1/admin-users') ||
-          /^\/rest\/v1\/(groups|group_members|flow_assignments|flow_versions|flows|ref_tables|ref_table_versions)(\?|$)/.test(
+          /^\/rest\/v1\/(groups|group_members|flow_assignments|flow_versions|flows)(\?|$)/.test(
             c.path,
           ) ||
+          // Users read the reference tables of their flows (spec §34 AC-RT-09); writes are Admin's.
+          (/^\/rest\/v1\/(ref_tables|ref_table_versions)(\?|$)/.test(c.path) &&
+            c.method !== 'GET') ||
           c.path.startsWith('/rest/v1/rpc/admin_') ||
           // ui_text_overrides: every user reads key/value; only the Admin tab writes or reads authors.
           (c.path.startsWith('/rest/v1/ui_text_overrides') &&
