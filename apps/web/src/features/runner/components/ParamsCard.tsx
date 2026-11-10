@@ -81,6 +81,8 @@ export function ParamsCard({
                   <Select
                     id={field.id}
                     value={value}
+                    invalid={field.invalid}
+                    {...(field.describedBy ? { describedBy: field.describedBy } : {})}
                     required={p.required}
                     disabled={disabled}
                     onChange={(v) => onChange(p.key, v)}

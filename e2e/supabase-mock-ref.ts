@@ -98,6 +98,11 @@ export class RefTablesMock {
   /** audit_logs entries the database would write for "not personal data" confirmations. */
   confirmations: { table: string; context: string; columns: string[] }[] = [];
   private counter = 0;
+  /** User read rule (set by SupabaseMock: tables of published versions of assigned flows). */
+  userCanRead: (user: MockUser, code: string) => boolean = () => false;
+  /** Version ids whose rows were read (once per run-page open, AC-RT-15 c). */
+  rowReads: string[] = [];
+  tableReads = 0;
 
   stamp(): string {
     this.counter++;
@@ -269,7 +274,10 @@ export class RefTablesMock {
     const method = request.method();
     const admin = caller?.role === 'admin' && caller.is_active;
     const single = (request.headers()['accept'] ?? '').includes('vnd.pgrst.object');
-    const eq = (f: string) => url.searchParams.get(f)?.replace(/^eq\./, '');
+    const eq = (f: string) => {
+      const v = url.searchParams.get(f);
+      return v?.startsWith('eq.') ? v.slice(3) : v?.startsWith('neq.') ? v : undefined;
+    };
     let body: Record<string, unknown> = {};
     try {
       body = JSON.parse(request.postData() ?? '{}') as Record<string, unknown>;
@@ -287,11 +295,26 @@ export class RefTablesMock {
     };
 
     if (method === 'GET') {
-      // RLS: a User / anon reads nothing (round 1).
+      // RLS: Admins read everything; a User reads the tables listed in a published version of a
+      // flow assigned to them, and only their published versions (round 2, AC-RT-09); anon nothing.
       const select = url.searchParams.get('select') ?? '*';
+      const readable = (t: MockRefTable) =>
+        admin || (caller !== undefined && caller.is_active && this.userCanRead(caller, t.code));
+      const inList = (f: string) => {
+        const raw = url.searchParams.get(f);
+        if (!raw?.startsWith('in.(')) return null;
+        return raw
+          .slice(4, -1)
+          .split(',')
+          .map((x) => x.replace(/^"|"$/g, ''));
+      };
       if (path === '/rest/v1/ref_tables') {
+        this.tableReads++;
         const code = eq('code');
-        const list = admin ? this.tables.filter((t) => !code || t.code === code) : [];
+        const codes = inList('code');
+        const list = this.tables.filter(
+          (t) => readable(t) && (!code || t.code === code) && (!codes || codes.includes(t.code)),
+        );
         await json(
           200,
           [...list].sort((a, b) => a.code.localeCompare(b.code)),
@@ -300,16 +323,29 @@ export class RefTablesMock {
       }
       const id = eq('id');
       const tableId = eq('ref_table_id');
+      const tableIds = inList('ref_table_id');
+      const status = eq('status');
       const notDiscarded = url.searchParams.get('status') === 'neq.discarded';
-      const list = (admin ? this.versions : [])
-        .filter(
-          (v) =>
+      const list = this.versions
+        .filter((v) => {
+          const t = this.tables.find((x) => x.id === v.ref_table_id);
+          if (!t || !readable(t)) return false;
+          if (!admin && v.status !== 'published') return false;
+          return (
             (!id || v.id === id) &&
             (!tableId || v.ref_table_id === tableId) &&
-            (!notDiscarded || v.status !== 'discarded'),
-        )
+            (!tableIds || tableIds.includes(v.ref_table_id)) &&
+            (!status ||
+              url.searchParams.get('status') === 'neq.discarded' ||
+              v.status === status) &&
+            (!notDiscarded || v.status !== 'discarded')
+          );
+        })
         .sort((a, b) => b.version_no - a.version_no)
-        .map((v) => this.versionRow(v, select));
+        .map((v) => {
+          if (select.split(',').some((c) => c.trim() === 'rows')) this.rowReads.push(v.id);
+          return this.versionRow(v, select);
+        });
       await json(200, single ? (list[0] ?? null) : list);
       return true;
     }

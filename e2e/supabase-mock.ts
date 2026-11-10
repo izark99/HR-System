@@ -9,6 +9,7 @@
 import type { BrowserContext, Page, Request, Route } from '@playwright/test';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
+import { flowRefTables } from '../packages/flow-schema/src/ref-tables';
 import { RefTablesMock } from './supabase-mock-ref';
 
 export const SUPABASE_ORIGIN = 'https://rzakjtgvbyxqsmbpcomw.supabase.co';
@@ -262,6 +263,17 @@ export class SupabaseMock {
 
   /** Reference tables (spec §34): `ref_tables`, `ref_table_versions` and their RPCs. */
   ref = new RefTablesMock();
+
+  constructor() {
+    // A User reads the reference tables of the published versions of flows assigned to them.
+    this.ref.userCanRead = (user, code) =>
+      this.versions.some(
+        (v) =>
+          v.status === 'published' &&
+          this.canSeeFlow(user, v.flow_id) &&
+          flowRefTables(v.definition).includes(code),
+      );
+  }
 
   /** PATCH/DELETE requests on flow_versions, as received. */
   versionWrites: { method: string; id: string; body: Record<string, unknown> }[] = [];
