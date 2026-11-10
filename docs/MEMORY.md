@@ -9,6 +9,8 @@
 
 ## Phạm vi & sản phẩm
 
+2026-11-10 09:13 - Harold duyệt mẫu "Xem bảng" bản 3 (https://claude.ai/artifact/WB8Ndbb5CXYgsr2muW5pET): phân trang 100 dòng/trang dưới bảng; header bảng phủ tới mép khung, thanh cuộn dọc chỉ ở thân bảng; khung chỉ cuộn ngang không chừa chỗ thanh cuộn dọc (không còn dải trắng 10px); ô tìm luôn nền trắng.
+
 2026-11-10 08:56 - Bảng tham chiếu vòng 2 (chấp nhận khác spec/mẫu): màn Chạy flow tải lười theo route (tách khỏi JS tải ban đầu để còn ngân sách); bảng tham chiếu thiếu phiên bản hiệu lực luôn khóa nút Chạy, kể cả bảng chỉ dùng cho tham số danh sách chọn không bắt buộc; vùng upload khi thiếu bảng dùng kiểu disabled sẵn có (không làm mờ 60% vì không đạt tương phản a11y). Mọi chỗ "Hiện thêm N dòng" (tab Văn bản giao diện, lưới dữ liệu bảng tham chiếu của Admin, hộp "Xem bảng") đổi thành phân trang 100 dòng/trang (dưới bảng: "Dòng a–b / tổng" + ‹ 1 … n ›; tìm/lọc về trang 1). Bảng có header nằm trên vùng cuộn dọc: header phủ cả cột thanh cuộn, thanh cuộn chỉ nằm dưới header (như header trang) — không để dải trắng cạnh header. Mẫu cập nhật https://claude.ai/artifact/WB8Ndbb5CXYgsr2muW5pET (bản 2) chờ duyệt.
 
 2026-11-10 07:50 - Harold duyệt mẫu màn Chạy flow cho bảng tham chiếu (https://claude.ai/artifact/WB8Ndbb5CXYgsr2muW5pET): khung "Phiên bản áp dụng" liệt kê từng bảng "Tên · vN · từ ngày" + nút "Xem bảng"; thiếu phiên bản → khung lỗi nêu bảng, khóa nút Tiếp, mờ phần upload; hộp "Xem bảng" chỉ đọc (tìm không dấu, 100 dòng/lô + "Hiện thêm", không sửa/tải về). Bắt đầu vòng 2.
