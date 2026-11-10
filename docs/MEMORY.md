@@ -9,6 +9,8 @@
 
 ## Phạm vi & sản phẩm
 
+2026-11-10 07:47 - Bảng tham chiếu vòng 2: thiếu phiên bản hiệu lực của bảng tham chiếu thì báo ngay khi User chọn kỳ (khung "Phiên bản áp dụng"), khóa nút Chạy trước bước upload; bản published có ô không khớp kiểu (Admin đổi kiểu cột sau khi publish) → tự chuyển nếu được, không được thì chặn chạy và nêu bảng + phiên bản + cột; dữ liệu bảng tham chiếu chỉ giữ trong bộ nhớ tab (tải lại mỗi lần mở màn Chạy flow, không lưu trình duyệt); User xem được nội dung bảng tham chiếu đang áp dụng (nút "Xem bảng" mở danh sách dòng chỉ đọc) — mẫu Artifact duyệt trước khi code. PR dependabot để nguyên, gom vào vòng nâng thư viện sau Phase 2 (build + full E2E + ngân sách JS + ảnh so pixel trước khi merge).
+
 2026-11-09 19:15 - Bảng tham chiếu vòng 1 (chấp nhận khác mẫu): hộp Import có lỗi thì chỉ hiện báo cáo + "chưa thay draft", không lỗi mới hiện xem trước 200 dòng; cảnh báo dữ liệu cá nhân trong hộp Import là checkbox xác nhận + nút (i) (màn Cột giữ khung cảnh báo); hàm RPC của bảng tham chiếu chạy `security invoker` như flow (hàm ghi audit xác nhận là definer, tự kiểm admin). Giữ bảng danh sách kéo ngang như quy tắc bảng Admin (không thu cột Phiên bản).
 
 2026-11-09 14:38 - Harold duyệt mẫu màn Bảng tham chiếu (https://claude.ai/artifact/92KZJ49WJTdFoxWMo26kar, bản 2 đã sửa lỗi bố cục màn Designer); bắt đầu vòng 1.
