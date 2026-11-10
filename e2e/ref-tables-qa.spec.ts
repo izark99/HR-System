@@ -1,288 +1,203 @@
 /**
- * Verifier checks of "Bảng tham chiếu" round 1 (spec §34 AC-RT-03, 04, 05, 06, 11), independent
- * of e2e/ref-tables.spec.ts: no cell value leaves the import except in the draft save, nothing is
- * persisted, keyboard moves of the grid, undo while typing, paste over removed rows / while
- * searching, readable error of a bad cell, publish proposals (close the open version, gap), retire,
- * .xls import, axe on every screen. Fake reference data only (branch list).
+ * Verifier checks of reference tables on the run page (spec §34 AC-RT-15 c, d; data-privacy.md),
+ * written from the requirements: reference rows never leave the page (no off-origin request, no
+ * request body to Supabase carrying a row, no console line, nothing in Web Storage / IndexedDB /
+ * Cache Storage / URL); "Xem bảng" by keyboard (focus kept in the dialog, Esc, focus back) and at
+ * 390px; a 50,000-row table (the per-version limit) stays usable. Supabase mocked, fake data only.
  */
-import AxeBuilder from '@axe-core/playwright';
-import { ADMIN, expect, test, type Locator, type Page } from './fixtures';
-import { persistedState, recordRequests, workbook, XLSX } from './helpers';
+import { expect, SUPABASE_ORIGIN, test, type Page } from './fixtures';
+import { fixtures, payrollInput, runButton, timesheetInput } from './helpers';
+import { openRefFlow, refBox, seedRefRun } from './ref-run-helpers';
 import { branchRows } from './supabase-mock-ref';
 
-const LIST = '/admin/ref-tables';
-const HEAD = ['Mã CN', 'Tên chi nhánh', 'Vùng lương tối thiểu'];
-const MARK = 'QAMARK';
+/** Branch names of the fake list: any of them outside the page memory is a leak. */
+const NAMES = ['Hồ Chí Minh', 'Hà Nội', 'Cần Thơ', 'Đà Nẵng', 'Hậu Giang', 'Bình Dương'];
 
-const grid = (page: Page) => page.getByRole('region', { name: /^Dữ liệu v\d+$/ });
-const cell = (page: Page, column: string, row: number) =>
-  grid(page).getByRole('textbox', { name: `${column}, dòng ${row}`, exact: true });
-const status = (page: Page) => page.locator('[data-grid-status]');
-
-async function pasteInto(target: Locator, text: string): Promise<void> {
-  await target.focus();
-  await target.evaluate((el, data) => {
-    const dt = new DataTransfer();
-    dt.setData('text/plain', data);
-    el.dispatchEvent(
-      new ClipboardEvent('paste', { clipboardData: dt, bubbles: true, cancelable: true }),
-    );
-  }, text);
+function watch(page: Page) {
+  const external: string[] = [];
+  const bodies: string[] = [];
+  const consoleLines: string[] = [];
+  page.on('request', (req) => {
+    const url = new URL(req.url());
+    if (
+      url.hostname !== 'localhost' &&
+      url.origin !== SUPABASE_ORIGIN &&
+      url.protocol !== 'blob:' &&
+      url.protocol !== 'data:'
+    ) {
+      external.push(`${req.method()} ${url.origin}`);
+    }
+    if (url.origin === SUPABASE_ORIGIN) bodies.push(`${req.url()} ${req.postData() ?? ''}`);
+  });
+  page.on('console', (m) => consoleLines.push(m.text()));
+  return { external, bodies, consoleLines };
 }
 
-test.describe('Admin', () => {
-  test.use({ signedInAs: ADMIN });
-
-  test('import: cell values only travel in the draft save; nothing persisted or logged', async ({
-    page,
-    supabase,
-  }) => {
-    const requests = recordRequests(page);
-    const logs: string[] = [];
-    page.on('console', (m) => logs.push(m.text()));
-    page.on('pageerror', (e) => logs.push(String(e)));
-    supabase.ref.seed({ code: 'DM_CHI_NHANH', name: 'Danh mục chi nhánh', draft: branchRows(2) });
-    await page.goto(`${LIST}/DM_CHI_NHANH/versions`);
-    await page.getByRole('button', { name: 'Import Excel vào draft' }).click();
-    const imp = page.getByRole('dialog', { name: 'Import Excel vào draft v1' });
-    await imp.getByLabel('Chọn file Excel để import').setInputFiles(
-      workbook(`${MARK}_file.xlsx`, {
-        S: [HEAD, [`${MARK}01`, `${MARK} Tên`, 1], [`${MARK}02`, 'B', 2]],
-      }),
-    );
-    await imp.getByRole('button', { name: 'Thay dữ liệu draft (2 → 2 dòng)' }).click();
-    await expect(page).toHaveURL(/\/versions\/1$/);
-    await expect(cell(page, 'Mã chi nhánh', 1)).toHaveValue(`${MARK}01`);
-
-    const carrying = requests.filter((r) => r.url.includes(MARK) || r.body.includes(MARK));
-    expect(carrying.map((r) => `${r.method} ${new URL(r.url).pathname}`)).toEqual([
-      'POST /rest/v1/rpc/admin_replace_ref_table_draft',
-    ]);
-    // The file name is not sent either (only the rows).
-    expect(carrying[0]!.body).not.toContain(`${MARK}_file`);
-    expect(logs.filter((l) => l.includes(MARK))).toEqual([]);
-    expect(await persistedState(page)).not.toContain(MARK);
-  });
-
-  test('a legacy .xls file imports like an .xlsx', async ({ page, supabase }) => {
-    supabase.ref.seed({ code: 'DM_CHI_NHANH', name: 'Danh mục chi nhánh', draft: [] });
-    await page.goto(`${LIST}/DM_CHI_NHANH/versions`);
-    await page.getByRole('button', { name: 'Import Excel vào draft' }).click();
-    const imp = page.getByRole('dialog', { name: 'Import Excel vào draft v1' });
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet([HEAD, ['CN01', 'A', 1]]), 'S');
-    const buffer = XLSX.write(wb, { type: 'buffer', bookType: 'biff8' }) as Buffer;
-    await imp.getByLabel('Chọn file Excel để import').setInputFiles({
-      name: 'dm.xls',
-      mimeType: 'application/vnd.ms-excel',
-      buffer,
-    });
-    await imp.getByRole('button', { name: 'Thay dữ liệu draft (0 → 1 dòng)' }).click();
-    await expect(page).toHaveURL(/\/versions\/1$/);
-    expect(supabase.ref.draftOf('DM_CHI_NHANH')!.rows).toEqual([
-      { ma_cn: 'CN01', ten_cn: 'A', vung: 1 },
-    ]);
-  });
-
-  test('grid keyboard: arrows, Enter, Tab; Ctrl+Z while typing undoes the text only', async ({
-    page,
-    supabase,
-  }) => {
-    supabase.ref.seed({ code: 'DM_CHI_NHANH', name: 'Danh mục chi nhánh', draft: branchRows(3) });
-    await page.goto(`${LIST}/DM_CHI_NHANH/versions/1`);
-    const a1 = cell(page, 'Mã chi nhánh', 1);
-    await a1.focus();
-    await page.keyboard.press('ArrowDown');
-    await expect(cell(page, 'Mã chi nhánh', 2)).toBeFocused();
-    await page.keyboard.press('End');
-    await page.keyboard.press('ArrowRight');
-    await expect(cell(page, 'Tên chi nhánh', 2)).toBeFocused();
-    await page.keyboard.press('Tab');
-    await expect(cell(page, 'Vùng lương tối thiểu', 2)).toBeFocused();
-    await page.keyboard.press('Shift+Enter');
-    await expect(cell(page, 'Vùng lương tối thiểu', 1)).toBeFocused();
-
-    // A committed edit, then typing in another cell: Ctrl+Z undoes the typing, not the grid.
-    const name1 = cell(page, 'Tên chi nhánh', 1);
-    await name1.fill('Đổi một');
-    await name1.press('Enter');
-    await expect(status(page)).toHaveText('1 ô sửa · 0 dòng mới · 0 dòng xóa — chưa lưu');
-    const name3 = cell(page, 'Tên chi nhánh', 3);
-    await name3.click();
-    await name3.press('End');
-    await page.keyboard.type('xyz');
-    await page.keyboard.press('Control+z');
-    await expect(name1).toHaveValue('Đổi một');
-    await expect(name3).not.toHaveValue(/xyz$/);
-  });
-
-  test('a bad cell keeps the save blocked and nothing reaches the server', async ({
-    page,
-    supabase,
-  }) => {
-    supabase.ref.seed({ code: 'DM_CHI_NHANH', name: 'Danh mục chi nhánh', draft: branchRows(2) });
-    await page.goto(`${LIST}/DM_CHI_NHANH/versions/1`);
-    const v = cell(page, 'Vùng lương tối thiểu', 1);
-    await v.fill('hai');
-    await v.press('Tab');
-    await expect(v).toHaveAttribute('aria-invalid', 'true');
-    // The reason is available to assistive technology.
-    await expect(v).toHaveAccessibleDescription(/số nguyên/i);
-    await page.getByRole('button', { name: 'Lưu draft' }).click();
-    await expect(page.getByText('còn 1 ô lỗi')).toBeVisible();
-    expect(supabase.ref.rpcBodies).toEqual([]);
-  });
-
-  test('paste while searching fills the matching rows, extra lines become new rows', async ({
-    page,
-    supabase,
-  }) => {
-    supabase.ref.seed({ code: 'DM_CHI_NHANH', name: 'Danh mục chi nhánh', draft: branchRows(6) });
-    await page.goto(`${LIST}/DM_CHI_NHANH/versions/1`);
-    await page.getByLabel('Tìm trong dữ liệu').fill('ha');
-    // Hà Nội (CN02), Hậu Giang (CN05).
-    await expect(grid(page).locator('tbody tr')).toHaveCount(2);
-    await pasteInto(cell(page, 'Tên chi nhánh', 2), 'Hà Nội 2\nHậu Giang 2\nMới');
-    await page.getByLabel('Tìm trong dữ liệu').fill('');
-    await expect(grid(page).locator('tbody tr')).toHaveCount(7);
-    await expect(cell(page, 'Tên chi nhánh', 2)).toHaveValue('Hà Nội 2');
-    await expect(cell(page, 'Tên chi nhánh', 3)).toHaveValue('Cần Thơ');
-    await expect(cell(page, 'Tên chi nhánh', 5)).toHaveValue('Hậu Giang 2');
-    await expect(cell(page, 'Tên chi nhánh', 7)).toHaveValue('Mới');
-    // The new row has no key: the save is refused and the cell is shown.
-    await page.getByRole('button', { name: 'Lưu draft' }).click();
-    await expect(cell(page, 'Mã chi nhánh', 7)).toHaveAttribute('data-cell-problem', 'keyBlank');
-    expect(supabase.ref.rpcBodies).toEqual([]);
-  });
-
-  test('publish proposes closing the open version and warns about a gap; retire', async ({
-    page,
-    supabase,
-  }) => {
-    supabase.ref.seed({
-      code: 'DM_CHI_NHANH',
-      name: 'Danh mục chi nhánh',
-      published: [{ from: '2026-01-01', rows: branchRows(2) }],
-      draft: branchRows(3),
-    });
-    await page.goto(`${LIST}/DM_CHI_NHANH/versions`);
-    await page.getByRole('button', { name: 'Thao tác khác cho v2' }).click();
-    await page.getByRole('menuitem', { name: 'Publish v2' }).click();
-    const pub = page.getByRole('dialog', { name: 'Publish v2 của DM_CHI_NHANH' });
-    const closeBox = pub.getByRole('checkbox', { name: /Kết thúc v1|Đặt v1 hiệu lực đến/ });
-    await expect(closeBox).toBeChecked();
-    await expect(pub).toContainText('draft thêm 1 dòng');
-    // Not closing v1 → the server refuses the overlap and says which version.
-    await closeBox.uncheck();
-    await pub.getByLabel(/Ghi chú thay đổi/).fill('Thêm CN03');
-    await pub.getByRole('button', { name: 'Publish' }).click();
-    await expect(pub).toContainText('v1');
-    await expect(pub).toBeVisible();
-    expect(supabase.ref.versions.find((v) => v.version_no === 2)!.status).toBe('draft');
-    await closeBox.check();
-    await pub.getByRole('button', { name: 'Publish' }).click();
-    await expect(pub).toBeHidden();
-    const v1 = supabase.ref.versions.find((v) => v.version_no === 1)!;
-    const v2 = supabase.ref.versions.find((v) => v.version_no === 2)!;
-    expect(v2.status).toBe('published');
-    expect(v1.effective_to).toBe(v2.effective_from);
-
-    // Retire v2 → a gap from its start appears.
-    await page.getByRole('button', { name: 'Thao tác khác cho v2' }).click();
-    await page.getByRole('menuitem', { name: 'Retire v2' }).click();
-    await page
-      .getByRole('dialog', { name: 'Retire v2?' })
-      .getByRole('button', { name: 'Retire' })
-      .click();
-    await expect(page.getByText('Đã retire v2.')).toBeVisible();
-    expect(
-      v2.status === 'retired' ||
-        supabase.ref.versions.find((v) => v.version_no === 2)!.status === 'retired',
-    ).toBe(true);
-    await expect(page.getByText(/trở đi không có phiên bản hiệu lực/)).toBeVisible();
-  });
-
-  test('axe: list, columns, versions, data grid and import dialog have no violation', async ({
-    page,
-    supabase,
-  }) => {
-    supabase.ref.seed({
-      code: 'DM_CHI_NHANH',
-      name: 'Danh mục chi nhánh',
-      published: [{ from: '2026-01-01', rows: branchRows(2) }],
-      draft: branchRows(3),
-    });
-    const scan = async (label: string) => {
-      const r = await new AxeBuilder({ page })
-        .withTags(['wcag2a', 'wcag2aa', 'wcag21aa'])
-        .analyze();
-      expect(
-        r.violations.map((v) => `${label}: ${v.id} ${v.nodes.map((n) => n.target).join(' ')}`),
-      ).toEqual([]);
+async function storageDump(page: Page) {
+  return page.evaluate(async () => {
+    const cacheUrls: string[] = [];
+    for (const name of await caches.keys()) {
+      const c = await caches.open(name);
+      for (const req of await c.keys()) cacheUrls.push(req.url);
+    }
+    return {
+      web: JSON.stringify({ ...localStorage }) + JSON.stringify({ ...sessionStorage }),
+      dbs: (await indexedDB.databases()).map((d) => d.name ?? ''),
+      cacheUrls,
+      url: location.href,
+      title: document.title,
     };
-    await page.goto(LIST);
-    await expect(page.getByRole('region', { name: 'Bảng tham chiếu', exact: true })).toBeVisible();
-    await scan('list');
-    await page.goto(`${LIST}/DM_CHI_NHANH`);
-    await expect(page.getByRole('region', { name: 'Các cột của bảng' })).toBeVisible();
-    await scan('columns');
-    await page.goto(`${LIST}/DM_CHI_NHANH/versions`);
-    await expect(page.getByRole('region', { name: 'Phiên bản của bảng' })).toBeVisible();
-    await scan('versions');
-    await page.goto(`${LIST}/DM_CHI_NHANH/versions/2`);
-    await expect(grid(page)).toBeVisible();
-    await cell(page, 'Vùng lương tối thiểu', 1).fill('hai');
-    await cell(page, 'Vùng lương tối thiểu', 1).press('Tab');
-    await scan('data grid with a bad cell');
-    await page.getByRole('button', { name: 'Import Excel' }).click();
-    await expect(page.getByRole('dialog')).toBeVisible();
-    await scan('import dialog');
   });
-});
+}
 
-test.describe('paste over removed rows', () => {
-  test.use({ signedInAs: ADMIN });
+test.describe('reference tables: privacy and "Xem bảng" (verifier)', () => {
+  test('rows stay in page memory: no leak to requests, console, storage, caches or URL', async ({
+    page,
+    supabase,
+  }) => {
+    test.setTimeout(120_000);
+    const w = watch(page);
+    seedRefRun(supabase);
+    await openRefFlow(page, '2026-09');
+    await refBox(page).getByRole('button', { name: 'Xem bảng Danh mục chi nhánh' }).click();
+    const dialog = page.getByRole('dialog', { name: 'Danh mục chi nhánh' });
+    await dialog.getByRole('searchbox', { name: 'Tìm trong bảng' }).fill('ha noi');
+    await expect(dialog.locator('tbody tr').first()).toContainText('Hà Nội');
+    // The search text does not land in the URL either.
+    expect(page.url()).not.toContain('noi');
+    await dialog.locator('[data-dialog-footer]').getByRole('button', { name: 'Đóng' }).click();
+    await expect(dialog).toHaveCount(0);
 
-  // Fixed 2026-11-09: rows marked "removed" are skipped by a multi-line paste.
-  test('a multi-line paste skips a row marked removed', async ({ page, supabase }) => {
-    supabase.ref.seed({ code: 'DM_CHI_NHANH', name: 'Danh mục chi nhánh', draft: branchRows(4) });
-    await page.goto(`${LIST}/DM_CHI_NHANH/versions/1`);
-    await page.getByRole('button', { name: 'Xóa dòng 3' }).click();
-    await expect(page.locator('[data-grid-row="2"]')).toHaveAttribute('data-removed', 'true');
-    // Row 3 is skipped: the 2 lines go to rows 2 and 4 (a 3rd line would be a new row, which
-    // then needs a key before saving).
-    await pasteInto(cell(page, 'Tên chi nhánh', 2), 'Tên A\nTên B');
-    await expect(cell(page, 'Tên chi nhánh', 4)).toHaveValue('Tên B');
-    await page.getByRole('button', { name: 'Lưu draft' }).click();
-    await expect(page.getByText('Đã lưu draft v1.')).toBeVisible();
-    const names = supabase.ref.draftOf('DM_CHI_NHANH')!.rows.map((r) => r.ten_cn);
-    expect(names).toEqual(expect.arrayContaining(['Tên A', 'Tên B']));
-    expect(names).toHaveLength(3);
+    await payrollInput(page).setInputFiles(fixtures('bang_luong_'));
+    await timesheetInput(page).setInputFiles(fixtures('cham_cong_'));
+    await expect(runButton(page)).toHaveText('Chạy', { timeout: 30_000 });
+    await runButton(page).click();
+    await page.waitForURL(/\/result$/, { timeout: 60_000 });
+    await expect.poll(() => supabase.runLogs.length).toBe(1);
+
+    expect(w.external).toEqual([]);
+    for (const n of NAMES) {
+      for (const b of w.bodies) expect(b, 'request to Supabase').not.toContain(n);
+      for (const l of w.consoleLines) expect(l, 'console').not.toContain(n);
+    }
+    const s = await storageDump(page);
+    for (const n of NAMES) {
+      expect(s.web).not.toContain(n);
+      expect(decodeURIComponent(s.url)).not.toContain(n);
+    }
+    expect(s.web).not.toContain('ma_cn');
+    expect(s.dbs).toEqual([]);
+    // Cache Storage only holds the app's own assets (DuckDB parts), never a Supabase answer.
+    for (const u of s.cacheUrls) expect(new URL(u).origin).not.toBe(SUPABASE_ORIGIN);
+    expect(s.cacheUrls.filter((u) => u.includes('ref_table'))).toEqual([]);
   });
-});
 
-test.describe('import report layout', () => {
-  test.use({ signedInAs: ADMIN, viewport: { width: 1280, height: 800 } });
+  test('"Xem bảng" by keyboard: focus stays inside, Esc closes, focus returns', async ({
+    page,
+    supabase,
+  }) => {
+    seedRefRun(supabase);
+    await openRefFlow(page, '2026-09');
+    const open = refBox(page).getByRole('button', { name: 'Xem bảng Danh mục chi nhánh' });
+    await open.focus();
+    await page.keyboard.press('Enter');
+    const dialog = page.getByRole('dialog', { name: 'Danh mục chi nhánh' });
+    await expect(dialog).toBeVisible();
+    await expect(dialog.getByRole('searchbox')).toBeVisible();
+    // Native modal <dialog>: Tab may step out to the browser UI (activeElement = body) but never
+    // onto the page behind the dialog.
+    const inside = () =>
+      dialog.evaluate(
+        (d) => d.contains(document.activeElement) || document.activeElement === document.body,
+      );
+    for (let i = 0; i < 12; i++) {
+      await page.keyboard.press('Tab');
+      expect(await inside(), `Tab ${i + 1} keeps the focus in the dialog`).toBe(true);
+    }
+    for (let i = 0; i < 6; i++) {
+      await page.keyboard.press('Shift+Tab');
+      expect(await inside(), `Shift+Tab ${i + 1}`).toBe(true);
+    }
+    // In the search box the first Esc clears the text (native search field), the next one closes.
+    const search = dialog.getByRole('searchbox');
+    await search.fill('can tho');
+    await search.press('Escape');
+    await expect(search).toHaveValue('');
+    await expect(dialog).toBeVisible();
+    await search.press('Escape');
+    await expect(dialog).toHaveCount(0);
+    await expect(open).toBeFocused();
+  });
 
-  // Fixed 2026-11-09: the "Nội dung" cell wraps inside the dialog.
-  test('import report: the message column wraps inside the dialog', async ({ page, supabase }) => {
-    supabase.ref.seed({ code: 'DM_CHI_NHANH', name: 'Danh mục chi nhánh', draft: branchRows(2) });
-    await page.goto(`${LIST}/DM_CHI_NHANH/versions`);
-    await page.getByRole('button', { name: 'Import Excel vào draft' }).click();
-    const imp = page.getByRole('dialog', { name: 'Import Excel vào draft v1' });
-    await imp.getByLabel('Chọn file Excel để import').setInputFiles(
-      workbook('danh_muc_chi_nhanh.xlsx', {
-        S: [
-          [...HEAD, 'Ghi chú'],
-          ['CN01', 'A', 1, 'x'],
-        ],
-      }),
+  test('"Xem bảng" at 390px fits the screen and its table scrolls inside', async ({
+    page,
+    supabase,
+  }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    seedRefRun(supabase);
+    await openRefFlow(page, '2026-09');
+    await refBox(page).getByRole('button', { name: 'Xem bảng Danh mục chi nhánh' }).click();
+    const dialog = page.getByRole('dialog', { name: 'Danh mục chi nhánh' });
+    await expect(dialog.locator('tbody tr').first()).toBeVisible();
+    const box = (await dialog.boundingBox())!;
+    expect(box.x).toBeGreaterThanOrEqual(0);
+    expect(box.x + box.width).toBeLessThanOrEqual(390);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(
+      390,
     );
-    await expect(imp.getByText('1 cảnh báo')).toBeVisible();
-    const message = imp.getByRole('cell', { name: /không có trong bảng/ });
-    expect(await message.evaluate((el) => getComputedStyle(el).whiteSpace)).toBe('normal');
-    const box = message.locator('xpath=ancestor::div[contains(@class,"overflow-auto")][1]');
-    const [scroll, client] = await box.evaluate((el) => [el.scrollWidth, el.clientWidth]);
-    expect(scroll).toBeLessThanOrEqual(client);
+    const close = dialog.locator('[data-dialog-footer]').getByRole('button', { name: 'Đóng' });
+    await close.scrollIntoViewIfNeeded();
+    await expect(close).toBeInViewport();
+  });
+
+  test('a 50,000-row table: run page, "Xem bảng" search and run stay responsive', async ({
+    page,
+    supabase,
+  }) => {
+    test.setTimeout(180_000);
+    seedRefRun(supabase);
+    const v2 = supabase.ref.versions.find((v) => v.id === 'reftbl-1-v2')!;
+    v2.rows = branchRows(50_000);
+    await openRefFlow(page, '2026-09');
+    await expect(refBox(page)).toHaveAttribute('role', 'status');
+    await expect(refBox(page)).toContainText('Danh mục chi nhánh · v2');
+
+    let t0 = Date.now();
+    await refBox(page).getByRole('button', { name: 'Xem bảng Danh mục chi nhánh' }).click();
+    const dialog = page.getByRole('dialog', { name: 'Danh mục chi nhánh' });
+    await expect(
+      dialog.getByText('50000 / 50000 dòng').or(dialog.getByText('50.000 / 50.000 dòng')),
+    ).toBeVisible();
+    const openMs = Date.now() - t0;
+    await expect(dialog.locator('tbody tr')).toHaveCount(100);
+
+    const expected = branchRows(50_000).filter((r) => r.ten_cn === 'Đà Nẵng').length;
+    t0 = Date.now();
+    await dialog.getByRole('searchbox', { name: 'Tìm trong bảng' }).fill('da nang');
+    await expect(dialog.locator('tbody tr').first()).toContainText('Đà Nẵng');
+    await expect(dialog).toContainText(`/ 50`);
+    const searchMs = Date.now() - t0;
+    await expect(dialog.locator('tbody tr')).toHaveCount(100);
+    expect(expected).toBeGreaterThan(100);
+    // Each keystroke re-filters 50k rows on the main thread: measure one character.
+    t0 = Date.now();
+    await dialog.getByRole('searchbox').press('Backspace');
+    await expect(dialog.locator('tbody tr').first()).toBeVisible();
+    const keyMs = Date.now() - t0;
+    console.log(`[perf] Xem bảng 50k: open ${openMs} ms, search ${searchMs} ms, key ${keyMs} ms`);
+    expect(openMs).toBeLessThan(5_000);
+    expect(searchMs).toBeLessThan(3_000);
+    await dialog.locator('[data-dialog-footer]').getByRole('button', { name: 'Đóng' }).click();
+    await expect(dialog).toHaveCount(0);
+
+    await payrollInput(page).setInputFiles(fixtures('bang_luong_'));
+    await timesheetInput(page).setInputFiles(fixtures('cham_cong_'));
+    await expect(runButton(page)).toHaveText('Chạy', { timeout: 30_000 });
+    t0 = Date.now();
+    await runButton(page).click();
+    await page.waitForURL(/\/result$/, { timeout: 120_000 });
+    console.log(`[perf] run with a 50k-row reference table: ${Date.now() - t0} ms`);
+    await expect.poll(() => supabase.runLogs.length).toBe(1);
+    expect(supabase.runLogs[0]).toMatchObject({ status: 'succeeded' });
   });
 });
