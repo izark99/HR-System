@@ -95,6 +95,7 @@
     },
     "desc": {
       "input_excel": "Đọc file của một mục upload",
+      "input_refTable": "Dùng bảng tham chiếu theo kỳ",
       "transform_select": "Chọn, đổi tên, sắp thứ tự cột",
       "transform_filter": "Lọc dòng theo điều kiện",
       "transform_formula": "Thêm/sửa cột bằng công thức Excel",
@@ -118,6 +119,7 @@
     "datetime": "Ngày giờ",
     "node": {
       "input_excel": "Đọc file Excel",
+      "input_refTable": "Bảng tham chiếu",
       "transform_select": "Chọn cột",
       "transform_filter": "Lọc dòng",
       "transform_formula": "Công thức",
@@ -229,6 +231,23 @@
       "slot": "Mục upload",
       "hint": "Cột của node lấy theo cấu hình mục upload (tab Input slot).",
       "noSlots": "Chưa có mục upload nào: hãy thêm ở tab Input slot (bỏ chọn node để thấy tab)."
+    },
+    "refTable": {
+      "refTable": "Bảng",
+      "hint": "Cột của node lấy theo định nghĩa bảng ở màn Bảng tham chiếu. Khi chạy, hệ thống tự dùng phiên bản có hiệu lực theo kỳ User chọn.",
+      "pick": "Chọn bảng",
+      "loading": "Đang tải danh sách bảng tham chiếu…",
+      "loadFailed": "Không tải được danh sách bảng tham chiếu.",
+      "retry": "Thử lại",
+      "noTables": "Chưa có bảng tham chiếu nào: tạo ở màn Bảng tham chiếu.",
+      "columns": "Cột ra ({{count}})",
+      "columnKey": "Mã cột",
+      "columnType": "Kiểu",
+      "previewVersion": "Xem trước dùng v{{version}} · hiệu lực từ {{from}} ({{when}})",
+      "previewNone": "Chưa có phiên bản hiệu lực cho {{when}}: xem trước sẽ báo lỗi.",
+      "whenPeriod": "kỳ mẫu {{period}}",
+      "whenDate": "ngày mẫu {{date}}",
+      "whenToday": "hôm nay"
     },
     "compare": {
       "keys": "Cột khóa",
@@ -475,7 +494,14 @@
     "addOption": "Thêm lựa chọn",
     "optionN": "Lựa chọn {{n}}",
     "optionValue": "Giá trị",
-    "optionLabel": "Nhãn"
+    "optionLabel": "Nhãn",
+    "optionSource": "Lấy lựa chọn từ",
+    "sourceList": "Danh sách nhập tay",
+    "sourceRef": "Bảng tham chiếu",
+    "fromRefTable": "Bảng",
+    "valueColumn": "Cột giá trị",
+    "labelColumn": "Cột nhãn",
+    "refHint": "Khi chạy, danh sách lấy từ phiên bản có hiệu lực của bảng theo kỳ User chọn."
   },
   "slot": {
     "intro": "Mục upload mô tả file User cần tải lên: sheet, dòng tiêu đề, các cột và quy tắc kiểm tra.",

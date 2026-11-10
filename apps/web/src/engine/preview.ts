@@ -9,6 +9,7 @@ import { runFlow } from './core/executor';
 import { EngineError, type Table, type Translate, type Value } from './core/types';
 import type { DuckDbProvider } from './duckdb/base';
 import { readSlot, type SlotReadResult, type SourceFile } from './io/excel-reader';
+import { refRunOptions, type RefStore } from './io/ref-data';
 import type {
   CellValue,
   ColumnInfo,
@@ -102,6 +103,7 @@ export class PreviewSession {
   constructor(
     private readonly t: Translate,
     private readonly duck?: DuckDbProvider,
+    private readonly refs?: RefStore,
   ) {}
 
   /** Keep the sample files of a slot (bytes only) and validate them with the given slot config. */
@@ -169,6 +171,7 @@ export class PreviewSession {
         params,
         collect: isOutput ? edgesInto(flow, nodeId).map((e) => e.from) : [nodeId],
         ...(this.duck ? { duck: this.duck } : {}),
+        ...refRunOptions(this.refs),
         onProgress: (e) => {
           if (e.type === 'node-started') ran.push(e.nodeId);
         },

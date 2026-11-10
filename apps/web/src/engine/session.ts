@@ -15,6 +15,7 @@ import { perfClear, perfMeasure, perfNow } from './core/perf';
 import { readSlot, readSlotAsync, type SlotReadResult, type SourceFile } from './io/excel-reader';
 import { writeWorkbook } from './io/excel-writer';
 import { formatIssue } from './io/validation';
+import { refRunOptions, type RefStore } from './io/ref-data';
 import { compareDiffColumns, MISMATCHED_METRICS_COLUMN } from './nodes/control-compare';
 import { XLSX_MIME } from './nodes/output-excel';
 import { VI_COLLATOR } from './nodes/transform-sort';
@@ -85,11 +86,16 @@ export class EngineSession {
   private artifacts: RunFlowResult['artifacts'] = [];
   private abort: AbortController | null = null;
   private readonly duck: DuckDbProvider | undefined;
+  private readonly refs: RefStore | undefined;
 
-  /** `duck`: opens DuckDB on demand (only flows with a DuckDB node ever call it). */
-  constructor(lng: 'vi' | 'en' = 'vi', options: { duck?: DuckDbProvider } = {}) {
+  /**
+   * `duck`: opens DuckDB on demand (only flows with a DuckDB node ever call it). `refs`: the
+   * reference tables sent for the chosen as-of date (spec §34).
+   */
+  constructor(lng: 'vi' | 'en' = 'vi', options: { duck?: DuckDbProvider; refs?: RefStore } = {}) {
     this.t = createEngineTranslator(lng);
     this.duck = options.duck;
+    this.refs = options.refs;
   }
 
   loadFlow(raw: unknown): LoadFlowResult {
@@ -192,6 +198,7 @@ export class EngineSession {
         releaseIntermediate: true,
         ...(this.duck ? { duck: this.duck } : {}),
         ...(onProgress ? { onProgress } : {}),
+        ...refRunOptions(this.refs),
         readSlot: (key) => {
           const slot = flow.inputSlots.find((s) => s.key === key);
           if (!slot) throw new EngineError('executor.error.unknownSlot', { slot: key });

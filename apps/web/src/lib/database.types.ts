@@ -61,6 +61,8 @@ export type FlowVersionRow = Timestamps & {
   published_by: string | null;
   published_at: string | null;
   created_by: string | null;
+  /** Reference table codes used by the definition: computed by the database, never written. */
+  ref_tables: string[];
 };
 
 export type FlowAssignmentRow = {
@@ -83,6 +85,8 @@ export type RunLogInsert = {
   error_code: string | null;
   error_node_id: string | null;
   client_info: Record<string, string | number | boolean | null> | null;
+  /** Reference table code → version id used by the run (no data, spec §34 AC-RT-08). */
+  ref_versions?: Record<string, string>;
 };
 
 export type MyFlowRow = {

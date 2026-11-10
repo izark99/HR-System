@@ -82,6 +82,7 @@ export const GROUP_PREFIXES: Record<string, UiTextGroup> = {
   'engine:sql': 'runtime',
   'engine:duckdb': 'runtime',
   'engine:formula': 'runtime',
+  'engine:refTable': 'runtime',
 };
 
 function matches(key: string, prefix: string): boolean {

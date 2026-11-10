@@ -10,7 +10,6 @@ import { ChangePasswordPage } from '../features/auth/ChangePasswordPage';
 import { resolveGuard } from '../features/auth/guard';
 import { LoginPage } from '../features/auth/LoginPage';
 import { FlowListPage } from '../features/runner/FlowListPage';
-import { RunPage } from '../features/runner/RunPage';
 import { RootLayout } from './RootLayout';
 import {
   DesignerSkeleton,
@@ -48,7 +47,7 @@ const flowListRoute = createRoute({
 export const runRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/run/$flowCode',
-  component: RunPage,
+  component: lazyRouteComponent(() => import('../features/runner/RunPage'), 'RunPage'),
 });
 
 export const resultRoute = createRoute({

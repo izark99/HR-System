@@ -49,7 +49,10 @@
     "required": "Bắt buộc nhập",
     "log": "Ghi vào lịch sử chạy",
     "isAsOfDate": "Dùng làm ngày hiệu lực",
-    "options": "Lựa chọn"
+    "options": "Lựa chọn",
+    "fromRefTable": "Bảng",
+    "valueColumn": "Cột giá trị",
+    "labelColumn": "Cột nhãn"
   },
   "option": {
     "value": "Giá trị",

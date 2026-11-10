@@ -87,3 +87,14 @@ export const OutputExcelConfigSchema = z
     });
   });
 export type OutputExcelConfig = z.infer<typeof OutputExcelConfigSchema>;
+
+/** Code of a reference table (spec §34, `ref_tables.code`): upper case, digits, underscore. */
+export const RefTableCodeSchema = z
+  .string()
+  .regex(/^[A-Z][A-Z0-9_]{1,63}$/, 'must be a reference table code: [A-Z][A-Z0-9_]{1,63}');
+
+/** Config of node `input.refTable` (spec §34 AC-RT-07): the rows of a reference table. */
+export const InputRefTableConfigSchema = z.strictObject({
+  refTable: RefTableCodeSchema,
+});
+export type InputRefTableConfig = z.infer<typeof InputRefTableConfigSchema>;

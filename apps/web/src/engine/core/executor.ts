@@ -19,6 +19,7 @@ import {
 import {
   EngineError,
   type ParamValue,
+  type RefTableDef,
   type RunArtifact,
   type RunServices,
   type RunView,
@@ -93,6 +94,10 @@ export interface RunFlowOptions {
   releaseIntermediate?: boolean;
   /** Nodes whose outputs must be returned as TS tables even when they stay in DuckDB. */
   collect?: readonly string[];
+  /** Reference table definitions (spec §34) for `input.refTable`. */
+  refTables?: Readonly<Record<string, RefTableDef>>;
+  /** Rows of the reference table versions chosen for the run (RAM only). */
+  readRefTable?: (code: string) => Table;
 }
 
 export interface RunFlowResult {
@@ -396,12 +401,19 @@ export async function runFlow(
         nodeId: node.id,
         params,
         readSlot,
+        ...(options.readRefTable ? { readRefTable: options.readRefTable } : {}),
         signal,
         emitArtifact: (a) => artifacts.push({ ...a, nodeId: node.id }),
         emitView: (v) => views.push({ ...v, nodeId: node.id }),
         warn: (w) => warnings.push({ ...w, nodeId: node.id }),
       };
-      const base = { t: options.t, flow, run, ...(options.duck ? { duck: options.duck } : {}) };
+      const base = {
+        t: options.t,
+        flow,
+        run,
+        ...(options.duck ? { duck: options.duck } : {}),
+        ...(options.refTables ? { refTables: options.refTables } : {}),
+      };
 
       let result: Record<string, PortData>;
       try {

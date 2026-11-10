@@ -14,7 +14,7 @@ import {
 import type { ZodError } from 'zod';
 import type { DuckDbProvider } from './duckdb/base';
 import type { AnyNodePlugin, PortDef } from './core/plugin';
-import { EngineError, type ColumnDef, type Translate } from './core/types';
+import { EngineError, type ColumnDef, type RefTableDef, type Translate } from './core/types';
 import { nodePlugins } from './nodes';
 import type { ColumnInfo } from './protocol';
 import { setupFieldLabel } from './field-path';
@@ -68,6 +68,11 @@ export interface DesignCheckOptions {
   t: Translate;
   duck?: DuckDbProvider;
   plugins?: Readonly<Record<string, AnyNodePlugin>>;
+  /**
+   * Reference tables by code (definitions, spec §34): checks `input.refTable` nodes and list
+   * params `fromRefTable`. Absent = the catalog could not be loaded (those parts are errors).
+   */
+  refTables?: Readonly<Record<string, RefTableDef>>;
 }
 
 function toInfo(c: ColumnDef): ColumnInfo {
@@ -141,6 +146,61 @@ export async function checkDesign(
   const def = isRecord(raw) ? migrateFlowDefinition(raw).definition : {};
   const src = isRecord(def) ? def : {};
 
+  /** List param whose options come from a reference table (AC-RT-10, AC-RT-02). */
+  const checkRefParam = (
+    opts: { fromRefTable: string; valueColumn: string; labelColumn: string },
+    label: string,
+    i: number,
+  ) => {
+    const where = { paramIndex: i };
+    if (!options.refTables) {
+      add(
+        'error',
+        'refTable.error.catalogUnavailable',
+        { param: label },
+        {
+          ...where,
+          path: 'options.fromRefTable',
+        },
+      );
+      return;
+    }
+    const def = options.refTables[opts.fromRefTable];
+    if (!def) {
+      add(
+        'error',
+        'design.param.refTableUnknown',
+        { param: label, table: opts.fromRefTable },
+        {
+          ...where,
+          path: 'options.fromRefTable',
+        },
+      );
+      return;
+    }
+    for (const field of ['valueColumn', 'labelColumn'] as const) {
+      if (!def.columns.some((c) => c.key === opts[field])) {
+        add(
+          'error',
+          'design.param.refColumnUnknown',
+          { param: label, table: def.name, column: opts[field] },
+          { ...where, path: `options.${field}` },
+        );
+      }
+    }
+    if (def.published === false) {
+      add(
+        'warning',
+        'refTable.warning.noPublished',
+        { param: label, table: def.name },
+        {
+          ...where,
+          path: 'options.fromRefTable',
+        },
+      );
+    }
+  };
+
   // ---- params -------------------------------------------------------------------------------
   const params: FlowParam[] = [];
   const paramKeys = new Set<string>();
@@ -192,7 +252,10 @@ export async function checkDesign(
         );
       }
     }
-    if (param.type === 'select' && (!Array.isArray(param.options) || param.options.length === 0)) {
+    const opts = param.options;
+    if (param.type === 'select' && opts && !Array.isArray(opts)) {
+      checkRefParam(opts, label, i);
+    } else if (param.type === 'select' && (!Array.isArray(opts) || opts.length === 0)) {
       add('error', 'design.param.noOptions', { param: label }, { paramIndex: i, path: 'options' });
     }
     params.push(param);
@@ -482,7 +545,12 @@ export async function checkDesign(
       result[r.node.id] = { status: 'blocked', inputs, outputs: null };
       continue;
     }
-    const ctx = { t, flow, ...(options.duck ? { duck: options.duck } : {}) };
+    const ctx = {
+      t,
+      flow,
+      ...(options.duck ? { duck: options.duck } : {}),
+      ...(options.refTables ? { refTables: options.refTables } : {}),
+    };
     const defs = Object.fromEntries(
       Object.entries(inputs).map(([port, cols]) => [port, cols.map(toDef)]),
     );

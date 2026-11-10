@@ -8,7 +8,9 @@ import type { DuckDbProvider } from './duckdb/base';
 import type { FileDownload, ParamValues, RowQuery, RunProgressEvent, UploadFile } from './protocol';
 import { createEngineTranslator, setEngineTextOverrides } from './core/i18n';
 import { checkDesign } from './design';
+import { RefStore, type RefTablePayload } from './io/ref-data';
 import { readRefImport, type RefImportColumn } from './io/ref-import';
+import type { RefTableDef } from './core/types';
 import { PreviewSession } from './preview';
 import { EngineSession } from './session';
 
@@ -16,10 +18,12 @@ import { EngineSession } from './session';
 const duck: DuckDbProvider = async (onProgress) =>
   (await import('./duckdb/browser')).browserDuckDb(onProgress);
 
-const session = new EngineSession('vi', { duck });
+/** Reference tables of the chosen as-of date (spec §34): RAM of this worker only. */
+const refs = new RefStore();
+const session = new EngineSession('vi', { duck, refs });
 const designT = createEngineTranslator('vi');
 /** Designer samples (spec §13.3): RAM of this worker only. */
-const preview = new PreviewSession(designT, duck);
+const preview = new PreviewSession(designT, duck, refs);
 
 function transferable(file: FileDownload): FileDownload {
   return Comlink.transfer(file, [file.data]);
@@ -30,7 +34,13 @@ const api = {
   setTextOverrides: (map: Record<string, string>) => setEngineTextOverrides(map),
   loadFlow: (raw: unknown) => session.loadFlow(raw),
   /** Designer / publish check: every problem + inferred columns (no data, spec §13.2). */
-  checkDesign: (raw: unknown) => checkDesign(raw, { t: designT, duck }),
+  checkDesign: (raw: unknown, refTables?: Record<string, RefTableDef>) =>
+    checkDesign(raw, { t: designT, duck, ...(refTables ? { refTables } : {}) }),
+  /**
+   * Reference tables effective on the as-of date (rows from the main thread, spec §34 AC-RT-15):
+   * replaces the previous set; per table usable or the first column whose cells do not fit.
+   */
+  setRefTables: (tables: RefTablePayload[]) => refs.set(tables),
   previewSetSamples: (slotKey: string, files: UploadFile[], slot: unknown) =>
     preview.setSampleFiles(slotKey, files, slot),
   previewValidate: (slotKey: string, slot: unknown) => preview.validate(slotKey, slot),

@@ -56,6 +56,14 @@ export const NODE_TYPES: NodeTypeSpec[] = [
     defaults: (t) => ({ slot: t.firstSlot ?? '' }),
   },
   {
+    type: 'input.refTable',
+    group: 'input',
+    idPrefix: 'ref',
+    inputs: () => [],
+    outputs: one('table', false),
+    defaults: () => ({ refTable: '' }),
+  },
+  {
     type: 'transform.select',
     group: 'transform',
     idPrefix: 'select',

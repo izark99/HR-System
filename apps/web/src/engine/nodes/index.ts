@@ -2,6 +2,7 @@ import type { AnyNodePlugin } from '../core/plugin';
 import { codeSqlPlugin } from './code-sql';
 import { controlComparePlugin } from './control-compare';
 import { inputExcelPlugin } from './input-excel';
+import { inputRefTablePlugin } from './input-ref-table';
 import { outputExcelPlugin } from './output-excel';
 import { outputPreviewPlugin } from './output-preview';
 import { transformDedupePlugin } from './transform-dedupe';
@@ -16,6 +17,7 @@ import { transformUnionPlugin } from './transform-union';
 /** Node plugin registry. Add new node types here (spec §12). */
 export const nodePlugins: Record<string, AnyNodePlugin> = {
   [inputExcelPlugin.type]: inputExcelPlugin,
+  [inputRefTablePlugin.type]: inputRefTablePlugin,
   [controlComparePlugin.type]: controlComparePlugin,
   [outputExcelPlugin.type]: outputExcelPlugin,
   [outputPreviewPlugin.type]: outputPreviewPlugin,

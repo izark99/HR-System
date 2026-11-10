@@ -207,7 +207,9 @@
       "duplicateKey": "Tham số \"{{param}}\": mã \"{{key}}\" trùng với tham số khác.",
       "asOfType": "Tham số \"{{param}}\": chỉ tham số kiểu tháng hoặc ngày mới làm ngày hiệu lực được.",
       "multipleAsOf": "Tham số \"{{param}}\": flow chỉ được có 1 tham số làm ngày hiệu lực.",
-      "noOptions": "Tham số \"{{param}}\": kiểu danh sách chọn cần ít nhất 1 lựa chọn."
+      "noOptions": "Tham số \"{{param}}\": kiểu danh sách chọn cần ít nhất 1 lựa chọn.",
+      "refTableUnknown": "Tham số \"{{param}}\": bảng tham chiếu \"{{table}}\" không tồn tại.",
+      "refColumnUnknown": "Tham số \"{{param}}\": bảng \"{{table}}\" không còn cột \"{{column}}\"."
     },
     "slot": {
       "invalidField": "Mục upload \"{{slot}}\": giá trị ở mục \"{{field}}\" không hợp lệ.",
@@ -260,6 +262,16 @@
     "warning": {
       "mixedTypes": "Cột \"{{column}}\": các nhánh của công thức trả về kiểu khác nhau (số và chữ) nên kết quả là chữ.",
       "rowErrors": "Node \"{{node}}\", cột \"{{column}}\": {{error}}: {{count}} dòng, các ô này được để trống (các dòng đầu tiên: {{rows}})."
+    }
+  },
+  "refTable": {
+    "error": {
+      "catalogUnavailable": "Chưa tải được danh sách bảng tham chiếu; tải lại trang để kiểm tra lại.",
+      "unknownTable": "Node \"{{node}}\": bảng tham chiếu \"{{table}}\" không tồn tại.",
+      "notLoaded": "Chưa có dữ liệu bảng tham chiếu \"{{table}}\" cho kỳ đã chọn."
+    },
+    "warning": {
+      "noPublished": "Bảng tham chiếu \"{{table}}\" chưa có phiên bản nào được publish; flow chưa chạy được."
     }
   }
 }

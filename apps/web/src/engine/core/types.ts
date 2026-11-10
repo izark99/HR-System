@@ -32,11 +32,34 @@ export { Table };
 
 export type Translate = (key: string, params?: Record<string, unknown>) => string;
 
+/** Column of a reference table (spec §34 AC-RT-02): key, display title, type. */
+export interface RefColumnDef {
+  key: string;
+  title: string;
+  type: 'string' | 'integer' | 'decimal' | 'date' | 'boolean';
+}
+
+/**
+ * Definition of a reference table known to the Designer / the run (no data): `published` = it has
+ * at least one published version (absent = unknown).
+ */
+export interface RefTableDef {
+  code: string;
+  name: string;
+  columns: RefColumnDef[];
+  published?: boolean;
+}
+
 export interface EngineContext {
   /** Translator bound to the engine namespace; used for generated column titles. */
   t: Translate;
   /** The flow being designed/run (input slots etc.). Absent in isolated node tests. */
   flow?: FlowDefinition;
+  /**
+   * Reference tables by code (definitions only, spec §34 AC-RT-07); absent = not known (the
+   * catalog could not be loaded), which blocks `input.refTable` nodes.
+   */
+  refTables?: Readonly<Record<string, RefTableDef>>;
   /** Run-scoped services; only present while the executor runs a node. */
   run?: RunServices;
   /** Opens DuckDB on demand (design-time `code.sql` schema via DESCRIBE). */
@@ -78,6 +101,8 @@ export interface RunServices {
   params: Readonly<Record<string, ParamValue>>;
   /** Read + validate the files of an input slot (the caller may serve a cached result). */
   readSlot(slotKey: string): SlotReadResult | Promise<SlotReadResult>;
+  /** Rows of the reference table version chosen for this run (absent: none was loaded). */
+  readRefTable?(code: string): Table;
   emitArtifact(artifact: Omit<RunArtifact, 'nodeId'>): void;
   emitView(view: Omit<RunView, 'nodeId'>): void;
   warn(warning: Omit<RunWarning, 'nodeId'>): void;

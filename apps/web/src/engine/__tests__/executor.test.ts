@@ -452,11 +452,12 @@ describe('output.excel file name', () => {
     expect(resolveFileName('{missing}', {})).toBe('output.xlsx');
   });
 
-  it('registers the step-1, step-3 and step-4 nodes (spec §12)', () => {
+  it('registers the step-1, step-3, step-4 and Phase 2 nodes (spec §12, §34)', () => {
     expect(Object.keys(nodePlugins).sort()).toEqual([
       'code.sql',
       'control.compare',
       'input.excel',
+      'input.refTable',
       'output.excel',
       'output.preview',
       'transform.dedupe',

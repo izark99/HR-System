@@ -15,6 +15,7 @@ type TFunction = (key: string, options?: Record<string, unknown>) => string;
 /** Form namespace (`designer:node.<ns>`) of each node type. */
 const FORM_NS: Record<string, string> = {
   'input.excel': 'inputExcel',
+  'input.refTable': 'refTable',
   'control.compare': 'compare',
   'output.excel': 'outputExcel',
   'output.preview': 'preview',
