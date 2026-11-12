@@ -1,7 +1,7 @@
 # HR Data Flow Platform — Đặc tả hệ thống (spec.md)
 
-> Phiên bản: 0.2 (draft) · Ngày: 2026-10-26 · Chủ sở hữu: Harold (HR Analytics)
-> Trạng thái: Chờ review · 0.2: bổ sung phạm vi Bước 3 (Flow Designer, DuckDB-WASM, nhóm transform cơ bản, Version & diff, tự đăng xuất) theo quyết định 2026-10-26 22:52; cập nhật theo quyết định 2026-10-27 07:31 (Q8–Q15)
+> Phiên bản: 0.3 · Cập nhật: 2026-11-12 · Chủ sở hữu: Harold (HR Analytics)
+> Trạng thái: tài liệu sống, cập nhật theo từng vòng (mỗi vòng thêm một mục user story + AC ở cuối); lộ trình và mốc đang mở ở `docs/PLAN.md` · 0.2: bổ sung phạm vi Bước 3 (Flow Designer, DuckDB-WASM, nhóm transform cơ bản, Version & diff, tự đăng xuất) theo quyết định 2026-10-26 22:52; cập nhật theo quyết định 2026-10-27 07:31 (Q8–Q15)
 
 ---
 
@@ -111,13 +111,13 @@ Kiến trúc giữ tính **portable**: frontend là static build; backend chỉ 
 |-----|-----------|---------|
 | Ngôn ngữ | TypeScript (strict) | |
 | Build | Vite | |
-| UI | React 19, Tailwind CSS v4, shadcn/ui | |
-| Routing / server state | TanStack Router, TanStack Query | |
-| Form & validation | React Hook Form + Zod | Zod cũng là nguồn sinh JSON Schema cho flow |
+| UI | React 19, Tailwind CSS v4; component tự viết trong `apps/web/src/components/` (§25.5) | shadcn/ui có trong kế hoạch ban đầu nhưng **không dùng** |
+| Routing | TanStack Router | TanStack Query có trong kế hoạch ban đầu nhưng **không dùng**; dữ liệu server lấy qua hook riêng của từng feature |
+| Form & validation | Form tự viết (`FormField`) + Zod | Zod cũng là nguồn sinh JSON Schema cho flow. React Hook Form có trong kế hoạch ban đầu nhưng **không dùng** |
 | Canvas flow | @xyflow/react (React Flow) + auto-layout tự viết (layered, trái → phải; không dùng ELK.js vì giấy phép EPL-2.0) | |
 | Code editor | Monaco Editor (`monaco-editor` đóng gói cùng app, chốt 2026-10-27) | Highlight SQL / Python / formula, autocomplete tên view/cột/tham số. Chỉ lazy-load trong chunk Designer; editor worker same-origin (`worker-src 'self'`); font codicon self-host (`font-src 'self'`); **không dùng CDN loader**: cấu hình `@monaco-editor/loader` (hoặc tương đương) dùng bản `monaco-editor` đã bundle, không bao giờ tải từ jsDelivr hay domain ngoài |
 | Data grid preview | TanStack Table + virtualization | Hiển thị hàng trăm nghìn dòng mượt |
-| Chart | Apache ECharts | |
+| Chart | Apache ECharts | **Chưa cài**: chỉ thêm khi làm `output.chart` (chưa xếp lịch) |
 | Đọc Excel | SheetJS (bản CE từ cdn.sheetjs.com, vendor tại `vendor/`) | Đọc .xlsx, .xls (CSV không nhận, chốt 2026-10-26) |
 | Giải nén .xlsx | `fflate` (MIT) cho đường đồng bộ; `DecompressionStream` của trình duyệt cho đường bất đồng bộ (worker) | Giải nén entry theo luồng, đếm byte, dừng sớm khi vượt giới hạn chống zip bomb (chốt 2026-10-30 23:29) |
 | Ghi Excel | ExcelJS | Giữ style/format khi đổ vào template |
@@ -833,7 +833,7 @@ Chỉ Admin; chỉ desktop (≥ 1280px). Route riêng, lazy-load (React Flow, co
 | Rủi ro | Giải pháp |
 |--------|-----------|
 | Supabase pause sau 7 ngày không hoạt động | GitHub Actions theo lịch ping 1 truy vấn nhẹ mỗi ngày; Admin dashboard cảnh báo nếu ping thất bại |
-| Free tier không có backup tự động đầy đủ | GitHub Actions hằng tuần chạy `pg_dump` cấu hình (không chứa dữ liệu cá nhân) → lưu vào artifact private / Google Drive của HR; Export flow JSON định kỳ |
+| Free tier không có backup tự động đầy đủ | `.github/workflows/backup.yml` (từ 2026-11-12): hằng tuần `pg_dump` dữ liệu schema `public`, khôi phục thử vào database tạm dựng từ `supabase/migrations/` và so số dòng từng bảng (`scripts/backup/dump-and-verify.sh`), mã hóa GPG AES-256, lưu artifact 90 ngày. Repo public nên chỉ tải lên file đã mã hóa. Không gồm schema `auth` (tài khoản, mật khẩu). Hướng dẫn: README "Sao lưu và khôi phục". Export flow JSON từ Designer vẫn dùng được |
 | Giới hạn DB 500MB / Storage 1GB | Run log tự xóa sau 12 tháng (cấu hình được); ref table lớn lưu dạng Parquet trong Storage |
 | Pyodide/DuckDB tải chậm lần đầu | DuckDB: Cache Storage trong worker, chỉ tải khi flow cần (§13.1). Pyodide (Phase 2): cơ chế cache tương tự |
 | Giới hạn 25 MiB/file của Cloudflare Pages | File `.wasm` của DuckDB tách thành phần < 25 MiB lúc build, ghép lại trong worker (§13.1) |

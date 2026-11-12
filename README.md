@@ -6,28 +6,30 @@ Webapp nội bộ xử lý dữ liệu Excel **trực tiếp trên trình duyệ
 
 ## Trạng thái
 
-Đang ở **Phase 1 (MVP)**, flow nghiệm thu là *Đối chiếu bảng lương – chấm công*.
+Phase 1 (MVP) đã xong; đang ở Phase 2. Lộ trình, mốc đang mở và việc không làm: [`docs/PLAN.md`](docs/PLAN.md). Trạng thái chi tiết: [`docs/HANDOFF.md`](docs/HANDOFF.md).
 
 | Hạng mục | Trạng thái |
 |----------|-----------|
-| Đặc tả, nhật ký quyết định, design system | ✅ `docs/` |
-| Engine: đọc Excel theo input slot, validation, node `control.compare`, xuất Excel nhiều sheet | ✅ có test (khớp `fixtures/payroll-timesheet/expected.json`) |
-| DAG executor + Web Worker + 3 màn hình User | ✅ |
-| Supabase: đăng nhập, đổi mật khẩu lần đầu, RLS, flow/version theo ngày hiệu lực, run log metadata, Admin Users & Groups, nhập flow JSON | ✅ (bước 2) |
-| Flow Designer cho Admin | ⏳ sau đó |
-| Python (Pyodide), template Excel | Phase 2 |
+| Engine trong Web Worker: đọc Excel theo input slot, validation, DuckDB-WASM, node biến đổi (chọn cột, lọc, sắp xếp, ghép, gộp, nhóm, bỏ trùng), `code.sql`, `transform.formula` (41 hàm Excel), `control.compare`, xuất Excel nhiều sheet, xem trước | ✅ |
+| Màn User: danh sách luồng xử lý, chạy (tham số → tải file và kiểm tra → chạy), kết quả | ✅ |
+| Supabase: đăng nhập, đổi mật khẩu lần đầu, RLS, flow/version theo ngày hiệu lực, run log metadata | ✅ |
+| Admin: tài khoản và nhóm, flow, phiên bản và hiệu lực (kèm so sánh), Flow Designer, văn bản giao diện, bảng tham chiếu (quản lý dữ liệu và phiên bản) | ✅ |
+| Dùng bảng tham chiếu trong flow (node `input.refTable`) | ⏳ kế tiếp (PLAN M1) |
+| Sao lưu hằng tuần có kiểm tra khôi phục (`.github/workflows/backup.yml`) | ✅ workflow; cần 2 secret (xem "Sao lưu và khôi phục") |
+| Màn Lịch sử hoạt động (Logs), template Excel (`output.template`) | Chưa làm (PLAN M4, M5) |
+| Python (Pyodide) | Chỉ làm khi có flow thật cần tới |
 
-Wireframe giao diện: https://claude.ai/artifact/BUfBGjG3F8XyXmctD86QzW (link riêng tư, cần được chia sẻ mới xem được).
+Wireframe giao diện bản đầu (chỉ tham khảo bố cục): https://claude.ai/artifact/BUfBGjG3F8XyXmctD86QzW (link riêng tư, cần được chia sẻ mới xem được).
 
 ## Kiến trúc tóm tắt
 
 ```
 Trình duyệt ─ React SPA (UI)
-             └ Web Worker: SheetJS (đọc) → engine (validate, compare…) → ExcelJS (ghi)
+             └ Web Worker: đọc .xlsx/.xls → engine (validate, DuckDB-WASM, compare…) → ghi .xlsx
                    ▲ file Excel không bao giờ upload
 Supabase ──── chỉ metadata: auth, flow/version, bảng tham chiếu không chứa dữ liệu cá nhân, log
 Cloudflare ── host SPA (Pages, deploy từ main)
-GitHub ───── CI + Actions theo lịch giữ Supabase không bị pause
+GitHub ───── CI + Actions theo lịch: giữ Supabase không bị pause, sao lưu hằng tuần
 ```
 
 Chi tiết: [`docs/spec.md`](docs/spec.md).
@@ -109,7 +111,7 @@ Thiếu biến khi build → app hiện màn "Ứng dụng chưa được cấu 
 ## Supabase (một lần khi dựng môi trường)
 
 1. **Migrations**: chạy lần lượt `supabase/migrations/*.sql` theo thứ tự tên file (SQL editor hoặc `psql`).
-2. **Kiểm thử RLS**: chạy `supabase/tests/rls.sql` (tự rollback); kết quả cuối phải là `RLS OK` (tương tự `versions.sql` → `VERSIONS OK`, `ui_text_overrides.sql` → `UI TEXT OK`).
+2. **Kiểm thử RLS**: chạy `supabase/tests/rls.sql` (tự rollback); bằng `psql` thì dòng kết quả cuối là `RLS OK` (tương tự `versions.sql` → `VERSIONS OK`, `ui_text_overrides.sql` → `UI TEXT OK`, `ref_tables.sql` → `REF TABLES OK`, `ref_tables_qa.sql` → `REF TABLES QA OK`). Trong SQL Editor của Supabase chỉ thấy kết quả của lệnh cuối (`rollback`): đạt là "Success. No rows returned"; không đạt là lỗi có chữ `… FAIL: …`.
    Không có Supabase? Chạy trên PostgreSQL ≥ 15 thường: nạp `supabase/tests/support/supabase_stub.sql` trước (chỉ dùng local).
 3. **Edge Function `admin-users`**: deploy 4 file trong `supabase/functions/admin-users/` (`index.ts`, `handler.ts`, `backend.ts`, `deno.json`). `ALLOWED_ORIGINS` (tùy chọn, mặc định `https://hr-data-flow.pages.dev`) = các origin của app, cách nhau dấu phẩy (VD `https://<tên>.pages.dev,http://localhost:5173`). `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY` do Supabase cung cấp sẵn. Hàm tự kiểm tra JWT + role Admin.
 4. **Admin đầu tiên**: chạy `supabase/seed/create_first_admin.sql` một lần (hướng dẫn tham số ở đầu file); script từ chối nếu đã có Admin. Mật khẩu không được ghi vào bảng hay câu lệnh DDL nào, nhưng vẫn nên **đăng nhập và đổi mật khẩu tạm ngay** (app cũng bắt buộc đổi ở lần đăng nhập đầu).
@@ -122,7 +124,38 @@ Thiếu biến khi build → app hiện màn "Ứng dụng chưa được cấu 
 ## Deploy
 
 - **Cloudflare Pages** (frontend): build command `pnpm install --frozen-lockfile && pnpm --filter @hrflow/web build`, output `apps/web/dist`, env `NODE_VERSION=22`, `PNPM_VERSION=10.28.0`, `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`. Header bảo mật (CSP…) lấy từ `apps/web/public/_headers`.
+- **Sao lưu**: `.github/workflows/backup.yml`, xem mục "Sao lưu và khôi phục".
 - **Keep-alive**: `.github/workflows/keep-alive.yml` ping Supabase mỗi ngày lúc 08:07 giờ VN (chỉ chạy trên `main`; GitHub tự tắt lịch nếu repo không hoạt động 60 ngày, khi đó bật lại trong tab Actions).
+
+## Sao lưu và khôi phục
+
+Supabase Free không có backup. `.github/workflows/backup.yml` chạy mỗi Chủ nhật 01:23 giờ VN (chạy tay: tab **Actions** → **Supabase backup** → **Run workflow**). Mỗi lần chạy:
+
+1. Dump **dữ liệu** của schema `public` (flow, phiên bản, bảng tham chiếu, văn bản giao diện đã sửa, hồ sơ tài khoản, nhóm, log). Cấu trúc bảng không cần dump vì đã nằm trong `supabase/migrations/`.
+2. **Khôi phục thử**: dựng một database tạm từ `supabase/migrations/`, nạp bản dump, so số dòng từng bảng với database thật (`scripts/backup/dump-and-verify.sh`). Lệch, hoặc database thật có bảng/cột mà migrations không có → lần chạy báo đỏ.
+3. Mã hóa (GPG, AES-256) rồi lưu thành artifact trong 90 ngày. Repo đang public nên chỉ file đã mã hóa được tải lên; log chỉ in tên bảng và số dòng.
+
+Không nằm trong bản sao lưu: tài khoản đăng nhập và mật khẩu (schema `auth`), Edge Function, cấu hình Auth. Sau sự cố phải tạo lại tài khoản (mục Supabase, bước 3–5).
+
+**Cài một lần** — GitHub → repo → **Settings** → **Secrets and variables** → **Actions** → **New repository secret**:
+
+| Secret | Giá trị |
+|--------|---------|
+| `SUPABASE_DB_URL` | Supabase Dashboard → nút **Connect** → mục **Session pooler** → chép chuỗi `postgresql://postgres.<mã project>:[YOUR-PASSWORD]@…pooler.supabase.com:5432/postgres`, thay `[YOUR-PASSWORD]` bằng mật khẩu database. Chưa biết mật khẩu: **Project Settings** → **Database** → **Reset database password** (app không dùng mật khẩu này nên không ảnh hưởng người dùng). Không dùng chuỗi "Direct connection" (chỉ có IPv6, máy chạy Actions không kết nối được) |
+| `BACKUP_PASSPHRASE` | Một cụm mật khẩu dài tự đặt, lưu trong trình quản lý mật khẩu. Mất cụm này thì không đọc được bản sao lưu nào |
+
+**Khôi phục** (cần `gpg` và `psql`):
+
+```bash
+# 1. Tải artifact của lần chạy gần nhất (Actions → lần chạy → Artifacts), giải nén, rồi giải mã:
+gpg -d -o hrflow-data.sql hrflow-data-YYYYMMDD.sql.gpg
+
+# 2. Database đích đã có cấu trúc (chạy supabase/migrations/*.sql theo thứ tự). Nạp dữ liệu:
+psql --single-transaction -v ON_ERROR_STOP=1 \
+  -c "set session_replication_role = replica" -f hrflow-data.sql "<chuỗi kết nối database đích>"
+```
+
+Bảng đích phải đang trống (migrations tự thêm vài dòng mặc định, VD `app_settings`; xem cách script làm trống bảng trước khi nạp). Các dòng gắn với tài khoản (`profiles`, `group_members`, `flow_assignments`, `run_logs`, `audit_logs`) mang id của tài khoản cũ: khi tài khoản được tạo lại với id mới thì gán lại nhóm và flow trong màn Admin. Xóa file `hrflow-data.sql` sau khi dùng.
 
 ## Nguyên tắc bắt buộc
 
@@ -135,4 +168,4 @@ Thiếu biến khi build → app hiện màn "Ứng dụng chưa được cấu 
 
 ## Công nghệ
 
-TypeScript · React 19 · Vite · Tailwind CSS v4 · Zod · big.js · SheetJS CE · ExcelJS · i18next · Supabase (supabase-js) · Vitest · Playwright · Cloudflare Pages · GitHub Actions — sắp tới: DuckDB-WASM, Pyodide, React Flow.
+TypeScript · React 19 · Vite · Tailwind CSS v4 · TanStack Router/Table/Virtual · Zod · big.js · DuckDB-WASM · Apache Arrow · SheetJS CE · ExcelJS · fflate · Comlink · React Flow · Monaco · i18next · Supabase (supabase-js) · Vitest · Playwright · Cloudflare Pages · GitHub Actions.
