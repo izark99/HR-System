@@ -1,6 +1,6 @@
 # HANDOFF — Trạng thái dự án để mở session mới
 
-> Cập nhật: 2026-11-10 (sau Phase 2 bước 1 vòng 1 — bảng tham chiếu, §34; kế tiếp: vòng 2 `input.refTable`). Đọc file này sau `CLAUDE.md` và `docs/MEMORY.md`.
+> Cập nhật: 2026-11-12 (thêm `docs/PLAN.md`: lộ trình của project owner; trạng thái code không đổi so với 2026-11-10, sau Phase 2 bước 1 vòng 1 — bảng tham chiếu, §34). Đọc file này sau `CLAUDE.md`, `docs/MEMORY.md` và `docs/PLAN.md`. **Việc tiếp theo lấy từ `docs/PLAN.md` §4 (mốc đầu tiên chưa xong: M0), không lấy từ §5 của file này.**
 
 ## 1. Đã xong
 
@@ -68,6 +68,8 @@
 17. Bảng tham chiếu vòng 1 (MINOR, 2026-11-10): (a) **ngân sách JS còn ~0,5 KiB** (214,7/215,2); (b) lưu 5 MB qua PostgREST chưa đo trên Supabase thật (giới hạn request của gateway); (c) DB so khóa bằng `btrim`, không chuẩn hóa NFC (client chặt hơn); (d) đổi kiểu cột khi đã có bản published: dữ liệu cũ giữ kiểu cũ — vòng 2 (engine) phải xử lý giá trị không khớp kiểu; (e) `supabase/tests/ref_tables*.sql` mới chạy trên Postgres local; trên DB thật chạy bài test rút gọn (rollback).
 
 ## 5. Bước tiếp theo
+
+> Từ 2026-11-12: thứ tự việc theo `docs/PLAN.md` §4 (M0 nền vững → M1 bảng tham chiếu vòng 2 → M2 Harold dựng 2 flow thật → M3 Designer thuận tiện → M4 màn Logs → M5 `output.template`). Phần dưới giữ làm lịch sử.
 
 - ~~Vòng nâng tooling~~, ~~bộ khung UI/UX vòng A, vòng B~~ → xong (lên `main` 2026-11-08). ~~So ảnh pixel~~ + §4.12a → xong (lên `main` 2026-11-09).
 - **Tiếp theo (theo MEMORY 2026-11-04 15:34):**

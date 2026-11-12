@@ -846,7 +846,7 @@ Chỉ Admin; chỉ desktop (≥ 1280px). Route riêng, lazy-load (React Flow, co
 - **Dữ liệu cá nhân không lưu trên server**: file Excel chỉ nằm trong bộ nhớ trình duyệt; đóng tab là mất. Không dùng IndexedDB/localStorage/Cache Storage để lưu file; file mẫu của Designer cũng chỉ nằm trong RAM (chốt 2026-10-26 22:52).
 - **Bảng tham chiếu** chỉ chứa dữ liệu **không mang tính cá nhân** (danh mục, mapping mã, biểu thuế, hệ số). Khi import, hệ thống cảnh báo nếu phát hiện cột có tên dạng `họ tên`, `CCCD`, `số điện thoại`, `email`, `mã NV`… (heuristic) và yêu cầu Admin xác nhận.
 - **Run log** không chứa nội dung; tên file gốc được hash (SHA-256) thay vì lưu nguyên văn (tên file có thể chứa tên người).
-- Tham chiếu pháp lý: Nghị định 13/2023/NĐ-CP; Luật Bảo vệ dữ liệu cá nhân 2025 (hiệu lực 01/01/2026). Thiết kế local-first giúp hạn chế tối đa việc xử lý/chuyển dữ liệu cá nhân ra nước ngoài. *(Cần bộ phận Pháp chế/IT của công ty xác nhận.)*
+- Tham chiếu pháp lý: Nghị định 13/2023/NĐ-CP; Luật Bảo vệ dữ liệu cá nhân 2025 (hiệu lực 01/01/2026). Thiết kế local-first giúp hạn chế tối đa việc xử lý/chuyển dữ liệu cá nhân ra nước ngoài. *(Dự án là thử nghiệm cá nhân nên không xin xác nhận của Pháp chế/IT, chốt 2026-11-12 21:09; nếu dùng cho công việc chính thức của tổ chức thì phải mở lại câu hỏi này.)*
 - HTTP security headers (cấu hình qua `apps/web/public/_headers` của Cloudflare Pages): CSP chặt (§9.5), `X-Content-Type-Options`, `Referrer-Policy: no-referrer`, `Permissions-Policy`, HSTS.
 - CSP (nguồn sự thật là `_headers`; tài liệu này và `.claude/rules/data-privacy.md` phải khớp):
 
@@ -963,6 +963,8 @@ Không thuộc Phase 1: `input.refTable`, bảng tham chiếu, template — Phas
 
 ### Phase 2 — Mở rộng xử lý & báo cáo
 
+> Từ 2026-11-12: mốc đang mở, điều kiện mở từng mục và việc không làm nằm ở `docs/PLAN.md`.
+
 Thứ tự (chốt 2026-11-04 15:34): (1) bảng tham chiếu, (2) `output.template`, (3) `code.python`; các mục còn lại chưa xếp.
 
 1. Bảng tham chiếu (`ref_tables`, `ref_table_versions`) có effective date, import từ Excel, node `input.refTable` (chốt 2026-10-26 22:52).
@@ -983,7 +985,7 @@ Thứ tự (chốt 2026-11-04 15:34): (1) bảng tham chiếu, (2) `output.templ
 | # | Câu hỏi | Ảnh hưởng |
 |---|---------|-----------|
 | ~~Q1~~ | ~~Flow nghiệm thu MVP?~~ → Đã chốt 2026-10-26: đối chiếu bảng lương – chấm công | — |
-| Q2 | IT/Pháp chế công ty có yêu cầu gì khi dùng cloud nước ngoài cho metadata không? | Hosting |
+| ~~Q2~~ | ~~IT/Pháp chế công ty có yêu cầu gì khi dùng cloud nước ngoài cho metadata không?~~ → Đã chốt 2026-11-12 21:09: dự án là thử nghiệm cá nhân, bỏ qua | — |
 | Q3 | Số lượng user dự kiến? | Free tier (Supabase Free: 50k MAU — dư) |
 | Q4 | Có cần Admin "giả lập" (impersonate) quyền User để kiểm tra không? | Phân quyền |
 | ~~Q5~~ | Đã chốt 2026-10-26: `sessionStorage` | — |

@@ -5,8 +5,10 @@ Webapp nội bộ xử lý dữ liệu Excel **trực tiếp trên trình duyệ
 ## Nguồn sự thật
 
 1. `docs/MEMORY.md`: các quyết định đã chốt, **thắng mọi giả định**.
-2. `docs/spec.md`: đặc tả chi tiết (kiến trúc, data model, node, design system §25).
-3. Code hiện có.
+2. `docs/PLAN.md`: lộ trình, mốc đang mở, nguyên tắc điều hành, việc không làm. **Đọc trước khi bắt đầu bất kỳ việc gì.**
+3. `docs/spec.md`: đặc tả chi tiết (kiến trúc, data model, node, design system §25).
+4. `docs/HANDOFF.md`: trạng thái, môi trường, việc tồn.
+5. Code hiện có.
 
 Yêu cầu mới mâu thuẫn với MEMORY.md/spec.md → dừng, nêu mâu thuẫn, hỏi Harold.
 
@@ -21,6 +23,7 @@ Yêu cầu mới mâu thuẫn với MEMORY.md/spec.md → dừng, nêu mâu thu�
 | `data-privacy.md` | Nguyên tắc dữ liệu & bảo mật bất di bất dịch | Luôn luôn |
 | `workflow.md` | Team agent và quy trình làm 1 tính năng | Luôn luôn |
 | `git.md` | Commit, secrets, tên công ty | Luôn luôn |
+| `pitfalls.md` | Bài học đã trả giá (lỗi đã gặp và cách tránh) | Luôn luôn |
 | `engine.md` | Engine, node plugin, worker, decimal | Khi làm trong `apps/web/src/engine/**`, `packages/flow-schema/**` |
 | `design.md` | UI, design system, i18n, a11y | Khi làm trong `apps/web/src/**/*.tsx`, `*.css` |
 | `testing.md` | Unit, E2E, dữ liệu giả, test nặng | Khi làm với file test, `e2e/**`, `fixtures/**` |

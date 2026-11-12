@@ -9,6 +9,8 @@
 
 ## Phạm vi & sản phẩm
 
+2026-11-12 21:09 - Dự án là thử nghiệm cá nhân của Harold: bỏ qua các vấn đề liên quan đến IT/Pháp chế (đóng câu hỏi mở Q2 của spec). Nguyên tắc dữ liệu trong `.claude/rules/data-privacy.md` không đổi.
+
 2026-11-09 19:15 - Bảng tham chiếu vòng 1 (chấp nhận khác mẫu): hộp Import có lỗi thì chỉ hiện báo cáo + "chưa thay draft", không lỗi mới hiện xem trước 200 dòng; cảnh báo dữ liệu cá nhân trong hộp Import là checkbox xác nhận + nút (i) (màn Cột giữ khung cảnh báo); hàm RPC của bảng tham chiếu chạy `security invoker` như flow (hàm ghi audit xác nhận là definer, tự kiểm admin). Giữ bảng danh sách kéo ngang như quy tắc bảng Admin (không thu cột Phiên bản).
 
 2026-11-09 14:38 - Harold duyệt mẫu màn Bảng tham chiếu (https://claude.ai/artifact/92KZJ49WJTdFoxWMo26kar, bản 2 đã sửa lỗi bố cục màn Designer); bắt đầu vòng 1.
@@ -256,6 +258,8 @@
 2026-10-26 08:20 - Flow có Draft/Published, lưu lịch sử version, rollback; quản lý hiệu lực theo effective date (effective_from / effective_to), không chồng lấn.
 
 ## Kỹ thuật & tổ chức
+
+2026-11-12 21:09 - Harold giao session chính vai trò project owner: lộ trình, mốc và nguyên tắc điều hành ghi ở `docs/PLAN.md` (đọc sau MEMORY, trước HANDOFF); bài học đã gặp ghi ở `.claude/rules/pitfalls.md` (luôn nạp). Mục nào của PLAN đổi một quyết định đã chốt (đánh dấu D-n) chỉ có hiệu lực sau khi Harold chốt và được ghi vào file này.
 
 2026-11-09 10:20 - Khung cuộn (theo yêu cầu "freeze header, chỉ cuộn phần dưới" để header không hụt 10px ở mép phải): từ breakpoint `md` (768px) trở lên header cố định; Admin: menu trái cũng đứng yên, chỉ cột nội dung cuộn; màn User: vùng dưới header cuộn; thanh cuộn (10px, chừa chỗ) nằm trong vùng cuộn đó, trang (`html`) không cuộn. Dưới 768px (điện thoại, 390px) giữ cuộn cả trang như cũ (header cuộn đi). Ảnh so pixel: lúc chụp test tạm mở rộng vùng cuộn để chụp đủ nội dung. Không dựng mẫu Artifact; gửi Harold ảnh trước/sau từng màn trước khi lên `main`. Làm trong cùng vòng với sửa thanh cuộn (§32, commit `f0d5494` chưa lên `main`): developer → verifier, trước tab "Văn bản giao diện".
 
