@@ -1,9 +1,15 @@
 {
-  "baselineCommit": "d079f6b",
-  "measuredWith": "node scripts/check-bundle-size.mjs --measure (zlib gzip level 9)",
-  "entryGzipBytes": 200370,
-  "maxGrowth": 0.1,
+  "entryLimitGzipBytes": 245760,
+  "entryLimitNote": "240 KiB, absolute limit for the JS loaded at start-up (entry + modulepreload chunks); MEMORY 2026-11-12 21:14. Measured with: node scripts/check-bundle-size.mjs --measure (zlib gzip level 9)",
+  "notInInitialJs": [
+    { "library": "monaco-editor", "marker": "MonacoEnvironment" },
+    { "library": "@xyflow/react", "marker": "react-flow__" },
+    { "library": "@duckdb/duckdb-wasm", "marker": "duckdb_web" },
+    { "library": "xlsx (SheetJS)", "marker": "SheetJS" },
+    { "library": "exceljs", "marker": "ExcelJS" }
+  ],
   "cssBaselineCommit": "a6e36e1",
   "cssGzipBytes": 37704,
+  "cssMaxGrowth": 0.1,
   "cssMeasuredWith": "node scripts/check-bundle-size.mjs --measure (sum of dist/assets/*.css, zlib gzip level 9)"
 }
