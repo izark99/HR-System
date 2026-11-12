@@ -1,0 +1,40 @@
+name: Database tests on Supabase
+
+# Runs supabase/tests/*.sql (RLS, versions, reference tables, UI texts) against the REAL Supabase
+# project, on demand only: tab Actions → "Database tests on Supabase" → Run workflow.
+# Run it after every migration that touches tables, policies, grants or RPCs, before `main`
+# (.claude/rules/pitfalls.md): a local PostgreSQL cannot prove Supabase's own default privileges.
+#
+# Safe on the live database: each test file is one transaction that ends with ROLLBACK and uses
+# fake accounts only; scripts/db-tests.sh refuses a file that is not shaped that way and prints
+# one line per file (error lines on failure, never result rows) because these logs are public.
+#
+# Secret: SUPABASE_DB_URL, the same one as the backup workflow (README, "Sao lưu và khôi phục").
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  db-tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Check that the secret is set
+        env:
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+        run: |
+          test -n "$SUPABASE_DB_URL" || { echo "::error::Secret SUPABASE_DB_URL is missing"; exit 1; }
+
+      # psql comes from the postgres:17 image (same major version as the Supabase project).
+      - name: Run the tests (each one rolls back)
+        env:
+          DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+        run: |
+          docker run --rm --network host -e DB_URL \
+            -v "$GITHUB_WORKSPACE:/repo:ro" \
+            postgres:17 bash /repo/scripts/db-tests.sh

@@ -16,6 +16,8 @@ Mỗi dòng là một lỗi đã xảy ra trong dự án và cách tránh. Gặp
 - Dựng mẫu Artifact, Harold duyệt, rồi mới code. Yêu cầu UI chốt dần qua ảnh chụp đã gây 4 vòng sửa.
 - Session chính tự soi từng ảnh ở 1280, 1024, 390 trước khi gửi. Harold không phải người tìm lỗi bố cục.
 - E2E chỉ chạy sau khi `pnpm --filter @hrflow/web build:e2e` exit 0. Đã từng build lỗi âm thầm và test chạy trên bản cũ.
+- Dừng E2E giữa chừng thì `vite preview` vẫn giữ cổng 4173 và lần chạy sau hỏng ngay từ đầu: tìm và tắt tiến trình đó (`ps -eo pid,args | grep "vite.js preview"`) trước khi chạy lại.
+- Đổi text mặc định kéo theo test E2E bám chữ và ảnh gốc: sửa `locales/` xong phải chạy full E2E, không chỉ unit test (unit test không bắt được).
 - Test hoặc ảnh so pixel chập chờn: không nới ngưỡng, không skip; lặp lại lần 2 thì điều tra nguyên nhân.
 - Không dựa vào thứ tự class Tailwind để ghi đè (`pb-0` đã thua `pb-12`).
 - Không dùng control mặc định của trình duyệt, kể cả `<input type="file">` hiện chữ.
@@ -26,7 +28,7 @@ Mỗi dòng là một lỗi đã xảy ra trong dự án và cách tránh. Gặp
 
 - Qua MCP, SQL chứa `drop` hoặc `delete` treo 60 giây rồi bị hủy. Migration không dùng hai từ đó; phần bắt buộc thì gửi Harold dán vào SQL Editor.
 - Bảng mới: `revoke all … from public, anon, authenticated` trước khi `grant`. Postgres local không có quyền mặc định của Supabase nên test local không bắt được.
-- RLS/RPC mới phải chạy bài test (tự rollback) trên DB thật trước khi lên `main`, rồi chạy security advisor.
+- RLS/RPC mới phải chạy bài test (tự rollback) trên DB thật trước khi lên `main`: workflow "Database tests on Supabase" (`db-tests.yml`, chạy tay; mọi file trong `supabase/tests/` phải là một transaction `begin … rollback`), rồi chạy security advisor.
 - Repo public: không đưa bản dump, secret hay dữ liệu chưa mã hóa vào artifact, log của Actions hoặc commit.
 
 ## Engine và dữ liệu

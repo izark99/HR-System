@@ -125,6 +125,7 @@ Thiếu biến khi build → app hiện màn "Ứng dụng chưa được cấu 
 
 - **Cloudflare Pages** (frontend): build command `pnpm install --frozen-lockfile && pnpm --filter @hrflow/web build`, output `apps/web/dist`, env `NODE_VERSION=22`, `PNPM_VERSION=10.28.0`, `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`. Header bảo mật (CSP…) lấy từ `apps/web/public/_headers`.
 - **Sao lưu**: `.github/workflows/backup.yml`, xem mục "Sao lưu và khôi phục".
+- **Kiểm thử database trên Supabase thật**: tab Actions → "Database tests on Supabase" → Run workflow (`.github/workflows/db-tests.yml`, dùng chung secret `SUPABASE_DB_URL`; mỗi bài test tự rollback). Chạy sau mỗi migration đụng tới bảng, policy, quyền hoặc RPC.
 - **Keep-alive**: `.github/workflows/keep-alive.yml` ping Supabase mỗi ngày lúc 08:07 giờ VN (chỉ chạy trên `main`; GitHub tự tắt lịch nếu repo không hoạt động 60 ngày, khi đó bật lại trong tab Actions).
 
 ## Sao lưu và khôi phục

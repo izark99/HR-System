@@ -24,7 +24,7 @@ Dự án là **thử nghiệm cá nhân** của Harold. Thành công là Harold 
 - Khoảng 60% token subagent đã ghi (4,2M / 6,8M, HANDOFF §6) dùng cho các vòng giao diện.
 - Bảng tham chiếu vòng 1 đã lên `main` nhưng chưa flow nào đọc được bảng (thiếu vòng 2).
 - Repo GitHub đang **public**.
-- Chưa có: sao lưu (spec §16 hứa `pg_dump` hằng tuần), màn Logs, nhân bản flow, tạo input slot từ file mẫu, panel Designer thu gọn/đổi kích thước.
+- Chưa có: màn Logs, nhân bản flow, tạo input slot từ file mẫu, panel Designer thu gọn/đổi kích thước. Sao lưu và kiểm RLS trên DB thật đã có workflow (2026-11-12), chờ secret để chạy lần đầu.
 
 ## 3. Nguyên tắc điều hành
 
@@ -44,11 +44,11 @@ Thứ tự: M0 → M1 → M2 → M3 → M4 → M5. Harold có thể bắt đầu
 
 | # | Việc | Xong khi |
 |---|------|----------|
-| 0.1 | Kiểm RLS trên DB thật: gửi Harold nội dung `supabase/tests/rls.sql`, `versions.sql`, `ref_tables.sql` để dán vào SQL Editor (các bài test tự rollback) | Harold báo `RLS OK`, `VERSIONS OK` và dòng OK của bảng tham chiếu; ghi vào HANDOFF §3. Có lỗi → sửa trước mọi việc khác |
-| 0.2 | Sao lưu hằng tuần bằng GitHub Actions: dump schema `public` qua Supabase CLI (`supabase db dump --db-url`, đọc tài liệu hiện hành bằng `search_docs` trước; dùng chuỗi kết nối **session pooler** vì runner không có IPv6), **mã hóa** bằng `gpg --symmetric` với passphrase trong secret, lưu artifact 90 ngày. Repo public nên không bao giờ tải lên bản chưa mã hóa. Harold thêm 2 secret theo hướng dẫn | 1 lần chạy xanh; 1 lần khôi phục thử vào Postgres local có đủ `flows`, `flow_versions`, `ref_tables`, `ref_table_versions`, `ui_text_overrides`; lệnh khôi phục ghi trong README |
+| 0.1 | Kiểm RLS trên DB thật. Đã có (2026-11-12): workflow chạy tay `.github/workflows/db-tests.yml` + `scripts/db-tests.sh` chạy cả 5 file `supabase/tests/*.sql` trên DB thật (mỗi file tự rollback; đã chạy thử trên Postgres local: 5/5 OK). Còn lại: Harold thêm secret `SUPABASE_DB_URL` (README "Sao lưu và khôi phục"), rồi chạy workflow (Opus gọi được bằng công cụ GitHub, đọc log) | Một lần chạy xanh trên DB thật, 5 dòng `db-tests: OK`; ghi vào HANDOFF §3. Có dòng FAIL → sửa trước mọi việc khác |
+| 0.2 | Sao lưu hằng tuần. Đã có (2026-11-12): `.github/workflows/backup.yml` + `scripts/backup/dump-and-verify.sh`: `pg_dump` dữ liệu schema `public` qua session pooler, **khôi phục thử** vào database tạm dựng từ `supabase/migrations/` và so số dòng từng bảng, mã hóa GPG AES-256, artifact 90 ngày (đã diễn tập trên Postgres local: đạt; database tạm không trống và cột lệch migrations đều bị bắt). Không gồm schema `auth`. Còn lại: Harold thêm 2 secret, chạy tay lần đầu | Một lần chạy xanh trên GitHub (đã gồm khôi phục thử). Lần chạy đỏ vì lệch cột/bảng nghĩa là DB thật khác `supabase/migrations/` → điều tra ngay |
 | 0.3 | ✅ Ngân sách JS (D-1A, xong 2026-11-12): ngưỡng tuyệt đối 240 KiB + kiểm tra thư viện nặng không vào JS tải ban đầu | Đã xong: `bundle-budget.json`, `check-bundle-size.mjs`, spec §18, MEMORY khớp nhau |
 | 0.4 | Bảng thuật ngữ + đưa chữ Harold đã sửa thành mặc định: đọc `ui_text_overrides` (chỉ `key`, `value`), chép vào `locales/vi/*.json`, viết bảng thuật ngữ vào spec §25.4 (đã thấy: flow → "luồng xử lý", Chạy → "Bắt đầu", lần chạy → "hoạt động", Users & Groups → "Tài khoản và nhóm", câu thông báo không có dấu chấm cuối). Không đụng dữ liệu trong bảng override | Text mặc định khớp production; ảnh gốc cập nhật trong cùng commit; mọi text mới về sau theo bảng thuật ngữ |
-| 0.5 | Tài liệu khớp code: bảng trạng thái README; spec §5 đánh dấu thư viện chưa dùng (shadcn/ui, TanStack Query, React Hook Form, ECharts); dòng phiên bản/trạng thái đầu spec | Không còn mô tả sai hiện trạng |
+| 0.5 | ✅ Tài liệu khớp code (xong 2026-11-12): bảng trạng thái README, mục "Sao lưu và khôi phục", spec §5 đánh dấu thư viện không dùng, dòng phiên bản đầu spec | Đã xong |
 | 0.6 | Harold chạy `pnpm perf:local` trên laptop thật | Có số cho AC-B3-24, ghi HANDOFF §4.5 |
 | 0.7 | ✅ Lưu trữ quyết định đã bị thay (D-3A, xong 2026-11-12): 34 dòng chuyển sang `docs/MEMORY-archive.md` | Đã xong: `MEMORY.md` chỉ còn quyết định đang hiệu lực; `decision-log.md` khớp |
 
@@ -132,11 +132,11 @@ Mỗi dòng một vướng mắc thật khi dùng app. Mức: chặn / chậm / 
 ## 8. Việc Harold làm tay
 
 1. ~~Trả lời §9~~ (xong 2026-11-12).
-2. M0.1: dán 3 file test SQL vào SQL Editor, báo dòng kết quả cuối.
-3. M0.2: thêm 2 secret cho workflow sao lưu (Opus gửi hướng dẫn).
-4. M0.6: chạy `pnpm perf:local` trên laptop, gửi số.
-5. M2: chọn và dựng 2 flow thật, báo vướng mắc.
-6. Nên làm: chuyển repo GitHub sang **private** (Settings → General → Danger Zone). Repo đang public và chứa ghi chú vận hành (mã project Supabase, tên tài khoản Admin đầu tiên, các điểm chưa kiểm). Cloudflare Pages và GitHub Actions vẫn chạy với repo private.
+2. M0.1 + M0.2: thêm 2 secret `SUPABASE_DB_URL` và `BACKUP_PASSPHRASE` trên GitHub (hướng dẫn từng bước: README, mục "Sao lưu và khôi phục"), rồi báo lại. Sau đó Opus chạy hai workflow "Database tests on Supabase" và "Supabase backup" và đọc kết quả; Harold không phải dán SQL.
+3. M0.6: chạy `pnpm perf:local` trên laptop, gửi số.
+4. M2: chọn và dựng 2 flow thật, báo vướng mắc.
+5. Nên làm: chuyển repo GitHub sang **private** (Settings → General → Danger Zone). Repo đang public và chứa ghi chú vận hành (mã project Supabase, tên tài khoản Admin đầu tiên, các điểm chưa kiểm). Cloudflare Pages và GitHub Actions vẫn chạy với repo private.
+6. Sau khi chữ mặc định mới (M0.4) lên `main`: vào tab "Cài đặt UI" bấm "Khôi phục tất cả" để 104 dòng đã sửa trở về mặc định (nay mặc định chính là chữ đã sửa), danh sách "đã sửa" sạch lại.
 
 ## 9. Quyết định của Harold về kế hoạch này
 
