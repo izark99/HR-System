@@ -874,7 +874,7 @@ Chỉ Admin; chỉ desktop (≥ 1280px). Route riêng, lazy-load (React Flow, co
 | Trình duyệt | Chrome, Edge (2 phiên bản mới nhất), desktop |
 | Hiệu năng | 100k dòng × 30 cột, flow 15 node: < 10 giây (không có node Python) trên laptop 8GB RAM |
 | UI | Tải trang đầu < 3 giây (chưa tính WASM engine); UI không bị treo khi engine chạy |
-| Kích thước bundle | Entry chunk và chunk của User không chứa React Flow, Monaco, DuckDB; Monaco + React Flow chỉ trong chunk Designer. Ngân sách (chốt 2026-10-27, sửa 2026-11-04 15:16): JS tải ban đầu = entry chunk + các chunk `modulepreload` (gzip) không tăng quá 10% so với cuối bước 2 (đo tại commit `d079f6b`, lưu mốc trong repo); script build tự kiểm tra và báo lỗi khi vượt |
+| Kích thước bundle | Entry chunk và chunk của User không chứa React Flow, Monaco, DuckDB; Monaco + React Flow chỉ trong chunk Designer. Ngân sách (chốt 2026-11-12 21:14, thay mốc +10% so với `d079f6b`): JS tải ban đầu = entry chunk + các chunk `modulepreload` (gzip) không vượt **240 KiB** tuyệt đối; script build (`apps/web/scripts/check-bundle-size.mjs`, cấu hình `bundle-budget.json`) tự kiểm tra kích thước và kiểm tra Monaco, React Flow, DuckDB, SheetJS, ExcelJS không nằm trong JS tải ban đầu (nhận diện bằng chuỗi đánh dấu; chuỗi không còn thấy ở chunk nào cũng báo lỗi). Các AC cũ ghi "215,2 KiB" hoặc "baseline +10%" (AC-B4-46, AC-UI-40, AC-TL-02, AC-TX-07, AC-RT-12) đọc theo ngưỡng mới. Ngân sách CSS gzip (+10%) không đổi |
 | Khả dụng | Phụ thuộc SLA free tier; app vẫn mở được khi Supabase lỗi nhưng không đăng nhập được |
 | Accessibility | WCAG 2.1 AA cho phần User |
 | i18n | `vi` mặc định; mọi text UI qua i18next; định dạng số/ngày theo locale (`1.234.567,89` cho vi) |
@@ -965,11 +965,11 @@ Không thuộc Phase 1: `input.refTable`, bảng tham chiếu, template — Phas
 
 > Từ 2026-11-12: mốc đang mở, điều kiện mở từng mục và việc không làm nằm ở `docs/PLAN.md`.
 
-Thứ tự (chốt 2026-11-04 15:34): (1) bảng tham chiếu, (2) `output.template`, (3) `code.python`; các mục còn lại chưa xếp.
+Thứ tự (chốt 2026-11-12 21:14): (1) bảng tham chiếu, (2) `output.template`; `code.python` chỉ mở khi có một flow thật không viết được bằng `code.sql` + `transform.formula`; các mục còn lại chưa xếp.
 
 1. Bảng tham chiếu (`ref_tables`, `ref_table_versions`) có effective date, import từ Excel, node `input.refTable` (chốt 2026-10-26 22:52).
 2. `output.template` (template Excel, bảng `templates`); `output.chart` chưa xếp thứ tự.
-3. `code.python` (Pyodide). `transform.formula` không có chế độ Python (chốt 2026-10-30 13:18).
+3. `code.python` (Pyodide): có điều kiện, xem dòng "Thứ tự" ở trên. `transform.formula` không có chế độ Python (chốt 2026-10-30 13:18).
 - `control.assert`, `pivot/unpivot`, `window`, `lookup`, `fillDown`, `cast`, `split/merge`, `sample/limit`.
 
 ### Phase 3 — Nâng cao

@@ -4,7 +4,7 @@ Webapp nội bộ xử lý dữ liệu Excel **trực tiếp trên trình duyệ
 
 ## Nguồn sự thật
 
-1. `docs/MEMORY.md`: các quyết định đã chốt, **thắng mọi giả định**.
+1. `docs/MEMORY.md`: các quyết định đang hiệu lực, **thắng mọi giả định** (quyết định đã bị thay nằm ở `docs/MEMORY-archive.md`, chỉ để tra lịch sử).
 2. `docs/PLAN.md`: lộ trình, mốc đang mở, nguyên tắc điều hành, việc không làm. **Đọc trước khi bắt đầu bất kỳ việc gì.**
 3. `docs/spec.md`: đặc tả chi tiết (kiến trúc, data model, node, design system §25).
 4. `docs/HANDOFF.md`: trạng thái, môi trường, việc tồn.

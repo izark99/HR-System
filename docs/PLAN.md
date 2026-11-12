@@ -2,7 +2,7 @@
 
 > Lập: 2026-11-12, bởi session project owner (Harold giao, MEMORY 2026-11-12 21:09). Người thực hiện: session Opus + subagent `developer` / `verifier`.
 > Thứ tự đọc mỗi session: `CLAUDE.md` → `docs/MEMORY.md` → **file này** → `docs/HANDOFF.md`.
-> Thứ tự ưu tiên khi mâu thuẫn: MEMORY > PLAN > spec > HANDOFF. Mục đánh dấu **⏳ D-n** đổi một quyết định đã chốt, chỉ có hiệu lực sau khi Harold trả lời (§9) và được ghi vào MEMORY.
+> Thứ tự ưu tiên khi mâu thuẫn: MEMORY > PLAN > spec > HANDOFF. Harold đã duyệt lộ trình này và chốt D-1, D-2, D-3 ngày 2026-11-12 21:14 (§9). Về sau, mục nào đổi một quyết định đã chốt phải đánh dấu **⏳ D-n** và chỉ có hiệu lực sau khi Harold trả lời và được ghi vào MEMORY.
 > Cập nhật file này khi một mốc đổi trạng thái (cùng commit với HANDOFF). Không chép lại nội dung spec vào đây.
 
 ## 1. Đích đến
@@ -19,7 +19,7 @@ Dự án là **thử nghiệm cá nhân** của Harold. Thành công là Harold 
 
 ## 2. Hiện trạng đã kiểm (2026-11-12)
 
-- Nhánh hiện tại: lint, typecheck, unit test (1.348 pass, 4 expected-fail, 12 skip), build đều pass. JS tải ban đầu 214,7 / 215,2 KiB (còn 0,5 KiB).
+- Nhánh hiện tại: lint, typecheck, unit test (1.348 pass, 4 expected-fail, 12 skip), build đều pass. JS tải ban đầu 214,7 / 240 KiB (còn 25,3 KiB, ngưỡng mới từ 2026-11-12).
 - Production: 2 tài khoản, 0 nhóm, 1 version published, 3 lần chạy, 1 bảng tham chiếu, 104 dòng text Harold đã sửa ở tab "Văn bản giao diện".
 - Khoảng 60% token subagent đã ghi (4,2M / 6,8M, HANDOFF §6) dùng cho các vòng giao diện.
 - Bảng tham chiếu vòng 1 đã lên `main` nhưng chưa flow nào đọc được bảng (thiếu vòng 2).
@@ -46,11 +46,11 @@ Thứ tự: M0 → M1 → M2 → M3 → M4 → M5. Harold có thể bắt đầu
 |---|------|----------|
 | 0.1 | Kiểm RLS trên DB thật: gửi Harold nội dung `supabase/tests/rls.sql`, `versions.sql`, `ref_tables.sql` để dán vào SQL Editor (các bài test tự rollback) | Harold báo `RLS OK`, `VERSIONS OK` và dòng OK của bảng tham chiếu; ghi vào HANDOFF §3. Có lỗi → sửa trước mọi việc khác |
 | 0.2 | Sao lưu hằng tuần bằng GitHub Actions: dump schema `public` qua Supabase CLI (`supabase db dump --db-url`, đọc tài liệu hiện hành bằng `search_docs` trước; dùng chuỗi kết nối **session pooler** vì runner không có IPv6), **mã hóa** bằng `gpg --symmetric` với passphrase trong secret, lưu artifact 90 ngày. Repo public nên không bao giờ tải lên bản chưa mã hóa. Harold thêm 2 secret theo hướng dẫn | 1 lần chạy xanh; 1 lần khôi phục thử vào Postgres local có đủ `flows`, `flow_versions`, `ref_tables`, `ref_table_versions`, `ui_text_overrides`; lệnh khôi phục ghi trong README |
-| 0.3 | Ngân sách JS — **⏳ D-1** | Theo trả lời của Harold; `bundle-budget.json`, spec §18, MEMORY khớp nhau |
+| 0.3 | ✅ Ngân sách JS (D-1A, xong 2026-11-12): ngưỡng tuyệt đối 240 KiB + kiểm tra thư viện nặng không vào JS tải ban đầu | Đã xong: `bundle-budget.json`, `check-bundle-size.mjs`, spec §18, MEMORY khớp nhau |
 | 0.4 | Bảng thuật ngữ + đưa chữ Harold đã sửa thành mặc định: đọc `ui_text_overrides` (chỉ `key`, `value`), chép vào `locales/vi/*.json`, viết bảng thuật ngữ vào spec §25.4 (đã thấy: flow → "luồng xử lý", Chạy → "Bắt đầu", lần chạy → "hoạt động", Users & Groups → "Tài khoản và nhóm", câu thông báo không có dấu chấm cuối). Không đụng dữ liệu trong bảng override | Text mặc định khớp production; ảnh gốc cập nhật trong cùng commit; mọi text mới về sau theo bảng thuật ngữ |
 | 0.5 | Tài liệu khớp code: bảng trạng thái README; spec §5 đánh dấu thư viện chưa dùng (shadcn/ui, TanStack Query, React Hook Form, ECharts); dòng phiên bản/trạng thái đầu spec | Không còn mô tả sai hiện trạng |
 | 0.6 | Harold chạy `pnpm perf:local` trên laptop thật | Có số cho AC-B3-24, ghi HANDOFF §4.5 |
-| 0.7 | Lưu trữ quyết định đã bị thay — **⏳ D-3** | Theo trả lời của Harold |
+| 0.7 | ✅ Lưu trữ quyết định đã bị thay (D-3A, xong 2026-11-12): 34 dòng chuyển sang `docs/MEMORY-archive.md` | Đã xong: `MEMORY.md` chỉ còn quyết định đang hiệu lực; `decision-log.md` khớp |
 
 ### M1 — Bảng tham chiếu vòng 2 (hoàn tất khoản đã đầu tư)
 
@@ -90,7 +90,7 @@ Giữ thứ tự Phase 2 đã chốt (MEMORY 2026-11-04 15:34). Điều kiện m
 
 ### Có điều kiện
 
-- `code.python` (Pyodide) — **⏳ D-2**: chỉ mở khi có một flow thật không viết được bằng `code.sql` + `transform.formula`.
+- `code.python` (Pyodide) — D-2A, chốt 2026-11-12: chỉ mở khi có một flow thật không viết được bằng `code.sql` + `transform.formula`.
 - `output.chart`, các node Phase 2 khác, tiếng Anh: chưa xếp, xem §6.
 
 ## 5. Chuẩn làm việc cho mọi vòng
@@ -131,27 +131,19 @@ Mỗi dòng một vướng mắc thật khi dùng app. Mức: chặn / chậm / 
 
 ## 8. Việc Harold làm tay
 
-1. Trả lời §9.
+1. ~~Trả lời §9~~ (xong 2026-11-12).
 2. M0.1: dán 3 file test SQL vào SQL Editor, báo dòng kết quả cuối.
 3. M0.2: thêm 2 secret cho workflow sao lưu (Opus gửi hướng dẫn).
 4. M0.6: chạy `pnpm perf:local` trên laptop, gửi số.
 5. M2: chọn và dựng 2 flow thật, báo vướng mắc.
 6. Nên làm: chuyển repo GitHub sang **private** (Settings → General → Danger Zone). Repo đang public và chứa ghi chú vận hành (mã project Supabase, tên tài khoản Admin đầu tiên, các điểm chưa kiểm). Cloudflare Pages và GitHub Actions vẫn chạy với repo private.
 
-## 9. Chờ Harold chốt
+## 9. Quyết định của Harold về kế hoạch này
 
-**D-1. Ngân sách JS tải ban đầu còn 0,5 KiB, vòng kế tiếp gần như chắc vượt. Xử lý thế nào?**
+Đã chốt 2026-11-12 21:14 (ghi trong MEMORY):
 
-- **A *(đề xuất)*:** đổi sang ngưỡng tuyệt đối 240 KiB gzip (hiện 214,7), thêm kiểm tra entry không chứa Monaco, React Flow, DuckDB, SheetJS, ExcelJS. Đủ chỗ cho vài vòng; ảnh hưởng tải trang không đáng kể. Con số 240 là ước lượng.
-- **B:** giữ 215,2 KiB, mỗi vòng cắt code khỏi entry. Tốn token và dễ phải dừng giữa vòng.
-- **C:** bỏ ngưỡng kích thước, chỉ giữ kiểm tra thư viện nặng.
+- **D-1A** — ngân sách JS tải ban đầu: ngưỡng tuyệt đối 240 KiB gzip, kèm kiểm tra Monaco, React Flow, DuckDB, SheetJS, ExcelJS không nằm trong JS tải ban đầu.
+- **D-2A** — `code.python` chỉ mở khi có flow thật không viết được bằng SQL + công thức.
+- **D-3A** — quyết định đã bị thay chuyển sang `docs/MEMORY-archive.md`.
 
-**D-2. `code.python` (Pyodide) đang xếp thứ 3 của Phase 2. Có làm theo lịch không?**
-
-- **A *(đề xuất)*:** chỉ làm khi có flow thật không viết được bằng SQL + công thức. pandas mặc định dùng số thực nên khó giữ cam kết decimal chính xác, và Pyodide nặng trên máy 8 GB.
-- **B:** giữ lịch, làm sau `output.template`.
-
-**D-3. `docs/MEMORY.md` được nạp vào mọi session (412 dòng, nhiều dòng đã gạch). Có lưu trữ bớt không?**
-
-- **A *(đề xuất)*:** chuyển các dòng đã gạch sang `docs/MEMORY-archive.md` (không xóa, không nạp tự động), sửa quy tắc `decision-log.md` cho khớp. Giảm token mỗi session.
-- **B:** giữ nguyên một file.
+Đang chờ: chưa có.

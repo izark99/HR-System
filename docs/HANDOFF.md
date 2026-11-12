@@ -69,6 +69,7 @@
 
 ## 5. Bước tiếp theo
 
+> Từ 2026-11-12 21:14: ngân sách JS tải ban đầu là 240 KiB tuyệt đối (hiện 214,7, còn 25,3); các ghi chú "còn ~675 B / ~0,5 KiB" ở §4.12e, §4.16a, §4.17a không còn đúng. Quyết định đã bị thay nằm ở `docs/MEMORY-archive.md`.
 > Từ 2026-11-12: thứ tự việc theo `docs/PLAN.md` §4 (M0 nền vững → M1 bảng tham chiếu vòng 2 → M2 Harold dựng 2 flow thật → M3 Designer thuận tiện → M4 màn Logs → M5 `output.template`). Phần dưới giữ làm lịch sử.
 
 - ~~Vòng nâng tooling~~, ~~bộ khung UI/UX vòng A, vòng B~~ → xong (lên `main` 2026-11-08). ~~So ảnh pixel~~ + §4.12a → xong (lên `main` 2026-11-09).

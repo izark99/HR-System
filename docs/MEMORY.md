@@ -4,10 +4,12 @@
 > - Mỗi quyết định ghi 1 dòng theo định dạng: `YYYY-MM-DD HH:MM - Quyết định` (giờ Việt Nam, UTC+7), **cách nhau 1 dòng trống** để hiển thị tách dòng khi đọc.
 > - Các quyết định ghi lúc `2026-10-26 08:20` thực tế được chốt trong khoảng 07:40–08:20 (lịch sử commit đã được gộp nên không còn giờ chính xác).
 > - Chỉ ghi quyết định **đã chốt** với Harold. Ý tưởng chưa chốt thì ghi vào mục "Câu hỏi mở" trong `docs/spec.md`.
-> - **Không xóa** quyết định cũ. Khi thay đổi: thêm dòng mới, đánh dấu dòng cũ bằng `~~gạch ngang~~` kèm `→ thay bởi YYYY-MM-DD HH:MM`.
+> - **Không xóa** quyết định cũ. Khi thay đổi: thêm dòng mới ở đây, chuyển dòng cũ sang `docs/MEMORY-archive.md` (đúng nhóm, đánh dấu `~~gạch ngang~~` kèm `→ thay bởi YYYY-MM-DD HH:MM`). File này chỉ chứa quyết định **đang hiệu lực** (chốt 2026-11-12 21:14).
 > - **Quyết định mới nhất đặt ở đầu** từng nhóm. Khi đổi quyết định, cập nhật luôn `docs/spec.md` cho khớp.
 
 ## Phạm vi & sản phẩm
+
+2026-11-12 21:14 - Thứ tự Phase 2: (1) bảng tham chiếu có effective date + node `input.refTable`; (2) `output.template` (template Excel); `code.python` (Pyodide) chỉ mở khi có một flow thật không viết được bằng `code.sql` + `transform.formula`. Các node Phase 2 khác chưa xếp thứ tự. Lộ trình chi tiết ở `docs/PLAN.md`.
 
 2026-11-12 21:09 - Dự án là thử nghiệm cá nhân của Harold: bỏ qua các vấn đề liên quan đến IT/Pháp chế (đóng câu hỏi mở Q2 của spec). Nguyên tắc dữ liệu trong `.claude/rules/data-privacy.md` không đổi.
 
@@ -27,23 +29,13 @@
 
 2026-11-09 09:12 - Tab "Văn bản giao diện" (duyệt mẫu https://claude.ai/artifact/XbyVkYNju69SB7pmvbAurb): bảng theo quy tắc bảng Admin hiện tại (mỗi ô 1 dòng, đủ chữ, kéo ngang; cột Màn, Mã, Chữ đang dùng, Trạng thái, Sửa lần cuối, Thao tác cố định phải: bút chì = Sửa, mũi tên vòng = Khôi phục mặc định); thanh lọc: Tìm (không phân biệt dấu), Màn (Select tự làm), "Chỉ dòng đã sửa", đếm dòng; nút "Khôi phục tất cả" ở header (ConfirmDialog). Sửa trong hộp thoại: bản gốc, ô chữ mới, biến bắt buộc đổi màu khi thiếu, đếm ký tự, lỗi tại chỗ chặn Lưu, xem trước với số liệu mẫu. Chữ mới: tab của Admin thấy ngay, người dùng khác thấy ở lần mở trang sau (không realtime).
 
-~~2026-11-09 09:06 - Tab Admin "Văn bản giao diện" (menu trái): Admin sửa text tiếng Việt của mọi màn User + Admin và thông báo kiểm tra file / lỗi chạy mà User thấy (engine; text đã sửa được truyền vào worker); không gồm Designer và bảng tra hàm công thức. Áp dụng chung cho mọi người dùng, kể cả màn Đăng nhập (bảng text đã sửa đọc được không cần đăng nhập vì chỉ chứa chữ giao diện, không dữ liệu cá nhân; chỉ Admin ghi). Chỉ chữ thuần (không HTML/link); chặn lưu khi thiếu/thừa biến `{{…}}`; độ dài ≤ 2 lần bản gốc (tối thiểu 40 ký tự); "Khôi phục mặc định" từng dòng và tất cả; lưu người sửa + thời điểm sửa gần nhất, không lịch sử phiên bản.~~ → thay bởi 2026-11-09 09:14
-
-2026-11-04 15:34 - Thứ tự Phase 2: (1) bảng tham chiếu có effective date (`ref_tables`, `ref_table_versions`) + node `input.refTable`; (2) `output.template` (template Excel); (3) `code.python` (Pyodide). Các node Phase 2 khác chưa xếp thứ tự.
-
 2026-11-04 15:34 - Thứ tự sau vòng nâng tooling: bộ khung UI/UX vòng A → vòng B (gộp HANDOFF §4 mục #3: nối cạnh bằng bàn phím trong Designer) → so ảnh pixel → mục #5 tối ưu hiệu năng (vòng riêng, gồm thời gian đẩy dữ liệu vào DuckDB và đo AC-B4-31 trên Chromium) → Phase 2. HANDOFF §4 mục #1 đã xong ở bước 4 – R1; mục #2, #4 vẫn chấp nhận như cũ.
-
-~~2026-10-30 17:32 - Vòng code đầu của bước 4 gộp thêm HANDOFF §4 mục #1 (giới hạn giải nén .xlsx: 2 GiB/entry; tỉ lệ nén ≤ 1:200 chỉ áp cho entry giải nén > 16 MiB, kèm giới hạn chống cộng dồn nhiều entry nhỏ; vượt → báo "file quá lớn"); mục #2, #4 giữ nguyên (chấp nhận); mục #3 (nối cạnh bằng bàn phím) và #5 (tối ưu hiệu năng, gồm thời gian đẩy dữ liệu vào DuckDB) làm vòng riêng sau `transform.formula`.~~ → thay bởi 2026-11-04 15:34
-
-~~2026-10-30 13:18 - Vòng code đầu của bước 4 gộp thêm HANDOFF §4 mục #1 (giới hạn giải nén .xlsx: ~1 GB/entry, tỉ lệ nén ≤ 1:200, vượt → báo "file quá lớn"); mục #2, #4 giữ nguyên (chấp nhận); mục #3 (nối cạnh bằng bàn phím) và #5 (tối ưu hiệu năng) làm vòng riêng sau `transform.formula`.~~ → thay bởi 2026-10-30 17:32
 
 2026-10-30 13:18 - `transform.formula` bản đầu không có XLOOKUP/VLOOKUP: tra cứu dùng `transform.join` (lấy đủ mọi dòng khớp). TEXT, NETWORKDAYS, TODAY, IFNA để sau.
 
 2026-10-27 07:31 - Bước 3 gồm: Flow Designer (React Flow) với node `input.excel`, `control.compare`, `output.excel`, `output.preview` + DuckDB-WASM và nhóm transform cơ bản `transform.select`, `transform.filter`, `transform.sort`, `transform.join`, `transform.union`, `transform.groupBy`, `transform.dedupe`, `code.sql`; màn Version & hiệu lực (kèm diff); tự đăng xuất sau 8 giờ.
 
 2026-10-27 07:31 - `transform.formula` (hàm Excel → SQL) làm ở bước 4, ngay sau bước 3.
-
-~~2026-10-26 22:52 - Bước 3 gồm: Flow Designer (React Flow) với node `input.excel`, `control.compare`, `output.excel` + DuckDB-WASM và nhóm transform cơ bản `transform.select`, `transform.filter`, `transform.sort`, `transform.join`, `transform.union`, `transform.groupBy`, `transform.dedupe`, `code.sql`; màn Version & hiệu lực (kèm diff); tự đăng xuất sau 8 giờ. `transform.formula` (hàm Excel → SQL) chưa nằm trong bước 3.~~ → thay bởi 2026-10-27 07:31
 
 2026-10-26 22:52 - Bảng tham chiếu (`ref_tables`, `ref_table_versions`), `templates` và node `input.refTable` để sang Phase 2.
 
@@ -117,8 +109,6 @@
 
 2026-10-27 07:31 - DuckDB-WASM tự host trên Cloudflare Pages: lúc build tách file `.wasm` (~34 MB, vượt giới hạn 25 MiB/file) thành các phần < 25 MiB; worker tải, kiểm tra checksum, ghép lại, cấp cho DuckDB qua URL `blob:` cục bộ; cache bằng Cache Storage. CSP thêm `blob:` vào `connect-src` (không thêm domain ngoài).
 
-~~2026-10-26 22:52 - DuckDB-WASM tự host trên Cloudflare Pages: lúc build tách file `.wasm` (~34 MB, vượt giới hạn 25 MiB/file) thành các phần < 25 MiB; worker tải, kiểm tra checksum, ghép lại rồi khởi tạo; cache bằng Cache Storage. Không thêm domain ngoài, CSP giữ nguyên.~~ → thay bởi 2026-10-27 07:31
-
 2026-10-26 20:27 - Giữ Supabase không bị pause bằng GitHub Actions chạy theo lịch mỗi ngày (`.github/workflows/keep-alive.yml`, chỉ dùng publishable key); bỏ Cloudflare Cron Worker.
 
 2026-10-26 20:27 - `main` là nhánh production: Cloudflare Pages deploy từ `main`; code được đưa lên `main` sau khi qua test/review.
@@ -129,15 +119,11 @@
 
 2026-10-26 13:37 - Supabase project `hr-data-flow` (ref `rzakjtgvbyxqsmbpcomw`), organization `izark99`, gói Free, region Singapore (`ap-southeast-1`); do Claude tạo qua kết nối Supabase.
 
-~~2026-10-26 08:20 - Dùng Cloudflare Cron Worker ping Supabase hằng ngày để tránh project bị pause sau 7 ngày.~~ → thay bởi 2026-10-26 20:27
-
 2026-10-26 08:20 - Hosting phải miễn phí: Cloudflare Pages (frontend) + Supabase Free (Auth, Postgres, Storage, Edge Functions). Không dùng Vercel Hobby vì cấm dùng thương mại.
 
 ## Xác thực & phân quyền
 
 2026-10-27 12:30 - Tự đăng xuất (hết 8 giờ) dùng đăng xuất cục bộ (`scope: 'local'`): vẫn gọi server thu hồi refresh token của phiên trong tab này, không ảnh hưởng tab/máy khác; xóa session trong `sessionStorage` và chuyển trang ngay, không chờ server quá 3 giây.
-
-~~2026-10-27 08:49 - Tự đăng xuất (hết 8 giờ) dùng đăng xuất toàn cục: thu hồi refresh token trên server, các phiên khác của cùng tài khoản cũng bị đăng xuất; mất mạng thì vẫn đăng xuất cục bộ.~~ → thay bởi 2026-10-27 12:30
 
 2026-10-26 22:52 - Tự đăng xuất sau 8 giờ không thao tác: thao tác = chuột/phím/cuộn/chạm trong tab; khi flow đang chạy không tính là không thao tác; cảnh báo trước 5 phút với nút "Tiếp tục làm việc" (nêu rõ nếu Designer còn thay đổi chưa lưu); hết giờ đăng xuất và về màn đăng nhập kèm thông báo lý do.
 
@@ -165,10 +151,6 @@
 
 2026-11-06 12:32 - Designer: nối cạnh bằng bàn phím: chọn node → nút "Nối tới…" trên thanh công cụ, phím tắt Ctrl+E, mở danh sách cổng đích có tìm kiếm (Select tự làm), Enter để nối; câu đọc cho trình đọc màn hình (`sr-only`, không hiển thị) là "Đã nối A → B" — ngoại lệ riêng của quy tắc §25.4 cho key `connectMenu.done`; nối bằng chuột giữ nguyên.
 
-~~2026-11-06 08:24 - Designer: nối cạnh bằng bàn phím (vòng B của bộ khung UI/UX): chọn node → nút "Nối tới…" trên thanh công cụ (kèm phím tắt) mở danh sách cổng đích có tìm kiếm (Select tự làm), Enter để nối; thông báo cho trình đọc màn hình "Đã nối A → B"; nối bằng chuột giữ nguyên.~~ → thay bởi 2026-11-06 12:32
-
-~~2026-11-04 15:34 - Designer: nối cạnh bằng bàn phím làm trong vòng B của bộ khung UI/UX (cách thao tác cụ thể chốt trước khi giao vòng B, spec Q27); bước 3 chỉ nối bằng chuột.~~ → thay bởi 2026-11-06 08:24
-
 2026-10-30 17:32 - `transform.formula`: cảnh báo dòng lỗi (`rowErrors`) hiện cả trên node ở canvas (không chỉ panel xem trước); sửa trong vòng sửa R1.
 
 2026-10-30 17:32 - `transform.formula`: chấp nhận 4 khác biệt: `^` với số mũ lấy từ cột dùng quy tắc 15 chữ số có nghĩa (số mũ là hằng nguyên vẫn chính xác); VALUE chỉ nhận dạng `1.5`/`1e3`, không nhận "1,500", "50%"; key cột bắt đầu bằng `_` bị cấm (`formula.error.reservedKey`); `type` `date`/`boolean` chỉ nhận biểu thức đúng kiểu đó (`decimal`/`integer`/`string` nhận mọi kiểu).
@@ -195,11 +177,7 @@
 
 2026-10-30 13:18 - `transform.formula`: người dùng chỉ viết công thức Excel, hệ thống tự transpile sang SQL DuckDB (không transpile sang Python); node không có chế độ viết SQL/Python (SQL dùng `code.sql`, Python dùng `code.python` ở Phase 2).
 
-~~2026-10-30 13:18 - `transform.formula` bản đầu hỗ trợ 37 hàm: IF, IFS, AND, OR, NOT, SWITCH, IFERROR, ISBLANK, ISNUMBER; ROUND, ROUNDUP, ROUNDDOWN, INT, ABS, MIN, MAX, MOD, SUM; LEFT, RIGHT, MID, LEN, TRIM, UPPER, LOWER, PROPER, CONCAT, TEXTJOIN, SUBSTITUTE, FIND, SEARCH, VALUE; DATE, YEAR, MONTH, DAY, EDATE, EOMONTH, DATEDIF, WEEKDAY; PARAM.~~ → thay bởi 2026-10-30 17:24
-
 2026-10-29 21:18 - Designer: luôn cho lưu draft, kể cả khi chưa có node nào hoặc còn lỗi; lỗi chỉ chặn ở bước Publish.
-
-~~2026-10-29 21:18 - Designer: nối cạnh chỉ bằng chuột ở bước 3 (React Flow không hỗ trợ bàn phím); cách nối bằng bàn phím làm ở R4 nếu còn hạn mức.~~ → thay bởi 2026-11-04 15:34
 
 2026-10-27 13:06 - `transform.groupBy`: `min`/`max` trên cột chữ so theo mã ký tự (thứ tự nhị phân của DuckDB), không theo bảng chữ cái tiếng Việt; ghi rõ trong spec.
 
@@ -259,6 +237,12 @@
 
 ## Kỹ thuật & tổ chức
 
+2026-11-12 21:14 - Harold duyệt `docs/PLAN.md` (lộ trình M0 → M5) và cho đưa lên `main`.
+
+2026-11-12 21:14 - Ngân sách bundle: JS tải ban đầu (gzip) = entry chunk + các chunk tải ngay cùng entry (`<link rel="modulepreload">`) không vượt 240 KiB tuyệt đối (thay mốc +10% so với `d079f6b`); build thêm kiểm tra Monaco, React Flow, DuckDB, SheetJS, ExcelJS không nằm trong JS tải ban đầu (nhận diện bằng chuỗi đánh dấu khai báo trong `apps/web/bundle-budget.json`; chuỗi không còn thấy ở chunk nào cũng báo lỗi). Ngân sách CSS gzip (+10%) giữ nguyên.
+
+2026-11-12 21:14 - Lưu trữ MEMORY: quyết định đã bị thay được chuyển sang `docs/MEMORY-archive.md` (giữ nguyên chữ, gạch ngang kèm `→ thay bởi`, không nạp tự động vào session); `docs/MEMORY.md` chỉ còn quyết định đang hiệu lực. Không xóa quyết định nào.
+
 2026-11-12 21:09 - Harold giao session chính vai trò project owner: lộ trình, mốc và nguyên tắc điều hành ghi ở `docs/PLAN.md` (đọc sau MEMORY, trước HANDOFF); bài học đã gặp ghi ở `.claude/rules/pitfalls.md` (luôn nạp). Mục nào của PLAN đổi một quyết định đã chốt (đánh dấu D-n) chỉ có hiệu lực sau khi Harold chốt và được ghi vào file này.
 
 2026-11-09 10:20 - Khung cuộn (theo yêu cầu "freeze header, chỉ cuộn phần dưới" để header không hụt 10px ở mép phải): từ breakpoint `md` (768px) trở lên header cố định; Admin: menu trái cũng đứng yên, chỉ cột nội dung cuộn; màn User: vùng dưới header cuộn; thanh cuộn (10px, chừa chỗ) nằm trong vùng cuộn đó, trang (`html`) không cuộn. Dưới 768px (điện thoại, 390px) giữ cuộn cả trang như cũ (header cuộn đi). Ảnh so pixel: lúc chụp test tạm mở rộng vùng cuộn để chụp đủ nội dung. Không dựng mẫu Artifact; gửi Harold ảnh trước/sau từng màn trước khi lên `main`. Làm trong cùng vòng với sửa thanh cuộn (§32, commit `f0d5494` chưa lên `main`): developer → verifier, trước tab "Văn bản giao diện".
@@ -273,10 +257,6 @@
 
 2026-11-06 18:27 - Bổ sung chống lỗi bố cục (theo yêu cầu "không để lỗi UI tương tự"): mọi nhóm tab (thường và dense) và lưới field không để 1 phần tử nằm lẻ ở hàng cuối; control xếp dọc trong một cột form/toolbar cùng bề rộng; nhãn checkbox cũng 1 dòng (nhãn dài rút gọn, phần chi tiết đưa vào (i)); nút (i) sát chữ nhãn (≤ 8px); chỉ 1 popover (i) mở mỗi lúc, Esc chỉ đóng popover không đóng dialog; tên file dài cắt "…" kèm tooltip; minimap Designer ẩn khi canvas thấp; node mới thêm không đè node có sẵn; lỗi cấu hình node không lộ key nội bộ và không lặp tên node.
 
-~~2026-11-06 14:48 - Thanh cuộn của panel giữ như cũ (chỉ hiện khi cần, không chừa chỗ sẵn). Lỗi ở tab Input slot là 2 thanh cuộn lồng nhau (khung ngoài cuộn thêm vì nội dung panel vượt chiều cao khung): sửa tận gốc để mỗi vùng chỉ có 1 thanh cuộn theo mỗi chiều; `layout-lint` chặn vùng cuộn lồng nhau cùng chiều.~~ → thay bởi 2026-11-09 09:06
-
-~~2026-11-06 14:45 - Mọi vùng cuộn trong app luôn chừa chỗ thanh cuộn (`scrollbar-gutter: stable`) để đổi tab/nội dung dài ngắn không làm lệch bố cục.~~ → thay bởi 2026-11-06 14:48
-
 2026-11-06 14:45 - Gợi ý dưới field và đoạn giải thích trong form/card/panel (mọi màn) không hiện mặc định: hiện bằng nút (i) cạnh nhãn/tiêu đề, mở khi rê chuột, focus hoặc bấm (mobile: bấm); trình đọc màn hình vẫn đọc qua `aria-describedby`. Lỗi validate vẫn hiện tại chỗ. Mô tả dưới tiêu đề trang (`PageHeader`) giữ nguyên.
 
 2026-11-06 14:45 - Nhãn field luôn 1 dòng, không xuống dòng: lưới form tự giảm số cột khi cột không đủ chỗ cho nhãn; ô số không hiện nút tăng/giảm mặc định của trình duyệt.
@@ -290,8 +270,6 @@
 2026-11-06 08:24 - Vòng B bộ khung UI/UX: component dùng chung cũ (`Select`, `Tooltip`, `Menu`, picker, `Skeleton`, `ui.tsx`) sửa khoảng cách về thang 4·8·12·16·24·32·48·64 (lệch ≤ 2px), kiểm bằng ảnh duyệt tay.
 
 2026-11-06 08:24 - Khoảng cách trong Designer (canvas, node, form cạnh canvas, panel dữ liệu) là ngoại lệ dense, ghi vào danh sách cho phép kèm lý do; phần khung Designer (thanh công cụ, dialog, toast) theo thang chuẩn.
-
-2026-11-04 15:16 - Ngân sách bundle: JS tải ban đầu (gzip) = entry chunk + các chunk tải ngay cùng entry (`<link rel="modulepreload">`, vì Vite 8/Rolldown tách phần dùng chung ra khỏi entry) không tăng quá 10% so với cuối bước 2 (commit `d079f6b`, baseline giữ nguyên); build tự kiểm tra và báo lỗi khi vượt.
 
 2026-11-04 15:16 - So ảnh pixel (`toHaveScreenshot`) hoãn tới sau vòng B của bộ khung UI/UX (tránh chụp lại ảnh gốc nhiều lần); code đã làm và kiểm (ngưỡng 0 pixel, đồng hồ trình duyệt cố định, cố định chữ thời gian chạy) lưu ở `docs/patches/2026-11-04-pixel-compare.patch`.
 
@@ -317,29 +295,13 @@
 
 2026-11-04 13:39 - Vitest 5: giữ mặc định mới `clearMocks: true`, sửa các test ghi lời gọi mock ngoài thân test (VD trong `beforeAll`).
 
-~~2026-11-04 13:39 - So ảnh pixel (`toHaveScreenshot`) cho toàn bộ các trạng thái của `e2e/ui-v2.spec.ts`, làm ngay sau vòng nâng tooling: ảnh gốc sinh trên Chromium cài sẵn và commit vào repo; đổi giao diện hoặc đổi Chromium thì cập nhật ảnh gốc trong cùng commit. Vẫn giữ trang ảnh duyệt tay và kiểm giá trị CSS.~~ → thay bởi 2026-11-04 15:16
-
-~~2026-11-04 13:39 - Dependabot: merge bản vá/bản nhỏ khi CI xanh. Vòng nâng tooling nâng trực tiếp trên nhánh làm việc (mỗi gói 1 commit; PR dependabot tự đóng khi `main` có bản mới): vite 8 cùng @vitejs/plugin-react 6 (bỏ luật ignore), vitest 5. `@playwright/test` giữ 1.63.0 vì 1.64 cần Chromium 156 (rev 1248) còn môi trường cài sẵn Chromium 153 (rev 1243); dependabot bỏ qua `@playwright/test` cho tới khi Chromium của môi trường được nâng; đóng PR #9. Bỏ qua major của `@types/node` (runtime Node 22) và `apache-arrow` (theo DuckDB-WASM).~~ → thay bởi 2026-11-04 15:16
-
-~~2026-11-03 16:22 - Duyệt mẫu bảng Admin (https://claude.ai/artifact/AwjFJEPc5YndnE6Z1tf56B): dòng cao 56px; biểu tượng bút chì = Sửa / Mở Designer, con mắt = Xem trong Designer, chồng lớp = Mở trang phiên bản; cột Phiên bản ở màn Flows hiện 2 phiên bản mới nhất kèm ngày "từ dd/MM/yyyy" ngay trong ô (+N cho phần còn lại). Thanh cuộn của mọi vùng cuộn trong app đồng bộ: mảnh 10px, rãnh `#F1F5F9`, tay kéo bo tròn `#475569`, hover `#1F2A44`.~~ → thay bởi 2026-11-04 14:12
-
 2026-11-03 16:06 - Bảng Admin (Users, Nhóm, Flows, Version): mọi dòng cùng chiều cao, mỗi ô 1 dòng nhưng hiện đủ chữ (không cắt "…"); bảng rộng hơn card thì kéo ngang trong card; cột Thao tác cố định ở mép phải (có vạch ngăn trái), các cột còn lại cuộn. Nhiều chip trong 1 ô nằm cùng 1 hàng.
 
 2026-11-03 15:32 - Cột Thao tác của mọi bảng Admin dùng nút biểu tượng cho gọn: 1 nút biểu tượng cho thao tác hay dùng (Users/Nhóm "Sửa" = bút chì; Flows "Mở trang phiên bản" = biểu tượng danh sách phiên bản; Version draft "Mở Designer" = bút chì; Version published/retired "Xem trong Designer" = con mắt) + nút "⋯" mở menu "Thao tác khác" (menu giữ chữ; Publish là mục đầu menu của dòng draft; thao tác nguy hiểm cuối menu, chữ coral, giữ hộp xác nhận). Nút biểu tượng 36px, SVG inline, có `aria-label` nêu tên dòng + tooltip chữ; bàn phím theo APG menu button.
 
-~~2026-11-03 15:18 - Bảng Admin (Users, Nhóm, Flows, Version): mọi dòng cùng chiều cao; mỗi ô 1 dòng, chữ dài cắt "…" và hiện đủ khi rê chuột/focus; nhiều chip trong 1 ô nằm cùng 1 hàng; bảng vừa chiều ngang card ở 1280px (cột Thao tác không che cột khác), cột Thao tác có vạch ngăn bên trái như bảng Flows.~~ → thay bởi 2026-11-03 16:06
-
-~~2026-11-03 14:53 - Màn Admin (Users & Groups, Nhóm, Flows, Version): chip trạng thái, menu trái ("Sắp có"), nhãn nút không xuống dòng vỡ bố cục. Cột Thao tác dùng chung cho mọi bảng Admin: 1 nút chữ (`button-text` của `docs/design-reference.md`: không viền, 14,4px/700, hover nền `#F1F5F9`, vùng bấm cao 36px) cho thao tác hay dùng + nút chữ "Thao tác khác ▾" mở menu (bàn phím theo APG menu button) chứa phần còn lại; thao tác nguy hiểm (Khóa, Retire, Hủy draft…) ở cuối menu, chữ coral, giữ hộp xác nhận. Nút hiện sẵn: Users "Sửa"; Nhóm "Sửa"; Flows "Mở trang phiên bản"; Version draft "Mở Designer" (Publish là mục đầu của menu, giống kiểu bảng Flows: chỉ nút chữ, không có nút teal trong bảng); Version published/retired "Xem trong Designer".~~ → thay bởi 2026-11-03 15:32
-
 2026-11-03 13:28 - Hoạt ảnh loading dạng khung xương (skeleton): khối `#F1F5F9` theo bố cục sắp hiện, vệt sáng lướt chậm (~1,5 giây/lượt), chỉ hiện khi chờ quá ~200ms; `prefers-reduced-motion` → khối tĩnh; trình đọc màn hình vẫn đọc "Đang tải…". Áp cho mọi chỗ đang hiện "Đang tải…" và lúc chuyển trang chờ tải code (VD Designer); thanh % tải bộ xử lý dữ liệu giữ nguyên. Làm gộp trong vòng sửa giao diện bản 2 đang chạy.
 
-~~2026-11-03 13:24 - Màn Admin (Users & Groups, Nhóm, Flows, Version): chip trạng thái, menu trái ("Sắp có"), nhãn nút không xuống dòng vỡ bố cục. Cột Thao tác dùng chung cho mọi bảng Admin: 1 nút chữ (`button-text` của `docs/design-reference.md`: không viền, 14,4px/700, hover nền `#F1F5F9`, vùng bấm cao 36px) cho thao tác hay dùng + nút chữ "Thao tác khác ▾" mở menu (bàn phím theo APG menu button) chứa phần còn lại; thao tác nguy hiểm (Khóa, Retire, Hủy draft…) ở cuối menu, chữ coral, giữ hộp xác nhận. Nút hiện sẵn: Users "Sửa"; Nhóm "Sửa"; Flows "Mở trang phiên bản"; Version draft "Mở Designer" + "Publish" (nút chính teal cỡ nhỏ); Version published/retired "Xem trong Designer".~~ → thay bởi 2026-11-03 14:53
-
 2026-11-03 13:24 - Màn Users & Groups: form tạo tài khoản chuyển vào dialog mở từ nút "+ Tạo tài khoản"; bảng chiếm đủ chiều ngang.
-
-~~2026-11-03 10:51 - Màn Admin (Users & Groups, Nhóm, Flows, Version): chip trạng thái, menu trái ("Sắp có"), nhãn nút không xuống dòng vỡ bố cục. Cột Thao tác dùng chung cho mọi bảng Admin: 1 nút nhỏ viền 36px cho thao tác hay dùng + nút "Thao tác khác ▾" mở menu (bàn phím theo APG menu button) chứa phần còn lại; thao tác nguy hiểm (Khóa, Retire, Hủy draft…) ở cuối menu, chữ coral, giữ hộp xác nhận. Nút hiện sẵn: Users "Sửa"; Nhóm "Sửa"; Flows "Mở trang phiên bản"; Version draft "Mở Designer" + "Publish" (nút chính); Version published/retired "Xem trong Designer".~~ → thay bởi 2026-11-03 13:24
-
-~~2026-11-03 10:49 - Tiêu đề trang giữ cao dòng bằng cỡ chữ (48/48, mobile 32/32); tiêu đề chứa tên do người dùng đặt (tên flow, tên version…) giới hạn 1 dòng, cắt bằng "…", hiện đủ tên khi rê chuột/focus (tránh dấu tiếng Việt chồng dòng).~~ → thay bởi 2026-11-04 14:12
 
 2026-11-03 10:49 - Màn Kết quả: tiêu đề "khớp toàn bộ" chỉ khi lệch = 0 và không có nhân viên chỉ có ở một file; còn lại dùng "Kỳ … có N nhân viên cần xử lý" với N = lệch + chỉ có trong lương + chỉ có trong chấm công (khớp số của card tối; card tối giữ phần chi tiết).
 
@@ -349,13 +311,7 @@
 
 2026-11-03 10:49 - Palette node của Designer: mọi item cùng kích thước; tên và mô tả mỗi thứ 1 dòng, chữ dài cắt bằng "…", mô tả đầy đủ hiện khi rê chuột/focus.
 
-~~2026-11-03 10:49 - Màn Admin (Users & Groups, Version…): chữ trong chip trạng thái, menu trái ("Sắp có"), nhãn nút không bị xuống dòng vỡ bố cục; cột Thao tác dùng chung một kiểu cho mọi bảng Admin (kiểu cụ thể: câu hỏi mở Q25 trong spec).~~ → thay bởi 2026-11-03 10:51
-
-~~2026-11-03 10:13 - UI/UX đồng nhất theo design language "bright executive" bản 2 (phong cách phẳng), cấu trúc lấy đúng số của `docs/design-reference.md`: giữ nguyên bộ màu (nền #F7FAF9, card trắng; teal = tốt/chính, coral = rủi ro/lỗi, amber = cảnh báo, blue = thông tin) và font Be Vietnam Pro; tiêu đề lớn (`display-xl` 56/56, `display-lg` 48/48) weight 500, `title-md` 24px/600, `title-sm` 20px/700, eyebrow 14px/500 giãn chữ 1px không nền, nút 18px/600 lh 27px, nút nhỏ 14,4px/700; card bo 12px, viền 1px #E2E8F0, không shadow (popover/modal/toast giữ shadow nhẹ); input bo 6px; nút 3 cấp bo 12px cao 48px (chính teal #0F766E, tối #1F2A44, outline viền #1F2A44); menu trái mục đang chọn có vạch màu bên trái; body 16px; trang đăng nhập nền phẳng + card có viền. Font tự host thêm lại weight 500, vẫn bỏ 800; ngân sách CSS gzip +10% giữ nguyên. Chi tiết token ở docs/spec.md §25.~~ → thay bởi 2026-11-04 14:12
-
 2026-11-03 10:13 - Chấp nhận các chỉnh sửa a11y của vòng giao diện: lưới chọn tháng hiện "Tháng 1"…"Tháng 12" (tên đọc phải chứa chữ hiển thị, WCAG 2.5.3); nút "Reset MK" đổi thành "Reset mật khẩu"; tiêu đề trên thanh của Designer giữ 20px để không mất diện tích canvas.
-
-~~2026-11-03 10:06 - Design language tham chiếu là file `docs/design-reference.md` (Harold gửi): chỉ lấy phần cấu trúc (bo góc, nút, thang chữ, eyebrow, khoảng cách); giữ bộ màu teal/coral/amber/blue và font Be Vietnam Pro theo §25; chữ thường (body) giữ 16px (file dùng 18px).~~ → thay bởi 2026-11-04 14:12
 
 2026-11-03 09:07 - Vòng giao diện bản 2: kiểm bằng ảnh chụp E2E (~20 trạng thái, dữ liệu giả) gom vào một trang xem ảnh để Harold duyệt tay, kèm kiểm tự động giá trị CSS thật (bo góc, cỡ chữ, tương phản); không so pixel (`toHaveScreenshot`) ở vòng này, cân nhắc lại sau vòng nâng tooling.
 
@@ -365,13 +321,7 @@
 
 2026-11-03 09:07 - Tiêu đề trang dạng câu kết luận chỉ áp dụng màn Kết quả (có số động, VD "Kỳ 09/2026 có 9 nhân viên lệch công"); màn Kết quả thêm KPI card (vạch trên 4px, số `display-xl`) và 1 card tối cho kết luận chính. Các màn khác giữ tiêu đề hiện tại.
 
-~~2026-11-03 09:07 - Bỏ font weight 800 (và 500 nếu không còn dùng); script ngân sách bundle thêm kiểm CSS gzip không tăng quá 10% so với `main` trước vòng giao diện.~~ → thay bởi 2026-11-03 10:13
-
-~~2026-11-03 09:01 - Dependabot: merge bản vá/bản nhỏ khi CI xanh; bản major của tooling (vite 8 cùng @vitejs/plugin-react 6, vitest 5, @playwright/test mới — cần khớp Chromium cài sẵn) gom vào một vòng "nâng tooling" riêng ngay sau vòng đổi giao diện, chạy đủ E2E; các PR #9, #11, #13 để mở tới lúc đó. Bỏ qua major của `@types/node` (runtime Node 22) và `apache-arrow` (theo DuckDB-WASM).~~ → thay bởi 2026-11-04 13:39
-
 2026-10-30 23:29 - Giải nén entry .xlsx: đường đồng bộ dùng `fflate` (MIT, giải nén theo luồng, dừng sớm được) thay bộ giải mã DEFLATE tự viết; đường bất đồng bộ (worker) giữ bộ giải nén có sẵn của trình duyệt (`DecompressionStream`) kèm đếm byte và dừng sớm.
-
-~~2026-10-30 22:59 - Giải nén entry .xlsx (đường đồng bộ và bất đồng bộ có giới hạn) dùng thư viện `fflate` (MIT, giải nén theo luồng, dừng sớm được), không dùng bộ giải mã DEFLATE tự viết.~~ → thay bởi 2026-10-30 23:29
 
 2026-10-30 13:29 - Ngoại lệ thang chữ lớn: canvas Designer, ô Monaco/công thức và bảng xem trước dữ liệu giữ chữ 14px; phần còn lại theo §25.1.
 
@@ -379,19 +329,13 @@
 
 2026-10-30 13:26 - Đổi giao diện theo design language bản 2 làm vòng code riêng, ngay sau vòng R1 của `transform.formula`.
 
-~~2026-10-30 13:26 - UI/UX đồng nhất theo design language "bright executive" bản 2 (phong cách phẳng): giữ nguyên bộ màu (nền #F7FAF9, card trắng; teal = tốt/chính, coral = rủi ro/lỗi, amber = cảnh báo, blue = thông tin) và font Be Vietnam Pro (tiêu đề weight 600); card bo 12px, viền 1px #E2E8F0, không shadow (popover/modal/toast giữ shadow nhẹ); input bo 6px; nút 3 cấp bo 12px cao 48px (chính teal #0F766E, tối #1F2A44, outline viền #1F2A44); eyebrow chữ in hoa giãn chữ, không nền; menu trái mục đang chọn có vạch màu bên trái; thang chữ lớn (body 16–18px, tiêu đề trang 48px); trang đăng nhập nền phẳng + card có viền. Chi tiết token ở docs/spec.md §25.~~ → thay bởi 2026-11-03 10:13
-
 2026-10-30 12:51 - Đội agent theo mô hình generator–verifier: bỏ `requirements-analyst` (thay bằng skill `clarify` chạy trong session chính); gộp `tester` + `reviewer` thành `verifier` (test + review, chỉ viết file test); giữ `developer` cho vòng code lớn, sửa nhỏ session chính tự làm; giao việc kèm gói bối cảnh ngắn; mỗi lúc chỉ 1 subagent. Ghi trong `.claude/rules/workflow.md`.
-
-~~2026-10-29 21:18 - Tester và reviewer chạy nối tiếp nhau (không song song) để tiết kiệm hạn mức; ghi trong `.claude/rules/workflow.md`.~~ → thay bởi 2026-10-30 12:51
 
 2026-10-28 07:46 - Do hạn mức gói có hạn: từ sau các vòng đang chạy (R3, R1b), mỗi thời điểm chỉ 1 developer chạy, các vòng code làm tuần tự; ghi trong `.claude/rules/workflow.md`.
 
 2026-10-27 17:50 - Engine chuyển bảng sang dạng cột (columnar, dựa trên Arrow) trong vòng riêng R1b, chạy song song với R3; bước 3 chỉ xong khi 1 triệu dòng × 30 cột chạy được không crash trên Chromium.
 
 2026-10-27 17:50 - Không dùng `<select>` (dropdown) mặc định của trình duyệt ở mọi màn; dùng Select tự làm theo design system (tương tự DatePicker), hỗ trợ nhóm, tìm kiếm, bàn phím.
-
-~~2026-10-27 07:36 - Ngân sách bundle: entry chunk (gzip) không tăng quá 10% so với cuối bước 2 (commit `d079f6b`); build tự kiểm tra và báo lỗi khi vượt.~~ → thay bởi 2026-11-04 15:16
 
 2026-10-27 07:31 - Editor code trong Designer dùng Monaco (theo spec §5), chỉ tải trong chunk Designer, worker và font self-host.
 
@@ -403,11 +347,7 @@
 
 2026-10-26 09:24 - Nút chính dùng teal đậm #0F766E (đạt tương phản WCAG AA với chữ trắng); #14B8A6 chỉ dùng cho mảng màu/trang trí.
 
-~~2026-10-26 09:24 - UI/UX đồng nhất theo design language "bright executive": font Be Vietnam Pro, nền sáng #F7FAF9, card trắng bo 20px + shadow nhẹ, eyebrow pill trên tiêu đề, màu theo ý nghĩa (teal = tốt/chính, coral = rủi ro/lỗi, amber = cảnh báo, blue = thông tin). Chi tiết token ở docs/spec.md §25.~~ → thay bởi 2026-10-30 13:26
-
 2026-10-26 08:44 - Tài liệu dự án đặt trong `docs/` (spec.md, MEMORY.md); CLAUDE.md và README.md giữ ở root.
-
-~~2026-10-26 08:20 - Team agent gồm: requirements-analyst (viết yêu cầu), developer (code), tester (test), reviewer (review code & bảo mật, read-only).~~ → thay bởi 2026-10-30 12:51
 
 2026-10-26 08:20 - Dùng CLAUDE.md (hướng dẫn dự án) + MEMORY.md (nhật ký quyết định) + team agent trong `.claude/agents/`.
 
