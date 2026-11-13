@@ -66,7 +66,7 @@ test('AC-07: duplicate Mã NV across two files names both file + row and blocks 
   // MEMORY 13:08: the duplicate marks BOTH files, while the report counts it once.
   await expect(payrollList(page).getByTestId('file-status')).toHaveText(['1 lỗi', '1 lỗi']);
   await expect(reportCard(page).getByText('1 lỗi', { exact: true })).toBeVisible();
-  await expect(runButton(page)).toHaveText('Chạy (sửa 1 lỗi trước)');
+  await expect(runButton(page)).toHaveText('Bắt đầu (sửa 1 lỗi trước)');
   await expect(runButton(page)).toBeDisabled();
 });
 
@@ -201,7 +201,7 @@ test('header-only file is a warning: still runnable, run succeeds', async ({ pag
   await expect(row.getByRole('cell').first()).toHaveText('Cảnh báo');
   await expect(row).toContainText('không có dòng dữ liệu nào');
   await expect(reportCard(page).getByText('Lưu ý:')).toBeVisible();
-  await expect(runButton(page)).toHaveText('Chạy');
+  await expect(runButton(page)).toHaveText('Bắt đầu');
   await expect(runButton(page)).toBeEnabled();
   await runButton(page).click();
   await expect(page).toHaveURL(new RegExp(`${RESULT_URL}$`));
@@ -249,7 +249,7 @@ test('removing all files of a slot returns to "need files"', async ({ page }) =>
   await uploadPayroll(page, [payroll('a.xlsx', employees(2))]);
   await page.getByRole('button', { name: 'Bỏ file a.xlsx' }).click();
   await expect(payrollList(page)).toHaveCount(0);
-  await expect(runButton(page)).toHaveText('Chạy (cần upload đủ file)');
+  await expect(runButton(page)).toHaveText('Bắt đầu (cần upload đủ file)');
 });
 
 test('re-adding a file with the same name replaces it (no duplicate entry, new content)', async ({

@@ -409,7 +409,7 @@ test.describe('unsaved changes and the idle sign-out (AC-B3-85)', () => {
     await settleChecks(page);
     await page.clock.fastForward('07:55:00');
     await expect(warning(page)).toContainText(
-      'Flow đang thiết kế còn thay đổi chưa lưu. Nếu bị đăng xuất, các thay đổi này sẽ mất.',
+      'Luồng đang thiết kế còn thay đổi chưa lưu. Nếu bị đăng xuất, các thay đổi này sẽ mất',
     );
     // Saving while the warning is open (Ctrl+S is allowed) removes the line.
     await warning(page).getByRole('button', { name: 'Tiếp tục làm việc' }).click();
@@ -512,7 +512,7 @@ test.describe('unsaved changes and the idle sign-out (AC-B3-85)', () => {
     await expect(page).toHaveURL(/versions$/);
     // Dirty state is released: another in-app navigation does not ask.
     await page
-      .getByRole('link', { name: /Danh sách flow|Flow/ })
+      .getByRole('link', { name: /Luồng xử lý|danh sách flow/ })
       .first()
       .click();
     await expect(page.getByRole('dialog')).toHaveCount(0);

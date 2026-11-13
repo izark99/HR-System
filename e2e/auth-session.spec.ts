@@ -80,11 +80,11 @@ test.describe('session expires mid-use', () => {
     }
     await page.goto('/login?reason=locked');
     await expect(page.getByRole('status')).toContainText(
-      'Tài khoản bị khóa hoặc chưa được cấp quyền. Vui lòng liên hệ Admin.',
+      'Tài khoản bị khóa hoặc chưa được cấp quyền. Vui lòng liên hệ Admin',
     );
     await page.goto('/login?reason=profileMissing');
     await expect(page.getByRole('status')).toContainText(
-      'Tài khoản bị khóa hoặc chưa được cấp quyền. Vui lòng liên hệ Admin.',
+      'Tài khoản bị khóa hoặc chưa được cấp quyền. Vui lòng liên hệ Admin',
     );
   });
 });
@@ -154,7 +154,9 @@ test.describe('login problems', () => {
     supabase.users.find((u) => u.id === USER.id)!.is_active = false;
     await page.goto('/login');
     await login(page, USER.username, USER.password);
-    await expect(page.getByRole('alert')).toContainText('tài khoản đã bị khóa. Liên hệ Admin.');
+    await expect(page.getByRole('alert')).toContainText(
+      'tài khoản đã bị khóa. Vui lòng liên hệ Admin',
+    );
     await expect(page).toHaveURL(/\/login$/);
     await expect(page.getByLabel('Mật khẩu')).toHaveValue('');
     expect(await page.evaluate(() => sessionStorage.length + localStorage.length)).toBe(0);
@@ -172,7 +174,7 @@ test.describe('login problems', () => {
     await page.goto('/login');
     await login(page, USER.username, USER.password);
     await expect(page.getByRole('alert')).toContainText(
-      'tài khoản bị khóa hoặc chưa được cấp quyền. Vui lòng liên hệ Admin.',
+      'tài khoản bị khóa hoặc chưa được cấp quyền. Vui lòng liên hệ Admin',
     );
     await expect(page.getByRole('alert')).not.toContainText('không xác định');
     await expect(page).toHaveURL(/\/login$/);
@@ -234,7 +236,7 @@ test.describe('open redirect through ?redirect=', () => {
         await page.goto(`/login?redirect=${encodeURIComponent(target)}`);
         await login(page, USER.username, USER.password);
         await expect(page.getByRole('heading', { level: 1 })).toHaveText(
-          'Chọn quy trình cần chạy hôm nay',
+          'Chọn luồng cần xử lý hôm nay',
         );
         const url = new URL(page.url());
         expect(url.origin).toBe(new URL(baseURL!).origin);
@@ -281,7 +283,7 @@ test.describe('open redirect through ?redirect=', () => {
         );
         await page.goto(`/login?redirect=${encodeURIComponent(target)}`);
         await expect(page.getByRole('heading', { level: 1 })).toHaveText(
-          'Chọn quy trình cần chạy hôm nay',
+          'Chọn luồng cần xử lý hôm nay',
         );
         expect(new URL(page.url()).origin).toBe(new URL(baseURL!).origin);
       });
@@ -307,7 +309,7 @@ test.describe('fixed bugs (were KNOWN BUGS)', () => {
       await page.goto(`/login?redirect=${encodeURIComponent(`/${ctrl}/evil.example`)}`);
       await login(page, USER.username, USER.password);
       await expect(page.getByRole('heading', { level: 1 })).toHaveText(
-        'Chọn quy trình cần chạy hôm nay',
+        'Chọn luồng cần xử lý hôm nay',
         { timeout: 3_000 },
       );
       expect(new URL(page.url()).origin).toBe(new URL(baseURL!).origin);

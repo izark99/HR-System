@@ -132,7 +132,7 @@ test('failure: one log with the error code only (no column name, no message)', a
 
   await uploadFixtures(page);
   await runButton(page).click();
-  await expect(page.getByRole('alert').filter({ hasText: 'Chạy không thành công:' })).toBeVisible();
+  await expect(page.getByRole('alert').filter({ hasText: 'Không thành công:' })).toBeVisible();
   await expect.poll(() => supabase.runLogs.length).toBe(1);
   await page.waitForTimeout(1500);
   expect(logsPosted(supabase)).toHaveLength(1);
@@ -146,7 +146,7 @@ test('failure: one log with the error code only (no column name, no message)', a
     error_node_id: 'cmp',
   });
   // The User still sees the human-readable message (it never left the browser).
-  await expect(page.getByRole('alert').filter({ hasText: 'Chạy không thành công:' })).toContainText(
+  await expect(page.getByRole('alert').filter({ hasText: 'Không thành công:' })).toContainText(
     'cot_rieng_tu_khong_co',
   );
 });
@@ -161,11 +161,11 @@ test.describe('cancel', () => {
     await timesheetInput(page).setInputFiles([
       timesheet(names[1]!, employees(ROWS, 1, 'CN01', 24)),
     ]);
-    await expect(runButton(page)).toHaveText('Chạy', { timeout: 30_000 });
+    await expect(runButton(page)).toHaveText('Bắt đầu', { timeout: 30_000 });
 
     await runButton(page).click();
     await page.getByRole('button', { name: 'Hủy', exact: true }).click({ timeout: 5_000 });
-    await expect(page.getByText('Đã hủy lần chạy:')).toBeVisible({ timeout: 30_000 });
+    await expect(page.getByText('Đã hủy:')).toBeVisible({ timeout: 30_000 });
     await expect(page.getByText('đang nạp lại file sau khi hủy…')).toHaveCount(0, {
       timeout: 30_000,
     });
@@ -180,7 +180,7 @@ test.describe('cancel', () => {
     expect(slots[0]!.files[0]!.sha256).toBe(sha256(names[0]!));
     expect(slots[1]!.files[0]!.sha256).toBe(sha256(names[1]!));
 
-    await expect(runButton(page)).toHaveText('Chạy', { timeout: 30_000 });
+    await expect(runButton(page)).toHaveText('Bắt đầu', { timeout: 30_000 });
     await runButton(page).click();
     await expect(page).toHaveURL(new RegExp(`${RESULT_URL}$`), { timeout: 60_000 });
     await expect.poll(() => supabase.runLogs.length).toBe(2);

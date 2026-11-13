@@ -40,14 +40,12 @@ test('acceptance flow: upload 6 fixtures, run, see 63/9/3/3, download the workbo
   page.on('pageerror', (e) => errors.push(e.message));
 
   await page.goto('/');
-  await expect(page.getByRole('heading', { level: 1 })).toHaveText(
-    'Chọn quy trình cần chạy hôm nay',
-  );
-  await expect(page.getByText('Chưa có lần chạy')).toBeVisible();
-  await page.getByRole('link', { name: /^Chạy flow Đối chiếu bảng lương/ }).click();
+  await expect(page.getByRole('heading', { level: 1 })).toHaveText('Chọn luồng cần xử lý hôm nay');
+  await expect(page.getByText('Chưa có hoạt động nào')).toBeVisible();
+  await page.getByRole('link', { name: /^Bắt đầu luồng xử lý: Đối chiếu bảng lương/ }).click();
 
   await expect(page).toHaveURL(/\/run\/payroll-timesheet$/);
-  const runButton = page.getByRole('button', { name: /^Chạy/ }).last();
+  const runButton = page.getByRole('button', { name: /^Bắt đầu/ }).last();
   await expect(runButton).toBeDisabled();
 
   await pickMonth(page, '2026-09');
@@ -64,7 +62,7 @@ test('acceptance flow: upload 6 fixtures, run, see 63/9/3/3, download the workbo
   await expect(page.getByText('Hợp lệ:')).toBeVisible();
   await expect(page.getByText('3 dòng đã bỏ qua')).toBeVisible();
 
-  await expect(runButton).toHaveText('Chạy');
+  await expect(runButton).toHaveText('Bắt đầu');
   await expect(runButton).toBeEnabled();
   await runButton.click();
 

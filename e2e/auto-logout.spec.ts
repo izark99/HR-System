@@ -5,7 +5,7 @@
 import { ADMIN, expect, test, type Page } from './fixtures';
 import { recordRequests } from './helpers';
 
-const HOME_TITLE = 'Chọn quy trình cần chạy hôm nay';
+const HOME_TITLE = 'Chọn luồng cần xử lý hôm nay';
 const warning = (page: Page) => page.getByRole('alertdialog', { name: 'Bạn sắp bị đăng xuất' });
 const continueButton = (page: Page) =>
   warning(page).getByRole('button', { name: 'Tiếp tục làm việc' });
@@ -61,7 +61,7 @@ test.describe('auto sign-out', () => {
     await page.clock.fastForward('05:00');
     await expect(page).toHaveURL(/\/login\?reason=idle$/);
     await expect(page.getByRole('status')).toContainText(
-      'Bạn đã được đăng xuất do không thao tác trong 8 giờ. Vui lòng đăng nhập lại.',
+      'Bạn đã được đăng xuất do không thao tác trong 8 giờ. Vui lòng đăng nhập lại',
     );
     await expect(page.getByLabel('Tên đăng nhập')).toBeVisible();
     expect(await page.evaluate(() => Object.keys(sessionStorage))).toEqual([]);

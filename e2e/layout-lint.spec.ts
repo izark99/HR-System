@@ -127,8 +127,11 @@ for (const viewport of [DESKTOP, LAPTOP, MOBILE]) {
       await ready(page);
       await expect(page.getByText('2 đầu vào · Phiên bản v3')).toBeVisible();
       await r.check('flow list');
-      // (i) of "Lần chạy gần đây": opened by a tap / click, inside the viewport.
-      await openInfoTip(page, page.getByRole('button', { name: 'Giải thích: Lần chạy gần đây' }));
+      // (i) of "Lịch sử hoạt động gần đây": opened by a tap / click, inside the viewport.
+      await openInfoTip(
+        page,
+        page.getByRole('button', { name: 'Giải thích: Lịch sử hoạt động gần đây' }),
+      );
       await r.check('flow list (i) open');
       r.assertClean(`flow-list-${size(viewport)}`);
     });

@@ -57,7 +57,7 @@ test.describe('period decides the version', () => {
     await expect(callout(page)).toContainText(
       'v1, hiệu lực từ 01/01/2026 đến 30/06/2026, theo kỳ đã chọn',
     );
-    await expect(runButton(page)).toHaveText('Chạy');
+    await expect(runButton(page)).toHaveText('Bắt đầu');
     await expect(page.getByText('0 lỗi')).toBeVisible();
     await runToResult(page);
     expect(await mismatchedTab(page)).toBe('Lệch (9)'); // v1 tolerance (0.5)
@@ -78,7 +78,7 @@ test.describe('period decides the version', () => {
     await upload(page);
     await pickMonth(page, '2026-10');
     await expect(callout(page)).toContainText('v2, hiệu lực từ 01/09/2026, theo kỳ đã chọn');
-    await expect(runButton(page)).toHaveText('Chạy');
+    await expect(runButton(page)).toHaveText('Bắt đầu');
     await runToResult(page);
     expect(await mismatchedTab(page)).toBe('Lệch (6)'); // v2 tolerance (100)
     await expect.poll(() => supabase.runLogs.length).toBe(1);
@@ -95,13 +95,13 @@ test.describe('period decides the version', () => {
     supabase.resolveDelayMs = (asOf) => (asOf === '2026-03-01' ? 1500 : 0);
     await openFlow(page, '2026-09');
     await upload(page);
-    await expect(runButton(page)).toHaveText('Chạy');
+    await expect(runButton(page)).toHaveText('Bắt đầu');
     await pickMonth(page, '2026-03'); // v1 answer is slow ...
     await pickMonth(page, '2026-10'); // ... and a newer pick (v2) is made meanwhile
     await page.waitForTimeout(2500); // the stale v1 answer has arrived by now
     await expect(callout(page)).toContainText('v2, hiệu lực từ 01/09/2026');
     await expect(periodButton(page)).toContainText('Tháng 10/2026');
-    await expect(runButton(page)).toHaveText('Chạy');
+    await expect(runButton(page)).toHaveText('Bắt đầu');
     await runToResult(page);
     expect(await mismatchedTab(page)).toBe('Lệch (6)');
     await expect.poll(() => supabase.runLogs.length).toBe(1);
@@ -115,7 +115,9 @@ test.describe('period decides the version', () => {
     await openFlow(page, '2026-06'); // as-of 2026-06-01 → v1
     await expect(callout(page)).toContainText('v1');
     await pickMonth(page, '2026-07'); // as-of 2026-07-01 = v1.effective_to (exclusive) → none
-    await expect(noVersion(page)).toContainText('flow chưa có phiên bản hiệu lực cho kỳ 07/2026');
+    await expect(noVersion(page)).toContainText(
+      'luồng xử lý chưa có phiên bản hiệu lực cho kỳ 07/2026',
+    );
     await pickMonth(page, '2026-08');
     await expect(noVersion(page)).toContainText('cho kỳ 08/2026');
     await pickMonth(page, '2026-09'); // as-of 2026-09-01 = v2.effective_from (inclusive) → v2
@@ -133,12 +135,12 @@ test.describe('period decides the version', () => {
   }) => {
     await openFlow(page, '2026-09');
     await upload(page);
-    await expect(runButton(page)).toHaveText('Chạy');
+    await expect(runButton(page)).toHaveText('Bắt đầu');
     await pickMonth(page, '2025-12'); // before v1
     const alert = noVersion(page);
-    await expect(alert).toContainText('flow chưa có phiên bản hiệu lực cho kỳ 12/2025');
+    await expect(alert).toContainText('luồng xử lý chưa có phiên bản hiệu lực cho kỳ 12/2025');
     await expect(alert).toHaveClass(/coral/);
-    await expect(runButton(page)).toHaveText('Chạy (chưa có phiên bản cho kỳ này)');
+    await expect(runButton(page)).toHaveText('Bắt đầu (chưa có phiên bản cho kỳ này)');
     await expect(runButton(page)).toBeDisabled();
     await runButton(page).click({ force: true });
     await runButton(page).focus();
@@ -150,7 +152,7 @@ test.describe('period decides the version', () => {
     // Back to a covered period: the same files are re-validated and Run is available again.
     await pickMonth(page, '2026-10');
     await expect(noVersion(page)).toHaveCount(0);
-    await expect(runButton(page)).toHaveText('Chạy');
+    await expect(runButton(page)).toHaveText('Bắt đầu');
     await expect(runButton(page)).toBeEnabled();
   });
 
@@ -160,18 +162,18 @@ test.describe('period decides the version', () => {
   }) => {
     await openFlow(page, '2026-09');
     await upload(page);
-    await expect(runButton(page)).toHaveText('Chạy');
+    await expect(runButton(page)).toHaveText('Bắt đầu');
     supabase.resolveFailure = { status: 500, code: 'XX000', sticky: true };
     await pickMonth(page, '2026-03');
     await expect(
       page.getByRole('alert').filter({ hasText: 'Chưa xác định được phiên bản:' }),
     ).toBeVisible();
-    await expect(runButton(page)).toHaveText('Chạy (chưa xác định được phiên bản)');
+    await expect(runButton(page)).toHaveText('Bắt đầu (chưa xác định được phiên bản)');
     await expect(runButton(page)).toBeDisabled();
     supabase.resolveFailure = null;
     await page.getByRole('button', { name: 'Thử lại' }).click();
     await expect(callout(page)).toContainText('v1');
-    await expect(runButton(page)).toHaveText('Chạy');
+    await expect(runButton(page)).toHaveText('Bắt đầu');
   });
 
   test('without a chosen period the callout says it follows today and asks to pick a period', async ({
@@ -191,12 +193,12 @@ test.describe('fixed bugs (were KNOWN BUGS)', () => {
   test('v1 → gap → v2: the run uses the v2 definition it reports', async ({ page, supabase }) => {
     await openFlow(page, '2026-03'); // worker holds v1
     await upload(page);
-    await expect(runButton(page)).toHaveText('Chạy');
+    await expect(runButton(page)).toHaveText('Bắt đầu');
     await pickMonth(page, '2026-08'); // gap: server answers with v2, applies = false
     await expect(noVersion(page)).toBeVisible();
     await pickMonth(page, '2026-10'); // v2 applies
     await expect(callout(page)).toContainText('v2, hiệu lực từ 01/09/2026');
-    await expect(runButton(page)).toHaveText('Chạy');
+    await expect(runButton(page)).toHaveText('Bắt đầu');
     await runToResult(page);
     await expect.poll(() => supabase.runLogs.length).toBe(1);
     expect(supabase.runLogs[0]).toMatchObject({ flow_version_id: V2 });

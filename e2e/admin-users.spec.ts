@@ -410,7 +410,7 @@ test.describe('own account (MEMORY 2026-10-26 18:09: no self-action guard, expli
     await dialog.getByRole('button', { name: 'Vẫn hạ quyền chính mình' }).click();
     await expect(page).not.toHaveURL(/\/admin/);
     await expect(page.getByRole('heading', { level: 1 })).toHaveText(
-      'Chọn quy trình cần chạy hôm nay',
+      'Chọn luồng cần xử lý hôm nay',
     );
     await page.waitForLoadState('networkidle');
     expect(supabase.functionCalls).toEqual([
@@ -659,14 +659,13 @@ test.describe('assign flows', () => {
       const p = await ctx.newPage();
       await supabase.signInAs(p, USER);
       await p.goto('/');
-      await expect(p.getByRole('heading', { level: 1 })).toHaveText(
-        'Chọn quy trình cần chạy hôm nay',
-      );
+      await expect(p.getByRole('heading', { level: 1 })).toHaveText('Chọn luồng cần xử lý hôm nay');
       // 0 must mean "list loaded and empty", not "not loaded yet".
-      if (expected === 0) await expect(p.getByText('Không tìm thấy flow phù hợp.')).toBeVisible();
-      await expect(p.getByRole('link', { name: /^Chạy flow Đối chiếu bảng lương/ })).toHaveCount(
-        expected,
-      );
+      if (expected === 0)
+        await expect(p.getByText('Không tìm thấy luồng xử lý phù hợp')).toBeVisible();
+      await expect(
+        p.getByRole('link', { name: /^Bắt đầu luồng xử lý: Đối chiếu bảng lương/ }),
+      ).toHaveCount(expected);
       await ctx.close();
     };
     await userView(1);

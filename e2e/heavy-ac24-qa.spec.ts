@@ -47,12 +47,12 @@ test(`AC-B3-24: ${ROWS} rows x 30 columns, cold and warm DuckDB`, async ({ page,
   for (const pass of ['cold', 'warm'] as const) {
     await page.goto('/run/payroll-timesheet');
     await expect(page.getByLabel(/^Chọn file cho Dữ liệu nhân sự/)).toBeAttached();
-    const run = page.getByRole('button', { name: /^(Chạy|Đang)/ }).last();
+    const run = page.getByRole('button', { name: /^(Bắt đầu|Đang)/ }).last();
 
     const t0 = Date.now();
     await page.getByLabel(/^Chọn file cho Danh mục chi nhánh/).setInputFiles(BRANCHES);
     await page.getByLabel(/^Chọn file cho Dữ liệu nhân sự/).setInputFiles(DATA);
-    await expect(run).toHaveText('Chạy', { timeout: 20 * 60_000 });
+    await expect(run).toHaveText('Bắt đầu', { timeout: 20 * 60_000 });
     await expect(run).toBeEnabled();
     timings[`${pass}: read + validate`] = Date.now() - t0;
 

@@ -77,7 +77,7 @@ test('AC-B3-27/28/29 + warnings: tabs in node order, "Chỉ xem", columns, sort,
   await page.getByRole('tab', { name: /^Ghép/ }).click();
   const region = page.getByRole('region', { name: 'Ghép' });
   await expect(region.getByRole('columnheader')).toHaveText(['Họ tên', 'Mã NV']);
-  await expect(page.getByText(/Đang hiển thị 10 \/ [\d.]+ dòng đầu\./)).toBeVisible();
+  await expect(page.getByText(/Đang hiển thị 10 \/ [\d.]+ dòng đầu/)).toBeVisible();
   await expect(region.getByRole('row')).toHaveCount(1 + 10);
 
   // Sort (in the worker) by "Chi nhánh": ascending, then descending; then search.
@@ -95,7 +95,7 @@ test('AC-B3-27/28/29 + warnings: tabs in node order, "Chỉ xem", columns, sort,
   await expect(byBranch.getByRole('row')).toHaveCount(1 + 1);
   await expect(first()).toHaveText('CN02');
   await page.getByLabel('Tìm trong bảng').fill('khong-co-dong-nao');
-  await expect(page.getByText('Không có dòng nào khớp từ khóa tìm kiếm.')).toBeVisible();
+  await expect(page.getByText('Không có dòng nào khớp từ khóa tìm kiếm')).toBeVisible();
 
   // The download has the 4 Excel sheets only.
   const [download] = await Promise.all([

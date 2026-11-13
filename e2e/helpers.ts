@@ -166,7 +166,7 @@ function hasFrame(req: Request): boolean {
 }
 
 export function runButton(page: Page): Locator {
-  return page.getByRole('button', { name: /^(Chạy|Đang)/ }).last();
+  return page.getByRole('button', { name: /^(Bắt đầu|Đang)/ }).last();
 }
 
 export function payrollInput(page: Page): Locator {
@@ -226,7 +226,7 @@ export async function uploadFixtures(page: Page): Promise<void> {
   await openFlow(page);
   await payrollInput(page).setInputFiles(fixtures('bang_luong_'));
   await timesheetInput(page).setInputFiles(fixtures('cham_cong_'));
-  await expect(runButton(page)).toHaveText('Chạy');
+  await expect(runButton(page)).toHaveText('Bắt đầu');
   await expect(runButton(page)).toBeEnabled();
 }
 

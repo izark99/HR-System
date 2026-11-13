@@ -48,8 +48,8 @@ test.describe('Admin', () => {
     page,
   }) => {
     await page.goto('/admin/users');
-    const nav = page.getByRole('navigation', { name: 'Menu Admin' });
-    await nav.getByRole('link', { name: 'Văn bản giao diện' }).click();
+    const nav = page.getByRole('navigation', { name: 'Menu dành cho Admin' });
+    await nav.getByRole('link', { name: 'Cài đặt UI' }).click();
     await expect(page).toHaveURL(/\/admin\/ui-text$/);
     await expect(page.getByRole('heading', { level: 1 })).toHaveText('Sửa câu chữ trên giao diện');
     const count = card(page).locator('[data-ui-text-count]');
@@ -121,7 +121,7 @@ test.describe('Admin', () => {
     // This tab: the menu label changed without a reload.
     await expect(
       page
-        .getByRole('navigation', { name: 'Menu Admin' })
+        .getByRole('navigation', { name: 'Menu dành cho Admin' })
         .getByRole('link', { name: 'Câu chữ giao diện' }),
     ).toBeVisible();
     await expect(row).toContainText('Đã sửa');
@@ -165,7 +165,7 @@ test.describe('Admin', () => {
     await box.fill('');
     await expect(d).toContainText('Chữ không được để trống');
     await box.fill('x'.repeat(60) + '{{name}}');
-    await expect(d).toContainText('Dài quá 40 ký tự');
+    await expect(d).toContainText('Dài quá 58 ký tự');
     await expect(save).toBeDisabled();
     await d.getByRole('button', { name: 'Hủy' }).click();
 

@@ -79,7 +79,7 @@ async function clearMeasures(page: Page): Promise<void> {
     await w.evaluate(() => performance.clearMeasures()).catch(() => 0);
 }
 
-const runButton = (page: Page) => page.getByRole('button', { name: /^(Chạy|Đang)/ }).last();
+const runButton = (page: Page) => page.getByRole('button', { name: /^(Bắt đầu|Đang)/ }).last();
 
 /** One pass: (re)select the data file (read + validate), run, wait for the Result screen. */
 async function pass(page: Page, data: string): Promise<Pass> {
@@ -87,13 +87,13 @@ async function pass(page: Page, data: string): Promise<Pass> {
   if (await remove.count()) await remove.click();
   await clearMeasures(page);
   await page.getByLabel(/^Chọn file cho Dữ liệu nhân sự/).setInputFiles(data);
-  await expect(runButton(page)).toHaveText('Chạy', { timeout: 60 * 60_000 });
+  await expect(runButton(page)).toHaveText('Bắt đầu', { timeout: 60 * 60_000 });
   await expect(runButton(page)).toBeEnabled();
   await runButton(page).click();
   await expect(page).toHaveURL(/\/result$/, { timeout: 60 * 60_000 });
   const m = await readMeasures(page);
   if (!m) throw new Error('no hrflow:* measures in any worker');
-  await page.getByRole('button', { name: 'Chạy lại' }).click();
+  await page.getByRole('button', { name: 'Bắt đầu lại' }).click();
   await expect(page).not.toHaveURL(/\/result$/);
   return m;
 }

@@ -87,7 +87,7 @@ test.describe('result page', () => {
     await chooseOption(metric, 'Phép');
     await expect(region().getByRole('row')).toHaveCount(1 + 3);
     await chooseOption(metric, 'Không lương');
-    await expect(page.getByText('Không có dòng nào.')).toBeVisible();
+    await expect(page.getByText('Không có dòng nào')).toBeVisible();
 
     await chooseOption(metric, 'Công');
     await chooseOption(branch, 'CN01');
@@ -160,10 +160,12 @@ test.describe('result page', () => {
     expect(wb2.worksheets).toHaveLength(4);
   });
 
-  test('"Chạy lại" goes back to the wizard with files kept and Run enabled', async ({ page }) => {
-    await page.getByRole('button', { name: 'Chạy lại' }).click();
+  test('"Bắt đầu lại" goes back to the wizard with files kept and Run enabled', async ({
+    page,
+  }) => {
+    await page.getByRole('button', { name: 'Bắt đầu lại' }).click();
     await expect(page).toHaveURL(new RegExp(`${FLOW_URL}$`));
-    await expect(runButton(page)).toHaveText('Chạy');
+    await expect(runButton(page)).toHaveText('Bắt đầu');
     await expect(runButton(page)).toBeEnabled();
     await runToResult(page);
     await expect(page.getByTestId('kpi')).toHaveText([/63/, /9/, /3/, /3/]);
@@ -174,7 +176,7 @@ test.describe('direct navigation and reload', () => {
   test('deep link to /run/:code opens the wizard', async ({ page }) => {
     await page.goto(FLOW_URL);
     await expect(page.getByRole('heading', { level: 1 })).toHaveText(/Đối chiếu bảng lương/);
-    await expect(runButton(page)).toHaveText('Chạy (cần upload đủ file)');
+    await expect(runButton(page)).toHaveText('Bắt đầu (cần upload đủ file)');
     await expect(runButton(page)).toBeDisabled();
   });
 
@@ -183,7 +185,7 @@ test.describe('direct navigation and reload', () => {
   }) => {
     await page.goto(RESULT_URL);
     await expect(page.getByText(/Chưa có kết quả trong phiên này/)).toBeVisible();
-    await page.getByRole('link', { name: 'Về trang chạy flow' }).click();
+    await page.getByRole('link', { name: 'Về trang trước' }).click();
     await expect(page).toHaveURL(new RegExp(`${FLOW_URL}$`));
   });
 
@@ -207,7 +209,9 @@ test.describe('direct navigation and reload', () => {
 
   test('unknown flow code shows "not found"', async ({ page }) => {
     await page.goto('/run/khong-ton-tai');
-    await expect(page.getByRole('alert')).toContainText('Không tìm thấy flow');
+    await expect(page.getByRole('alert')).toContainText(
+      'Bạn chưa được cấp quyền bất kỳ luồng xử lý nào',
+    );
     await page.goto('/run/khong-ton-tai/result');
     await expect(page.getByText(/Chưa có kết quả/)).toBeVisible();
   });
@@ -228,8 +232,8 @@ test('after leaving the result page, the wizard offers a way back to the result'
 }) => {
   await uploadFixtures(page);
   await runToResult(page);
-  await page.getByRole('link', { name: 'Danh sách flow' }).click();
-  await page.getByRole('link', { name: /^Chạy flow Đối chiếu/ }).click();
+  await page.getByRole('link', { name: 'Danh sách luồng xử lý' }).click();
+  await page.getByRole('link', { name: /^Bắt đầu luồng xử lý: Đối chiếu/ }).click();
   await expect(page).toHaveURL(new RegExp(`${FLOW_URL}$`));
   await expect(page.locator('[aria-current=step]')).toContainText('Kết quả');
   const back = page.getByRole('link', { name: 'Xem kết quả' });

@@ -210,7 +210,7 @@ test.describe('InfoTip on a touch screen (390)', () => {
 
   test('tap opens inside the viewport, tap outside closes', async ({ page }) => {
     await page.goto('/');
-    const tip = page.getByRole('button', { name: 'Giải thích: Lần chạy gần đây' });
+    const tip = page.getByRole('button', { name: 'Giải thích: Lịch sử hoạt động gần đây' });
     await tip.scrollIntoViewIfNeeded();
     await tip.tap();
     await expect(page.locator(POP)).toHaveCount(1);

@@ -1,15 +1,15 @@
 {
   "app": {
-    "title": "Nền tảng xử lý dữ liệu HR",
-    "name": "HR Data Flow",
-    "tagline": "Xử lý file Excel ngay trên trình duyệt — dữ liệu không rời khỏi máy của bạn.",
+    "title": "HR Tools",
+    "name": "HR Tools",
+    "tagline": "Xử lý theo luồng trực tiếp trên trình duyệt",
     "status": "Đang xây dựng (Phase 1)",
     "skipToContent": "Bỏ qua, tới nội dung chính",
-    "home": "Trang chủ HR Data Flow"
+    "home": "Trang chủ"
   },
   "nav": {
-    "label": "Menu chính",
-    "runFlows": "Chạy flow",
+    "label": "Menu",
+    "runFlows": "Luồng xử lý",
     "changePassword": "Đổi mật khẩu"
   },
   "common": {
@@ -24,7 +24,7 @@
     "cancel": "Hủy",
     "retry": "Thử lại",
     "errorLabel": "Lỗi:",
-    "soon": "Sắp có",
+    "soon": "Sắp ra mắt",
     "tabCount": "{{label}} ({{count, number}})",
     "stepDone": "Đã xong",
     "notifications": "Thông báo",
@@ -32,32 +32,32 @@
     "emptyTitle": "Chưa có dữ liệu"
   },
   "flows": {
-    "eyebrow": "Flow của bạn",
-    "title": "Chọn quy trình cần chạy hôm nay",
-    "subtitle": "Các flow Admin đã gán cho bạn hoặc nhóm của bạn.",
-    "searchLabel": "Tìm flow",
-    "searchPlaceholder": "Nhập tên flow…",
+    "eyebrow": "Luồng của bạn",
+    "title": "Chọn luồng cần xử lý hôm nay",
+    "subtitle": "Các luồng xử lý được cấp quyền",
+    "searchLabel": "Tìm kiếm",
+    "searchPlaceholder": "Nhập tên luồng cần tìm...",
     "categoriesLabel": "Lọc theo nhóm",
     "allCategories": "Tất cả",
     "inputs_one": "{{count}} đầu vào",
     "inputs_other": "{{count}} đầu vào",
-    "run": "Chạy flow",
-    "runNamed": "Chạy flow {{name}}",
-    "empty": "Không tìm thấy flow phù hợp.",
-    "emptyHint": "Thử từ khóa khác hoặc chọn nhóm \"Tất cả\".",
-    "emptyNone": "Admin chưa gán flow nào cho bạn. Vui lòng liên hệ Admin.",
-    "loadError": "Không tải được danh sách flow.",
+    "run": "Bắt đầu",
+    "runNamed": "Bắt đầu luồng xử lý: {{name}}",
+    "empty": "Không tìm thấy luồng xử lý phù hợp",
+    "emptyHint": "Thử từ khóa khác hoặc chọn nhóm \"Tất cả\"",
+    "emptyNone": "Bạn chưa được cấp quyền bất kỳ luồng xử lý nào. Vui lòng liên hệ Admin",
+    "loadError": "Không tải được danh sách luồng xử lý",
     "version": "Phiên bản {{version}}"
   },
   "recent": {
-    "title": "Lần chạy gần đây",
-    "empty": "Chưa có lần chạy",
-    "emptyHint": "Chạy một flow ở trên, lần chạy sẽ hiện ở đây.",
-    "note": "Lịch sử chỉ lưu thông tin lần chạy, không lưu nội dung dữ liệu.",
-    "loadError": "Không tải được lịch sử chạy.",
+    "title": "Lịch sử hoạt động gần đây",
+    "empty": "Chưa có hoạt động nào",
+    "emptyHint": "Bắt đầu một luồng xử lý ở trên, lịch sử hoạt động sẽ hiện ở đây",
+    "note": "Lịch sử hoạt động chỉ ghi nhận thời gian, không lưu trữ nội dung",
+    "loadError": "Không tải được lịch sử hoạt động",
     "col": {
       "time": "Thời gian",
-      "flow": "Flow",
+      "flow": "Luồng xử lý",
       "params": "Tham số",
       "version": "Phiên bản",
       "status": "Trạng thái"
@@ -67,18 +67,18 @@
       "failed": "Lỗi",
       "cancelled": "Đã hủy"
     },
-    "tableLabel": "Bảng các lần chạy"
+    "tableLabel": "Bảng lịch sử hoạt động"
   },
   "run": {
-    "back": "Danh sách flow",
-    "notFound": "Không tìm thấy flow này hoặc bạn chưa được gán flow.",
-    "loadFailed": "Flow chưa hợp lệ nên chưa chạy được. Hãy báo Admin.",
+    "back": "Danh sách luồng xử lý",
+    "notFound": "Bạn chưa được cấp quyền bất kỳ luồng xử lý nào. Vui lòng liên hệ Admin",
+    "loadFailed": "Luồng xử lý chưa hoàn thiện, vui lòng liên hệ Admin",
     "instructions": "Hướng dẫn của Admin:",
     "stepsLabel": "Các bước",
     "step": {
       "params": "Tham số",
       "upload": "Upload & kiểm tra",
-      "run": "Chạy",
+      "run": "Bắt đầu",
       "result": "Kết quả",
       "done": "Đã xong",
       "current": "Đang ở bước này"
@@ -86,44 +86,44 @@
     "paramsTitle": "Tham số",
     "safety": {
       "label": "An toàn dữ liệu:",
-      "text": "file được xử lý ngay trên máy bạn, không gửi lên server."
+      "text": "file được xử lý ngay trên máy bạn, không gửi lên server"
     },
     "actions": {
       "back": "Quay lại",
-      "run": "Chạy",
-      "fixErrors_one": "Chạy (sửa {{count}} lỗi trước)",
-      "fixErrors_other": "Chạy (sửa {{count}} lỗi trước)",
-      "needFiles": "Chạy (cần upload đủ file)",
-      "needParams": "Chạy (cần nhập tham số)",
+      "run": "Bắt đầu",
+      "fixErrors_one": "Bắt đầu (sửa {{count}} lỗi trước)",
+      "fixErrors_other": "Bắt đầu (sửa {{count}} lỗi trước)",
+      "needFiles": "Bắt đầu (cần upload đủ file)",
+      "needParams": "Bắt đầu (cần nhập tham số)",
       "validating": "Đang kiểm tra file…",
-      "running": "Đang chạy…",
+      "running": "Đang xử lý…",
       "cancel": "Hủy",
       "cancelling": "Đang hủy…",
-      "restoreFailed": "Chạy (cần nạp lại file)",
+      "restoreFailed": "Bắt đầu (cần nạp lại file)",
       "retryRestore": "Thử lại",
       "viewResult": "Xem kết quả",
       "resolvingVersion": "Đang xác định phiên bản…",
-      "noVersion": "Chạy (chưa có phiên bản cho kỳ này)",
-      "versionError": "Chạy (chưa xác định được phiên bản)",
-      "barLabel": "Thao tác chạy flow"
+      "noVersion": "Bắt đầu (chưa có phiên bản cho kỳ này)",
+      "versionError": "Bắt đầu (chưa xác định được phiên bản)",
+      "barLabel": "Thao tác bắt đầu luồng xử lý"
     },
     "progress": {
-      "title": "Đang chạy flow",
+      "title": "Đang thực thi luồng xử lý",
       "percent": "{{percent}}%",
       "pending": "Chờ",
-      "running": "Đang chạy",
+      "running": "Đang thực thi",
       "done": "Xong · {{seconds}} giây",
       "rows_one": "{{count, number}} dòng",
       "rows_other": "{{count, number}} dòng"
     },
-    "failed": "Chạy không thành công:",
-    "cancelled": "bạn có thể chạy lại khi sẵn sàng.",
+    "failed": "Không thành công:",
+    "cancelled": "bạn có thể bắt đầu lại khi sẵn sàng",
     "restoring": "đang nạp lại file sau khi hủy…",
-    "cancelledLabel": "Đã hủy lần chạy:",
+    "cancelledLabel": "Đã hủy:",
     "restoreFailedLabel": "Chưa nạp lại được file:",
-    "restoreFailed": "sau khi hủy, hệ thống không chuẩn bị lại được file của bạn. Bấm Thử lại; nếu vẫn lỗi, tải lại trang.",
-    "loadErrorLabel": "Chưa tải được flow:",
-    "loadError": "không kết nối được máy chủ. Kiểm tra mạng rồi thử lại.",
+    "restoreFailed": "sau khi hủy, hệ thống không chuẩn bị lại được file của bạn. Bấm \"Thử lại\" nếu vẫn lỗi hãy tải lại trang",
+    "loadErrorLabel": "Chưa tải được luồng xử lý:",
+    "loadError": "không kết nối được máy chủ. Kiểm tra mạng rồi thử lại sau",
     "version": {
       "label": "Phiên bản áp dụng:",
       "range": "{{version}}, hiệu lực từ {{from}}",
@@ -132,12 +132,12 @@
       "forToday": ", theo ngày hôm nay (chọn kỳ để kiểm tra lại).",
       "resolving": "đang xác định phiên bản theo kỳ đã chọn…",
       "noneLabel": "Chưa có phiên bản:",
-      "none": "flow chưa có phiên bản hiệu lực {{when}}. Chọn kỳ khác hoặc liên hệ Admin.",
+      "none": "luồng xử lý chưa có phiên bản hiệu lực {{when}}. Chọn kỳ khác hoặc liên hệ Admin",
       "period": "cho kỳ {{period}}",
       "date": "cho ngày {{date}}",
       "today": "cho ngày hôm nay",
       "errorLabel": "Chưa xác định được phiên bản:",
-      "error": "không kết nối được máy chủ.",
+      "error": "không kết nối được máy chủ",
       "retry": "Thử lại"
     },
     "engineLoadingLabel": "Đang chuẩn bị:"
@@ -158,7 +158,7 @@
     "errors_other": "{{count}} lỗi",
     "warnings_one": "{{count}} cảnh báo",
     "warnings_other": "{{count}} cảnh báo",
-    "readFailed": "Không đọc được file. Hãy thử chọn lại."
+    "readFailed": "Không đọc được file. Hãy thử chọn lại"
   },
   "report": {
     "title": "Báo cáo kiểm tra file",
@@ -168,12 +168,12 @@
     "warnings_other": "{{count}} cảnh báo",
     "skipped_one": "{{count}} dòng đã bỏ qua",
     "skipped_other": "{{count}} dòng đã bỏ qua",
-    "empty": "Upload file để hệ thống kiểm tra trước khi chạy.",
+    "empty": "Upload file để hệ thống kiểm tra trước khi bắt đầu",
     "validLabel": "Hợp lệ:",
-    "valid": "các file không có lỗi hay cảnh báo, có thể chạy.",
+    "valid": "các file không có lỗi hay cảnh báo, có thể bắt đầu",
     "warningsOnlyLabel": "Lưu ý:",
-    "warningsOnly": "chỉ có cảnh báo, bạn vẫn chạy được nhưng nên kiểm tra lại.",
-    "truncated": "Đang hiển thị {{shown}}/{{total}} dòng. Tải báo cáo để xem đủ.",
+    "warningsOnly": "chỉ có cảnh báo, bạn vẫn có thể tiếp tục nhưng nên kiểm tra lại",
+    "truncated": "Đang hiển thị {{shown}}/{{total}} dòng. Tải báo cáo để xem đầy đủ",
     "download": "Tải báo cáo lỗi (.xlsx)",
     "col": {
       "severity": "Mức",
@@ -189,7 +189,7 @@
     "tableLabel": "Chi tiết lỗi và cảnh báo"
   },
   "result": {
-    "eyebrow": "Chạy xong · {{rows}} dòng · {{seconds}} giây",
+    "eyebrow": "Hoàn thành · {{rows}} dòng · {{seconds}} giây",
     "titleMismatched": "Kỳ {{period}} có {{count, number}} nhân viên lệch cần xử lý",
     "titleMismatchedNoPeriod": "Có {{count, number}} nhân viên lệch cần xử lý",
     "titlePending": "Kỳ {{period}} có {{count, number}} nhân viên cần xử lý",
@@ -198,9 +198,9 @@
     "titleMatchedNoPeriod": "Tất cả nhân viên đều khớp",
     "titleMatchedCount": "Kỳ {{period}} khớp toàn bộ {{count, number}} nhân viên",
     "titleMatchedCountNoPeriod": "Khớp toàn bộ {{count, number}} nhân viên",
-    "titleGeneric": "Flow đã chạy xong",
+    "titleGeneric": "Hoàn thành",
     "thresholds": "Ngưỡng: {{list}}",
-    "rerun": "Chạy lại",
+    "rerun": "Bắt đầu lại",
     "download_one": "Tải Excel ({{count}} sheet)",
     "download_other": "Tải Excel ({{count}} sheet)",
     "downloadNamed": "Tải {{name}}",
@@ -217,26 +217,26 @@
     "filtersLabel": "Bộ lọc",
     "showing_one": "{{count, number}} dòng",
     "showing_other": "{{count, number}} dòng",
-    "empty": "Không có dòng nào.",
-    "noSession": "Chưa có kết quả trong phiên này. Kết quả chỉ nằm trong trình duyệt và sẽ mất khi tải lại trang.",
-    "goRun": "Về trang chạy flow",
+    "empty": "Không có dòng nào",
+    "noSession": "Chưa có kết quả trong phiên này. Kết quả chỉ nằm trong trình duyệt và sẽ mất khi tải lại trang",
+    "goRun": "Về trang trước",
     "rowsFailedLabel": "Chưa tải được dữ liệu:",
-    "rowsFailed": "không lấy được các dòng của sheet này.",
+    "rowsFailed": "không lấy được các dòng của sheet này",
     "retry": "Thử lại",
     "noteLabel": "Lưu ý:",
-    "note": "kết quả chỉ nằm trong trình duyệt. Hãy tải file về trước khi đóng tab.",
+    "note": "kết quả chỉ nằm trong trình duyệt. Hãy tải file về trước khi đóng tab",
     "viewOnly": "Chỉ xem",
-    "truncated": "Đang hiển thị {{shown}} / {{total}} dòng đầu.",
+    "truncated": "Đang hiển thị {{shown}} / {{total}} dòng đầu",
     "warningsLabel": "Cảnh báo:",
     "search": "Tìm trong bảng",
     "sortHint": "Bấm để sắp xếp tăng dần, giảm dần hoặc bỏ sắp xếp",
-    "noMatch": "Không có dòng nào khớp từ khóa tìm kiếm.",
+    "noMatch": "Không có dòng nào khớp từ khóa tìm kiếm",
     "conclusion": {
       "label": "Kết luận",
       "actionTitle": "Cần xử lý {{count, number}} nhân viên",
-      "actionText": "{{mismatched}} nhân viên lệch vượt ngưỡng, {{onlyLeft}} chỉ có trong {{left}}, {{onlyRight}} chỉ có trong {{right}}. Xem chi tiết ở các sheet bên dưới, rồi tải file Excel để lưu lại.",
+      "actionText": "{{mismatched}} nhân viên lệch vượt ngưỡng, {{onlyLeft}} chỉ có trong {{left}}, {{onlyRight}} chỉ có trong {{right}}. Xem chi tiết ở các sheet bên dưới, rồi tải file Excel để lưu lại",
       "okTitle": "Không có gì cần xử lý",
-      "okText": "{{matched}} nhân viên có ở cả {{left}} và {{right}}, mọi chênh lệch đều nằm trong ngưỡng."
+      "okText": "{{matched}} nhân viên có ở cả {{left}} và {{right}}, mọi chênh lệch đều nằm trong ngưỡng"
     }
   },
   "config": {
@@ -287,17 +287,17 @@
     }
   },
   "auth": {
-    "eyebrow": "Nền tảng xử lý dữ liệu nhân sự",
-    "tagline": "Xử lý file Excel ngay trên máy bạn, theo quy trình Admin thiết lập.",
+    "eyebrow": "Bộ công cụ xử lý dữ liệu",
+    "tagline": "Xử lý theo luồng trực tiếp trên trình duyệt",
     "errorLabel": "Chưa thành công:",
     "login": {
       "title": "Đăng nhập",
-      "note": "Tài khoản do Admin cấp. Quên mật khẩu, vui lòng liên hệ Admin.",
+      "note": "Tài khoản do Admin cấp. Quên mật khẩu, vui lòng liên hệ Admin",
       "username": "Tên đăng nhập",
       "password": "Mật khẩu",
       "submit": "Đăng nhập",
       "submitting": "Đang đăng nhập…",
-      "safety": "file Excel chỉ được xử lý trên máy bạn, không tải lên server."
+      "safety": "Xử lý theo luồng trực tiếp trên trình duyệt"
     },
     "password": {
       "eyebrowFirst": "Lần đăng nhập đầu tiên",
@@ -311,51 +311,51 @@
       "saving": "Đang lưu…",
       "back": "Quay lại",
       "doneLabel": "Đã đổi mật khẩu:",
-      "done": "lần đăng nhập sau dùng mật khẩu mới.",
+      "done": "lần đăng nhập sau dùng mật khẩu mới",
       "problem": {
-        "empty": "hãy nhập mật khẩu mới.",
-        "tooShort": "mật khẩu cần ít nhất {{min}} ký tự.",
-        "tooLong": "mật khẩu quá dài (tối đa 72 byte).",
-        "mismatch": "hai mật khẩu chưa khớp nhau."
+        "empty": "hãy nhập mật khẩu mới",
+        "tooShort": "mật khẩu cần ít nhất {{min}} ký tự",
+        "tooLong": "mật khẩu quá dài (tối đa 72 byte)",
+        "mismatch": "nhập lại mật khẩu chưa khớp"
       }
     },
     "errors": {
-      "missingFields": "nhập tên đăng nhập và mật khẩu.",
-      "invalidCredentials": "tên đăng nhập hoặc mật khẩu không đúng.",
-      "locked": "tài khoản đã bị khóa. Liên hệ Admin.",
-      "noAccess": "tài khoản bị khóa hoặc chưa được cấp quyền. Vui lòng liên hệ Admin.",
-      "rateLimited": "thử quá nhiều lần. Đợi vài phút rồi thử lại.",
-      "network": "không kết nối được máy chủ. Kiểm tra mạng rồi thử lại.",
-      "weakPassword": "mật khẩu chưa đủ mạnh. Dùng mật khẩu dài hơn, khó đoán hơn.",
-      "samePassword": "mật khẩu mới phải khác mật khẩu hiện tại.",
-      "reauthNeeded": "phiên đăng nhập quá cũ. Đăng xuất, đăng nhập lại rồi đổi mật khẩu.",
-      "sessionExpired": "phiên đăng nhập đã hết hạn. Đăng nhập lại.",
-      "unknown": "có lỗi không xác định. Thử lại hoặc liên hệ Admin."
+      "missingFields": "nhập tên đăng nhập và mật khẩu",
+      "invalidCredentials": "tên đăng nhập hoặc mật khẩu không đúng",
+      "locked": "tài khoản đã bị khóa. Vui lòng liên hệ Admin",
+      "noAccess": "tài khoản bị khóa hoặc chưa được cấp quyền. Vui lòng liên hệ Admin",
+      "rateLimited": "thử quá nhiều lần. Đợi vài phút rồi thử lại sau",
+      "network": "không kết nối được máy chủ. Kiểm tra mạng rồi thử lại sau",
+      "weakPassword": "mật khẩu chưa đủ mạnh. Dùng mật khẩu dài hơn, khó đoán hơn",
+      "samePassword": "mật khẩu mới phải khác mật khẩu hiện tại",
+      "reauthNeeded": "phiên đăng nhập quá cũ. Đăng xuất, đăng nhập lại rồi đổi mật khẩu",
+      "sessionExpired": "phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại",
+      "unknown": "có lỗi không xác định. Thử lại hoặc liên hệ Admin"
     },
     "reason": {
       "locked": {
         "label": "Không vào được tài khoản:",
-        "text": "Tài khoản bị khóa hoặc chưa được cấp quyền. Vui lòng liên hệ Admin."
+        "text": "Tài khoản bị khóa hoặc chưa được cấp quyền. Vui lòng liên hệ Admin"
       },
       "profileMissing": {
         "label": "Không vào được tài khoản:",
-        "text": "Tài khoản bị khóa hoặc chưa được cấp quyền. Vui lòng liên hệ Admin."
+        "text": "Tài khoản bị khóa hoặc chưa được cấp quyền. Vui lòng liên hệ Admin"
       },
       "profileError": {
         "label": "Chưa tải được tài khoản:",
-        "text": "kiểm tra mạng rồi đăng nhập lại."
+        "text": "kiểm tra mạng rồi đăng nhập lại sau"
       },
       "sessionExpired": {
         "label": "Phiên đã hết hạn:",
-        "text": "hãy đăng nhập lại. File đã chọn trước đó không được giữ lại."
+        "text": "hãy đăng nhập lại. File đã chọn trước đó không được giữ lại"
       },
       "signedOut": {
         "label": "Đã đăng xuất:",
-        "text": "dữ liệu của phiên trước đã được xóa khỏi trình duyệt."
+        "text": "dữ liệu của phiên trước đã được xóa khỏi trình duyệt"
       },
       "idle": {
         "label": "Đã tự đăng xuất:",
-        "text": "Bạn đã được đăng xuất do không thao tác trong 8 giờ. Vui lòng đăng nhập lại."
+        "text": "Bạn đã được đăng xuất do không thao tác trong 8 giờ. Vui lòng đăng nhập lại"
       }
     }
   },
@@ -363,23 +363,23 @@
     "badge": "Admin",
     "errorLabel": "Chưa thành công:",
     "cancel": "Hủy",
-    "localMode": "Khu vực quản trị cần kết nối Supabase (đang chạy chế độ flow cục bộ).",
+    "localMode": "Khu vực quản trị cần kết nối Supabase (đang chạy chế độ luồng xử lý cục bộ)",
     "dialog": {
       "close": "Đóng"
     },
     "nav": {
-      "label": "Menu Admin",
+      "label": "Menu dành cho Admin",
       "dashboard": "Tổng quan",
-      "flows": "Flows",
+      "flows": "Luồng xử lý",
       "refTables": "Bảng tham chiếu",
-      "templates": "Template",
-      "users": "Users & Groups",
-      "uiText": "Văn bản giao diện",
-      "logs": "Logs",
-      "soon": "Sắp có"
+      "templates": "Mẫu",
+      "users": "Tài khoản và nhóm",
+      "uiText": "Cài đặt UI",
+      "logs": "Lịch sử hoạt động",
+      "soon": "Sắp ra mắt"
     },
     "errors": {
-      "origin_not_allowed": "trang này chưa được phép gọi chức năng quản trị (cấu hình ALLOWED_ORIGINS).",
+      "origin_not_allowed": "trang này chưa được phép gọi chức năng quản trị (cấu hình ALLOWED_ORIGINS)",
       "unauthorized": "phiên đăng nhập đã hết hạn. Đăng nhập lại.",
       "forbidden": "bạn không có quyền thực hiện thao tác này.",
       "invalid_input": "thông tin chưa hợp lệ. Username 3-32 ký tự: chữ thường không dấu, số, dấu chấm, gạch dưới, gạch ngang.",
@@ -716,9 +716,9 @@
   },
   "idle": {
     "title": "Bạn sắp bị đăng xuất",
-    "text": "Bạn đã không thao tác gần 8 giờ. Phiên làm việc sẽ tự kết thúc sau",
+    "text": "Bạn đã không thao tác gần 8 giờ. Phiên làm việc sẽ tự kết thúc",
     "unsavedLabel": "Lưu ý:",
-    "unsaved": "Flow đang thiết kế còn thay đổi chưa lưu. Nếu bị đăng xuất, các thay đổi này sẽ mất.",
+    "unsaved": "Luồng đang thiết kế còn thay đổi chưa lưu. Nếu bị đăng xuất, các thay đổi này sẽ mất",
     "continue": "Tiếp tục làm việc"
   },
   "select": {

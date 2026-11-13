@@ -160,7 +160,7 @@ for (const viewport of [DESKTOP, MOBILE]) {
       // Form workspace (§25.5): a link back to the flow list takes the eyebrow's place (AC-UI-71).
       await titleChecks(page, { eyebrow: false });
       await expect(
-        page.locator('[data-page-header]').getByRole('link', { name: 'Danh sách flow' }),
+        page.locator('[data-page-header]').getByRole('link', { name: 'Danh sách luồng xử lý' }),
       ).toBeVisible();
       await inputChecks(page.locator('form input'));
       await buttonChecks(page.locator('form button, form a'));
@@ -173,7 +173,7 @@ for (const viewport of [DESKTOP, MOBILE]) {
     test('flow list', async ({ page }) => {
       await page.goto('/');
       await expect(page.getByRole('heading', { level: 1 })).toHaveText(
-        'Chọn quy trình cần chạy hôm nay',
+        'Chọn luồng cần xử lý hôm nay',
       );
       await expect(page.getByText('2 đầu vào · Phiên bản v3')).toBeVisible();
       await commonChecks(page);
@@ -183,7 +183,7 @@ for (const viewport of [DESKTOP, MOBILE]) {
       await inputChecks(page.locator('#flow-search'));
       await pillChecks(page.getByRole('group', { name: 'Lọc theo nhóm' }).getByRole('button'));
       // AC-UI-71: no left menu on User screens; content centred, at most 1280px.
-      await expect(page.getByRole('navigation', { name: 'Menu chính' })).toHaveCount(0);
+      await expect(page.getByRole('navigation', { name: 'Menu', exact: true })).toHaveCount(0);
       expect((await style(page.locator('main'))).maxWidth).toBe('1280px');
       await axe(page, `flow-list ${size}`);
       await shot(page, '03-flow-list', 'default');
@@ -200,8 +200,8 @@ for (const viewport of [DESKTOP, MOBILE]) {
       await titleChecks(page, { eyebrow: false });
       await expect(page.locator('[data-stepper] li')).toHaveCount(4);
       await expect(page.locator('[data-stepper] [aria-current="step"]')).toHaveCount(1);
-      const bar = page.getByRole('region', { name: 'Thao tác chạy flow' });
-      await expect(bar.getByRole('button', { name: /^Chạy/ })).toBeInViewport();
+      const bar = page.getByRole('region', { name: 'Thao tác bắt đầu luồng xử lý' });
+      await expect(bar.getByRole('button', { name: /^Bắt đầu/ })).toBeInViewport();
       await cardChecks(page.locator('main [data-card]'));
       await inputChecks(periodButton(page));
       await labelChecks(page.locator('main label[for^="param-"]'));
@@ -243,7 +243,7 @@ for (const viewport of [DESKTOP, MOBILE]) {
       await timesheetInput(page).setInputFiles([
         timesheet('cham_cong_lon.xlsx', employees(24_000, 1, 'CN01', 24)),
       ]);
-      await expect(runButton(page)).toHaveText('Chạy', { timeout: 30_000 });
+      await expect(runButton(page)).toHaveText('Bắt đầu', { timeout: 30_000 });
       await runButton(page).click();
       const cancel = page.getByRole('button', { name: 'Hủy', exact: true });
       await expect(cancel).toBeVisible({ timeout: 5_000 });
@@ -302,7 +302,7 @@ test.describe('admin screens 1280x800', () => {
     await commonChecks(page);
     await titleChecks(page);
     await topBarChecks(page);
-    await navChecks(page.getByRole('navigation', { name: 'Menu Admin' }));
+    await navChecks(page.getByRole('navigation', { name: 'Menu dành cho Admin' }));
     await cardChecks(page.locator('main [data-card]'));
     await adminTableChecks(page.getByRole('table', { name: 'Danh sách tài khoản' }));
     await inputChecks(page.locator('main input[type="text"], main [role="combobox"]'));
@@ -735,7 +735,7 @@ const REACT_FLOW_EXCLUDE = [
 
 /** Left menu (AC-UI-54): "Sắp có" is a small chip on the same line as its label. */
 async function soonChecks(page: Page): Promise<void> {
-  const nav = page.getByRole('navigation', { name: 'Menu Admin' });
+  const nav = page.getByRole('navigation', { name: 'Menu dành cho Admin' });
   const items = nav.locator('[aria-disabled="true"]');
   const n = await items.count();
   expect(n).toBeGreaterThan(0);
@@ -829,7 +829,7 @@ test.describe('loading skeleton (AC-UI-56)', () => {
     await skeletonChecks(page, 'flow-list 1280x800', '03-flow-list');
     release();
     await expect(page.locator('[data-loading]')).toHaveCount(0);
-    await expect(page.getByRole('link', { name: /^Chạy flow Đối chiếu/ })).toBeVisible();
+    await expect(page.getByRole('link', { name: /^Bắt đầu luồng xử lý: Đối chiếu/ })).toBeVisible();
   });
 });
 

@@ -272,8 +272,8 @@ test('AC-B3-33: build the acceptance flow in the Designer, save, reload, publish
   await pickMonth(page, '2026-09');
   await page.getByLabel(/^Chọn file cho Bảng lương/).setInputFiles(fixtures('bang_luong_'));
   await page.getByLabel(/^Chọn file cho Chấm công/).setInputFiles(fixtures('cham_cong_'));
-  const run = page.getByRole('button', { name: /^Chạy/ }).last();
-  await expect(run).toHaveText('Chạy');
+  const run = page.getByRole('button', { name: /^Bắt đầu/ }).last();
+  await expect(run).toHaveText('Bắt đầu');
   await expect(run).toBeEnabled();
   await run.click();
   await expect(page).toHaveURL(/\/run\/doi-chieu-moi\/result$/, { timeout: 120_000 });

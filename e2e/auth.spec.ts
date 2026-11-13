@@ -25,7 +25,7 @@ test.describe('signed out', () => {
     await page.goto('/');
     await expect(page).toHaveURL(/\/login$/);
     await expect(page.getByRole('heading', { level: 1 })).toHaveText('Đăng nhập');
-    await expect(page.getByText('Quên mật khẩu, vui lòng liên hệ Admin.')).toBeVisible();
+    await expect(page.getByText('Quên mật khẩu, vui lòng liên hệ Admin')).toBeVisible();
     await expect(page.getByRole('link', { name: /quên mật khẩu/i })).toHaveCount(0);
 
     await page.getByLabel('Tên đăng nhập').fill('HR.NV01');
@@ -58,19 +58,19 @@ test.describe('signed out', () => {
 
     await expect(page).toHaveURL(/\/$/);
     await expect(page.getByRole('heading', { level: 1 })).toHaveText(
-      'Chọn quy trình cần chạy hôm nay',
+      'Chọn luồng cần xử lý hôm nay',
     );
     expect(user.password).toBe('mat-khau-moi-2026');
     await expect(page.getByText('2 đầu vào · Phiên bản v3')).toBeVisible();
 
-    await page.getByRole('link', { name: /^Chạy flow Đối chiếu bảng lương/ }).click();
+    await page.getByRole('link', { name: /^Bắt đầu luồng xử lý: Đối chiếu bảng lương/ }).click();
     await pickMonth(page, '2026-09');
     await expect(page.getByRole('status').filter({ hasText: 'Phiên bản áp dụng:' })).toContainText(
       'v3',
     );
     await payrollInput(page).setInputFiles(fixtures('bang_luong_'));
     await timesheetInput(page).setInputFiles(fixtures('cham_cong_'));
-    await expect(runButton(page)).toHaveText('Chạy');
+    await expect(runButton(page)).toHaveText('Bắt đầu');
     await runButton(page).click();
     await expect(page.getByTestId('kpi').first()).toBeVisible({ timeout: 120_000 });
     await expect.poll(() => supabase.runLogs.length).toBe(1);
@@ -81,8 +81,8 @@ test.describe('signed out', () => {
     });
 
     // The run shows up in the history card (metadata only).
-    await page.getByRole('link', { name: 'Danh sách flow' }).first().click();
-    const recent = page.getByRole('region', { name: 'Lần chạy gần đây' });
+    await page.getByRole('link', { name: 'Danh sách luồng xử lý' }).first().click();
+    const recent = page.getByRole('region', { name: 'Lịch sử hoạt động gần đây' });
     await expect(recent.getByRole('row')).toHaveCount(2);
     await expect(recent).toContainText('Kỳ lương: 09/2026');
     await expect(recent).toContainText('Thành công');
@@ -120,7 +120,7 @@ test.describe('signed in as a User', () => {
     await page.goto('/admin/users');
     await expect(page).toHaveURL(/\/$/);
     await expect(page.getByRole('heading', { level: 1 })).toHaveText(
-      'Chọn quy trình cần chạy hôm nay',
+      'Chọn luồng cần xử lý hôm nay',
     );
     await page.getByRole('button', { name: `Tài khoản ${USER.username}` }).click();
     await expect(page.getByRole('link', { name: 'Quản trị' })).toHaveCount(0);
@@ -130,9 +130,11 @@ test.describe('signed in as a User', () => {
   test('a flow that is not assigned is neither listed nor runnable', async ({ page, supabase }) => {
     supabase.flowVisibleToUsers = false;
     await page.goto('/');
-    await expect(page.getByText('Không tìm thấy flow phù hợp.')).toBeVisible();
+    await expect(page.getByText('Không tìm thấy luồng xử lý phù hợp')).toBeVisible();
     await page.goto('/run/payroll-timesheet');
-    await expect(page.getByRole('alert')).toContainText('Không tìm thấy flow');
+    await expect(page.getByRole('alert')).toContainText(
+      'Bạn chưa được cấp quyền bất kỳ luồng xử lý nào',
+    );
   });
 });
 
@@ -150,7 +152,7 @@ test.describe('signed in as Admin', () => {
     await expect(page.getByRole('heading', { level: 1 })).toHaveText(
       'Quản lý tài khoản và quyền chạy flow',
     );
-    await expect(page.getByRole('navigation', { name: 'Menu Admin' })).toBeVisible();
+    await expect(page.getByRole('navigation', { name: 'Menu dành cho Admin' })).toBeVisible();
     await expect(page.getByRole('tab', { name: 'Tài khoản (2)' })).toHaveAttribute(
       'aria-selected',
       'true',

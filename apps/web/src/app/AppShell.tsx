@@ -26,7 +26,8 @@ export function AppShell() {
         <div className="flex items-center gap-3">
           <Link
             to="/"
-            aria-label={t('app.home')}
+            // Name = visible app name + "home" (WCAG 2.5.3), robust to edits of either text.
+            aria-label={`${t('app.name')} - ${t('app.home')}`}
             className="flex min-h-target items-center gap-3 text-title-sm text-ink no-underline hover:text-ink"
           >
             <img src="/favicon.svg" alt="" aria-hidden width={32} height={32} className="size-8" />

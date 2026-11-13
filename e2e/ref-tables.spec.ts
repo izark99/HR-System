@@ -56,7 +56,7 @@ test.describe('Admin', () => {
     const requests = recordRequests(page);
     await page.goto('/admin/users');
     await page
-      .getByRole('navigation', { name: 'Menu Admin' })
+      .getByRole('navigation', { name: 'Menu dành cho Admin' })
       .getByRole('link', { name: 'Bảng tham chiếu' })
       .click();
     await expect(page).toHaveURL(/\/admin\/ref-tables$/);

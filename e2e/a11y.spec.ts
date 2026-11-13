@@ -133,7 +133,7 @@ test('keyboard only: params, file pickers, run, tabs, filter and download', asyn
   // Skip link is the first Tab stop.
   await page.keyboard.press('Tab');
   await expect(page.getByRole('link', { name: 'Bỏ qua, tới nội dung chính' })).toBeFocused();
-  await tabTo(page, /^Chạy flow Đối chiếu/);
+  await tabTo(page, /^Bắt đầu luồng xử lý: Đối chiếu/);
   await page.keyboard.press('Enter');
   await expect(page).toHaveURL(new RegExp(`${FLOW_URL}$`));
   await expect(periodButton(page)).toBeVisible();
@@ -157,9 +157,9 @@ test('keyboard only: params, file pickers, run, tabs, filter and download', asyn
     page.keyboard.press('Space'),
   ]);
   await timesheetChooser.setFiles(fixtures('cham_cong_'));
-  await expect(runButton(page)).toHaveText('Chạy');
+  await expect(runButton(page)).toHaveText('Bắt đầu');
 
-  await tabTo(page, /^Chạy$/);
+  await tabTo(page, /^Bắt đầu$/);
   await page.keyboard.press('Enter');
   await expect(page).toHaveURL(/\/result$/);
 
@@ -267,7 +267,7 @@ test('touch targets are at least 44px high (wizard + result)', async ({ page }) 
   expect(await smallTargets(page)).toEqual([]);
 });
 
-test('primary "Chạy" button: disabled vs enabled colors and contrast', async ({ page }) => {
+test('primary "Bắt đầu" button: disabled vs enabled colors and contrast', async ({ page }) => {
   await openFlow(page);
   const disabled = await settledColors(page);
   expect(disabled.disabled).toBe(true);
@@ -295,7 +295,7 @@ test('primary "Chạy" button: disabled vs enabled colors and contrast', async (
   expect(contrastRatio(disabled.fg, disabled.bg)).toBeGreaterThanOrEqual(4.5);
 });
 
-test('primary "Chạy" button is not mid-transition right after it becomes enabled', async ({
+test('primary "Bắt đầu" button is not mid-transition right after it becomes enabled', async ({
   page,
 }) => {
   // The pale-teal Run button in screenshot 04-run-valid.png: check what a screenshot right after
@@ -421,10 +421,10 @@ test.describe('month picker (MEMORY 13:48: custom picker, keyboard operable)', (
     expect(asOf()).toContain('2026-09-01');
     await pickMonth(page, '2025-03');
     await expect(page.getByRole('alert')).toContainText(
-      'flow chưa có phiên bản hiệu lực cho kỳ 03/2025',
+      'luồng xử lý chưa có phiên bản hiệu lực cho kỳ 03/2025',
     );
     expect(asOf()).toContain('2025-03-01');
-    await expect(runButton(page)).toHaveText('Chạy (chưa có phiên bản cho kỳ này)');
+    await expect(runButton(page)).toHaveText('Bắt đầu (chưa có phiên bản cho kỳ này)');
     await expect(runButton(page)).toBeDisabled();
   });
 

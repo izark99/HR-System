@@ -228,18 +228,18 @@ test('AC-B3-25: Hủy while a DuckDB node is running terminates the worker; the 
   await timesheetInput(page).setInputFiles([
     timesheet('cham_cong_nho.xlsx', employees(40, 1, 'CN01', 24)),
   ]);
-  await expect(runButton(page)).toHaveText('Chạy', { timeout: 30_000 });
+  await expect(runButton(page)).toHaveText('Bắt đầu', { timeout: 30_000 });
   await runButton(page).click();
 
   const row = page
-    .getByRole('region', { name: 'Đang chạy flow' })
+    .getByRole('region', { name: 'Đang thực thi luồng xử lý' })
     .getByRole('listitem')
     .filter({ has: page.getByText('SQL nặng', { exact: true }) });
-  await expect(row).toContainText('Đang chạy', { timeout: 120_000 });
+  await expect(row).toContainText('Đang thực thi', { timeout: 120_000 });
   await page.waitForTimeout(1500); // inside the synchronous DuckDB query now
   const t0 = Date.now();
   await page.getByRole('button', { name: 'Hủy' }).click();
-  await expect(page.getByText('Đã hủy lần chạy:')).toBeVisible({ timeout: 60_000 });
+  await expect(page.getByText('Đã hủy:')).toBeVisible({ timeout: 60_000 });
   const toCancelled = Date.now() - t0;
   test.info().annotations.push({ type: 'cancel-ms', description: String(toCancelled) });
   expect(toCancelled).toBeLessThan(15_000);
@@ -249,7 +249,7 @@ test('AC-B3-25: Hủy while a DuckDB node is running terminates the worker; the 
   await expect(page.getByText('đang nạp lại file sau khi hủy…')).toHaveCount(0, {
     timeout: 60_000,
   });
-  await expect(runButton(page)).toHaveText('Chạy', { timeout: 60_000 });
+  await expect(runButton(page)).toHaveText('Bắt đầu', { timeout: 60_000 });
   await expect(runButton(page)).toBeEnabled();
   await expect(page.getByRole('button', { name: 'Bỏ file bang_luong_nho.xlsx' })).toBeEnabled();
   expect(supabase.runLogs.at(-1)?.status).toBe('cancelled');

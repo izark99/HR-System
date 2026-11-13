@@ -57,7 +57,9 @@ test.describe('Version & validity screen', () => {
       'Đối chiếu bảng lương – chấm công: đang áp dụng v1',
     );
     await expect(
-      page.getByRole('navigation', { name: 'Menu Admin' }).getByRole('link', { name: 'Flows' }),
+      page
+        .getByRole('navigation', { name: 'Menu dành cho Admin' })
+        .getByRole('link', { name: 'Luồng xử lý' }),
     ).toHaveAttribute('aria-current', 'page');
 
     const v1 = row(page, 1);

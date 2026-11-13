@@ -60,7 +60,7 @@ async function scrollFacts(page: Page) {
     window.scrollTo(0, document.documentElement.scrollHeight);
     const main = document.querySelector('main#main');
     const last = main?.lastElementChild?.getBoundingClientRect();
-    const nav = document.querySelector('nav[aria-label="Menu Admin"]');
+    const nav = document.querySelector('nav[aria-label="Menu dành cho Admin"]');
     const navLast = nav?.lastElementChild?.getBoundingClientRect();
     const navVisible = nav ? getComputedStyle(nav).display !== 'none' : false;
     return {

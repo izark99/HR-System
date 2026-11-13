@@ -35,10 +35,10 @@ test.describe('signed in as a User', () => {
       const requests = recordRequests(page);
       await page.goto(url);
       await expect(page.getByRole('heading', { level: 1 })).toHaveText(
-        'Chọn quy trình cần chạy hôm nay',
+        'Chọn luồng cần xử lý hôm nay',
       );
       expect(new URL(page.url()).pathname).toBe('/');
-      await expect(page.getByRole('navigation', { name: 'Menu Admin' })).toHaveCount(0);
+      await expect(page.getByRole('navigation', { name: 'Menu dành cho Admin' })).toHaveCount(0);
       await page.waitForTimeout(300);
       expect(supabase.adminCalls()).toEqual([]);
       expect(supabase.functionCalls).toEqual([]);
@@ -52,10 +52,10 @@ test.describe('signed in as a User', () => {
     const requests = recordRequests(page);
     await page.goto('/');
     await expect(page.getByRole('heading', { level: 1 })).toHaveText(
-      'Chọn quy trình cần chạy hôm nay',
+      'Chọn luồng cần xử lý hôm nay',
     );
     await page.goto(FLOW_URL);
-    await expect(page.getByRole('button', { name: /^Chạy/ }).last()).toBeVisible();
+    await expect(page.getByRole('button', { name: /^Bắt đầu/ }).last()).toBeVisible();
     await page.waitForTimeout(300);
     expect(requests.some((r) => /\/assets\/index-[\w-]+\.js$/.test(r.url))).toBe(true);
     expect(adminChunks(requests)).toEqual([]);
@@ -67,7 +67,7 @@ test.describe('signed in as a User', () => {
   }) => {
     await page.goto('/ADMIN/users');
     await expect(page.getByRole('table', { name: 'Danh sách tài khoản' })).toHaveCount(0);
-    await expect(page.getByRole('navigation', { name: 'Menu Admin' })).toHaveCount(0);
+    await expect(page.getByRole('navigation', { name: 'Menu dành cho Admin' })).toHaveCount(0);
     await page.waitForTimeout(300);
     expect(supabase.adminCalls()).toEqual([]);
   });
@@ -91,7 +91,7 @@ test.describe('signed in as a User', () => {
       dispatchEvent(new PopStateEvent('popstate'));
     });
     await expect(page.getByRole('heading', { level: 1 })).toHaveText(
-      'Chọn quy trình cần chạy hôm nay',
+      'Chọn luồng cần xử lý hôm nay',
     );
     await page.waitForTimeout(300);
     expect(supabase.adminCalls()).toEqual([]);
@@ -137,12 +137,12 @@ test.describe('signed in as an Admin', () => {
   test('/admin → /admin/users; menu shows both admin pages', async ({ page }) => {
     await page.goto('/admin');
     await expect(page).toHaveURL(/\/admin\/users$/);
-    const nav = page.getByRole('navigation', { name: 'Menu Admin' });
-    await expect(nav.getByRole('link', { name: 'Users & Groups' })).toHaveAttribute(
+    const nav = page.getByRole('navigation', { name: 'Menu dành cho Admin' });
+    await expect(nav.getByRole('link', { name: 'Tài khoản và nhóm' })).toHaveAttribute(
       'aria-current',
       'page',
     );
-    await nav.getByRole('link', { name: 'Flows' }).click();
+    await nav.getByRole('link', { name: 'Luồng xử lý' }).click();
     await expect(page).toHaveURL(/\/admin\/flows$/);
     // Not-yet-built sections are inert and labelled.
     await expect(nav.locator('[aria-disabled="true"]')).toHaveCount(3);

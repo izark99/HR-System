@@ -40,6 +40,9 @@
 - E2E chạy song song nhiều agent: cổng cấu hình qua `E2E_PORT` (mặc định 4173). Luôn chạy trên bản build mới (đã từng có lần build E2E lỗi âm thầm, test chạy bản cũ).
 - Đội agent (chốt 2026-10-30): session chính + skill `clarify`, subagent `developer` và `verifier`.
 
+- (2026-11-13) Sao lưu và kiểm DB thật có workflow (`backup.yml`, `db-tests.yml`) nhưng **chưa chạy lần nào**: chờ Harold thêm secret `SUPABASE_DB_URL`, `BACKUP_PASSPHRASE` (README "Sao lưu và khôi phục"). Khi có, chạy cả hai và ghi kết quả vào đây.
+- (2026-11-13) Chữ mặc định đã là chữ Harold sửa (PLAN M0.4); bảng `ui_text_overrides` trên production vẫn còn 104 dòng trùng chữ mặc định cho tới khi Harold bấm "Khôi phục tất cả".
+
 ## 4. Việc còn tồn (MINOR, chấp nhận để sau)
 
 1. ~~Giới hạn giải nén .xlsx~~ → đã làm ở bước 4 – R1.

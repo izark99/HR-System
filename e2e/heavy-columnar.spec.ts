@@ -111,14 +111,14 @@ class HeapSampler {
     p.worker = Math.max(p.worker, worker);
     // Which node is running (progress list), for per-node phases.
     const running = await this.page
-      .getByRole('region', { name: 'Đang chạy flow' })
+      .getByRole('region', { name: 'Đang thực thi luồng xử lý' })
       .getByRole('listitem')
-      .filter({ hasText: 'Đang chạy' })
+      .filter({ hasText: 'Đang thực thi' })
       .first()
       .textContent({ timeout: 200 })
       .catch(() => null);
     if (running && this.phase.startsWith('run')) {
-      const label = running.replace(/Đang chạy.*$/s, '').trim();
+      const label = running.replace(/Đang thực thi.*$/s, '').trim();
       if (label && this.phase !== `run: ${label}`) this.setPhase(`run: ${label}`);
     }
   }
@@ -171,13 +171,13 @@ test(`${ROWS} rows x 30 columns: filter -> join -> groupBy -> output.excel witho
 
   await page.goto('/run/payroll-timesheet');
   await expect(page.getByLabel(/^Chọn file cho Dữ liệu nhân sự/)).toBeAttached();
-  const run = page.getByRole('button', { name: /^(Chạy|Đang)/ }).last();
+  const run = page.getByRole('button', { name: /^(Bắt đầu|Đang)/ }).last();
 
   sampler.setPhase('upload + read + validate (branch lookup)');
   await page.getByLabel(/^Chọn file cho Danh mục chi nhánh/).setInputFiles(BRANCHES);
   sampler.setPhase(`upload + read + validate (${ROWS} x 30)`);
   await page.getByLabel(/^Chọn file cho Dữ liệu nhân sự/).setInputFiles(DATA);
-  await expect(run).toHaveText('Chạy', { timeout: 45 * 60_000 });
+  await expect(run).toHaveText('Bắt đầu', { timeout: 45 * 60_000 });
   await expect(run).toBeEnabled();
 
   sampler.setPhase('run');

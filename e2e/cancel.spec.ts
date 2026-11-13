@@ -29,11 +29,11 @@ test('cancel mid-run, files are restored, a second run succeeds', async ({ page 
   await timesheetInput(page).setInputFiles([
     timesheet('cham_cong_lon.xlsx', employees(ROWS, 1, 'CN01', 24)),
   ]);
-  await expect(runButton(page)).toHaveText('Chạy', { timeout: 30_000 });
+  await expect(runButton(page)).toHaveText('Bắt đầu', { timeout: 30_000 });
 
   await runButton(page).click();
   await page.getByRole('button', { name: 'Hủy', exact: true }).click({ timeout: 5_000 });
-  await expect(page.getByText('Đã hủy lần chạy:')).toBeVisible({ timeout: 30_000 });
+  await expect(page.getByText('Đã hủy:')).toBeVisible({ timeout: 30_000 });
   const path = (await page.getByText('đang nạp lại file sau khi hủy…').count())
     ? 'terminate+restore'
     : 'cooperative';
@@ -44,7 +44,7 @@ test('cancel mid-run, files are restored, a second run succeeds', async ({ page 
   await expect(page.getByText('đang nạp lại file sau khi hủy…')).toHaveCount(0, {
     timeout: 30_000,
   });
-  await expect(runButton(page)).toHaveText('Chạy', { timeout: 30_000 });
+  await expect(runButton(page)).toHaveText('Bắt đầu', { timeout: 30_000 });
   await expect(runButton(page)).toBeEnabled();
   await expect(page.getByRole('button', { name: 'Bỏ file bang_luong_lon.xlsx' })).toBeEnabled();
 

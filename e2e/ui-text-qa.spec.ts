@@ -105,8 +105,8 @@ test.describe('performance of the ~1.470-row table (HRFLOW_PERF=1)', () => {
     await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
     const t0 = Date.now();
     await page
-      .getByRole('navigation', { name: 'Menu Admin' })
-      .getByRole('link', { name: 'Văn bản giao diện' })
+      .getByRole('navigation', { name: 'Menu dành cho Admin' })
+      .getByRole('link', { name: 'Cài đặt UI' })
       .click();
     const count = page.locator('[data-ui-text-count]');
     await expect(count).toHaveText(/^1\.\d{3} \/ 1\.\d{3} dòng/);

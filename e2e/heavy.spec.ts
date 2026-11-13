@@ -73,7 +73,7 @@ async function uploadHeavy(page: Page): Promise<void> {
   await timed('upload+validate both slots', async () => {
     await payrollInput(page).setInputFiles(PAYROLL);
     await timesheetInput(page).setInputFiles(TIMESHEET);
-    await expect(runButton(page)).toHaveText('Chạy', { timeout: 5 * 60_000 });
+    await expect(runButton(page)).toHaveText('Bắt đầu', { timeout: 5 * 60_000 });
   });
   await expect(
     page.getByRole('list', { name: /Bảng lương/ }).getByTestId('file-status'),
@@ -82,7 +82,7 @@ async function uploadHeavy(page: Page): Promise<void> {
 
 function nodeRow(page: Page, label: string) {
   return page
-    .getByRole('region', { name: 'Đang chạy flow' })
+    .getByRole('region', { name: 'Đang thực thi luồng xử lý' })
     .getByRole('listitem')
     .filter({ has: page.getByText(label, { exact: true }) });
 }
@@ -92,7 +92,7 @@ async function expectUsable(page: Page): Promise<void> {
   await expect(page.getByText('đang nạp lại file sau khi hủy…')).toHaveCount(0, {
     timeout: 5 * 60_000,
   });
-  await expect(runButton(page)).toHaveText('Chạy', { timeout: 5 * 60_000 });
+  await expect(runButton(page)).toHaveText('Bắt đầu', { timeout: 5 * 60_000 });
   await expect(runButton(page)).toBeEnabled();
   await expect(page.getByRole('button', { name: /^Bỏ file bang_luong_heavy/ })).toBeEnabled();
   await expect(periodButton(page)).toBeEnabled();
@@ -117,10 +117,12 @@ test('cancel while the workbook is written (cooperative if the worker yields wit
 
   await runButton(page).click();
   // output.excel (ExcelJS) is async and yields: the abort is seen there without terminating.
-  await expect(nodeRow(page, 'File đối chiếu')).toContainText('Đang chạy', { timeout: 5 * 60_000 });
+  await expect(nodeRow(page, 'File đối chiếu')).toContainText('Đang thực thi', {
+    timeout: 5 * 60_000,
+  });
   const t0 = Date.now();
   await page.getByRole('button', { name: 'Hủy' }).click();
-  await expect(page.getByText('Đã hủy lần chạy:')).toBeVisible({ timeout: 60_000 });
+  await expect(page.getByText('Đã hủy:')).toBeVisible({ timeout: 60_000 });
   timings['cooperative cancel → cancelled'] = Date.now() - t0;
   const restored = await page.getByText('đang nạp lại file sau khi hủy…').count();
   test.info().annotations.push({
@@ -167,10 +169,10 @@ test('hard cancel during the synchronous compare: worker terminated, files resto
 }) => {
   await uploadHeavy(page);
   await runButton(page).click();
-  await expect(nodeRow(page, 'Đối chiếu')).toContainText('Đang chạy', { timeout: 60_000 });
+  await expect(nodeRow(page, 'Đối chiếu')).toContainText('Đang thực thi', { timeout: 60_000 });
   const t0 = Date.now();
   await page.getByRole('button', { name: 'Hủy' }).click();
-  await expect(page.getByText('Đã hủy lần chạy:')).toBeVisible({ timeout: 60_000 });
+  await expect(page.getByText('Đã hủy:')).toBeVisible({ timeout: 60_000 });
   timings['hard cancel → cancelled'] = Date.now() - t0;
   // While restoring, Run must not be clickable.
   const restoringSeen = await page

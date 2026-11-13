@@ -229,7 +229,7 @@ test.describe('loading skeleton (AC-UI-56)', () => {
   test('a fast answer never flashes a skeleton (flow list)', async ({ page }) => {
     await watchSkeleton(page);
     await page.goto('/');
-    await expect(page.getByRole('link', { name: /^Chạy flow Đối chiếu/ })).toBeVisible();
+    await expect(page.getByRole('link', { name: /^Bắt đầu luồng xử lý: Đối chiếu/ })).toBeVisible();
     expect(
       await page.evaluate(() => (window as unknown as { __skeletonSeen: boolean }).__skeletonSeen),
     ).toBe(false);

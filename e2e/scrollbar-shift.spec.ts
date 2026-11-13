@@ -148,7 +148,7 @@ for (const viewport of [DESKTOP, LAPTOP]) {
       await ready(page);
       const frame = page.locator('[data-scroll-frame]');
       await expect(frame.locator('main#main')).toHaveCount(1);
-      const fixed = 'header, nav[aria-label="Menu Admin"]';
+      const fixed = 'header, nav[aria-label="Menu dành cho Admin"]';
       const box = () =>
         page.locator(fixed).evaluateAll((els) =>
           els.map((e) => {
@@ -188,7 +188,7 @@ for (const viewport of [DESKTOP, LAPTOP]) {
       expect(await box()).toEqual(before);
       // A new screen starts at the top of the frame.
       await page.mouse.wheel(0, 400);
-      await page.getByRole('link', { name: 'Flows' }).click();
+      await page.getByRole('link', { name: 'Luồng xử lý' }).click();
       await expect(page.getByRole('heading', { level: 1 })).toHaveText('Flow và phiên bản');
       await expect.poll(async () => (await scrollTops(page)).frame).toBe(0);
     });

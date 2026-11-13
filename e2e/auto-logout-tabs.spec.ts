@@ -4,7 +4,7 @@
  */
 import { expect, test, USER, type Page } from './fixtures';
 
-const HOME_TITLE = 'Chọn quy trình cần chạy hôm nay';
+const HOME_TITLE = 'Chọn luồng cần xử lý hôm nay';
 const warning = (page: Page) => page.getByRole('alertdialog', { name: 'Bạn sắp bị đăng xuất' });
 
 test('activity in tab A does not extend tab B: B warns and signs out, A stays signed in', async ({

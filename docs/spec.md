@@ -1210,6 +1210,24 @@ Breakpoint: mobile < 768px (1 cột, menu trái thu thành nút mở), tablet 76
 - Không dùng ký hiệu có thể thiếu trong font (≤ ≥ → × −) trong text UI; dùng chữ hoặc `-`. Ngoại lệ (chốt 2026-11-06 12:32): câu chỉ dành cho trình đọc màn hình `connectMenu.done` ("Đã nối A → B", `sr-only`, không hiển thị).
 - Touch target tối thiểu 44px (nút chuẩn và input 44px); tương phản chữ đạt WCAG AA.
 
+**Bảng thuật ngữ** (từ 2026-11-12: lấy từ 104 dòng Harold tự sửa ở tab "Cài đặt UI" trên production, nay là chữ mặc định trong `locales/vi/common.json`). Mọi text mới phải theo bảng này; text cũ ở Admin/Designer còn dùng từ cũ thì đổi khi sửa tới màn đó.
+
+| Khái niệm | Dùng | Không dùng |
+|-----------|------|------------|
+| Tên app | HR Tools | HR Data Flow |
+| Flow (với User và trên menu) | luồng xử lý (ngắn: luồng) | flow, quy trình |
+| Nút bắt đầu xử lý | Bắt đầu, Bắt đầu lại | Chạy, Chạy lại |
+| Trạng thái đang xử lý / xong | Đang xử lý…, Đang thực thi, Hoàn thành | Đang chạy, Chạy xong |
+| Một lần chạy / lịch sử chạy | hoạt động, lịch sử hoạt động | lần chạy, lịch sử chạy, logs |
+| Gán flow cho người dùng | cấp quyền | gán |
+| Mục menu Admin | Luồng xử lý · Bảng tham chiếu · Mẫu · Tài khoản và nhóm · Cài đặt UI · Lịch sử hoạt động | Flows · Template · Users & Groups · Văn bản giao diện · Logs |
+| Tính năng chưa có | Sắp ra mắt | Sắp có |
+| Nhờ Admin hỗ trợ | Vui lòng liên hệ Admin | Liên hệ Admin, Hãy báo Admin |
+| Mời thử lại | … rồi thử lại sau | … rồi thử lại |
+
+- Thông báo ngắn (lỗi, ghi chú, gợi ý trong khung, câu sau nhãn đậm) **không có dấu chấm cuối**; trong cùng một thông báo, các câu trước vẫn ngăn nhau bằng dấu chấm.
+- Giữ nguyên các từ đã quen: Admin, file, Upload, sheet, Excel.
+
 
 ### 25.5 Khung trang & pattern dùng chung (chốt 2026-11-04 14:12)
 
