@@ -24,12 +24,15 @@ export function Tooltip({
   children,
   className,
   as: Wrapper = 'span',
+  side = 'bottom',
 }: {
   text: string | null;
   children: ReactNode;
   className?: string;
   /** `div` when the anchor wraps block content (e.g. an `<h1>`): a span may not contain it. */
   as?: 'span' | 'div';
+  /** `right`: beside the anchor, e.g. an icon rail where a tip below would hide the next item. */
+  side?: 'bottom' | 'right';
 }) {
   const anchor = useRef<HTMLElement>(null);
   const tip = useRef<HTMLSpanElement>(null);
@@ -44,11 +47,16 @@ export function Tooltip({
     const w = el.offsetWidth;
     const h = el.offsetHeight;
     let top = a.bottom + GAP;
-    if (top + h > window.innerHeight - MARGIN) top = Math.max(MARGIN, a.top - h - GAP);
-    const left = Math.max(MARGIN, Math.min(a.left, window.innerWidth - w - MARGIN));
+    let left = Math.max(MARGIN, Math.min(a.left, window.innerWidth - w - MARGIN));
+    if (side === 'right') {
+      top = Math.max(MARGIN, a.top + (a.height - h) / 2);
+      left = Math.min(a.right + GAP, window.innerWidth - w - MARGIN);
+    } else if (top + h > window.innerHeight - MARGIN) {
+      top = Math.max(MARGIN, a.top - h - GAP);
+    }
     el.style.top = `${top}px`;
     el.style.left = `${left}px`;
-  }, [visible, text]);
+  }, [visible, text, side]);
 
   useEffect(() => {
     if (!visible) return;

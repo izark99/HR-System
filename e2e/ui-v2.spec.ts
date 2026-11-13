@@ -743,11 +743,69 @@ async function soonChecks(page: Page): Promise<void> {
     expect((await style(items.nth(i))).height, 'disabled item on one line').toBeLessThanOrEqual(44);
     expect((await style(items.nth(i).locator('span').last())).radius).toBe('999px');
   }
+  // MEMORY 2026-11-13 07:58: the expanded menu is wide enough for every label next to its chip.
+  const cut = await nav.evaluate((el) =>
+    Array.from(el.querySelectorAll<HTMLElement>('a, [aria-disabled="true"] > span:first-child'))
+      .filter((e) => e.scrollWidth > e.clientWidth)
+      .map((e) => e.textContent),
+  );
+  expect(cut, 'menu labels cut with "…"').toEqual([]);
 }
 
 async function settleCanvas(page: Page): Promise<void> {
   await page.evaluate(() => new Promise((r) => requestAnimationFrame(() => r(null))));
 }
+
+test.describe('left menu collapse (MEMORY 2026-11-13 07:58)', () => {
+  test.use({ signedInAs: ADMIN, viewport: DESKTOP });
+
+  test('collapses to an icon rail, keeps it across Admin screens, expands again', async ({
+    page,
+  }) => {
+    await page.goto('/admin/users');
+    const nav = page.getByRole('navigation', { name: 'Menu dành cho Admin' });
+    const toggle = page.getByRole('button', { name: 'Thu gọn menu' });
+    await expect(toggle).toHaveAttribute('aria-expanded', 'true');
+    const wide = (await nav.boundingBox())!.width;
+    expect(wide).toBe(320);
+
+    await toggle.focus();
+    await page.keyboard.press('Enter');
+    const expand = page.getByRole('button', { name: 'Mở rộng menu' });
+    await expect(expand).toHaveAttribute('aria-expanded', 'false');
+    await expect(expand).toBeFocused();
+    expect((await nav.boundingBox())!.width).toBe(64);
+    // Every item keeps its name; disabled ones say they are coming.
+    for (const name of ['Luồng xử lý', 'Bảng tham chiếu', 'Tài khoản và nhóm', 'Cài đặt UI']) {
+      await expect(nav.getByRole('link', { name, exact: true })).toBeVisible();
+    }
+    await expect(nav.getByRole('link', { name: 'Tài khoản và nhóm' })).toHaveAttribute(
+      'aria-current',
+      'page',
+    );
+    await expect(nav.getByText('Lịch sử hoạt động · Sắp ra mắt')).toBeAttached();
+    // Tooltip with the name on hover; the page column gets the room.
+    await nav.getByRole('link', { name: 'Luồng xử lý' }).hover();
+    await expect(page.getByText('Luồng xử lý', { exact: true }).last()).toBeVisible();
+    const table = page.getByRole('table', { name: 'Danh sách tài khoản' });
+    await expect(table).toBeVisible();
+    await commonChecks(page);
+    await axe(page, 'admin-users nav collapsed 1280x800');
+    await shot(page, '07-admin-users', 'nav-collapsed');
+
+    // Still collapsed on another Admin screen, nothing written to browser storage.
+    await nav.getByRole('link', { name: 'Luồng xử lý' }).click();
+    await expect(page).toHaveURL(/\/admin\/flows$/);
+    await expect(page.getByRole('button', { name: 'Mở rộng menu' })).toBeVisible();
+    expect(
+      await page.evaluate(() => localStorage.length + sessionStorage.length),
+    ).toBeLessThanOrEqual(1); // the Supabase session only
+
+    await page.getByRole('button', { name: 'Mở rộng menu' }).click();
+    expect((await nav.boundingBox())!.width).toBe(320);
+    await expect(nav.getByRole('link', { name: 'Luồng xử lý' })).toHaveText('Luồng xử lý');
+  });
+});
 
 test.describe('admin screens at 1024px: no horizontal page scroll (AC-UI-12)', () => {
   test.use({ signedInAs: ADMIN, viewport: { width: 1024, height: 768 } });

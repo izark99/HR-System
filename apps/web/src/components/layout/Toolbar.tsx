@@ -23,7 +23,8 @@ export function Toolbar({
         className,
       )}
     >
-      <div className="flex min-w-0 flex-1 flex-wrap items-center gap-3">{children}</div>
+      {/* min-w-min: never narrower than its widest item, so `end` wraps instead of spilling. */}
+      <div className="flex min-w-min flex-1 flex-wrap items-center gap-3">{children}</div>
       {end && <div className="flex shrink-0 items-center gap-2">{end}</div>}
     </div>
   );

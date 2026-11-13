@@ -308,3 +308,79 @@ export function LayoutIcon({ size = 18, className }: IconProps) {
     </Icon>
   );
 }
+
+// ---- admin menu (SideNavLayout) -------------------------------------------------------------
+
+/** Menu "Tổng quan": four tiles. */
+export function GridIcon({ size = 20, className }: IconProps) {
+  return (
+    <Icon size={size} className={className}>
+      <rect x="3" y="3" width="7" height="7" rx="1.5" />
+      <rect x="14" y="3" width="7" height="7" rx="1.5" />
+      <rect x="3" y="14" width="7" height="7" rx="1.5" />
+      <rect x="14" y="14" width="7" height="7" rx="1.5" />
+    </Icon>
+  );
+}
+
+/** Menu "Luồng xử lý": two steps joined by a line. */
+export function FlowIcon({ size = 20, className }: IconProps) {
+  return (
+    <Icon size={size} className={className}>
+      <rect x="2" y="4" width="7" height="6" rx="1.5" />
+      <rect x="15" y="14" width="7" height="6" rx="1.5" />
+      <path d="M9 7h3a2 2 0 0 1 2 2v6a2 2 0 0 0 2 2h-1" />
+    </Icon>
+  );
+}
+
+/** Menu "Bảng tham chiếu": a small table. */
+export function TableIcon({ size = 20, className }: IconProps) {
+  return (
+    <Icon size={size} className={className}>
+      <rect x="3" y="4" width="18" height="16" rx="2" />
+      <path d="M3 10h18M9 10v10" />
+    </Icon>
+  );
+}
+
+/** Menu "Mẫu": a sheet with a folded corner. */
+export function FileIcon({ size = 20, className }: IconProps) {
+  return (
+    <Icon size={size} className={className}>
+      <path d="M14 3H6a1 1 0 0 0-1 1v16a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V8z" />
+      <path d="M14 3v5h5" />
+    </Icon>
+  );
+}
+
+/** Menu "Tài khoản và nhóm": two people. */
+export function UsersIcon({ size = 20, className }: IconProps) {
+  return (
+    <Icon size={size} className={className}>
+      <circle cx="9" cy="8" r="3.5" />
+      <path d="M2.5 20a6.5 6.5 0 0 1 13 0" />
+      <path d="M16 4.5a3.5 3.5 0 0 1 0 7M18 14a6.5 6.5 0 0 1 3.5 6" />
+    </Icon>
+  );
+}
+
+/** Menu "Cài đặt UI": the letter T. */
+export function TextIcon({ size = 20, className }: IconProps) {
+  return (
+    <Icon size={size} className={className}>
+      <path d="M5 7V4h14v3M12 4v16M9 20h6" />
+    </Icon>
+  );
+}
+
+/** Menu "Lịch sử hoạt động": a clock turning back. */
+export function HistoryIcon({ size = 20, className }: IconProps) {
+  return (
+    <Icon size={size} className={className}>
+      <path d="M3 12a9 9 0 1 0 2.6-6.4L3 8" />
+      <path d="M3 3v5h5" />
+      <path d="M12 7v5l3 2" />
+    </Icon>
+  );
+}

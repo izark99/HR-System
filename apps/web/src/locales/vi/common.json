@@ -25,6 +25,8 @@
     "retry": "Thử lại",
     "errorLabel": "Lỗi:",
     "soon": "Sắp ra mắt",
+    "navCollapse": "Thu gọn menu",
+    "navExpand": "Mở rộng menu",
     "tabCount": "{{label}} ({{count, number}})",
     "stepDone": "Đã xong",
     "notifications": "Thông báo",
@@ -716,7 +718,7 @@
   },
   "idle": {
     "title": "Bạn sắp bị đăng xuất",
-    "text": "Bạn đã không thao tác gần 8 giờ. Phiên làm việc sẽ tự kết thúc",
+    "text": "Bạn đã không thao tác gần 8 giờ. Phiên làm việc sẽ tự kết thúc sau",
     "unsavedLabel": "Lưu ý:",
     "unsaved": "Luồng đang thiết kế còn thay đổi chưa lưu. Nếu bị đăng xuất, các thay đổi này sẽ mất",
     "continue": "Tiếp tục làm việc"

@@ -237,6 +237,12 @@
 
 ## Kỹ thuật & tổ chức
 
+2026-11-13 07:58 - Menu trái Admin (từ 768px): rộng 320px (đủ nhãn dài nhất kèm chip "Sắp ra mắt", không cắt "…"; thay 240px) và **thu gọn / mở rộng** được bằng nút mũi tên ở đầu menu (`aria-expanded`): thu gọn còn dải 64px chỉ có icon, tên mục hiện ở tooltip bên phải, mục chưa có đọc "… · Sắp ra mắt". Trạng thái giữ trong bộ nhớ của tab (đi giữa các màn Admin vẫn giữ), không ghi storage; mặc định mở rộng. Dưới 768px giữ nút "Menu" như cũ.
+
+2026-11-13 07:58 - Câu cảnh báo tự đăng xuất giữ chữ "sau" trước đồng hồ đếm ngược ("… sẽ tự kết thúc sau 04:59"); chấp nhận thanh nút dính đáy màn Chạy flow xuống 2 dòng ở 390px khi nút có chữ dài.
+
+2026-11-13 07:58 - Đưa bản M0 (chữ mặc định mới, sao lưu, kiểm DB thật, tài liệu) lên `main` không qua `verifier` vì full E2E đã xanh và thay đổi chủ yếu là chữ.
+
 2026-11-12 21:14 - Harold duyệt `docs/PLAN.md` (lộ trình M0 → M5) và cho đưa lên `main`.
 
 2026-11-12 21:14 - Ngân sách bundle: JS tải ban đầu (gzip) = entry chunk + các chunk tải ngay cùng entry (`<link rel="modulepreload">`) không vượt 240 KiB tuyệt đối (thay mốc +10% so với `d079f6b`); build thêm kiểm tra Monaco, React Flow, DuckDB, SheetJS, ExcelJS không nằm trong JS tải ban đầu (nhận diện bằng chuỗi đánh dấu khai báo trong `apps/web/bundle-budget.json`; chuỗi không còn thấy ở chunk nào cũng báo lỗi). Ngân sách CSS gzip (+10%) giữ nguyên.

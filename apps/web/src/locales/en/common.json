@@ -13,6 +13,8 @@
     "retry": "Try again",
     "errorLabel": "Error:",
     "soon": "Coming soon",
+    "navCollapse": "Collapse menu",
+    "navExpand": "Expand menu",
     "tabCount": "{{label}} ({{count, number}})",
     "stepDone": "Done",
     "notifications": "Notifications",

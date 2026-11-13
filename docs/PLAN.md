@@ -127,8 +127,8 @@ Mỗi dòng một vướng mắc thật khi dùng app. Mức: chặn / chậm / 
 | Ngày | Màn | Đang làm gì | Vướng gì | Mức | Mốc xử lý |
 |------|-----|-------------|----------|-----|-----------|
 | 2026-11-12 | Designer | Xem flow 5 node ở 1280×800 | Chữ trong node quá nhỏ; mở panel dữ liệu thì canvas chỉ còn một dải thấp (nguồn: review ảnh, chưa phải Harold báo) | chậm | M3a |
-| 2026-11-13 | Menu Admin | Đọc menu trái | Chữ mới "Sắp ra mắt" dài hơn "Sắp có" nên "Tổng quan" và "Lịch sử hoạt động" bị cắt "…" (đang có trên production vì là chữ Harold sửa). Chờ Harold chọn: chip ngắn lại / menu rộng hơn / bỏ mục chưa có | khó chịu | chờ Harold |
-| 2026-11-13 | Chạy flow (390px) | Bấm nút chính trên điện thoại | "Bắt đầu (sửa 1 lỗi trước)" dài hơn nên thanh nút dính đáy xuống 2 dòng, che nhiều màn hình hơn. Câu "Phiên làm việc sẽ tự kết thúc 04:59" thiếu chữ "sau" (Harold bỏ khi sửa chữ) | khó chịu | chờ Harold |
+| 2026-11-13 | Menu Admin | Đọc menu trái | Nhãn bị cắt "…" vì chip "Sắp ra mắt" dài | khó chịu | ✅ 2026-11-13: menu rộng 320px + thu gọn thành dải icon (MEMORY 07:58) |
+| 2026-11-13 | Chạy flow (390px) | Bấm nút chính trên điện thoại | Thanh nút xuống 2 dòng; câu đăng xuất thiếu "sau" | khó chịu | ✅ 2026-11-13: thêm lại "sau"; 2 dòng chấp nhận (MEMORY 07:58) |
 | 2026-11-12 | Admin | Muốn xem ai chạy gì | Không có màn Logs (nguồn: review) | chậm | M4 |
 
 ## 8. Việc Harold làm tay

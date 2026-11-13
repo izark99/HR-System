@@ -1210,6 +1210,8 @@ Breakpoint: mobile < 768px (1 cột, menu trái thu thành nút mở), tablet 76
 - Không dùng ký hiệu có thể thiếu trong font (≤ ≥ → × −) trong text UI; dùng chữ hoặc `-`. Ngoại lệ (chốt 2026-11-06 12:32): câu chỉ dành cho trình đọc màn hình `connectMenu.done` ("Đã nối A → B", `sr-only`, không hiển thị).
 - Touch target tối thiểu 44px (nút chuẩn và input 44px); tương phản chữ đạt WCAG AA.
 
+**Menu trái Admin** (chốt 2026-11-13 07:58): từ 768px rộng 320px, thu gọn được thành dải icon 64px (nút mũi tên đầu menu, tooltip tên mục bên phải); trạng thái chỉ giữ trong tab. Icon mỗi mục ở `components/icons` (nhóm "admin menu").
+
 **Bảng thuật ngữ** (từ 2026-11-12: lấy từ 104 dòng Harold tự sửa ở tab "Cài đặt UI" trên production, nay là chữ mặc định trong `locales/vi/common.json`). Mọi text mới phải theo bảng này; text cũ ở Admin/Designer còn dùng từ cũ thì đổi khi sửa tới màn đó.
 
 | Khái niệm | Dùng | Không dùng |
