@@ -38,6 +38,10 @@
 
 ## Kỹ thuật & tổ chức
 
+~~2026-11-12 21:14 - Harold duyệt `docs/PLAN.md` (lộ trình M0 → M5) và cho đưa lên `main`.~~ → thay bởi 2026-11-13 12:55
+
+~~2026-11-12 21:09 - Harold giao session chính vai trò project owner: lộ trình, mốc và nguyên tắc điều hành ghi ở `docs/PLAN.md` (đọc sau MEMORY, trước HANDOFF); bài học đã gặp ghi ở `.claude/rules/pitfalls.md` (luôn nạp). Mục nào của PLAN đổi một quyết định đã chốt (đánh dấu D-n) chỉ có hiệu lực sau khi Harold chốt và được ghi vào file này.~~ → thay bởi 2026-11-13 12:55
+
 ~~2026-11-06 14:48 - Thanh cuộn của panel giữ như cũ (chỉ hiện khi cần, không chừa chỗ sẵn). Lỗi ở tab Input slot là 2 thanh cuộn lồng nhau (khung ngoài cuộn thêm vì nội dung panel vượt chiều cao khung): sửa tận gốc để mỗi vùng chỉ có 1 thanh cuộn theo mỗi chiều; `layout-lint` chặn vùng cuộn lồng nhau cùng chiều.~~ → thay bởi 2026-11-09 09:06
 
 ~~2026-11-06 14:45 - Mọi vùng cuộn trong app luôn chừa chỗ thanh cuộn (`scrollbar-gutter: stable`) để đổi tab/nội dung dài ngắn không làm lệch bố cục.~~ → thay bởi 2026-11-06 14:48

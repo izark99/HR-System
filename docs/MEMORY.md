@@ -3,11 +3,14 @@
 > Quy tắc ghi:
 > - Mỗi quyết định ghi 1 dòng theo định dạng: `YYYY-MM-DD HH:MM - Quyết định` (giờ Việt Nam, UTC+7), **cách nhau 1 dòng trống** để hiển thị tách dòng khi đọc.
 > - Các quyết định ghi lúc `2026-10-26 08:20` thực tế được chốt trong khoảng 07:40–08:20 (lịch sử commit đã được gộp nên không còn giờ chính xác).
-> - Chỉ ghi quyết định **đã chốt** với Harold. Ý tưởng chưa chốt thì ghi vào mục "Câu hỏi mở" trong `docs/spec.md`.
+> - Chỉ ghi quyết định **đã chốt** với Harold. Ý tưởng chưa chốt thì ghi vào bảng "open questions" của file liên quan trong `docs/redesign/` (từ 2026-11-13; trước đó là `docs/spec.md`).
 > - **Không xóa** quyết định cũ. Khi thay đổi: thêm dòng mới ở đây, chuyển dòng cũ sang `docs/MEMORY-archive.md` (đúng nhóm, đánh dấu `~~gạch ngang~~` kèm `→ thay bởi YYYY-MM-DD HH:MM`). File này chỉ chứa quyết định **đang hiệu lực** (chốt 2026-11-12 21:14).
-> - **Quyết định mới nhất đặt ở đầu** từng nhóm. Khi đổi quyết định, cập nhật luôn `docs/spec.md` cho khớp.
+> - **Quyết định mới nhất đặt ở đầu** từng nhóm. Khi đổi quyết định, cập nhật luôn file liên quan trong `docs/redesign/` cho khớp (từ 2026-11-13; `docs/spec.md` chuyển vào `docs/archive/`, chỉ để tra cứu).
+> - Thứ tự ưu tiên khi mâu thuẫn (chốt 2026-11-13): `docs/MEMORY.md` > `docs/redesign/` > code > `docs/archive/`.
 
 ## Phạm vi & sản phẩm
+
+2026-11-13 12:55 - Thiết kế lại dự án (Harold trả lời 1B, 2A, 4A): lập đủ bộ tài liệu thiết kế tiếng Anh ở `docs/redesign/` (00–08 + ADR); phạm vi sản phẩm giữ nguyên: nền tảng chạy flow Excel trên trình duyệt, server không lưu dữ liệu nhân sự, không mở rộng sang lưu headcount/C&B/budget; người dùng 6 tháng tới: Harold + tối đa 5 người thử, giữ 2 role admin/user. Kế hoạch thực hiện: `docs/redesign/06-refactor-plan.md`.
 
 2026-11-12 21:14 - Thứ tự Phase 2: (1) bảng tham chiếu có effective date + node `input.refTable`; (2) `output.template` (template Excel); `code.python` (Pyodide) chỉ mở khi có một flow thật không viết được bằng `code.sql` + `transform.formula`. Các node Phase 2 khác chưa xếp thứ tự. Lộ trình chi tiết ở `docs/PLAN.md`.
 
@@ -237,13 +240,15 @@
 
 ## Kỹ thuật & tổ chức
 
-2026-11-12 21:14 - Harold duyệt `docs/PLAN.md` (lộ trình M0 → M5) và cho đưa lên `main`.
+2026-11-13 12:55 - Giao diện (Harold trả lời 3ABCD, 5C): thiết kế lại cả visual thành **một design system dùng chung** (token + component) để về sau phát triển thêm thì tái sử dụng, không lệch, không phải code lại; đặc tả ở `docs/redesign/04-ui-ux-system.md` (DS v3), Harold duyệt trên trang showcase ở 2 mốc GATE-1, GATE-2 trước khi chuyển màn. Các quyết định UI cũ bên dưới vẫn hiệu lực cho từng màn tới khi màn đó được chuyển sang DS v3 (task T-P3-08 sẽ chuyển chúng sang archive).
+
+2026-11-13 12:55 - Tài liệu hợp nhất (Harold trả lời 6B): `docs/redesign/` thay `docs/spec.md`, `docs/PLAN.md`, `docs/HANDOFF.md` (bản cũ chuyển vào `docs/archive/` ở task T-P0-01, chỉ để tra cứu); `CLAUDE.md` viết lại bằng tiếng Anh; `docs/MEMORY.md` giữ làm nhật ký quyết định (tiếng Việt); trạng thái dự án chỉ ghi ở Progress Log của `docs/redesign/06-refactor-plan.md`. Lộ trình sản phẩm M1–M5 của PLAN cũ được giữ lại thành backlog B-01…B-09 trong file đó.
+
+2026-11-13 12:55 - Cách thực thi (Harold trả lời câu 7): refactor + dựng lại hệ thống agent (CLAUDE.md, rules, skills, subagent, hooks) theo best practice của Anthropic; thiết kế ở `docs/redesign/08-agent-system.md`, dựng ở task T-P0-02. Quy trình developer → verifier hiện tại còn hiệu lực tới khi T-P0-02 xong.
 
 2026-11-12 21:14 - Ngân sách bundle: JS tải ban đầu (gzip) = entry chunk + các chunk tải ngay cùng entry (`<link rel="modulepreload">`) không vượt 240 KiB tuyệt đối (thay mốc +10% so với `d079f6b`); build thêm kiểm tra Monaco, React Flow, DuckDB, SheetJS, ExcelJS không nằm trong JS tải ban đầu (nhận diện bằng chuỗi đánh dấu khai báo trong `apps/web/bundle-budget.json`; chuỗi không còn thấy ở chunk nào cũng báo lỗi). Ngân sách CSS gzip (+10%) giữ nguyên.
 
 2026-11-12 21:14 - Lưu trữ MEMORY: quyết định đã bị thay được chuyển sang `docs/MEMORY-archive.md` (giữ nguyên chữ, gạch ngang kèm `→ thay bởi`, không nạp tự động vào session); `docs/MEMORY.md` chỉ còn quyết định đang hiệu lực. Không xóa quyết định nào.
-
-2026-11-12 21:09 - Harold giao session chính vai trò project owner: lộ trình, mốc và nguyên tắc điều hành ghi ở `docs/PLAN.md` (đọc sau MEMORY, trước HANDOFF); bài học đã gặp ghi ở `.claude/rules/pitfalls.md` (luôn nạp). Mục nào của PLAN đổi một quyết định đã chốt (đánh dấu D-n) chỉ có hiệu lực sau khi Harold chốt và được ghi vào file này.
 
 2026-11-09 10:20 - Khung cuộn (theo yêu cầu "freeze header, chỉ cuộn phần dưới" để header không hụt 10px ở mép phải): từ breakpoint `md` (768px) trở lên header cố định; Admin: menu trái cũng đứng yên, chỉ cột nội dung cuộn; màn User: vùng dưới header cuộn; thanh cuộn (10px, chừa chỗ) nằm trong vùng cuộn đó, trang (`html`) không cuộn. Dưới 768px (điện thoại, 390px) giữ cuộn cả trang như cũ (header cuộn đi). Ảnh so pixel: lúc chụp test tạm mở rộng vùng cuộn để chụp đủ nội dung. Không dựng mẫu Artifact; gửi Harold ảnh trước/sau từng màn trước khi lên `main`. Làm trong cùng vòng với sửa thanh cuộn (§32, commit `f0d5494` chưa lên `main`): developer → verifier, trước tab "Văn bản giao diện".
 
